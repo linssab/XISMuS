@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a1.3                          #
+#                        version: a1.4                          #
 # @author: Sergio Lins                                          #
 #################################################################
 
@@ -87,9 +87,9 @@ def getcalibration(self,flag):
     else: raise IOError("No calibration data available! Or 'config.cfg' does not exist!")
     return CalParam
 
-def getdata(self):
+def getdata(mca):
     ObjectData=[]
-    file = open(self)
+    file = open(mca)
     line = file.readline()
     while "<<DATA>>" not in line:
         line = file.readline()
@@ -100,8 +100,8 @@ def getdata(self):
     file.close()
     return ObjectData
 
-def getchannels(self):
-    return len(getdata(self))
+def getchannels(mca):
+    return len(getdata(mca))
 
 def calibrate(self,flag):
     param=getcalibration(self,flag)
@@ -164,6 +164,33 @@ def updatespectra(file,size):
     else: index = str(size)
     newfile=str(prefix+'_'+index+'.'+extension)
     return newfile
+
+def getdimension():
+    loadconfig = os.path.join(dirname,"config.cfg")
+    if not os.path.exists(loadconfig):
+        raise IOError("Config file not found!") 
+    else: config_file = dirname+'config.cfg'
+
+    file = open(config_file, 'r')
+    line = file.readline()
+    if "<<SIZE>>" in line:
+        while "<<END>>" not in line:
+            if 'lines' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                x = int(aux[1])
+            if 'rows' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                y = int(aux[1])
+            line = file.readline()
+        print("From SpecRead.getdimension():\nImage size is: ")
+        print("%d Line(s) and %d Row(s)" % (x,y))
+    return x,y
 
 if __name__=="__main__":
     #specfile=sys.argv[0]

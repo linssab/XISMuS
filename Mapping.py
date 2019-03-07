@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          DENSITY MAP GENERATOR                                #
-#                        version: a1.1                          #
+#                        version: a1.2                          #
 # @author: Sergio Lins                                          #
 #################################################################
 
@@ -16,34 +16,12 @@ import time
 
 timer=time.time()
 #_for now the first spectra is given manually
-start = SpecRead.dirname+'Cesareo_1.mca'
+start = SpecRead.input
 
-loadconfig = os.path.join(SpecRead.dirname,"config.cfg")
-if not os.path.exists(loadconfig):
-    raise IOError("Config file not found!") 
-else: config_file = SpecRead.dirname+'config.cfg'
-
-file = open(config_file, 'r')
-line = file.readline()
-if "<<SIZE>>" in line:
-    print("IMAGE SIZE IS: ")
-    while "<<END>>" not in line:
-        if 'lines' in line:
-            line=line.replace('\r','')
-            line=line.replace('\n','')
-            line=line.replace('\t',' ')
-            aux = line.split()
-            x = int(aux[1])
-            print("%d Line(s)" % x)
-        if 'rows' in line:
-            line=line.replace('\r','')
-            line=line.replace('\n','')
-            line=line.replace('\t',' ')
-            aux = line.split()
-            y = int(aux[1])
-            print("%d Rows(s)" % y)
-        line = file.readline()
-    dimension = x*y
+imagsize = SpecRead.getdimension()
+x = imagsize[0]
+y = imagsize[1]
+dimension = x*y
 
 def updateposition(a,b):
     currentx=a
