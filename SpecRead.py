@@ -10,6 +10,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from PyMca5.PyMcaMath import SimpleMath
+import SpecMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
 dirname = "C:/misure/"
@@ -151,16 +152,26 @@ def getplot(mca):
     plt.show()
     return 0
 
+def getstackplot(mca):
+    energy = calibrate(mca,'data')
+    size = getdimension()
+    dimension = size[0]*size[1]
+    data = SpecMath.stacksum(mca,dimension)
+    plt.plot(energy,data)
+    plt.show()
+    return 0
+    
 def updatespectra(file,size):
     name=str(file)
     name=name.replace('_',' ')
+    name=name.replace('-',' ')
     name=name.replace('.',' ')
     name=name.split()
     for i in range(len(name)):
         if name[i].isdigit()==True: index=int(name[i])
         if name[i] == "mca": extension=name[i]
-        if len(name[i]) > 3: prefix = name[i]
-    if index < size: index=str(index+1)
+        if len(name[i]) > 6: prefix = name[i]
+    if index < size: index = str(index+1)
     else: index = str(size)
     newfile=str(prefix+'_'+index+'.'+extension)
     return newfile
@@ -191,7 +202,3 @@ def getdimension():
         print("From SpecRead.getdimension():\nImage size is: ")
         print("%d Line(s) and %d Row(s)" % (x,y))
     return x,y
-
-if __name__=="__main__":
-    #specfile=sys.argv[0]
-    specfile=input
