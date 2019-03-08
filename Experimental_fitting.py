@@ -11,7 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import math
 from PyMca5.PyMcaPhysics.xrf import Elements
-from PyMca5.PyMcaPhysics.xrf.Sergio import SpecRead
+import SpecRead
 
 ElementList = [ elt[0] for elt in Elements.ElementsInfo ]
 ElementBinding=Elements.ElementBinding
@@ -20,14 +20,14 @@ ElementsInfo=Elements.ElementsInfo
 """
 DEFINE THE GLOBAL VAR FOR CALCULATING G(i,Ej) AND s
 """
-specfile = 'Cesareo_1.mca'
+specfile = SpecRead.input
 n = SpecRead.getchannels(specfile)        #__number of channels
 FANO = 0.114                              #__SILICON
 NOISE = 90
 ZERO = -0.0118
 CHANNEL = np.zeros([n])
 ENERGY = np.zeros([n])
-GAIN = SpecRead.getgain(specfile)*1000
+GAIN = SpecRead.getgain(specfile,'data')*1000
 
 """
 END OF GLOBAL VARIABLES DEFINITION
@@ -57,7 +57,8 @@ for i in range(n):
     ENERGY[i]=E(i)/1000
 
 if __name__=="__main__":
-    ele = sys.argv[1]
+    #ele = sys.argv[1]
+    ele = 'Au'
     Analytic=[]
     for rays in Elements.Element[ele]['rays']:
         print(rays, ":")
@@ -67,14 +68,3 @@ if __name__=="__main__":
                     Elements.Element[ele][transition]['rate']))
             Analytic.append(Elements.Element[ele][transition]['energy']*1000)
     print("Every transition for element %s : %r" % (ele,Analytic))
-    Np = len(Analytic)
-    spectra=GiEj(Analytic)
-    
-    curve = SpecRead.calibrate(specfile)
-    data = SpecRead.getdata(specfile)
-    print(GAIN)
-    plt.plot(curve,data)
-    plt.grid(True)
-    plt.show()
-    plt.plot(ENERGY,spectra)
-    plt.show()
