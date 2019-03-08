@@ -66,8 +66,8 @@ def setROI(lookup,xarray,yarray):
     peak_corr = 0
     for peak_corr in range(2):
         FWHM = 2.3548 * sigma(lookup)
-        lowx = (lookup - (FWHM/2))/1000
-        highx = (lookup + (FWHM/2))/1000
+        lowx = (lookup - (FWHM))/1000
+        highx = (lookup + (FWHM))/1000
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
