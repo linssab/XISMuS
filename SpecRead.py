@@ -25,13 +25,13 @@ TEST FILE
 """
 input=dirname+'Cesareo_1.mca'
 
-# MCA MEANS THE INPUT MUST ME AN MCA FILE
+# MCA MEANS THE INPUT MUST BE AN MCA FILE
 # SELF MEANS THE INPUT CAN BE EITHER A DATA ARRAY OR AN MCA FILE
-# THE FLAG MUST SAY IF ITS AN MCA 'file' OR A DATA ARRAY 'data'
+# THE FLAG MUST SAY IF THE FILE IS AN MCA 'file' OR A DATA ARRAY 'data'
 
-def getheader(self):
+def getheader(mca):
     ObjectHeader=[]
-    file = open(self)
+    file = open(mca)
     line = file.readline()
     while "<<DATA>>" not in line:
         ObjectHeader.append(line.replace('\n',' '))
@@ -152,12 +152,14 @@ def getplot(mca):
     plt.show()
     return 0
 
-def getstackplot(mca):
+def getstackplot(mca,*args):
     energy = calibrate(mca,'data')
     size = getdimension()
     dimension = size[0]*size[1]
     data = SpecMath.stacksum(mca,dimension)
-    plt.plot(energy,data)
+    if '-semilog' in args: plt.semilogy(energy,data)
+    else:
+        plt.plot(energy,data)
     plt.show()
     return 0
     
@@ -199,6 +201,5 @@ def getdimension():
                 aux = line.split()
                 y = int(aux[1])
             line = file.readline()
-        print("From SpecRead.getdimension():\nImage size is: ")
-        print("%d Line(s) and %d Row(s)" % (x,y))
+        print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
     return x,y
