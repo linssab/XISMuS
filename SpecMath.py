@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import SpecRead
 from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
 
-NOISE = 90
+NOISE = 80
 FANO = 0.114
 
 def DFT(fx):
@@ -42,7 +42,7 @@ def sigma(energy):
     return math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))
 
 def gaussianbuilder(channel,energy):
-    sigma = math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))
+    sigma = sigma(energy)
     chEnergy = (channel*GAIN + B)*1000
     A = GAIN/(sigma)*math.sqrt(2*math.pi)
     return A*(math.exp(-(((energy-chEnergy)**2)/(2*(sigma**2)))))
@@ -64,39 +64,46 @@ def getindex(value,array):
 
 def setROI(lookup,xarray,yarray):
     peak_corr = 0
+#    print("---------------------------------------------")
     for peak_corr in range(2):
+#        print("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
         lowx = (lookup - (FWHM))/1000
         highx = (lookup + (FWHM))/1000
+#        print("FWHM: %f\nlowx: %f\nhighx: %f" % (FWHM, lowx,highx))
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
         lowx_idx = idx-1
+#        print("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx
-        ROI = xarray[lowx_idx:highx_idx+1]
-        data = yarray[lowx_idx:highx_idx+1]
+        highx_idx = idx-1
+        ROI = xarray[lowx_idx:highx_idx]
+        data = yarray[lowx_idx:highx_idx]
         ROI = np.asarray(ROI)
         data = np.asarray(data)
         shift = Arithmetic.search_peak(ROI,data)
         lookup = shift[0]*1000
+#        print("iteration: %d PEAK MAX: %f" % (peak_corr,lookup))
+#        print(ROI[0],ROI[-1])
+#    plt.plot(xarray,yarray)
+#    plt.plot(ROI,data)
+#    plt.show()
     return lowx_idx,highx_idx
 
 def getpeakarea(file,lookup,energyaxis):
     Area = 0
     data = SpecRead.getdata(file)
-    ROI = setROI(lookup,energyaxis,data)
-    xdata = energyaxis[ROI[0]:ROI[1]+1]
-    ydata = data[ROI[0]:ROI[1]+1]
+    idx = setROI(lookup,energyaxis,data)
+    xdata = energyaxis[idx[0]:idx[1]]
+    ydata = data[idx[0]:idx[1]]
     for i in range(len(xdata)):
         Area += ydata[i]
     return Area
 
 if __name__=="__main__":
 
-    # THIS GETS A DEFAULT CALIBRATION FROM config.cfg FILE
-    # THIS IS ONLY USEFUL FOR PLOTTING THE GAUSSIANS
     file = SpecRead.input
     calibration = SpecRead.calibrate(file,'data')
     GAIN = calibration[-1]/len(calibration)

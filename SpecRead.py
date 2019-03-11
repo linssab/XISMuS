@@ -2,7 +2,7 @@
 #                                                               #
 #          SPEC READER                                          #
 #                        version: a1.4                          #
-# @author: Sergio Lins                                          #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import sys
@@ -41,15 +41,15 @@ def getheader(mca):
             break
     return ObjectHeader
 
-def getcalibration(self,flag):
+def getcalibration(self,flag=None):
     checker=0
     CalParam=[]
-    if flag == 'file':
+    if flag == None:
         file = open(self)
         line = file.readline()
         for line in file:
-            if "<<CALIBRATION>>" in line and flag == 'file':
-                print("Using calibration data from specfile.")
+            if "<<CALIBRATION>>" in line and flag == None:
+                print("Using calibration data from specfile %s!" % self)
                 checker=1
         file.close()
         if checker == 1:
@@ -104,7 +104,12 @@ def getdata(mca):
 def getchannels(mca):
     return len(getdata(mca))
 
-def calibrate(self,flag):
+# CALIBRATE RETURNS A CALIBRATION CURVE USING CALIBRATION INFORMATION
+# FROM EITHER THE MCA FILE OR FROM 'config.cfg'. PRIORITY IS GIVEN TO 
+# THE MCA FILE CALIBRATION DATA. IT CAN BE OVERRUN USING THE 'data' 
+# FLAG OPTION
+
+def calibrate(self,flag=None):
     param=getcalibration(self,flag)
     x=[]
     y=[]
@@ -118,7 +123,7 @@ def calibrate(self,flag):
     GAIN=coefficients[0]
     B=coefficients[1]
     R=coefficients[2]
-    print("Correlation coefficient R = %f" % R)
+#    print("Correlation coefficient R = %f" % R)
     if flag == 'data':
         n = len(self)
     elif flag == 'file':
@@ -201,5 +206,5 @@ def getdimension():
                 aux = line.split()
                 y = int(aux[1])
             line = file.readline()
-        print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
+#        print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
     return x,y
