@@ -84,7 +84,7 @@ def setROI(lookup,xarray,yarray):
         ROI = np.asarray(ROI)
         data = np.asarray(data)
         shift = Arithmetic.search_peak(ROI,data)
-        lookup = shift[0]*1000
+        if -120 < (shift[0]*1000)-lookup < 100: lookup = shift[0]*1000
 #        print("iteration: %d PEAK MAX: %f" % (peak_corr,lookup))
 #        print(ROI[0],ROI[-1])
 #    plt.plot(xarray,yarray)
@@ -92,9 +92,9 @@ def setROI(lookup,xarray,yarray):
 #    plt.show()
     return lowx_idx,highx_idx
 
-def getpeakarea(file,lookup,energyaxis):
+def getpeakarea(dataarray,lookup,energyaxis):
     Area = 0
-    data = SpecRead.getdata(file)
+    data = dataarray
     idx = setROI(lookup,energyaxis,data)
     xdata = energyaxis[idx[0]:idx[1]]
     ydata = data[idx[0]:idx[1]]
