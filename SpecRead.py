@@ -31,6 +31,40 @@ input=dirname+'Cesareo_1.mca'
 # SELF MEANS THE INPUT CAN BE EITHER A DATA ARRAY OR AN MCA FILE
 # THE FLAG MUST SAY IF THE FILE IS AN MCA 'file' OR A DATA ARRAY 'data'
 
+def RatioMatrixReadFile(ratiofile):
+    Matrix=[]
+    with open (ratiofile,'rt') as in_file:
+        for line in in_file:
+            Matrix.append(line.strip("'\n"))
+        for i in range(len(Matrix)): 
+            Matrix[i]=Matrix[i].split()
+        for j in range(len(Matrix)):
+            for k in range(len(Matrix[j])):
+                if Matrix[j][k].isdigit() == True: Matrix[j][k]=int(Matrix[j][k])
+                else: Matrix[j][k]=1
+        if len(Matrix[-1]) == 0: Matrix[-1]=[1, 1, 1, 1]
+    return Matrix
+
+def RatioMatrixTransform(MatrixList):
+    iterx=0
+    itery=0
+    for i in range(len(MatrixList)):
+        if len(MatrixList[i]) > 1:
+            if MatrixList[i][0] > 0 and MatrixList[i][0] > MatrixList[i-1][0] and MatrixList[i][0] > iterx: iterx=int(MatrixList[i][0])
+        if len(MatrixList[i]) > 1:
+            if MatrixList[i][1] > 0  and MatrixList[i][1] > MatrixList[i-1][1] and MatrixList[i][1] > itery: itery=int(MatrixList[i][1])
+
+    RatesMatrix=np.zeros((iterx+1,itery+1))
+    for i in range(len(MatrixList)):
+        x=int(MatrixList[i][0])
+        y=int(MatrixList[i][1])
+        ka=int(MatrixList[i][2])
+        kb=int(MatrixList[i][3])
+        if kb==0: kb=1
+        RatesMatrix[x,y]=ka/kb
+    return RatesMatrix
+
+
 def getheader(mca):
     ObjectHeader=[]
     file = open(mca)
