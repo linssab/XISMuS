@@ -9,16 +9,18 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from PyMca5.PyMcaMath import SimpleMath
 import SpecMath
+from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
 dirname = "C:/misure/"
 if not os.path.exists(dirname):
     dirname = os.getcwd()
-    print("Workpath is: %s" % dirname)
+    dirname = os.mkdir(dirname + 'xrfscanner')
+    print("Workpath is: {0}".format(dirname))
     if not os.path.exists(dirname):
         raise IOError("File or directory does no exist!")
+else: print("Path found! Working on {0}".format(dirname))
 
 """
 TEST FILE
