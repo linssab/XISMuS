@@ -2,7 +2,7 @@
 #                                                               #
 #          DENSITY MAP GENERATOR                                #
 #                        version: a1.3                          #
-# @author: Sergio Lins                                          #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import sys
@@ -16,6 +16,7 @@ from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
 from PyMca5.PyMcaPhysics import Elements
 import matplotlib.pyplot as plt
 import time
+import cv2
 import math
 
 timer=time.time()
@@ -62,17 +63,17 @@ def plotdensitymap():
         currenty=scan[1]
         currentspectra = SpecRead.updatespectra(spec,dimension)
     print("Execution took %s seconds" % (time.time() - timer))
-    density_map = density_map.astype(np.float64)/density_map.max()
+    density_map = density_map.astype(np.float32)/density_map.max()
     density_map = 255*density_map
-    image = density_map.astype(np.uint8)
-    plt.imshow(density_map, cmap='gray')
+    image = colorize(density_map,'gray')
+    plt.imshow(image, cmap='gray')
     plt.show()
     return image
 
 def plotpeakmap(*args):
     partialtimer = time.time()
     LocalElementList = args
-    colorcode=['green','blue','red']
+    colorcode=['red','green','blue']
     eleenergy = EnergyLib.Energies
     stackimage = colorize(np.zeros([imagex,imagey]))
     for input in range(len(LocalElementList)):
@@ -95,42 +96,75 @@ def plotpeakmap(*args):
                 spec = currentspectra
 #               print("Current X= %d\nCurrent Y= %d" % (currentx,currenty))
 #               print("Current spectra is: %s" % spec)
-                sum = SpecMath.getpeakarea(spec,element,energyaxis)
+                specdata = SpecRead.getdata(spec)
+                sum = SpecMath.getpeakarea(specdata,element,energyaxis)
                 elmap[currentx][currenty] = sum
                 scan = updateposition(scan[0],scan[1])
                 currentx = scan[0]
                 currenty = scan[1]
                 currentspectra = SpecRead.updatespectra(spec,dimension)
-            image = elmap/elmap.max()*255
-            tintimage = colorize(image,colorcode[input])
-            stackimage = tintimage + stackimage
-        print("Execution took %s seconds" % (time.time() - partialtimer))
-        partialtimer = time.time()
+            image = elmap/normalize(energyaxis)*255
+            tintimage = colorize(image,colorcode[input+1])
+            stackimage = cv2.addWeighted(tintimage, 1, stackimage, 1, 0)
+            print("Execution took %s seconds" % (time.time() - partialtimer))
+            partialtimer = time.time()
     plt.imshow(stackimage)
     cax = plt.axes([0,255,1,10])
     plt.colorbar(cax=cax)
     plt.show()
     return stackimage
 
+def normalize(energyaxis):
+    MaxDetectedArea = 0
+    currentspectra = start
+    stackeddata = SpecMath.stacksum(start,dimension)
+    stackedlist = stackeddata.tolist()
+    absenergy = (stackedlist.index(stackeddata.max()))*SpecRead.getgain(start,'data')*1000
+    for iteration in range(dimension):
+        spec = currentspectra
+        specdata = SpecRead.getdata(spec)
+        sum = SpecMath.getpeakarea(specdata,absenergy,energyaxis)
+        if sum > MaxDetectedArea: MaxDetectedArea = sum
+        currentspectra = SpecRead.updatespectra(spec,dimension)
+    return MaxDetectedArea
+        
+
 def colorize(elementmap,color=None):
     R = np.zeros([imagex,imagey])
     G = np.zeros([imagex,imagey])
     B = np.zeros([imagex,imagey])
+    A = np.zeros([imagex,imagey])
     elmap = elementmap
     pixel = []
     myimage = [[]]*(imagex-1)
-    if color == 'blue':
-        B=elementmap
-    elif color == 'red':
-        R=elementmap
+    if color == 'red':
+        R=R+elmap
+        G=G+0
+        B=B+0
+        A=A+255
     elif color == 'green':
-        G=elementmap
+        R=R+0
+        G=G+elmap
+        B=B+0
+        A=A+255
+    elif color == 'blue':
+        R=R+0
+        G=G+0
+        B=B+elmap
+        A=A+255
+    elif color == 'gray':
+        R=R
+        G=G
+        B=B
+        A=A+elmap
     for line in range(imagex-1):    
         for i in range(imagey-1):
-            pixel.append(np.array([R[line][i],G[line][i],B[line][i],255],dtype='float32'))
+            pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],dtype='float32'))
             myimage[line]=np.asarray(pixel,dtype='uint8')
         pixel = []
     image = np.asarray(myimage)
+#    plt.imshow(myimage)
+#    plt.show()
     return image
 
 if __name__=="__main__":
@@ -157,4 +191,8 @@ if __name__=="__main__":
         print("Fetching density map...")
         plotdensitymap()
     if flag1 == '-plotstack':
+        if len(sys.argv) >= 3:
+            flag2 = sys.argv[2]
+        else:
+            flag2 = None
         SpecRead.getstackplot(start,flag2)
