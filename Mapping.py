@@ -75,7 +75,7 @@ def plotdensitymap():
     plt.show()
     return image
 
-def plotpeakmap(*args,ratio=None,plot=None):
+def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
     partialtimer = time.time()
     LocalElementList = args
     colorcode=['red','green','blue']
@@ -83,7 +83,8 @@ def plotpeakmap(*args,ratio=None,plot=None):
     logging.info("Started energy axis calibration")
     energyaxis = SpecRead.calibrate(start,'data')
     logging.info("Finished energy axis calibration")
-    stackimage = colorize(np.zeros([imagex,imagey]))
+    stackimage = colorize(np.zeros([imagex,imagey]),'none')
+    norm = normalize(energyaxis)
     for input in range(len(LocalElementList)):
         Element = LocalElementList[input]
         # STARTS IMAGE ACQUISITION FOR ELEMENT 'Element'
@@ -108,6 +109,7 @@ def plotpeakmap(*args,ratio=None,plot=None):
 #               print("Current spectra is: %s" % spec)
                 specdata = SpecRead.getdata(spec)
                 sum = SpecMath.getpeakarea(specdata,element,energyaxis)
+#                print("SUM={0}".format(sum))
                 elmap[currentx][currenty] = sum
                 
                 if ratio == True:
@@ -126,17 +128,26 @@ def plotpeakmap(*args,ratio=None,plot=None):
             logging.info("Finished iteration process for element {}".format(Element))
             if ratio == True: ratiofile.close()
             logging.info("Started normalizing and coloring step")
-            image = elmap/normalize(energyaxis)*255
-            tintimage = colorize(image,colorcode[input+1])
-            stackimage = cv2.addWeighted(tintimage, 1, stackimage, 1, 0)
+            print("NORM={0}".format(norm))
+            print("{0} MAX={1}".format(Element,elmap.max()))
+            image = elmap/norm*255
+            if enhance == True: image = elmap/elmap.max()*255
+            image = colorize(image,colorcode[input])
+            stackimage = cv2.addWeighted(image, 1, stackimage, 1, 0)
             logging.info("Finished normalizing and coloring step")
             print("Execution took %s seconds" % (time.time() - partialtimer))
             partialtimer = time.time()
     logging.info("Finished map acquisition!")
     if plot == True: 
+        if enhance == True: 
+            hist,bins = np.histogram(stackimage.flatten(),256,[0,256])
+            cdf = hist.cumsum()
+            cdf_norm = cdf * hist.max()/cdf.max()
+            cdf_mask = np.ma.masked_equal(cdf,0)
+            cdf_mask = (cdf_mask - cdf_mask.min())*255/(cdf_mask.max()-cdf_mask.min())
+            cdf = np.ma.filled(cdf_mask,0).astype('uint8')
+            stackimage = cdf[stackimage]
         plt.imshow(stackimage)
-        cax = plt.axes([0,255,1,10])
-        plt.colorbar(cax=cax)
         plt.show()
     return stackimage
 
@@ -145,7 +156,8 @@ def normalize(energyaxis):
     currentspectra = start
     stackeddata = SpecMath.stacksum(start,dimension)
     stackedlist = stackeddata.tolist()
-    absenergy = (stackedlist.index(stackeddata.max()))*SpecRead.getgain(start,'data')*1000
+    absenergy = energyaxis[stackedlist.index(stackeddata.max())] * 1000
+    print("ABSENERGY: {0}".format(absenergy))
     for iteration in range(dimension):
         spec = currentspectra
         specdata = SpecRead.getdata(spec)
@@ -179,10 +191,10 @@ def colorize(elementmap,color=None):
         B=B+elmap
         A=A+255
     elif color == 'gray':
-        R=R
-        G=G
-        B=B
-        A=A+elmap
+        R=R+elmap
+        G=G+elmap
+        B=B+elmap
+        A=A+255
     for line in range(imagex-1):    
         for i in range(imagey-1):
             pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],dtype='float32'))
@@ -216,9 +228,15 @@ if __name__=="__main__":
                 if sys.argv[3] in Elements.ElementList:
                     element2 = sys.argv[3]
                 else: 
-                    raise Exception("%s not an element!" % sys.argv[3])
-                    logging.exception("{0} is not a chemical element!".format(sys.argv[3]))
-            plotpeakmap(element1,element2,plot=True)
+                    if '-enhance' in sys.argv:
+                        pass
+                    else:
+                        raise Exception("%s not an element!" % sys.argv[3])
+                        logging.exception("{0} is not a chemical element!".format(sys.argv[3]))
+            if '-enhance' in sys.argv:
+                plotpeakmap(element1,element2,plot=True,enhance=True)
+            else:
+                plotpeakmap(element1,element2,plot=True)
         else: 
             raise Exception("No element input!")
             logging.exception("No element input!")
