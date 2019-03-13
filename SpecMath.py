@@ -1,14 +1,13 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a0.4                          #
+#                        version: a1.0                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import os
 import numpy as np
 import math
-from scipy.fftpack import fft
 import matplotlib.pyplot as plt
 import SpecRead
 from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
@@ -16,14 +15,28 @@ from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
 NOISE = 80
 FANO = 0.114
 
-def DFT(fx):
-    Fu = np.fft.fft(fx)
-    Power = np.abs(Fu)**2
-    FuFilt = np.fft.ifft(Fu)
-    plt.plot(fx)
-    plt.plot(FuFilt)
-    plt.show()
-    return FuFilt
+def function(ydata,x):
+    return ydata[x]
+
+def dif2(ydata,x,gain):
+    value = (function(ydata, x + 2*gain) - 2*function(ydata, x + gain) + function(ydata, x)) / (gain * gain)
+    return value
+
+def plotdif2(ydata,xdata,gain,ROI):
+    dif2curve = []
+    xinterval = xdata[ROI[0]:ROI[1]]
+    print("xinterval = {0}".format(xinterval))
+    print(len(xinterval))
+    yinterval = ydata[ROI[0]-2:ROI[1]+2]
+    print("yinterval = {0}".format(yinterval))
+    print(len(yinterval))
+    for x in range(len(xinterval)):
+        dif2curve.append(dif2(yinterval,x,1))
+#    plt.plot(xinterval,dif2curve)
+#    yinterval = ydata[ROI[0]:ROI[1]]
+#    plt.plot(xinterval,yinterval)
+#    plt.show()
+    return dif2curve
 
 def stacksum(firstspec,dimension):
     " DIMENSION STANDS FOR THE MAP DIMENSION, LINES*ROWS (OR THE NUMBER OF FILES) "
@@ -84,7 +97,7 @@ def setROI(lookup,xarray,yarray):
         ROI = np.asarray(ROI)
         data = np.asarray(data)
         shift = Arithmetic.search_peak(ROI,data)
-        if -120 < (shift[0]*1000)-lookup < 100: lookup = shift[0]*1000
+        if -60 < (shift[0]*1000)-lookup < 60: lookup = shift[0]*1000
 #       print("iteration: %d PEAK MAX: %f" % (peak_corr,lookup))
 #        print(ROI[0],ROI[-1])
 #    plt.plot(xarray,yarray)
@@ -103,8 +116,11 @@ def getpeakarea(dataarray,lookup,energyaxis):
     return Area
 
 if __name__=="__main__":
-
-    file = SpecRead.input
-    calibration = SpecRead.calibrate(file,'data')
-    GAIN = calibration[-1]/len(calibration)
-    B = calibration[0]
+    dirname = os.path.join('C:/misure/')
+    file = dirname+'Cesareo_200.mca'
+    xdata = SpecRead.calibrate(file,'data')
+    ydata = SpecRead.getdata(file)
+    gain = SpecRead.getgain(file,'data')
+    lookup = 8110
+    ROI = setROI(lookup,xdata,ydata)
+    curve = plotdif2(ydata,xdata,gain,ROI)
