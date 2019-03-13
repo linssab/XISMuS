@@ -9,3 +9,6 @@ This step is not yet optimized and still requires a great deal of user interacti
 At least, type in your prompt window (cmd on Windows) `python -Mapping.py -help` to get the usage options.
 _*Mapping.py*_ can provide elemental mapping of any single chemical element, density map and stack plot of all spectrum.
 To save any of the produced images, simply click on the save icon, in the lower right corner of the plot window.
+
+<img src="http://latex.codecogs.com/gif.latex?k\alpha" border="0"/> or
+<img src="http://latex.codecogs.com/gif.latex?l\alpha" border="0"/>
