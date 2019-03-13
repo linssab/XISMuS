@@ -85,7 +85,7 @@ def setROI(lookup,xarray,yarray):
         data = np.asarray(data)
         shift = Arithmetic.search_peak(ROI,data)
         if -120 < (shift[0]*1000)-lookup < 100: lookup = shift[0]*1000
-#        print("iteration: %d PEAK MAX: %f" % (peak_corr,lookup))
+#       print("iteration: %d PEAK MAX: %f" % (peak_corr,lookup))
 #        print(ROI[0],ROI[-1])
 #    plt.plot(xarray,yarray)
 #    plt.plot(ROI,data)

@@ -124,6 +124,8 @@ def getcalibration(self,flag=None):
     else: raise IOError("No calibration data available! Or 'config.cfg' does not exist!")
     return CalParam
 
+Parameters = getcalibration(input,'data')
+
 def getdata(mca):
     ObjectData=[]
     file = open(mca)
@@ -146,7 +148,10 @@ def getchannels(mca):
 # FLAG OPTION
 
 def calibrate(self,flag=None):
-    param=getcalibration(self,flag)
+    if flag == 'data':
+        param = Parameters
+    else:
+        param = getcalibration(self,flag)
     x=[]
     y=[]
     for i in range(len(param)):
