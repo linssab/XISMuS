@@ -32,10 +32,10 @@ def plotdif2(ydata,xdata,gain,ROI):
     print(len(yinterval))
     for x in range(len(xinterval)):
         dif2curve.append(dif2(yinterval,x,1))
-#    plt.plot(xinterval,dif2curve)
-#    yinterval = ydata[ROI[0]:ROI[1]]
-#    plt.plot(xinterval,yinterval)
-#    plt.show()
+    plt.plot(xinterval,dif2curve)
+    yinterval = ydata[ROI[0]:ROI[1]]
+    plt.plot(xinterval,yinterval)
+    plt.show()
     return dif2curve
 
 def stacksum(firstspec,dimension):
@@ -121,6 +121,6 @@ if __name__=="__main__":
     xdata = SpecRead.calibrate(file,'data')
     ydata = SpecRead.getdata(file)
     gain = SpecRead.getgain(file,'data')
-    lookup = 8110
+    lookup = 4200
     ROI = setROI(lookup,xdata,ydata)
     curve = plotdif2(ydata,xdata,gain,ROI)

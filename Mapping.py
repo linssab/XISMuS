@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          XRF MAP GENERATOR                                    #
-#                        version: a1.4.0                        #
+#                        version: a1.4.1                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -87,6 +87,7 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
     norm = normalize(energyaxis)
     for input in range(len(LocalElementList)):
         Element = LocalElementList[input]
+        
         # STARTS IMAGE ACQUISITION FOR ELEMENT 'Element'
         
         if Element in Elements.ElementList:
