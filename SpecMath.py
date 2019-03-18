@@ -8,8 +8,10 @@
 import os
 import numpy as np
 import math
+import scipy.signal
 import matplotlib.pyplot as plt
 import SpecRead
+import EnergyLib
 from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
 
 NOISE = 80
@@ -22,20 +24,19 @@ def dif2(ydata,x,gain):
     value = (function(ydata, x + 2*gain) - 2*function(ydata, x + gain) + function(ydata, x)) / (gain * gain)
     return value
 
-def plotdif2(ydata,xdata,gain,ROI):
+def getdif2(ydata,xdata,gain):
     dif2curve = []
-    xinterval = xdata[ROI[0]:ROI[1]]
-    print("xinterval = {0}".format(xinterval))
-    print(len(xinterval))
-    yinterval = ydata[ROI[0]-2:ROI[1]+2]
-    print("yinterval = {0}".format(yinterval))
-    print(len(yinterval))
+    xinterval = xdata
+#    print("xinterval = {0}".format(xinterval))
+    yinterval = np.pad(ydata,2,'edge')
+#    print("yinterval = {0}".format(yinterval))
     for x in range(len(xinterval)):
-        dif2curve.append(dif2(yinterval,x,1))
+        difvalue = dif2(yinterval,x,1)
+        dif2curve.append(difvalue)
     plt.plot(xinterval,dif2curve)
-    yinterval = ydata[ROI[0]:ROI[1]]
-    plt.plot(xinterval,yinterval)
-    plt.show()
+#    yinterval = yinterval[2:-2]
+#    plt.plot(xinterval,yinterval)
+#    plt.show()
     return dif2curve
 
 def stacksum(firstspec,dimension):
@@ -75,52 +76,64 @@ def getindex(value,array):
     ydata = array.tolist()
     return ydata.index(value)
 
-def setROI(lookup,xarray,yarray):
+def setROI(lookup,xarray,yarray,isapeak=True):
+    lookup = int(lookup)
     peak_corr = 0
-#    print("---------------------------------------------")
-    for peak_corr in range(2):
-#        print("lookup: %d" % lookup)
+    print("-"*51)
+    for peak_corr in range(3):
+        print("-"*20 + "iteration {0}".format(peak_corr) + "-"*20)
+        print("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
         lowx = (lookup - (FWHM))/1000
         highx = (lookup + (FWHM))/1000
-#        print("FWHM: %f\nlowx: %f\nhighx: %f" % (FWHM, lowx,highx))
+        print("FWHM: %f\nlowx: %f\nhighx: %f" % (FWHM, lowx,highx))
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
-        lowx_idx = idx-1
-#        print("lowx_idx: %d" % lowx_idx)
+        lowx_idx = idx-2
+        print("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx-1
+        highx_idx = idx+2
+        print("highx_idx: %d" % highx_idx)
         ROI = xarray[lowx_idx:highx_idx]
         data = yarray[lowx_idx:highx_idx]
-        ROI = np.asarray(ROI)
-        data = np.asarray(data)
         shift = Arithmetic.search_peak(ROI,data)
-        if -60 < (shift[0]*1000)-lookup < 60: lookup = shift[0]*1000
-#       print("iteration: %d PEAK MAX: %f" % (peak_corr,lookup))
-#        print(ROI[0],ROI[-1])
+        print(shift[0])
+        if -120 < (shift[0]*1000)-lookup < 120:
+            if (shift[0]*1000)-lookup == 0: break
+            lookup = shift[0]*1000
+            peak_corr = 0
+            print("GAP IS LESSER THAN 120eV!")
+        else: 
+            print(" difference is: {0}".format((shift[0]*1000)-lookup))
+            isapeak = False
+            break
+        print(ROI[0],ROI[-1])
 #    plt.plot(xarray,yarray)
 #    plt.plot(ROI,data)
 #    plt.show()
-    return lowx_idx,highx_idx
+    return lowx_idx,highx_idx,isapeak
 
-def getpeakarea(dataarray,lookup,energyaxis):
+def getpeakarea(lookup,data,energyaxis,svg=True):
     Area = 0
-    data = dataarray
+    if svg == True:
+        data = scipy.signal.savgol_filter(\
+                data,5,3,deriv=0,delta=1,axis=0,mode="interp",cval=0.0)
     idx = setROI(lookup,energyaxis,data)
     xdata = energyaxis[idx[0]:idx[1]]
     ydata = data[idx[0]:idx[1]]
-    for i in range(len(xdata)):
-        Area += ydata[i]
+    if idx[2] == True:
+        for i in range(len(xdata)):
+            Area += ydata[i]
+    else: print("{0} has no peak!".format(lookup))
     return Area
 
 if __name__=="__main__":
     dirname = os.path.join('C:/misure/')
     file = dirname+'Cesareo_200.mca'
-    xdata = SpecRead.calibrate(file,'data')
+    xdata = SpecRead.calibrate(file,'file')
     ydata = SpecRead.getdata(file)
     gain = SpecRead.getgain(file,'data')
-    lookup = 4200
-    ROI = setROI(lookup,xdata,ydata)
-    curve = plotdif2(ydata,xdata,gain,ROI)
+    lookup = 11939
+    print(getpeakarea(lookup,ydata,xdata,svg=True))
