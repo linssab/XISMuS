@@ -198,7 +198,7 @@ def getplot(mca):
     return 0
 
 def getstackplot(mca,*args):
-    energy = calibrate(mca,'data')
+    energy = calibrate(mca,'file')
     size = getdimension()
     dimension = size[0]*size[1]
     data = SpecMath.stacksum(mca,dimension)
