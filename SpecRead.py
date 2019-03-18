@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a1.4                          #
+#                        version: a1.5                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -43,23 +43,24 @@ def RatioMatrixReadFile(ratiofile):
                 if Matrix[j][k].isdigit() == True: Matrix[j][k]=int(Matrix[j][k])
                 else: Matrix[j][k]=1
         if len(Matrix[-1]) == 0: Matrix[-1]=[1, 1, 1, 1]
+    Matrix = np.asarray(Matrix)
     return Matrix
 
-def RatioMatrixTransform(MatrixList):
+def RatioMatrixTransform(MatrixArray):
     iterx=0
     itery=0
-    for i in range(len(MatrixList)):
-        if len(MatrixList[i]) > 1:
-            if MatrixList[i][0] > 0 and MatrixList[i][0] > MatrixList[i-1][0] and MatrixList[i][0] > iterx: iterx=int(MatrixList[i][0])
-        if len(MatrixList[i]) > 1:
-            if MatrixList[i][1] > 0  and MatrixList[i][1] > MatrixList[i-1][1] and MatrixList[i][1] > itery: itery=int(MatrixList[i][1])
+    for i in range(len(MatrixArray)):
+        if len(MatrixArray[i]) > 1:
+            if MatrixArray[i][0] > 0 and MatrixArray[i][0] > MatrixArray[i-1][0] and MatrixArray[i][0] > iterx: iterx=int(MatrixArray[i][0])
+        if len(MatrixArray[i]) > 1:
+            if MatrixArray[i][1] > 0  and MatrixArray[i][1] > MatrixArray[i-1][1] and MatrixArray[i][1] > itery: itery=int(MatrixArray[i][1])
 
     RatesMatrix=np.zeros((iterx+1,itery+1))
-    for i in range(len(MatrixList)):
-        x=int(MatrixList[i][0])
-        y=int(MatrixList[i][1])
-        ka=int(MatrixList[i][2])
-        kb=int(MatrixList[i][3])
+    for i in range(len(MatrixArray)):
+        x=int(MatrixArray[i][0])
+        y=int(MatrixArray[i][1])
+        ka=int(MatrixArray[i][2])
+        kb=int(MatrixArray[i][3])
         if kb==0: kb=1
         RatesMatrix[x,y]=ka/kb
     return RatesMatrix
@@ -127,6 +128,7 @@ def getcalibration(self,flag=None):
 Parameters = getcalibration(input,'data')
 
 def getdata(mca):
+    
     ObjectData=[]
     file = open(mca)
     line = file.readline()
@@ -137,10 +139,8 @@ def getdata(mca):
         ObjectData.append(int(line))
         line = file.readline()
     file.close()
-    return ObjectData
-
-def getchannels(mca):
-    return len(getdata(mca))
+    Data = np.asarray(ObjectData)
+    return Data
 
 # CALIBRATE RETURNS A CALIBRATION CURVE USING CALIBRATION INFORMATION
 # FROM EITHER THE MCA FILE OR FROM 'config.cfg'. PRIORITY IS GIVEN TO 
@@ -169,16 +169,15 @@ def calibrate(self,flag=None):
         n = len(self)
     elif flag == 'file':
         n = len(getdata(self))
-    n = getchannels(self)
-    curve = np.zeros([n])
-    curve=[]
+    curve = []
     for i in range(n):
         curve.append((GAIN*i)+B)
+    curve = np.asarray(curve)
     return curve
 
 def getgain(self,flag):
-    curve=calibrate(self,flag)
-    n=len(curve)
+    curve = calibrate(self,flag)
+    n = len(curve)
     GAIN=0
     for i in range(n-1):
         GAIN+=curve[i+1]-curve[i]
@@ -221,7 +220,7 @@ def updatespectra(file,size):
         if len(name[i]) > 6: prefix = name[i]
     if index < size: index = str(index+1)
     else: index = str(size)
-    newfile=str(prefix+'_'+index+'.'+extension)
+    newfile = str(prefix+'_'+index+'.'+extension)
     return newfile
 
 def getdimension():
