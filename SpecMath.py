@@ -44,10 +44,10 @@ def stacksum(firstspec,dimension):
     " SO THE FUNCTION GETS THE TOTAL NUMBER OF SPECTRA TO BE STACKED "
     aux = SpecRead.getdata(firstspec)
     currentspectra = firstspec
-    Stack = np.array([len(aux)])
+    Stack = np.zeros([len(aux)])
     for i in range(dimension):
         spec = currentspectra
-        data = np.asarray(SpecRead.getdata(spec))
+        data = SpecRead.getdata(spec)
         Stack = Stack + data
         currentspectra = SpecRead.updatespectra(spec,dimension)
     return Stack
