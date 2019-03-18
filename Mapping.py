@@ -80,8 +80,9 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
     LocalElementList = args
     colorcode=['red','green','blue']
     eleenergy = EnergyLib.Energies
+    logging.info(eleenergy)
     logging.info("Started energy axis calibration")
-    energyaxis = SpecRead.calibrate(start,'data')
+    energyaxis = SpecRead.calibrate(start,'file')
     logging.info("Finished energy axis calibration")
     stackimage = colorize(np.zeros([imagex,imagey]),'none')
     norm = normalize(energyaxis)
@@ -93,8 +94,10 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
         if Element in Elements.ElementList:
             logging.info("Started acquisition of {0} map".format(Element))
             print("Fetching map image for %s..." % Element)
-            pos = Elements.ElementList.index(Element) 
+            pos = Elements.ElementList.index(Element)
             element = eleenergy[pos]*1000
+            logging.warning("Energy {0} for element {1} being used as lookup!"\
+                    .format(element,Element))
             currentspectra = start
             elmap = np.zeros([imagex,imagey])
             scan=([0,0])
@@ -103,21 +106,24 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
             if ratio == True: 
                 ratiofile = open('ratio.txt','w+')
                 logging.warning("Ratio map will be generated!")
+                kbindex = Elements.ElementList.index(Element) 
+                kbenergy = EnergyLib.kbEnergies[kbindex]*1000
+                logging.warning("Energy {0} for element {1} being used as lookup!"\
+                        .format(kbenergy,Element))
+
             logging.info("Starting iteration over spectra...")
             for ITERATION in range(dimension):
                 spec = currentspectra
 #               print("Current X= %d\nCurrent Y= %d" % (currentx,currenty))
 #               print("Current spectra is: %s" % spec)
                 specdata = SpecRead.getdata(spec)
-                sum = SpecMath.getpeakarea(specdata,element,energyaxis)
+                sum = SpecMath.getpeakarea(element,specdata,energyaxis)
 #                print("SUM={0}".format(sum))
                 elmap[currentx][currenty] = sum
                 
                 if ratio == True:
                     ka = sum
-                    kbindex = Elements.ElementList.index(Element) 
-                    kbenergy = EnergyLib.kbEnergies[kbindex]*1000
-                    kb = SpecMath.getpeakarea(specdata,kbenergy,energyaxis)
+                    kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis)
                     row = scan[0]
                     column = scan[1]
                     ratiofile.write("%d\t%d\t%d\t%d\n" % (row, column,ka, kb))
@@ -162,7 +168,7 @@ def normalize(energyaxis):
     for iteration in range(dimension):
         spec = currentspectra
         specdata = SpecRead.getdata(spec)
-        sum = SpecMath.getpeakarea(specdata,absenergy,energyaxis)
+        sum = SpecMath.getpeakarea(absenergy,specdata,energyaxis)
         if sum > MaxDetectedArea: MaxDetectedArea = sum
         currentspectra = SpecRead.updatespectra(spec,dimension)
     return MaxDetectedArea
