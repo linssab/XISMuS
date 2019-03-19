@@ -13,19 +13,17 @@ import SpecMath
 from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
-dirname = "C:/misure/"
+dirname = "C:/campioneperu/"
 if not os.path.exists(dirname):
-    dirname = os.getcwd()
-    dirname = os.mkdir(dirname + 'xrfscanner')
-    print("Workpath is: {0}".format(dirname))
-    if not os.path.exists(dirname):
+    try:
+        dirname = os.getcwd()
+        dirname = os.mkdir(dirname + 'xrfscanner')
+        print("Workpath is: {0}".format(dirname))
+    except: 
         raise IOError("File or directory does no exist!")
 else: print("Path found! Working on {0}".format(dirname))
 
-"""
-TEST FILE
-"""
-input=dirname+'Cesareo_1.mca'
+input = dirname+'Cesareo_1.mca'
 
 # MCA MEANS THE INPUT MUST BE AN MCA FILE
 # SELF MEANS THE INPUT CAN BE EITHER A DATA ARRAY OR AN MCA FILE
