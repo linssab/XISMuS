@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          XRF MAP GENERATOR                                    #
-#                        version: a1.4.1                        #
+#                        version: a1.4.2                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -103,6 +103,7 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
             scan=([0,0])
             currentx=scan[0]
             currenty=scan[1]
+            
             if ratio == True: 
                 ratiofile = open('ratio.txt','w+')
                 logging.warning("Ratio map will be generated!")
@@ -126,7 +127,7 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
                     kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis)
                     row = scan[0]
                     column = scan[1]
-                    ratiofile.write("%d\t%d\t%d\t%d\n" % (row, column,ka, kb))
+                    ratiofile.write("%d\t%d\t%d\t%d\n" % (row, column, ka, kb))
 
                 scan = updateposition(scan[0],scan[1])
                 currentx = scan[0]
@@ -134,6 +135,7 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
                 currentspectra = SpecRead.updatespectra(spec,dimension)
             logging.info("Finished iteration process for element {}".format(Element))
             if ratio == True: ratiofile.close()
+            
             logging.info("Started normalizing and coloring step")
             print("NORM={0}".format(norm))
             print("{0} MAX={1}".format(Element,elmap.max()))
@@ -144,7 +146,9 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
             logging.info("Finished normalizing and coloring step")
             print("Execution took %s seconds" % (time.time() - partialtimer))
             partialtimer = time.time()
+    
     logging.info("Finished map acquisition!")
+    
     if plot == True: 
         if enhance == True: 
             hist,bins = np.histogram(stackimage.flatten(),256,[0,256])

@@ -34,9 +34,9 @@ def getdif2(ydata,xdata,gain):
         difvalue = dif2(yinterval,x,1)
         dif2curve.append(difvalue)
     plt.plot(xinterval,dif2curve)
-#    yinterval = yinterval[2:-2]
-#    plt.plot(xinterval,yinterval)
-#    plt.show()
+    yinterval = yinterval[2:-2]
+    plt.plot(xinterval,yinterval)
+    plt.show()
     return dif2curve
 
 def stacksum(firstspec,dimension):
@@ -90,23 +90,23 @@ def setROI(lookup,xarray,yarray,isapeak=True):
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
-        lowx_idx = idx-2
+        lowx_idx = idx-1
         print("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx+2
+        highx_idx = idx+1
         print("highx_idx: %d" % highx_idx)
         ROI = xarray[lowx_idx:highx_idx]
         data = yarray[lowx_idx:highx_idx]
         shift = Arithmetic.search_peak(ROI,data)
         print(shift[0])
-        if -120 < (shift[0]*1000)-lookup < 120:
+        if 1.1*(-FWHM/2) < (shift[0]*1000)-lookup < 1.1*(FWHM/2):
             if (shift[0]*1000)-lookup == 0: break
             lookup = shift[0]*1000
             peak_corr = 0
-            print("GAP IS LESSER THAN 120eV!")
+            print("GAP IS LESSER THAN {0}!".format(FWHM/2))
         else: 
-            print(" difference is: {0}".format((shift[0]*1000)-lookup))
+            print("Difference is: {0}".format((shift[0]*1000)-lookup))
             isapeak = False
             break
         print(ROI[0],ROI[-1])
@@ -134,6 +134,9 @@ if __name__=="__main__":
     file = dirname+'Cesareo_200.mca'
     xdata = SpecRead.calibrate(file,'file')
     ydata = SpecRead.getdata(file)
+    ydata = scipy.signal.savgol_filter(\
+            ydata,5,3,deriv=0,delta=1,axis=-1,mode="interp",cval=0.0)
     gain = SpecRead.getgain(file,'data')
-    lookup = 11939
+    lookup = 8040
     print(getpeakarea(lookup,ydata,xdata,svg=True))
+    getdif2(ydata,xdata,1)
