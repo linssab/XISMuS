@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          XRF MAP GENERATOR                                    #
-#                        version: a1.4.2                        #
+#                        version: a1.5.0                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -19,7 +19,7 @@ import math
 import logging
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',
-filename = 'process.log',level = logging.INFO)
+filename = 'process.log',level = logging.DEBUG)
 f=open('process.log','w')
 f.truncate(0)
 logging.info('*'* 10 + ' MAPPING.PY LOG START ' + '*'* 10)
@@ -75,7 +75,7 @@ def plotdensitymap():
     plt.show()
     return image
 
-def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
+def plotpeakmap(*args,ratio=None,plot=None,normalize=False):
     partialtimer = time.time()
     LocalElementList = args
     colorcode=['red','green','blue']
@@ -85,7 +85,13 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
     energyaxis = SpecRead.calibrate(start,'file')
     logging.info("Finished energy axis calibration")
     stackimage = colorize(np.zeros([imagex,imagey]),'none')
-    norm = normalize(energyaxis)
+    if normalize == True: 
+        norm_timer = time.time()
+        logging.info("Searching for largest peak area in batch!")
+        logging.getLogger().setLevel(logging.INFO)
+        norm = normalize_fnc(energyaxis)
+        logging.info("Process took: {0}s\n".format(time.time()-norm_timer))
+        logging.getLogger().setLevel(logging.DEBUG)
     for input in range(len(LocalElementList)):
         Element = LocalElementList[input]
         
@@ -115,12 +121,15 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
             logging.info("Starting iteration over spectra...")
             for ITERATION in range(dimension):
                 spec = currentspectra
+                logging.info("Specfile being processed is: {0}".format(spec))
 #               print("Current X= %d\nCurrent Y= %d" % (currentx,currenty))
 #               print("Current spectra is: %s" % spec)
                 specdata = SpecRead.getdata(spec)
                 sum = SpecMath.getpeakarea(element,specdata,energyaxis)
 #                print("SUM={0}".format(sum))
                 elmap[currentx][currenty] = sum
+                logging.info("File {0} has a peak area of {1} for element {2}\n"\
+                        .format(spec,sum,Element))
                 
                 if ratio == True:
                     ka = sum
@@ -136,21 +145,31 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
             logging.info("Finished iteration process for element {}".format(Element))
             if ratio == True: ratiofile.close()
             
-            logging.info("Started normalizing and coloring step")
-            print("NORM={0}".format(norm))
-            print("{0} MAX={1}".format(Element,elmap.max()))
-            image = elmap/norm*255
-            if enhance == True: image = elmap/elmap.max()*255
+            if normalize == True:
+                logging.info("Normalizing image...")
+                logging.warning("Maximum detected area is: {0}".format(norm))
+                print("NORM AREA = {0}".format(norm))
+                logging.warning("{0} maximum detected area is: {1}".format(Element,elmap.max()))
+                print("{0} MAX AREA = {1}".format(Element,elmap.max()))
+                image = elmap/norm*255
+
+            elif normalize == False: 
+                try:
+                    image = elmap/elmap.max()*255
+                except ValueError: 
+                    logging.warning("Element {0} not present!".format(Element))
+                    pass
+            logging.info("Started coloring step")
             image = colorize(image,colorcode[input])
             stackimage = cv2.addWeighted(image, 1, stackimage, 1, 0)
-            logging.info("Finished normalizing and coloring step")
+            logging.info("Finished coloring step")
             print("Execution took %s seconds" % (time.time() - partialtimer))
             partialtimer = time.time()
     
     logging.info("Finished map acquisition!")
     
     if plot == True: 
-        if enhance == True: 
+        if normalize == True: 
             hist,bins = np.histogram(stackimage.flatten(),256,[0,256])
             cdf = hist.cumsum()
             cdf_norm = cdf * hist.max()/cdf.max()
@@ -162,7 +181,7 @@ def plotpeakmap(*args,ratio=None,plot=None,enhance=None):
         plt.show()
     return stackimage
 
-def normalize(energyaxis):
+def normalize_fnc(energyaxis):
     MaxDetectedArea = 0
     currentspectra = start
     stackeddata = SpecMath.stacksum(start,dimension)
@@ -219,7 +238,9 @@ def colorize(elementmap,color=None):
 if __name__=="__main__":
     flag1 = sys.argv[1]
     if flag1 == '-help':
-        print("USAGE: '-findelement x y'; plots a 2D map of elements 'x' and/or 'y'\n\
+        print("\nUSAGE: '-findelement x y'; plots a 2D map of elements 'x' and/or 'y'\
+additionally, you can type '-normalize' when finding one element to generate\
+an image where the element is displeyd in proportion to the most abundant element.\n\
        '-plotmap'; plots a density map\n\
        '-plotstack'; plots the sum spectra of all sample. Optional: you can add '-semilog' to plot it in semilog mode.\n\
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
@@ -239,13 +260,13 @@ if __name__=="__main__":
                 if sys.argv[3] in Elements.ElementList:
                     element2 = sys.argv[3]
                 else: 
-                    if '-enhance' in sys.argv:
+                    if '-normalize' in sys.argv:
                         pass
                     else:
                         raise Exception("%s not an element!" % sys.argv[3])
                         logging.exception("{0} is not a chemical element!".format(sys.argv[3]))
-            if '-enhance' in sys.argv:
-                plotpeakmap(element1,element2,plot=True,enhance=True)
+            if '-normalize' in sys.argv:
+                plotpeakmap(element1,element2,plot=True,normalize=True)
             else:
                 plotpeakmap(element1,element2,plot=True)
         else: 
