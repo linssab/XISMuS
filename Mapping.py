@@ -24,7 +24,6 @@ f=open('process.log','w')
 f.truncate(0)
 logging.info('*'* 10 + ' MAPPING.PY LOG START ' + '*'* 10)
 timer=time.time()
-# FOR NOW THE STARTING SPECTRA MUST BE GIVEN MANUALLY IN SpecRead.py FILE
 start = SpecRead.input
 
 imagsize = SpecRead.getdimension()
@@ -36,16 +35,10 @@ def updateposition(a,b):
     currentx=a
     currenty=b
     if currenty == imagey-1:
-#        print("We reached the end of the line, y= %d" % currenty)
         currenty=0
-#        print("Now we reset the column, y= %d" % currenty)
         currentx+=1
-#        print("And last we move to the next line, x= %d" % currentx)
     else:
         currenty+=1
-#        print("We are still in the middle of the line, y+1 = %d" % currenty)
-#    if currentx == imagex-1 and currenty == imagey-1:
-#        print("END OF IMAGE")
     actual=([currentx,currenty])
     return actual
 
@@ -61,7 +54,7 @@ def plotdensitymap():
 #        print("Current X= %d\nCurrent Y= %d" % (currentx,currenty))
 #        print("Current spectra is: %s" % spec)
         sum = SpecRead.getsum(spec)
-        density_map[currentx][currenty]=sum          #_update matrix
+        density_map[currentx][currenty] = sum
         scan=updateposition(scan[0],scan[1])
         currentx=scan[0]
         currenty=scan[1]
@@ -75,7 +68,9 @@ def plotdensitymap():
     plt.show()
     return image
 
-def plotpeakmap(*args,ratio=None,plot=None,normalize=False):
+def plotpeakmap(*args,ratio=SpecRead.ratio,plot=None,\
+        normalize=SpecRead.enhance,svg=SpecRead.svg):
+    
     partialtimer = time.time()
     LocalElementList = args
     colorcode=['red','green','blue']
@@ -85,6 +80,7 @@ def plotpeakmap(*args,ratio=None,plot=None,normalize=False):
     energyaxis = SpecRead.calibrate(start,'file')
     logging.info("Finished energy axis calibration")
     stackimage = colorize(np.zeros([imagex,imagey]),'none')
+    
     if normalize == True: 
         norm_timer = time.time()
         logging.info("Searching for largest peak area in batch!")
@@ -92,10 +88,11 @@ def plotpeakmap(*args,ratio=None,plot=None,normalize=False):
         norm = normalize_fnc(energyaxis)
         logging.info("Process took: {0}s\n".format(time.time()-norm_timer))
         logging.getLogger().setLevel(logging.DEBUG)
+    
     for input in range(len(LocalElementList)):
         Element = LocalElementList[input]
         
-        # STARTS IMAGE ACQUISITION FOR ELEMENT 'Element'
+        #    STARTS IMAGE ACQUISITION FOR ELEMENT 'Element'    #
         
         if Element in Elements.ElementList:
             logging.info("Started acquisition of {0} map".format(Element))
@@ -106,43 +103,42 @@ def plotpeakmap(*args,ratio=None,plot=None,normalize=False):
                     .format(element,Element))
             currentspectra = start
             elmap = np.zeros([imagex,imagey])
-            scan=([0,0])
-            currentx=scan[0]
-            currenty=scan[1]
+            scan = ([0,0])
+            currentx = scan[0]
+            currenty = scan[1]
             
             if ratio == True: 
                 ratiofile = open('ratio.txt','w+')
+                logging.warning("Background stripping is ON! - slow -")
                 logging.warning("Ratio map will be generated!")
-                kbindex = Elements.ElementList.index(Element) 
+                kbindex = Elements.ElementList.index(Element)
                 kbenergy = EnergyLib.kbEnergies[kbindex]*1000
-                logging.warning("Energy {0} for element {1} being used as lookup!"\
+                logging.warning("Energy {0}eV for element {1} being used as lookup!"\
                         .format(kbenergy,Element))
 
-            logging.info("Starting iteration over spectra...")
+            logging.info("Starting iteration over spectra...\n")
             for ITERATION in range(dimension):
                 spec = currentspectra
-                logging.info("Specfile being processed is: {0}".format(spec))
-#               print("Current X= %d\nCurrent Y= %d" % (currentx,currenty))
-#               print("Current spectra is: %s" % spec)
+                logging.info("Specfile being processed is: {0}\n".format(spec))
                 specdata = SpecRead.getdata(spec)
-                sum = SpecMath.getpeakarea(element,specdata,energyaxis)
-#                print("SUM={0}".format(sum))
+                background = SpecMath.peakstrip(specdata,24,3)
+                sum = SpecMath.getpeakarea(element,specdata,energyaxis,background,svg)
                 elmap[currentx][currenty] = sum
-                logging.info("File {0} has a peak area of {1} for element {2}\n"\
-                        .format(spec,sum,Element))
-                
+               
                 if ratio == True:
                     ka = sum
-                    kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis)
+                    kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg)
                     row = scan[0]
                     column = scan[1]
-                    ratiofile.write("%d\t%d\t%d\t%d\n" % (row, column, ka, kb))
-
+                    ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
+                    logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
+                             .format(spec,ka,kb,Element))
+                
                 scan = updateposition(scan[0],scan[1])
                 currentx = scan[0]
                 currenty = scan[1]
                 currentspectra = SpecRead.updatespectra(spec,dimension)
-            logging.info("Finished iteration process for element {}".format(Element))
+            logging.info("Finished iteration process for element {}\n".format(Element))
             if ratio == True: ratiofile.close()
             
             if normalize == True:
@@ -293,12 +289,12 @@ an image where the element is displeyd in proportion to the most abundant elemen
                 if sys.argv[3] in Elements.ElementList:
                     element2 = sys.argv[3]
                 else: raise Exception("%s not an element!" % sys.argv[3])
-            plotpeakmap(element1,element2,ratio=True)
+#            plotpeakmap(element1,element2,ratio=True)
             ratiofile = 'ratio.txt'
             ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
             ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
-            #ratioimage = colorize(ratiomatrix,'gray')
-            #cv2.addWeighted(ratioimage, 1, ratioimage, 0, 0)
+#            ratioimage = colorize(ratiomatrix,'gray')
+#            cv2.addWeighted(ratioimage, 1, ratioimage, 0, 0)
             plt.imshow(ratiomatrix,cmap='gray')
             plt.show()
         else: raise Exception("No element input!")
