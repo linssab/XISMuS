@@ -1,13 +1,14 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a1.5                          #
+#                        version: a1.6                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import sys
 import os
 import numpy as np
+import logging
 import matplotlib.pyplot as plt
 import SpecMath
 from PyMca5.PyMcaMath import SimpleMath
@@ -24,6 +25,9 @@ if not os.path.exists(dirname):
 else: print("Path found! Working on {0}".format(dirname))
 
 input = dirname+'Cesareo_1.mca'
+svg = True
+ratio = True
+enhance = False
 
 # MCA MEANS THE INPUT MUST BE AN MCA FILE
 # SELF MEANS THE INPUT CAN BE EITHER A DATA ARRAY OR AN MCA FILE
@@ -61,6 +65,7 @@ def RatioMatrixTransform(MatrixArray):
         kb=int(MatrixArray[i][3])
         if kb==0: kb=1
         RatesMatrix[x,y]=ka/kb
+        if ka/kb > 15: RatesMatrix[x,y]=0  # CUTOFF FILTER FOR PEAK ERRORS #
     return RatesMatrix
 
 
@@ -162,7 +167,7 @@ def calibrate(self,flag=None):
     GAIN=coefficients[0]
     B=coefficients[1]
     R=coefficients[2]
-#    print("Correlation coefficient R = %f" % R)
+    logging.info("Correlation coefficient R = %f!" % R)
     if flag == 'data':
         n = len(self)
     elif flag == 'file':
