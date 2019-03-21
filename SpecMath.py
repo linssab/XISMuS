@@ -35,6 +35,20 @@ def getdif2(ydata,xdata,gain):
         dif2curve.append(difvalue)
     return dif2curve
 
+def energyaxis():
+    return SpecRead.calibrate(SpecRead.getdata(SpecRead.getfirstfile()),'data')
+
+def getstackplot(mca,energy,*args):
+    energy = energy
+    size = SpecRead.getdimension()
+    dimension = size[0]*size[1]
+    data = stacksum(mca,dimension)
+    if '-semilog' in args: plt.semilogy(energy,data)
+    else:
+        plt.plot(energy,data)
+    plt.show()
+    return 0
+
 def stacksum(firstspec,dimension):
     # FIRSTSPEC IS A STRING WITH THE NAME OF THE FIRST FILE IN THE BATCH #
     " DIMENSION STANDS FOR THE MAP DIMENSION, LINES*ROWS (OR THE NUMBER OF FILES) "
@@ -74,10 +88,10 @@ def creategaussian(channels,energy):
 # OUTPUT: indexes corresponding to 2*FWHM of a gaussian centered    #
 # at eV energy position                                             #
 
-def setROI(lookup,xarray,yarray,svg=SpecRead.svg):
+def setROI(lookup,xarray,yarray,svg):
     lookup = int(lookup)
     peak_corr = 0
-    if svg == True: yarray  = scipy.signal.savgol_filter(yarray,5,3)
+    if svg == 'SNIPBG': yarray  = scipy.signal.savgol_filter(yarray,5,3)
     logging.debug("-"*15 + " Setting ROI " + "-"*15)
     for peak_corr in range(3):
         logging.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
@@ -113,12 +127,14 @@ def setROI(lookup,xarray,yarray,svg=SpecRead.svg):
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     return lowx_idx,highx_idx,shift[2]
 
-def getpeakarea(lookup,data,energyaxis,continuum,svg=SpecRead.svg):
+def getpeakarea(lookup,data,energyaxis,continuum,svg):
     Area = 0
     idx = setROI(lookup,energyaxis,data,svg)
     xdata = energyaxis[idx[0]:idx[1]]
     ydata = data[idx[0]:idx[1]]
-    if svg == True: ROIbg = continuum[idx[0]:idx[1]]
+    if svg == 'SNIPBG': 
+        logging.debug("ROIbg is active!")
+        ROIbg = continuum[idx[0]:idx[1]]
     smooth_dif2 = scipy.signal.savgol_filter(\
             getdif2(ydata,xdata,1),5,3)
     for i in range(len(smooth_dif2)):

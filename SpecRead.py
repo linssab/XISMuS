@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a1.6                          #
+#                        version: a2.0                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -10,25 +10,66 @@ import os
 import numpy as np
 import logging
 import matplotlib.pyplot as plt
-import SpecMath
 from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
+logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
+        filename = 'logfile.log',level = logging.DEBUG)
+with open('logfile.log','w+') as mylog: mylog.truncate(0)
+logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
+
+
 dirname = "C:/campioneperu/"
-if not os.path.exists(dirname):
-    try:
-        dirname = os.getcwd()
-        dirname = os.mkdir(dirname + 'xrfscanner')
-        print("Workpath is: {0}".format(dirname))
-    except: 
-        raise IOError("File or directory does no exist!")
-else: print("Path found! Working on {0}".format(dirname))
+configfile = os.getcwd() + '\config.cfg'
 
-input = dirname+'Cesareo_1.mca'
-svg = True
-ratio = True
-enhance = False
+#if not os.path.exists(dirname):
+#    try:
+#        dirname = os.getcwd()
+#        dirname = os.mkdir(dirname + 'xrfscanner')
+#        print("Workpath is: {0}".format(dirname))
+#    except: 
+#       raise IOError("File or directory does no exist!")
+#else: print("Path found! Working on {0}".format(dirname))
 
+def getfirstfile():
+    return dirname+'Cesareo_1.mca'
+
+def getconfig():
+    modesdict = {}
+    file = open(configfile, 'r')
+    line = file.readline()
+    if "<<CONFIG_START>>" in line:
+        line = file.readline()
+        while "<<SIZE>>" not in line:
+            if 'bgstrip' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                modesdict['bgstrip'] = str(aux[2])
+                logging.info("Bgstrip mode? {0}".format(modesdict.get('bgstrip')))
+                line = file.readline()
+            if 'ratio' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                if aux[2] == 'True': modesdict['ratio'] = True
+                elif aux[2] == 'False': modesdict['ratio'] = False
+                logging.info("Create ratio matrix? {0}".format(modesdict.get('ratio')))
+                line = file.readline()
+            if 'enhance' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                if aux[2] == 'True': modesdict['enhance'] = True
+                elif aux[2] == 'False': modesdict['enhance'] = False
+                logging.info("Enhance image? {0}".format(modesdict.get('enhance')))
+                line = file.readline()
+        file.close()
+    return modesdict
+ 
 # MCA MEANS THE INPUT MUST BE AN MCA FILE
 # SELF MEANS THE INPUT CAN BE EITHER A DATA ARRAY OR AN MCA FILE
 # THE FLAG MUST SAY IF THE FILE IS AN MCA 'file' OR A DATA ARRAY 'data'
@@ -104,9 +145,8 @@ def getcalibration(self,flag=None):
                 CalParam.append([int(aux[0]),float(aux[1])])
                 line = file.readline()
             file.close()
-    elif os.path.exists(dirname+'config.cfg') and checker==0 or flag == 'data'\
-            and os.path.exists(dirname+'config.cfg'):
-            configfile=dirname+'config.cfg'
+    elif os.path.exists(configfile) and checker==0 or flag == 'data'\
+            and os.path.exists(configfile):
             file = open(configfile)
             for line in file:
                 if "<<CALIBRATION>>" in line:
@@ -127,8 +167,6 @@ def getcalibration(self,flag=None):
             else: raise IOError("No calibration values on config.cfg!")
     else: raise IOError("No calibration data available! Or 'config.cfg' does not exist!")
     return CalParam
-
-Parameters = getcalibration(input,'data')
 
 def getdata(mca):
     
@@ -152,9 +190,9 @@ def getdata(mca):
 
 def calibrate(self,flag=None):
     if flag == 'data':
-        param = Parameters
+        param = getcalibration(self,'data')
     else:
-        param = getcalibration(self,flag)
+        param = getcalibration(self,flag=None)
     x=[]
     y=[]
     for i in range(len(param)):
@@ -199,18 +237,7 @@ def getplot(mca):
     plt.plot(energy,data)
     plt.show()
     return 0
-
-def getstackplot(mca,*args):
-    energy = calibrate(mca,'file')
-    size = getdimension()
-    dimension = size[0]*size[1]
-    data = SpecMath.stacksum(mca,dimension)
-    if '-semilog' in args: plt.semilogy(energy,data)
-    else:
-        plt.plot(energy,data)
-    plt.show()
-    return 0
-    
+   
 def updatespectra(file,size):
     name=str(file)
     name=name.replace('_',' ')
@@ -227,15 +254,13 @@ def updatespectra(file,size):
     return newfile
 
 def getdimension():
-    loadconfig = os.path.join(dirname,"config.cfg")
-    if not os.path.exists(loadconfig):
+    if not os.path.exists(configfile):
         raise IOError("Config file not found!") 
-    else: config_file = dirname+'config.cfg'
 
-    file = open(config_file, 'r')
+    file = open(configfile, 'r')
     line = file.readline()
-    if "<<SIZE>>" in line:
-        while "<<END>>" not in line:
+    if "<<CONFIG_START>>" in line:
+        while "<<CALIBRATION>>" not in line:
             if 'lines' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
@@ -250,4 +275,6 @@ def getdimension():
                 y = int(aux[1])
             line = file.readline()
 #        print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
+    else: line = file.readline()
     return x,y
+

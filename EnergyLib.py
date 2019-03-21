@@ -1,6 +1,3 @@
-import numpy as np
-from PyMca5.PyMcaPhysics.xrf import Elements
-
 ElementsInfo = [
    ["H",    0,  0],
    ["He",   0,  0],

@@ -1,49 +1,33 @@
 #################################################################
 #                                                               #
 #          XRF MAP GENERATOR                                    #
-#                        version: a1.5.0                        #
+#                        version: a2.0                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import sys
 import numpy as np
+import logging
 import SpecMath
 import SpecRead
 import EnergyLib
-from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
+import ImgMath
 from PyMca5.PyMcaPhysics import Elements
 import matplotlib.pyplot as plt
 import time
 import cv2
-import math
-import logging
 
-logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',
-filename = 'process.log',level = logging.DEBUG)
-f=open('process.log','w')
-f.truncate(0)
-logging.info('*'* 10 + ' MAPPING.PY LOG START ' + '*'* 10)
-timer=time.time()
-start = SpecRead.input
+timer = time.time()
 
 imagsize = SpecRead.getdimension()
 imagex = imagsize[0]
 imagey = imagsize[1]
 dimension = imagex*imagey
 
-def updateposition(a,b):
-    currentx=a
-    currenty=b
-    if currenty == imagey-1:
-        currenty=0
-        currentx+=1
-    else:
-        currenty+=1
-    actual=([currentx,currenty])
-    return actual
+configdict = SpecRead.getconfig()
 
 def plotdensitymap():
-    currentspectra = start
+    currentspectra = SpecRead.getfirstfile()
     density_map = np.zeros([imagex,imagey])
     scan=([0,0])
     currentx=scan[0]
@@ -51,11 +35,9 @@ def plotdensitymap():
     logging.info("Started acquisition of density map")
     for ITERATION in range(dimension):
         spec = currentspectra
-#        print("Current X= %d\nCurrent Y= %d" % (currentx,currenty))
-#        print("Current spectra is: %s" % spec)
-        sum = SpecRead.getsum(spec)
-        density_map[currentx][currenty] = sum
-        scan=updateposition(scan[0],scan[1])
+        netcounts = SpecRead.getsum(spec)
+        density_map[currentx][currenty] = netcounts
+        scan = ImgMath.updateposition(scan[0],scan[1])
         currentx=scan[0]
         currenty=scan[1]
         currentspectra = SpecRead.updatespectra(spec,dimension)
@@ -68,40 +50,37 @@ def plotdensitymap():
     plt.show()
     return image
 
-def plotpeakmap(*args,ratio=SpecRead.ratio,plot=None,\
-        normalize=SpecRead.enhance,svg=SpecRead.svg):
+def plotpeakmap(*args,ratio=configdict.get('ratio'),plot=None,\
+        normalize=configdict.get('enhance'),svg=configdict.get('bgstrip')):
     
     partialtimer = time.time()
     LocalElementList = args
-    colorcode=['red','green','blue']
-    eleenergy = EnergyLib.Energies
-    logging.info(eleenergy)
+    colorcode = ['red','green','blue']
+    ElementsEnergy = EnergyLib.Energies
     logging.info("Started energy axis calibration")
-    energyaxis = SpecRead.calibrate(start,'file')
+    energyaxis = SpecMath.energyaxis()
     logging.info("Finished energy axis calibration")
-    stackimage = colorize(np.zeros([imagex,imagey]),'none')
+    stackimage = ImgMath.colorize(np.zeros([imagex,imagey]),'none')
     
     if normalize == True: 
         norm_timer = time.time()
-        logging.info("Searching for largest peak area in batch!")
-        logging.getLogger().setLevel(logging.INFO)
-        norm = normalize_fnc(energyaxis)
+        logging.warning("Searching for largest peak area in batch!")
+        norm = ImgMath.normalize_fnc(energyaxis)
         logging.info("Process took: {0}s\n".format(time.time()-norm_timer))
-        logging.getLogger().setLevel(logging.DEBUG)
     
-    for input in range(len(LocalElementList)):
-        Element = LocalElementList[input]
+    for argument in range(len(LocalElementList)):
+        Element = LocalElementList[argument]
         
         #    STARTS IMAGE ACQUISITION FOR ELEMENT 'Element'    #
         
         if Element in Elements.ElementList:
             logging.info("Started acquisition of {0} map".format(Element))
             print("Fetching map image for %s..." % Element)
-            pos = Elements.ElementList.index(Element)
-            element = eleenergy[pos]*1000
-            logging.warning("Energy {0} for element {1} being used as lookup!"\
+            energyindex = Elements.ElementList.index(Element)
+            element = ElementsEnergy[energyindex]*1000
+            logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                     .format(element,Element))
-            currentspectra = start
+            currentspectra = SpecRead.getfirstfile()
             elmap = np.zeros([imagex,imagey])
             scan = ([0,0])
             currentx = scan[0]
@@ -109,24 +88,29 @@ def plotpeakmap(*args,ratio=SpecRead.ratio,plot=None,\
             
             if ratio == True: 
                 ratiofile = open('ratio.txt','w+')
+                ratiofile.write("-"*10 + " Counts of Element {0} "\
+                        .format(Element) + 10*"-" + '\n')
+                ratiofile.write("row\tcolumn\tline1\tline2\n")
                 logging.warning("Background stripping is ON! - slow -")
                 logging.warning("Ratio map will be generated!")
                 kbindex = Elements.ElementList.index(Element)
                 kbenergy = EnergyLib.kbEnergies[kbindex]*1000
-                logging.warning("Energy {0}eV for element {1} being used as lookup!"\
+                logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                         .format(kbenergy,Element))
 
             logging.info("Starting iteration over spectra...\n")
             for ITERATION in range(dimension):
                 spec = currentspectra
-                logging.info("Specfile being processed is: {0}\n".format(spec))
                 specdata = SpecRead.getdata(spec)
-                background = SpecMath.peakstrip(specdata,24,3)
-                sum = SpecMath.getpeakarea(element,specdata,energyaxis,background,svg)
-                elmap[currentx][currenty] = sum
+                if svg == 'SNIPBG': background = SpecMath.peakstrip(specdata,24,3)
+                else: background = np.zeros(\
+                        [len(SpecRead.getdata(SpecRead.getfirstfile()))])
+                logging.info("Specfile being processed is: {0}\n".format(spec))
+                netpeak = SpecMath.getpeakarea(element,specdata,energyaxis,background,svg)
+                elmap[currentx][currenty] = netpeak
                
                 if ratio == True:
-                    ka = sum
+                    ka = netpeak
                     kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg)
                     row = scan[0]
                     column = scan[1]
@@ -134,11 +118,13 @@ def plotpeakmap(*args,ratio=SpecRead.ratio,plot=None,\
                     logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
                              .format(spec,ka,kb,Element))
                 
-                scan = updateposition(scan[0],scan[1])
+                scan = ImgMath.updateposition(scan[0],scan[1])
                 currentx = scan[0]
                 currenty = scan[1]
                 currentspectra = SpecRead.updatespectra(spec,dimension)
+            
             logging.info("Finished iteration process for element {}\n".format(Element))
+            
             if ratio == True: ratiofile.close()
             
             if normalize == True:
@@ -156,7 +142,7 @@ def plotpeakmap(*args,ratio=SpecRead.ratio,plot=None,\
                     logging.warning("Element {0} not present!".format(Element))
                     pass
             logging.info("Started coloring step")
-            image = colorize(image,colorcode[input])
+            image = ImgMath.colorize(image,colorcode[argument])
             stackimage = cv2.addWeighted(image, 1, stackimage, 1, 0)
             logging.info("Finished coloring step")
             print("Execution took %s seconds" % (time.time() - partialtimer))
@@ -176,60 +162,6 @@ def plotpeakmap(*args,ratio=SpecRead.ratio,plot=None,\
         plt.imshow(stackimage)
         plt.show()
     return stackimage
-
-def normalize_fnc(energyaxis):
-    MaxDetectedArea = 0
-    currentspectra = start
-    stackeddata = SpecMath.stacksum(start,dimension)
-    stackedlist = stackeddata.tolist()
-    absenergy = energyaxis[stackedlist.index(stackeddata.max())] * 1000
-    print("ABSENERGY: {0}".format(absenergy))
-    for iteration in range(dimension):
-        spec = currentspectra
-        specdata = SpecRead.getdata(spec)
-        sum = SpecMath.getpeakarea(absenergy,specdata,energyaxis)
-        if sum > MaxDetectedArea: MaxDetectedArea = sum
-        currentspectra = SpecRead.updatespectra(spec,dimension)
-    return MaxDetectedArea
-        
-
-def colorize(elementmap,color=None):
-    R = np.zeros([imagex,imagey])
-    G = np.zeros([imagex,imagey])
-    B = np.zeros([imagex,imagey])
-    A = np.zeros([imagex,imagey])
-    elmap = elementmap
-    pixel = []
-    myimage = [[]]*(imagex-1)
-    if color == 'red':
-        R=R+elmap
-        G=G+0
-        B=B+0
-        A=A+255
-    elif color == 'green':
-        R=R+0
-        G=G+elmap
-        B=B+0
-        A=A+255
-    elif color == 'blue':
-        R=R+0
-        G=G+0
-        B=B+elmap
-        A=A+255
-    elif color == 'gray':
-        R=R+elmap
-        G=G+elmap
-        B=B+elmap
-        A=A+255
-    for line in range(imagex-1):    
-        for i in range(imagey-1):
-            pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],dtype='float32'))
-            myimage[line]=np.asarray(pixel,dtype='uint8')
-        pixel = []
-    image = np.asarray(myimage)
-#    plt.imshow(myimage)
-#    plt.show()
-    return image
 
 if __name__=="__main__":
     flag1 = sys.argv[1]
@@ -276,7 +208,7 @@ an image where the element is displeyd in proportion to the most abundant elemen
             flag2 = sys.argv[2]
         else:
             flag2 = None
-        SpecRead.getstackplot(start,flag2)
+        SpecRead.getstackplot(SpecRead.getfirstfile(),flag2)
     if flag1 == '-getratios':
         if len(sys.argv) > 3: raise Exception("More than one element selected!\nFor -getratios, please input only one element.")
         if len(sys.argv) > 2:
@@ -298,4 +230,3 @@ an image where the element is displeyd in proportion to the most abundant elemen
             plt.imshow(ratiomatrix,cmap='gray')
             plt.show()
         else: raise Exception("No element input!")
-
