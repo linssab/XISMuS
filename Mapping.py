@@ -117,6 +117,8 @@ def plotpeakmap(*args,ratio=configdict.get('ratio'),plot=None,\
                     ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
                     logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
                              .format(spec,ka,kb,Element))
+                    if kb > ka: elmap[currentx][currenty] = 0
+                    logging.info("Kb is larger than Ka for element {0}".format(Element))
                 
                 scan = ImgMath.updateposition(scan[0],scan[1])
                 currentx = scan[0]

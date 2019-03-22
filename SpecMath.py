@@ -91,6 +91,7 @@ def creategaussian(channels,energy):
 def setROI(lookup,xarray,yarray,svg):
     lookup = int(lookup)
     peak_corr = 0
+    isapeak = True
     if svg == 'SNIPBG': yarray  = scipy.signal.savgol_filter(yarray,5,3)
     logging.debug("-"*15 + " Setting ROI " + "-"*15)
     for peak_corr in range(3):
@@ -103,18 +104,18 @@ def setROI(lookup,xarray,yarray,svg):
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
-        lowx_idx = idx-1
+        lowx_idx = idx
         logging.debug("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx+1
+        highx_idx = idx
         logging.debug("highx_idx: %d" % highx_idx)
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
         shift = Arithmetic.search_peak(ROIaxis,ROIdata)
         logging.debug("Shift: {0}".format(shift))
-        if 1.04*(-FWHM/2) < (shift[0]*1000)-lookup < 1.04*(FWHM/2):
-            if (shift[0]*1000)-lookup == 0: 
+        if 1.05*(-FWHM/2) < (shift[0]*1000)-lookup < 1.05*(FWHM/2):
+            if (shift[0]*1000)-lookup == 0:
                 logging.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
                 break
             lookup = shift[0]*1000
@@ -122,10 +123,12 @@ def setROI(lookup,xarray,yarray,svg):
             logging.debug("GAP IS LESSER THAN {0}!".format(FWHM/2))
         else: 
             logging.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
-            shift = (0,0,0)
+            lookupcenter = int(len(ROIaxis)/2)
+            shift = (0,0,lookupcenter)
+            isapeak = False
             break
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
-    return lowx_idx,highx_idx,shift[2]
+    return lowx_idx,highx_idx,shift[2],isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,svg):
     Area = 0
@@ -140,8 +143,9 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg):
     for i in range(len(smooth_dif2)):
         if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
         elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
-    if idx[2] != 0 and smooth_dif2[idx[2]] < 0\
-            or smooth_dif2[idx[2]+1] < 0 or smooth_dif2[idx[2]-1] < 0:
+    if smooth_dif2[idx[2]] < 0 and idx[3] == True\
+            or smooth_dif2[idx[2]+1] < 0 and idx[3] == True\
+            or smooth_dif2[idx[2]-1] < 0 and idx[3] == True:
         logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
         logging.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
                 smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
@@ -159,6 +163,11 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg):
 #    plt.plot(xdata,ROIbg)
 #    plt.plot(xdata,smooth_dif2)
 #    plt.show()
+#    print(ydata)
+#    print(len(ydata))
+#    print(smooth_dif2)
+#    print(len(smooth_dif2))
+#    print(ydata[idx[2]],smooth_dif2[idx[2]])
     return Area
 
 # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (2*W)+1       #
@@ -193,13 +202,13 @@ def peakstrip(spectrum,cycles,w):
 
 if __name__=="__main__":
     dirname = os.path.join(SpecRead.dirname)
-    file = dirname+'Cesareo_26.mca'
+    file = dirname+'Cesareo_1195.mca'
     xdata = SpecRead.calibrate(file,'file')
     testdata = SpecRead.getdata(file)
     gain = SpecRead.getgain(file,'data')
-    lookup = 8971
+    lookup = 24941
     
-    continuum = peakstrip(testdata,24,3)
+    continuum = peakstrip(testdata,18,3)
     getpeakarea(lookup,testdata,xdata,continuum,svg='SNIPBG')
 #    smooth_dif2 = scipy.signal.savgol_filter(\
 #            getdif2(ydata,xdata,1),5,3)
