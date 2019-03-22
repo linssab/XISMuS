@@ -140,15 +140,25 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg):
     for i in range(len(smooth_dif2)):
         if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
         elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
-    if idx[2] != 0 and smooth_dif2[idx[2]] < 0:
+    if idx[2] != 0 and smooth_dif2[idx[2]] < 0\
+            or smooth_dif2[idx[2]+1] < 0 or smooth_dif2[idx[2]-1] < 0:
         logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
+        logging.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
+                smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
         for i in range(len(xdata)):
             try:
                 if ROIbg[i] < ydata[i]: Area += (ydata[i]-ROIbg[i])
-                logging.warning("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
+                logging.debug("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
             except:
                 Area += ydata[i]
-    else: logging.debug("{0} has no peak! Dif2 = {1}\n".format(lookup,smooth_dif2[idx[2]]))
+    else: 
+        logging.debug("{0} has no peak! Dif2 = {1}\n".format(lookup,smooth_dif2[idx[2]]))
+        logging.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
+            smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
+#    plt.plot(xdata,ydata)
+#    plt.plot(xdata,ROIbg)
+#    plt.plot(xdata,smooth_dif2)
+#    plt.show()
     return Area
 
 # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (2*W)+1       #
@@ -180,19 +190,20 @@ def peakstrip(spectrum,cycles,w):
     logging.debug("TIMESTAMP: END of background estimation!")
     return background
    
-"""
+
 if __name__=="__main__":
     dirname = os.path.join(SpecRead.dirname)
-    file = dirname+'Cesareo_200.mca'
+    file = dirname+'Cesareo_26.mca'
     xdata = SpecRead.calibrate(file,'file')
     testdata = SpecRead.getdata(file)
     gain = SpecRead.getgain(file,'data')
-    lookup = 9710
-
-    getpeakarea(lookup,testdata,xdata,svg=True)
+    lookup = 8971
+    
+    continuum = peakstrip(testdata,24,3)
+    getpeakarea(lookup,testdata,xdata,continuum,svg='SNIPBG')
 #    smooth_dif2 = scipy.signal.savgol_filter(\
 #            getdif2(ydata,xdata,1),5,3)
 #    for i in range(len(smooth_dif2)):
 #        if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
 #        elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
-"""
+

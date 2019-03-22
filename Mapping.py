@@ -210,23 +210,29 @@ an image where the element is displeyd in proportion to the most abundant elemen
             flag2 = None
         SpecRead.getstackplot(SpecRead.getfirstfile(),flag2)
     if flag1 == '-getratios':
-        if len(sys.argv) > 3: raise Exception("More than one element selected!\nFor -getratios, please input only one element.")
-        if len(sys.argv) > 2:
-            element1 = None
-            element2 = None
-            if sys.argv[2] in Elements.ElementList:
-                element1 = sys.argv[2]
-            else: raise Exception("%s not an element!" % sys.argv[2])
-            if len(sys.argv) > 3:
-                if sys.argv[3] in Elements.ElementList:
-                    element2 = sys.argv[3]
-                else: raise Exception("%s not an element!" % sys.argv[3])
+        ratiofile = 'ratio.txt'
+        ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
+        ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
+        plt.imshow(ratiomatrix,cmap='gray')
+        plt.show()
+
+#        if len(sys.argv) > 3: raise Exception("More than one element selected!\nFor -getratios, please input only one element.")
+#        if len(sys.argv) > 2:
+#            element1 = None
+#            element2 = None
+#            if sys.argv[2] in Elements.ElementList:
+#                element1 = sys.argv[2]
+#            else: raise Exception("%s not an element!" % sys.argv[2])
+#            if len(sys.argv) > 3:
+#                if sys.argv[3] in Elements.ElementList:
+#                    element2 = sys.argv[3]
+#                else: raise Exception("%s not an element!" % sys.argv[3])
 #            plotpeakmap(element1,element2,ratio=True)
-            ratiofile = 'ratio.txt'
-            ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
-            ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
+#            ratiofile = 'ratio.txt'
+#            ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
+#            ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
 #            ratioimage = colorize(ratiomatrix,'gray')
 #            cv2.addWeighted(ratioimage, 1, ratioimage, 0, 0)
-            plt.imshow(ratiomatrix,cmap='gray')
-            plt.show()
-        else: raise Exception("No element input!")
+#            plt.imshow(ratiomatrix,cmap='gray')
+#            plt.show()
+#       else: raise Exception("No element input!")
