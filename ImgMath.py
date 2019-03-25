@@ -58,6 +58,11 @@ def colorize(elementmap,color=None):
         G=G+0
         B=B+elmap
         A=A+255
+    elif color == 'gold':
+        R=R+elmap
+        G=G+elmap
+        B=B+0
+        A=A+255
     elif color == 'gray':
         R=R+elmap
         G=G+elmap
@@ -85,4 +90,14 @@ def updateposition(a,b):
         currenty+=1
     actual=([currentx,currenty])
     return actual
+
+def enhanceimage(image):
+    hist,bins = np.histogram(image.flatten(),256,[0,256])
+    cdf = hist.cumsum()
+    cdf_norm = cdf * hist.max()/cdf.max()
+    cdf_mask = np.ma.masked_equal(cdf,0)
+    cdf_mask = (cdf_mask - cdf_mask.min())*255/(cdf_mask.max()-cdf_mask.min())
+    cdf = np.ma.filled(cdf_mask,0).astype('uint8')
+    image = cdf[image]
+    return image
 

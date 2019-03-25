@@ -120,7 +120,7 @@ def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
     partialtimer = time.time()
     LocalElementList = args
     print(LocalElementList)
-    colorcode = ['red','green','blue','yellow','purple','pink']
+    colorcode = ['red','gold','blue','green']
     KaElementsEnergy = EnergyLib.Energies
     KbElementsEnergy = EnergyLib.kbEnergies
     logging.info("Started energy axis calibration")
@@ -179,7 +179,6 @@ def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
                     if ka == 0: kb = 0
                     elif ka > 0:
                         kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg)
-                    logging.info("Kb is larger than Ka for element {0}".format(Element))
                     row = scan[0]
                     column = scan[1]
                     ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
@@ -209,24 +208,24 @@ def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
                 except ValueError: 
                     logging.warning("Element {0} not present!".format(Element))
                     pass
+            
             logging.info("Started coloring step")
             image = ImgMath.colorize(image,colorcode[argument])
+            if normalize == True: image = ImgMath.enhanceimage(image)
             stackimage = cv2.addWeighted(image, 1, stackimage, 1, 0)
             logging.info("Finished coloring step")
+            plt.imshow(image)
+            plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
+                .format(LocalElementList[argument],configdict.get('bgstrip'),\
+                configdict.get('ratio'),configdict.get('enhance')),dpi=150,transparent=True) 
             print("Execution took %s seconds" % (time.time() - partialtimer))
             partialtimer = time.time()
+            plt.clf()
     
     logging.info("Finished map acquisition!")
     
     if plot == True: 
-        if normalize == True: 
-            hist,bins = np.histogram(stackimage.flatten(),256,[0,256])
-            cdf = hist.cumsum()
-            cdf_norm = cdf * hist.max()/cdf.max()
-            cdf_mask = np.ma.masked_equal(cdf,0)
-            cdf_mask = (cdf_mask - cdf_mask.min())*255/(cdf_mask.max()-cdf_mask.min())
-            cdf = np.ma.filled(cdf_mask,0).astype('uint8')
-            stackimage = cdf[stackimage]
+        if normalize == True: stackimage = ImgMath.enhanceimage(stackimage)
         plt.imshow(stackimage)
         plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
                 .format(LocalElementList,configdict.get('bgstrip'),configdict.get('ratio'),\
