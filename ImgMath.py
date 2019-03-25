@@ -1,13 +1,15 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: a1.0                          #
+#                        version: a1.01                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import numpy as np
 import SpecRead
 import SpecMath
+
+configdict = SpecRead.getconfig()
 
 def normalize_fnc(energyaxis):
     MaxDetectedArea = 0
@@ -19,11 +21,12 @@ def normalize_fnc(energyaxis):
     stackeddata = SpecMath.stacksum(currentspectra,imagedimension)
     stackedlist = stackeddata.tolist()
     absenergy = energyaxis[stackedlist.index(stackeddata.max())] * 1000
+    bg = np.zeros([len(energyaxis)])
     print("ABSENERGY: {0}".format(absenergy))
     for iteration in range(imagedimension):
         spec = currentspectra
         specdata = SpecRead.getdata(spec)
-        sum = SpecMath.getpeakarea(absenergy,specdata,energyaxis,0)
+        sum = SpecMath.getpeakarea(absenergy,specdata,energyaxis,bg,configdict.get('bgstrip'))
         if sum > MaxDetectedArea: MaxDetectedArea = sum
         currentspectra = SpecRead.updatespectra(spec,imagedimension)
     return MaxDetectedArea

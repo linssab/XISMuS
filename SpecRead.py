@@ -14,13 +14,14 @@ from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-        filename = 'logfile.log',level = logging.DEBUG)
+        filename = 'logfile.log',level = logging.INFO)
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 
 dirname = "C:/campioneperu/"
-configfile = os.getcwd() + '\config.cfg'
+workpath = os.getcwd()
+configfile = workpath + '\config.cfg'
 
 #if not os.path.exists(dirname):
 #    try:

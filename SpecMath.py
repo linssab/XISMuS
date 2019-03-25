@@ -202,11 +202,11 @@ def peakstrip(spectrum,cycles,w):
 
 if __name__=="__main__":
     dirname = os.path.join(SpecRead.dirname)
-    file = dirname+'Cesareo_1195.mca'
+    file = dirname+'Cesareo_218.mca'
     xdata = SpecRead.calibrate(file,'file')
     testdata = SpecRead.getdata(file)
     gain = SpecRead.getgain(file,'data')
-    lookup = 24941
+    lookup = 8263
     
     continuum = peakstrip(testdata,18,3)
     getpeakarea(lookup,testdata,xdata,continuum,svg='SNIPBG')

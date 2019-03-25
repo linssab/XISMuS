@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          XRF MAP GENERATOR                                    #
-#                        version: a2.0                          #
+#                        version: a2.01                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -50,24 +50,90 @@ def plotdensitymap():
     plt.show()
     return image
 
-def plotpeakmap(*args,ratio=configdict.get('ratio'),plot=None,\
+
+def getpeaks(elementlist,ratio=configdict.get('ratio'),plot=None,\
+	normalixe=configdict.get('enhance'),bgstrip=configdict.get('bgstrip')):
+	
+    partialtimer = time.time()
+    LocalElementList = elementlist
+    currentspectra = SpecRead.getfirstfile()
+    energyaxis = SpecMath.energyaxis()
+    scan = ([0,0])
+    currentx = scan[0]
+    currenty = scan[1]
+    KaElementsEnergy = EnergyLib.Energies
+    KbElementsEnergy = EnergyLib.kbEnergies
+ 
+    for Element in LocalElementList: 
+        if ratio == True: 
+            ratiofile = open('ratio_{0}.txt'.format(Element),'w+')
+            ratiofile.write("-"*10 + " Counts of Element {0} ".format(Element) + 10*"-" + '\n')
+            ratiofile.write("row\tcolumn\tline1\tline2\n")
+            logging.warning("Ratio map will be generated for element {0}!".format(Element))
+            ratiofile.close()
+        else:
+            kafile = open('counts_{0}.txt'.format(Element),'w+')
+            kafile.write("-"*10 + " Counts of Element {0} ".format(Element) + 10*"-" + '\n')
+            kafile.write("row\tcolumn\tcounts\n")
+            kafile.close()
+          
+    logging.info("Starting iteration over spectra...\n")
+    for ITERATION in range(dimension):
+        spec = currentspectra
+        specdata = SpecRead.getdata(spec)
+        if bgstrip == 'SNIPBG': background = SpecMath.peakstrip(specdata,24,3)
+        else: background = np.zeros([len(specdata)])
+        logging.info("Specfile being processed is: {0}\n".format(spec))
+            
+        for Element in LocalElementList:
+            kaindex = Elements.ElementList.index(Element)
+            kaenergy = KaElementsEnergy[kaindex]*1000
+            ka = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,bgstrip)
+            if ratio == True:
+                localratiofile = open('ratio_{0}.txt'.format(Element),'w')
+                kbindex = Elements.ElementList.index(Element)
+                kbenergy = EnergyLib.kbEnergies[kbindex]*1000
+                kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,bgstrip)
+                row = scan[0]
+                column = scan[1]
+                localratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
+                localratiofile.close()
+            else:
+                localkafile = open('counts_{0}.txt'.format(Element),'w')
+                row = scan[0]
+                column = scan[1]
+                localkafile.write("%d\t%d\t%d\t%s\n" % (row, column, ka, spec))
+                localkafile.close()
+
+        scan = ImgMath.updateposition(scan[0],scan[1])
+        currentx = scan[0]
+        currenty = scan[1]
+        currentspectra = SpecRead.updatespectra(spec,dimension)
+           
+    if ratio == True: ratiofile.close()
+    else: kafile.close()
+    return 0
+
+def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
         normalize=configdict.get('enhance'),svg=configdict.get('bgstrip')):
     
     partialtimer = time.time()
     LocalElementList = args
-    colorcode = ['red','green','blue']
-    ElementsEnergy = EnergyLib.Energies
+    print(LocalElementList)
+    colorcode = ['red','green','blue','yellow','purple','pink']
+    KaElementsEnergy = EnergyLib.Energies
+    KbElementsEnergy = EnergyLib.kbEnergies
     logging.info("Started energy axis calibration")
     energyaxis = SpecMath.energyaxis()
     logging.info("Finished energy axis calibration")
     stackimage = ImgMath.colorize(np.zeros([imagex,imagey]),'none')
-    
+
     if normalize == True: 
         norm_timer = time.time()
-        logging.warning("Searching for largest peak area in batch!")
+        logging.warning("Searching for largest peak area in batch! - slow -")
         norm = ImgMath.normalize_fnc(energyaxis)
         logging.info("Process took: {0}s\n".format(time.time()-norm_timer))
-    
+
     for argument in range(len(LocalElementList)):
         Element = LocalElementList[argument]
         
@@ -76,10 +142,10 @@ def plotpeakmap(*args,ratio=configdict.get('ratio'),plot=None,\
         if Element in Elements.ElementList:
             logging.info("Started acquisition of {0} map".format(Element))
             print("Fetching map image for %s..." % Element)
-            energyindex = Elements.ElementList.index(Element)
-            element = ElementsEnergy[energyindex]*1000
+            kaindex = Elements.ElementList.index(Element)
+            kaenergy = KaElementsEnergy[kaindex]*1000
             logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
-                    .format(element,Element))
+                    .format(kaenergy,Element))
             currentspectra = SpecRead.getfirstfile()
             elmap = np.zeros([imagex,imagey])
             scan = ([0,0])
@@ -87,11 +153,11 @@ def plotpeakmap(*args,ratio=configdict.get('ratio'),plot=None,\
             currenty = scan[1]
             
             if ratio == True: 
-                ratiofile = open('ratio.txt','w+')
+                ratiofile = open('ratio_{0}.txt'.format(Element),'w+')
                 ratiofile.write("-"*10 + " Counts of Element {0} "\
                         .format(Element) + 10*"-" + '\n')
                 ratiofile.write("row\tcolumn\tline1\tline2\n")
-                logging.warning("Background stripping is ON! - slow -")
+                if svg != 'None': logging.warning("Background stripping is ON! - slow -")
                 logging.warning("Ratio map will be generated!")
                 kbindex = Elements.ElementList.index(Element)
                 kbenergy = EnergyLib.kbEnergies[kbindex]*1000
@@ -103,23 +169,23 @@ def plotpeakmap(*args,ratio=configdict.get('ratio'),plot=None,\
                 spec = currentspectra
                 specdata = SpecRead.getdata(spec)
                 if svg == 'SNIPBG': background = SpecMath.peakstrip(specdata,24,3)
-                else: background = np.zeros(\
-                        [len(SpecRead.getdata(SpecRead.getfirstfile()))])
+                else: background = np.zeros([len(specdata)])
                 logging.info("Specfile being processed is: {0}\n".format(spec))
-                netpeak = SpecMath.getpeakarea(element,specdata,energyaxis,background,svg)
+                netpeak = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg)
                 elmap[currentx][currenty] = netpeak
                
                 if ratio == True:
                     ka = netpeak
-                    kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg)
+                    if ka == 0: kb = 0
+                    elif ka > 0:
+                        kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg)
+                    logging.info("Kb is larger than Ka for element {0}".format(Element))
                     row = scan[0]
                     column = scan[1]
                     ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
                     logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
                              .format(spec,ka,kb,Element))
-                    if kb > ka: elmap[currentx][currenty] = 0
-                    logging.info("Kb is larger than Ka for element {0}".format(Element))
-                
+                                    
                 scan = ImgMath.updateposition(scan[0],scan[1])
                 currentx = scan[0]
                 currenty = scan[1]
@@ -162,10 +228,15 @@ def plotpeakmap(*args,ratio=configdict.get('ratio'),plot=None,\
             cdf = np.ma.filled(cdf_mask,0).astype('uint8')
             stackimage = cdf[stackimage]
         plt.imshow(stackimage)
+        plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
+                .format(LocalElementList,configdict.get('bgstrip'),configdict.get('ratio'),\
+                configdict.get('enhance')),dpi=150,transparent=True) 
         plt.show()
     return stackimage
 
 if __name__=="__main__":
+    inputlist = ['-findelement','Mapping.py','-normalize','-getratios'] 
+    elementlist = []
     flag1 = sys.argv[1]
     if flag1 == '-help':
         print("\nUSAGE: '-findelement x y'; plots a 2D map of elements 'x' and/or 'y'\
@@ -175,33 +246,23 @@ an image where the element is displeyd in proportion to the most abundant elemen
        '-plotstack'; plots the sum spectra of all sample. Optional: you can add '-semilog' to plot it in semilog mode.\n\
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     if flag1 == '-findelement':    
-        if len(sys.argv) > 4: 
-            raise Exception("More than 2 elements were selected! Try again with 2 or less inputs!")
-            logging.exception("More than 2 elements were selected!")
-        if len(sys.argv) > 2:
-            element1 = None
-            element2 = None
-            if sys.argv[2] in Elements.ElementList:
-                element1 = sys.argv[2]
+        for arg in range(len(sys.argv)):
+            if sys.argv[arg] in Elements.ElementList:
+                elementlist.append(sys.argv[arg])
             else: 
-                raise Exception("%s not an element!" % sys.argv[2])
-                logging.exception("{0} is not a chemical element!".format(sys.argv[2]))
-            if len(sys.argv) > 3:
-                if sys.argv[3] in Elements.ElementList:
-                    element2 = sys.argv[3]
+                if sys.argv[arg] in inputlist:
+                    pass
                 else: 
-                    if '-normalize' in sys.argv:
-                        pass
-                    else:
-                        raise Exception("%s not an element!" % sys.argv[3])
-                        logging.exception("{0} is not a chemical element!".format(sys.argv[3]))
+                    raise Exception("%s not an element!" % sys.argv[arg])
+                    logging.exception("{0} is not a chemical element!".format(sys.argv[arg]))
             if '-normalize' in sys.argv:
-                plotpeakmap(element1,element2,plot=True,normalize=True)
-            else:
-                plotpeakmap(element1,element2,plot=True)
-        else: 
-            raise Exception("No element input!")
-            logging.exception("No element input!")
+                pass
+        if '-normalize' in sys.argv:
+            plotpeakmap(elementlist,plot=True,normalize=True)
+        else:
+            plotpeakmap(elementlist,plot=True)
+        logging.exception("No element input!")
+    
     if flag1 == '-plotmap':
         print("Fetching density map...")
         plotdensitymap()
@@ -210,31 +271,18 @@ an image where the element is displeyd in proportion to the most abundant elemen
             flag2 = sys.argv[2]
         else:
             flag2 = None
-        SpecRead.getstackplot(SpecRead.getfirstfile(),flag2)
+        SpecMath.getstackplot(SpecRead.getfirstfile(),SpecMath.energyaxis())
     if flag1 == '-getratios':
-        ratiofile = 'ratio.txt'
+        for arg in range(len(sys.argv)):
+            if sys.argv[arg] in Elements.ElementList:
+                elementlist.append(sys.argv[arg])
+            else: 
+                if sys.argv[arg] in inputlist:
+                    pass
+                else: 
+                    raise Exception("%s not an element!" % sys.argv[arg])
+        ratiofile = 'ratio_{0}.txt'.format(elementlist[0])
         ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
         ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
         plt.imshow(ratiomatrix,cmap='gray')
         plt.show()
-
-#        if len(sys.argv) > 3: raise Exception("More than one element selected!\nFor -getratios, please input only one element.")
-#        if len(sys.argv) > 2:
-#            element1 = None
-#            element2 = None
-#            if sys.argv[2] in Elements.ElementList:
-#                element1 = sys.argv[2]
-#            else: raise Exception("%s not an element!" % sys.argv[2])
-#            if len(sys.argv) > 3:
-#                if sys.argv[3] in Elements.ElementList:
-#                    element2 = sys.argv[3]
-#                else: raise Exception("%s not an element!" % sys.argv[3])
-#            plotpeakmap(element1,element2,ratio=True)
-#            ratiofile = 'ratio.txt'
-#            ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
-#            ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
-#            ratioimage = colorize(ratiomatrix,'gray')
-#            cv2.addWeighted(ratioimage, 1, ratioimage, 0, 0)
-#            plt.imshow(ratiomatrix,cmap='gray')
-#            plt.show()
-#       else: raise Exception("No element input!")
