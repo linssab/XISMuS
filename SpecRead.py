@@ -14,12 +14,12 @@ from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-        filename = 'logfile.log',level = logging.INFO)
+        filename = 'logfile.log',level = logging.DEBUG)
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
-
-dirname = "C:/campioneperu/"
+dirname = 'C:/misure/'
+firstfile = 'Cesareo_1.mca'
 workpath = os.getcwd()
 configfile = workpath + '\config.cfg'
 
@@ -33,7 +33,7 @@ configfile = workpath + '\config.cfg'
 #else: print("Path found! Working on {0}".format(dirname))
 
 def getfirstfile():
-    return dirname+'Cesareo_1.mca'
+    return dirname+firstfile
 
 def getconfig():
     modesdict = {}
@@ -170,18 +170,32 @@ def getcalibration(self,flag=None):
     return CalParam
 
 def getdata(mca):
-    
-    ObjectData=[]
-    file = open(mca)
-    line = file.readline()
-    while "<<DATA>>" not in line:
+    name = str(mca)
+    name = name.replace('_',' ')
+    name = name.replace('/',' ')
+    name = name.split()
+    if 'test' in name:
+        Data = []
+        file = open(mca)
+        lines = file.readlines()
+        for line in lines:
+            line = line.split()
+            counts = float(line[1])
+            counts = counts * 10e3
+            Data.append(counts)
+        Data = np.asarray(Data)
+    else:
+        ObjectData=[]
+        file = open(mca)
         line = file.readline()
-    line = file.readline()
-    while "<<END>>" not in line:
-        ObjectData.append(int(line))
+        while "<<DATA>>" not in line:
+            line = file.readline()
         line = file.readline()
-    file.close()
-    Data = np.asarray(ObjectData)
+        while "<<END>>" not in line:
+            ObjectData.append(int(line))
+            line = file.readline()
+        file.close()
+        Data = np.asarray(ObjectData)
     return Data
 
 # CALIBRATE RETURNS A CALIBRATION CURVE USING CALIBRATION INFORMATION
@@ -248,6 +262,7 @@ def updatespectra(file,size):
     for i in range(len(name)):
         if name[i].isdigit()==True: index=int(name[i])
         if name[i] == "mca": extension=name[i]
+        elif name[i] == "txt": extension=name[i]
         if len(name[i]) > 6: prefix = name[i]
     if index < size: index = str(index+1)
     else: index = str(size)
@@ -279,3 +294,8 @@ def getdimension():
     else: line = file.readline()
     return x,y
 
+#energy = calibrate(getdata(getfirstfile()),'data')
+#mcfile = dirname + 'test_14.txt'
+#counts = getdata(mcfile)
+#plt.plot(energy,counts)
+#plt.show()

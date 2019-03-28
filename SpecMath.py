@@ -94,7 +94,7 @@ def setROI(lookup,xarray,yarray,svg):
     isapeak = True
     if svg == 'SNIPBG': yarray  = scipy.signal.savgol_filter(yarray,5,3)
     logging.debug("-"*15 + " Setting ROI " + "-"*15)
-    for peak_corr in range(3):
+    for peak_corr in range(2):
         logging.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
         logging.debug("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
@@ -104,11 +104,11 @@ def setROI(lookup,xarray,yarray,svg):
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
-        lowx_idx = idx
+        lowx_idx = idx-2
         logging.debug("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx
+        highx_idx = idx+2
         logging.debug("highx_idx: %d" % highx_idx)
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
@@ -120,7 +120,7 @@ def setROI(lookup,xarray,yarray,svg):
                 break
             lookup = shift[0]*1000
             peak_corr = 0
-            logging.debug("GAP IS LESSER THAN {0}!".format(FWHM/2))
+            logging.debug("GAP IS LESSER THAN {0}!".format(1.05 * FWHM/2))
         else: 
             logging.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
             lookupcenter = int(len(ROIaxis)/2)
@@ -128,6 +128,8 @@ def setROI(lookup,xarray,yarray,svg):
             isapeak = False
             break
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
+    lowx_idx = lowx_idx + 2
+    highx_idx = highx_idx - 2
     return lowx_idx,highx_idx,shift[2],isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,svg):
@@ -159,15 +161,15 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg):
         logging.debug("{0} has no peak! Dif2 = {1}\n".format(lookup,smooth_dif2[idx[2]]))
         logging.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
             smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
+    
 #    plt.plot(xdata,ydata)
-#    plt.plot(xdata,ROIbg)
 #    plt.plot(xdata,smooth_dif2)
+#    plt.plot(xdata,ROIbg)
 #    plt.show()
 #    print(ydata)
 #    print(len(ydata))
-#    print(smooth_dif2)
-#    print(len(smooth_dif2))
 #    print(ydata[idx[2]],smooth_dif2[idx[2]])
+#    print("Lookup: {0} Area: {1}".format(lookup,Area))
     return Area
 
 # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (2*W)+1       #
@@ -202,11 +204,10 @@ def peakstrip(spectrum,cycles,w):
 
 if __name__=="__main__":
     dirname = os.path.join(SpecRead.dirname)
-    file = dirname+'Cesareo_218.mca'
-    xdata = SpecRead.calibrate(file,'file')
+    file = dirname+'test_4.txt'
+    xdata = energyaxis()
     testdata = SpecRead.getdata(file)
-    gain = SpecRead.getgain(file,'data')
-    lookup = 8263
+    lookup = 10551
     
     continuum = peakstrip(testdata,18,3)
     getpeakarea(lookup,testdata,xdata,continuum,svg='SNIPBG')

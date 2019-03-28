@@ -66,13 +66,13 @@ def getpeaks(elementlist,ratio=configdict.get('ratio'),plot=None,\
  
     for Element in LocalElementList: 
         if ratio == True: 
-            ratiofile = open('ratio_{0}.txt'.format(Element),'w+')
+            ratiofile = open(SpecRead.workpath + '/output/ratio_{0}.txt'.format(Element),'w+')
             ratiofile.write("-"*10 + " Counts of Element {0} ".format(Element) + 10*"-" + '\n')
             ratiofile.write("row\tcolumn\tline1\tline2\n")
             logging.warning("Ratio map will be generated for element {0}!".format(Element))
             ratiofile.close()
         else:
-            kafile = open('counts_{0}.txt'.format(Element),'w+')
+            kafile = open(SpecRead.wrokpath + '/output/counts_{0}.txt'.format(Element),'w+')
             kafile.write("-"*10 + " Counts of Element {0} ".format(Element) + 10*"-" + '\n')
             kafile.write("row\tcolumn\tcounts\n")
             kafile.close()
@@ -90,7 +90,8 @@ def getpeaks(elementlist,ratio=configdict.get('ratio'),plot=None,\
             kaenergy = KaElementsEnergy[kaindex]*1000
             ka = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,bgstrip)
             if ratio == True:
-                localratiofile = open('ratio_{0}.txt'.format(Element),'w')
+                localratiofile = open(SpecRead.wrokpath + '/output/ratio_{0}.txt'\
+                        .format(Element),'w')
                 kbindex = Elements.ElementList.index(Element)
                 kbenergy = EnergyLib.kbEnergies[kbindex]*1000
                 kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,bgstrip)
@@ -99,7 +100,8 @@ def getpeaks(elementlist,ratio=configdict.get('ratio'),plot=None,\
                 localratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
                 localratiofile.close()
             else:
-                localkafile = open('counts_{0}.txt'.format(Element),'w')
+                localkafile = open(SpecRead.workpath + '/output/counts_{0}.txt'\
+                        .format(Element),'w')
                 row = scan[0]
                 column = scan[1]
                 localkafile.write("%d\t%d\t%d\t%s\n" % (row, column, ka, spec))
@@ -153,7 +155,7 @@ def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
             currenty = scan[1]
             
             if ratio == True: 
-                ratiofile = open('ratio_{0}.txt'.format(Element),'w+')
+                ratiofile = open(SpecRead.workpath + '/output/ratio_{0}.txt'.format(Element),'w+')
                 ratiofile.write("-"*10 + " Counts of Element {0} "\
                         .format(Element) + 10*"-" + '\n')
                 ratiofile.write("row\tcolumn\tline1\tline2\n")
@@ -211,8 +213,8 @@ def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
             
             logging.info("Started coloring step")
             image = ImgMath.colorize(image,colorcode[argument])
-            if normalize == True: image = ImgMath.enhanceimage(image)
             stackimage = cv2.addWeighted(image, 1, stackimage, 1, 0)
+            if normalize == True: image = ImgMath.enhanceimage(image)
             logging.info("Finished coloring step")
             plt.imshow(image)
             plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
@@ -280,7 +282,7 @@ an image where the element is displeyd in proportion to the most abundant elemen
                     pass
                 else: 
                     raise Exception("%s not an element!" % sys.argv[arg])
-        ratiofile = 'ratio_{0}.txt'.format(elementlist[0])
+        ratiofile = SpecRead.workpath + '/output/ratio_{0}.txt'.format(elementlist[0])
         ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
         ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
         plt.imshow(ratiomatrix,cmap='gray')
