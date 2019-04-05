@@ -12,6 +12,7 @@ import SpecMath
 import SpecRead
 import EnergyLib
 import ImgMath
+import SpecFitter
 from PyMca5.PyMcaPhysics import Elements
 import matplotlib.pyplot as plt
 import time
@@ -50,74 +51,9 @@ def plotdensitymap():
     plt.show()
     return image
 
-
-def getpeaks(elementlist,ratio=configdict.get('ratio'),plot=None,\
-	normalixe=configdict.get('enhance'),bgstrip=configdict.get('bgstrip')):
-	
-    partialtimer = time.time()
-    LocalElementList = elementlist
-    currentspectra = SpecRead.getfirstfile()
-    energyaxis = SpecMath.energyaxis()
-    scan = ([0,0])
-    currentx = scan[0]
-    currenty = scan[1]
-    KaElementsEnergy = EnergyLib.Energies
-    KbElementsEnergy = EnergyLib.kbEnergies
- 
-    for Element in LocalElementList: 
-        if ratio == True: 
-            ratiofile = open(SpecRead.workpath + '/output/ratio_{0}.txt'.format(Element),'w+')
-            ratiofile.write("-"*10 + " Counts of Element {0} ".format(Element) + 10*"-" + '\n')
-            ratiofile.write("row\tcolumn\tline1\tline2\n")
-            logging.warning("Ratio map will be generated for element {0}!".format(Element))
-            ratiofile.close()
-        else:
-            kafile = open(SpecRead.wrokpath + '/output/counts_{0}.txt'.format(Element),'w+')
-            kafile.write("-"*10 + " Counts of Element {0} ".format(Element) + 10*"-" + '\n')
-            kafile.write("row\tcolumn\tcounts\n")
-            kafile.close()
-          
-    logging.info("Starting iteration over spectra...\n")
-    for ITERATION in range(dimension):
-        spec = currentspectra
-        specdata = SpecRead.getdata(spec)
-        if bgstrip == 'SNIPBG': background = SpecMath.peakstrip(specdata,24,3)
-        else: background = np.zeros([len(specdata)])
-        logging.info("Specfile being processed is: {0}\n".format(spec))
-            
-        for Element in LocalElementList:
-            kaindex = Elements.ElementList.index(Element)
-            kaenergy = KaElementsEnergy[kaindex]*1000
-            ka = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,bgstrip)
-            if ratio == True:
-                localratiofile = open(SpecRead.wrokpath + '/output/ratio_{0}.txt'\
-                        .format(Element),'w')
-                kbindex = Elements.ElementList.index(Element)
-                kbenergy = EnergyLib.kbEnergies[kbindex]*1000
-                kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,bgstrip)
-                row = scan[0]
-                column = scan[1]
-                localratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
-                localratiofile.close()
-            else:
-                localkafile = open(SpecRead.workpath + '/output/counts_{0}.txt'\
-                        .format(Element),'w')
-                row = scan[0]
-                column = scan[1]
-                localkafile.write("%d\t%d\t%d\t%s\n" % (row, column, ka, spec))
-                localkafile.close()
-
-        scan = ImgMath.updateposition(scan[0],scan[1])
-        currentx = scan[0]
-        currenty = scan[1]
-        currentspectra = SpecRead.updatespectra(spec,dimension)
-           
-    if ratio == True: ratiofile.close()
-    else: kafile.close()
-    return 0
-
 def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
-        normalize=configdict.get('enhance'),svg=configdict.get('bgstrip')):
+        normalize=configdict.get('enhance'),svg=configdict.get('bgstrip'),\
+        peakmethod='PyMcaFit'):
     
     partialtimer = time.time()
     LocalElementList = args
@@ -168,19 +104,38 @@ def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
 
             logging.info("Starting iteration over spectra...\n")
             for ITERATION in range(dimension):
+                
                 spec = currentspectra
-                specdata = SpecRead.getdata(spec)
-                if svg == 'SNIPBG': background = SpecMath.peakstrip(specdata,24,3)
+                RAW = SpecRead.getdata(spec)
+                
+                if peakmethod == 'PyMcaFit': 
+                    try:
+                        specdata = SpecFitter.fit(spec)
+                    except:
+                        print("\tCHANNEL COUNT\t")
+                        logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD!\t")
+                        specdata = SpecRead.getdata(spec)
+               
+                elif peakmethod == 'Simple':
+                    specdata = SpecRead.getdata(spec)   
+ 
+                if svg == 'SNIPBG': background = SpecMath.peakstrip(RAW,24,5)
                 else: background = np.zeros([len(specdata)])
                 logging.info("Specfile being processed is: {0}\n".format(spec))
-                netpeak = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg)
+ 
+#                plt.semilogy(SpecMath.energyaxis(),specdata)
+#                plt.semilogy(SpecMath.energyaxis(),RAW)
+#                plt.semilogy(SpecMath.energyaxis(),background)
+#                plt.show()
+                
+                netpeak = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
                 elmap[currentx][currenty] = netpeak
                
                 if ratio == True:
                     ka = netpeak
                     if ka == 0: kb = 0
                     elif ka > 0:
-                        kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg)
+                        kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg,RAW)
                     row = scan[0]
                     column = scan[1]
                     ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
@@ -191,7 +146,8 @@ def plotpeakmap(args,ratio=configdict.get('ratio'),plot=None,\
                 currentx = scan[0]
                 currenty = scan[1]
                 currentspectra = SpecRead.updatespectra(spec,dimension)
-            
+                print("{0:.2f}".format(ITERATION/dimension*100), "Percent complete  \r", end='')
+                sys.stdout.flush()
             logging.info("Finished iteration process for element {}\n".format(Element))
             
             if ratio == True: ratiofile.close()

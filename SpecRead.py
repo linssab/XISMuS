@@ -14,23 +14,14 @@ from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-        filename = 'logfile.log',level = logging.DEBUG)
+        filename = 'logfile.log',level = logging.INFO)
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 dirname = 'C:/misure/'
 firstfile = 'Cesareo_1.mca'
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg'
-
-#if not os.path.exists(dirname):
-#    try:
-#        dirname = os.getcwd()
-#        dirname = os.mkdir(dirname + 'xrfscanner')
-#        print("Workpath is: {0}".format(dirname))
-#    except: 
-#       raise IOError("File or directory does no exist!")
-#else: print("Path found! Working on {0}".format(dirname))
+configfile = workpath + '\config.cfg.misure'
 
 def getfirstfile():
     return dirname+firstfile
@@ -229,10 +220,11 @@ def calibrate(self,flag=None):
     for i in range(n):
         curve.append((GAIN*i)+B)
     curve = np.asarray(curve)
-    return curve
+    return curve,GAIN
 
 def getgain(self,flag):
-    curve = calibrate(self,flag)
+    calibration = calibrate(self,flag)
+    curve = calibration[0]
     n = len(curve)
     GAIN=0
     for i in range(n-1):
@@ -247,7 +239,8 @@ def getsum(mca):
     return SUM
 
 def getplot(mca):
-    energy=calibrate(mca,'file')
+    calibration = calibrate(mca,'file')
+    energy = calibration[1]
     data=getdata(mca)
     plt.plot(energy,data)
     plt.show()

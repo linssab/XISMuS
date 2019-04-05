@@ -36,7 +36,8 @@ def getdif2(ydata,xdata,gain):
     return dif2curve
 
 def energyaxis():
-    return SpecRead.calibrate(SpecRead.getdata(SpecRead.getfirstfile()),'data')
+    calibration = SpecRead.calibrate(SpecRead.getdata(SpecRead.getfirstfile()),'data')
+    return calibration[0]
 
 def getstackplot(mca,energy,*args):
     energy = energy
@@ -92,8 +93,11 @@ def setROI(lookup,xarray,yarray,svg):
     lookup = int(lookup)
     peak_corr = 0
     isapeak = True
+    
     if svg == 'SNIPBG': yarray  = scipy.signal.savgol_filter(yarray,5,3)
+    
     logging.debug("-"*15 + " Setting ROI " + "-"*15)
+    
     for peak_corr in range(2):
         logging.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
         logging.debug("lookup: %d" % lookup)
@@ -114,10 +118,10 @@ def setROI(lookup,xarray,yarray,svg):
         ROIdata = yarray[lowx_idx:highx_idx]
         shift = Arithmetic.search_peak(ROIaxis,ROIdata)
         logging.debug("Shift: {0}".format(shift))
-        if 1.05*(-FWHM/2) < (shift[0]*1000)-lookup < 1.05*(FWHM/2):
+        
+        if 1.20*(-FWHM/2) < (shift[0]*1000)-lookup < 1.20*(FWHM/2):
             if (shift[0]*1000)-lookup == 0:
                 logging.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
-                break
             lookup = shift[0]*1000
             peak_corr = 0
             logging.debug("GAP IS LESSER THAN {0}!".format(1.05 * FWHM/2))
@@ -126,43 +130,71 @@ def setROI(lookup,xarray,yarray,svg):
             lookupcenter = int(len(ROIaxis)/2)
             shift = (0,0,lookupcenter)
             isapeak = False
-            break
+        
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
+    
     lowx_idx = lowx_idx + 2
     highx_idx = highx_idx - 2
+    
     return lowx_idx,highx_idx,shift[2],isapeak
 
-def getpeakarea(lookup,data,energyaxis,continuum,svg):
+def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
     Area = 0
+    
     idx = setROI(lookup,energyaxis,data,svg)
+    isapeak = idx[3]
     xdata = energyaxis[idx[0]:idx[1]]
     ydata = data[idx[0]:idx[1]]
-    if svg == 'SNIPBG': 
-        logging.debug("ROIbg is active!")
-        ROIbg = continuum[idx[0]:idx[1]]
+    original_data = RAW[idx[0]:idx[1]] 
+    ROIbg = continuum[idx[0]:idx[1]]
+    
+# SIGNAL TO NOISE PEAK TEST CRITERIA #
+ 
+    if original_data.sum() >= (3*ROIbg.sum()):
+        isapeak = True
+    else: 
+        isapeak = False
+    
     smooth_dif2 = scipy.signal.savgol_filter(\
-            getdif2(ydata,xdata,1),5,3)
+            getdif2(original_data,xdata,1),5,3)
+    
     for i in range(len(smooth_dif2)):
         if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
         elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
-    if smooth_dif2[idx[2]] < 0 and idx[3] == True\
-            or smooth_dif2[idx[2]+1] < 0 and idx[3] == True\
-            or smooth_dif2[idx[2]-1] < 0 and idx[3] == True:
+    
+# 2ND DERIVATIVE CHECK - LEFT AND RIGHT - #    
+
+    if smooth_dif2[idx[2]] < 0 and isapeak == True\
+            or smooth_dif2[idx[2]+1] < 0 and isapeak == True\
+            or smooth_dif2[idx[2]-1] < 0 and isapeak == True:
         logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
         logging.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
                 smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
         for i in range(len(xdata)):
-            try:
-                if ROIbg[i] < ydata[i]: Area += (ydata[i]-ROIbg[i])
-                logging.debug("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
-            except:
-                Area += ydata[i]
+            if ROIbg[i] < ydata[i]: Area += (ydata[i]-ROIbg[i])
+            logging.debug("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
+                
     else: 
         logging.debug("{0} has no peak! Dif2 = {1}\n".format(lookup,smooth_dif2[idx[2]]))
         logging.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
             smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
+
+##############
+# TEST BLOCK #          
+##############    
     
+#    print("peak: {0}\t bg: {1}".format(original_data.sum(),(3*ROIbg.sum())))
+#    print("\t{0}\t".format(isapeak))
+    chi2 = 0
+    for i in range(len(original_data)):
+        aux = (math.pow(original_data[i],2) - math.pow(ydata[i],2))
+        if aux < 0: aux = aux * -1
+        chi2 += math.sqrt(aux)
+#    chi2 = chi2/len(ydata)
+#    print("chi2 = {0:.2f}".format(chi2))
+
 #    plt.plot(xdata,ydata)
+#    plt.plot(xdata,original_data)
 #    plt.plot(xdata,smooth_dif2)
 #    plt.plot(xdata,ROIbg)
 #    plt.show()
@@ -176,26 +208,22 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg):
 # W VALUE MUST BE LARGER THAN 3 AND ODD, SINCE 3 IS THE MINIMUM  #
 # SATISFACTORY POLYNOMIAL DEGREE TO SMOOTHEN THE DATA            #
 
-def ryan_snip(data,cycles,w):
+def ryan_snip(dataarray,cycles,w):
     for k in range(cycles):
         l = w
-        for l in range(len(data)-w):
-            m = (data[l-w] + data[l+w])/2
-            if data[l] > m: data[l] = m
-    return data
+        for l in range(len(dataarray)-w):
+            m = (dataarray[l-w] + dataarray[l+w])/2
+            if dataarray[l] > m: dataarray[l] = m
+    return dataarray
 
 def peakstrip(spectrum,cycles,w):
+    spectrum_sq = np.zeros([len(spectrum)])
     logging.debug("TIMESTAMP: BEGIN of background estimation!")
-    for i in range(len(spectrum)): spectrum[i] = math.sqrt(spectrum[i])
-    spectrum_smth = scipy.signal.savgol_filter(spectrum,w,2)
+    for i in range(len(spectrum)): spectrum_sq[i] = math.sqrt(spectrum[i])
+    spectrum_smth = scipy.signal.savgol_filter(spectrum_sq,w,2)
     spectrum_filtered = ryan_snip(spectrum_smth,cycles,w)
     for j in range(len(spectrum_filtered)):\
             spectrum_filtered[j] = math.pow(spectrum_filtered[j],2)
-    
-    # FOR SOME REASON, THE INPUT SPECTRUM MUST BE RE-TRANSFORMED     # 
-    # BEFORE FINISHING THE OPERATION                                 #
-    
-    for k  in range(len(spectrum)): spectrum[k] = math.pow(spectrum[k],2)
     
     background = scipy.signal.savgol_filter(spectrum_filtered,9,3)
     logging.debug("TIMESTAMP: END of background estimation!")
@@ -204,13 +232,17 @@ def peakstrip(spectrum,cycles,w):
 
 if __name__=="__main__":
     dirname = os.path.join(SpecRead.dirname)
-    file = dirname+'test_4.txt'
+    specfile = dirname+'Cesareo_74.mca'
     xdata = energyaxis()
-    testdata = SpecRead.getdata(file)
-    lookup = 10551
+    import SpecFitter
+    testdata = SpecFitter.fit(specfile)
+#    testdata = SpecRead.getdata(specfile)
+    RAW_data = SpecRead.getdata(specfile)
+    lookup = 9711
     
-    continuum = peakstrip(testdata,18,3)
-    getpeakarea(lookup,testdata,xdata,continuum,svg='SNIPBG')
+#    continuum = peakstrip(testdata,18,3)
+    continuum = np.zeros([len(testdata)])
+    getpeakarea(lookup,testdata,xdata,continuum,'SNIPBG',RAW_data)
 #    smooth_dif2 = scipy.signal.savgol_filter(\
 #            getdif2(ydata,xdata,1),5,3)
 #    for i in range(len(smooth_dif2)):
