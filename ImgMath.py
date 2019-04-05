@@ -13,23 +13,26 @@ configdict = SpecRead.getconfig()
 
 def normalize_fnc(energyaxis):
     MaxDetectedArea = 0
-    currentspectra = SpecRead.getfirstfile()
+    spec = SpecRead.getfirstfile()
+    RAW_data = SpecRead.getdata(spec)
+    
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
     imagey = imagesize[1]
     imagedimension = imagex*imagey
-    stackeddata = SpecMath.stacksum(currentspectra,imagedimension)
+    
+    stackeddata = SpecMath.stacksum(spec,imagedimension)
     stackedlist = stackeddata.tolist()
     absenergy = energyaxis[stackedlist.index(stackeddata.max())] * 1000
-    bg = np.zeros([len(energyaxis)])
     print("ABSENERGY: {0}".format(absenergy))
-    for iteration in range(imagedimension):
-        spec = currentspectra
-        specdata = SpecRead.getdata(spec)
-        sum = SpecMath.getpeakarea(absenergy,specdata,energyaxis,bg,configdict.get('bgstrip'))
-        if sum > MaxDetectedArea: MaxDetectedArea = sum
-        currentspectra = SpecRead.updatespectra(spec,imagedimension)
-    return MaxDetectedArea
+    
+    bg = SpecMath.peakstrip(stackeddata,24,3)
+
+# NO FITTING IS USED TO CALCULATE MAX AREA!        
+
+    sum = SpecMath.getpeakarea(absenergy,stackeddata,energyaxis,bg,\
+            configdict.get('bgstrip'),RAW_data)
+    return sum
         
 def colorize(elementmap,color=None):
     imagesize = SpecRead.getdimension()
