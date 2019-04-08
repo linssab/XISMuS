@@ -94,7 +94,7 @@ def updateposition(a,b):
     actual=([currentx,currenty])
     return actual
 
-def enhanceimage(image):
+def flattenhistogram(image):
     hist,bins = np.histogram(image.flatten(),256,[0,256])
     cdf = hist.cumsum()
     cdf_norm = cdf * hist.max()/cdf.max()
