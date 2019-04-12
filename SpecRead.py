@@ -18,10 +18,10 @@ logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
-dirname = 'C:/misure/'
-firstfile = 'Cesareo_1.mca'
+dirname = 'C:/MCPbCoAu/'
+firstfile = 'test_1.txt'
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg.misure'
+configfile = workpath + '\config.cfg.mc'
 
 def getfirstfile():
     return dirname+firstfile
@@ -59,6 +59,12 @@ def getconfig():
                 elif aux[2] == 'False': modesdict['enhance'] = False
                 logging.info("Enhance image? {0}".format(modesdict.get('enhance')))
                 line = file.readline()
+            if 'thick ratio' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                modesdict['thick ratio'] = int(aux[2])
         file.close()
     return modesdict
  
@@ -287,8 +293,3 @@ def getdimension():
     else: line = file.readline()
     return x,y
 
-#energy = calibrate(getdata(getfirstfile()),'data')
-#mcfile = dirname + 'test_14.txt'
-#counts = getdata(mcfile)
-#plt.plot(energy,counts)
-#plt.show()
