@@ -8,6 +8,10 @@
 import numpy as np
 import SpecRead
 import SpecMath
+import Compounds
+import math
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 configdict = SpecRead.getconfig()
 
@@ -33,7 +37,46 @@ def normalize_fnc(energyaxis):
     sum = SpecMath.getpeakarea(absenergy,stackeddata,energyaxis,bg,\
             configdict.get('bgstrip'),RAW_data)
     return sum
-        
+
+def getheightmap(depth_matrix,compound,thickratio):
+    imagesize = SpecRead.getdimension()
+    imagex = imagesize[0]
+    imagey = imagesize[1]
+    heightmap = np.zeros([imagex,imagey])
+    
+    coefficients = Compounds.coefficients(compound)
+    mu1 = coefficients[0]
+    mu2 = coefficients[1]
+    for i in range(len(depth_matrix)):
+        for j in range(len(depth_matrix[i])):
+            d = -1 * ((math.log(depth_matrix[i][j]/thickratio))/(mu1-mu2))
+            if d < 0: heightmap[i][j] = 0
+            elif depth_matrix[i][j] <= thickratio*1.10 and \
+                    depth_matrix[i][j] >= thickratio*0.90:
+                heightmap[i][j] = 0
+            else: heightmap[i][j] = 10000 * d
+    return heightmap
+
+def plot3D(depth_matrix):
+    fig = plt.figure()
+    ax = fig.gca(projection = '3d')
+    imagesize = SpecRead.getdimension()
+    imagex = np.arange(imagesize[0])
+    print(imagex)
+    imagey = np.arange(imagesize[1])
+    print(imagey)
+    Z = []
+    X, Y = np.meshgrid(imagex,imagey)
+    for i in range(len(depth_matrix)):
+        for j in range(len(depth_matrix[i])):
+            Z.append(depth_matrix[i][j])
+#    print("{0},{1}".format(Z,len(Z)))
+    print(depth_matrix)
+    MAP = ax.plot_surface(X,Y,depth_matrix,\
+            cmap='GnBu',linewidth=0,antialiased=False)
+    plt.show()
+    return 0
+
 def colorize(elementmap,color=None):
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
