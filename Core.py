@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 import logging
 
 def plot(image):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(image, vmin=0, vmax=255)
-    fig.colorbar(cax)
+    image_norm = image/image.max()*255
+    image_color = ImgMath.colorize(image_norm,'green')
+    fig, ax = plt.subplots()
+    plt.imshow(image_color)
     plt.show()
     return 0
 
@@ -71,5 +71,7 @@ an image where the element is displeyd in proportion to the most abundant elemen
         ratiofile = SpecRead.workpath + '/output/ratio_{0}.txt'.format(elementlist[0])
         ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
         ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
-        plt.imshow(ratiomatrix,cmap='gray')
+        heightmap = ImgMath.getheightmap(ratiomatrix,'CoBlue',1.32)
+        plt.imshow(heightmap,cmap='gray')
         plt.show()
+#        ImgMath.plot3D(ratiomatrix)
