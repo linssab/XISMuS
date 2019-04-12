@@ -62,18 +62,20 @@ def plot3D(depth_matrix):
     ax = fig.gca(projection = '3d')
     imagesize = SpecRead.getdimension()
     imagex = np.arange(imagesize[0])
-    print(imagex)
     imagey = np.arange(imagesize[1])
-    print(imagey)
     Z = []
     X, Y = np.meshgrid(imagex,imagey)
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             Z.append(depth_matrix[i][j])
-#    print("{0},{1}".format(Z,len(Z)))
-    print(depth_matrix)
+    Z = np.asarray(Z)
+
+    depth_matrix = depth_matrix.transpose()
     MAP = ax.plot_surface(X,Y,depth_matrix,\
-            cmap='GnBu',linewidth=0,antialiased=False)
+            cmap='gray',linewidth=0,antialiased=False)
+    ax.set_zlim(0,depth_matrix.max()*1.50)
+    ax.set_ylim(-1,imagesize[1]*1.10)
+    ax.set_xlim(-1,imagesize[0]*1.10)
     plt.show()
     return 0
 

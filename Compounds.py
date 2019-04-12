@@ -10,7 +10,8 @@ import EnergyLib
 CompoundList = {
         'CoBlue'    :{'Co':0.3331,'Al':0.3050,'O':0.3619},
         'PbWhite'   :{'Pb':0.8014,'O':0.1650,'C':0.031,'H':0.0026},
-        'AuSheet'   :{'Au':0.75,'Ag':0.25}
+        'AuSheet'   :{'Au':0.75,'Ag':0.25},
+        'linoil'    :{'C':0.78,'O':0.11,'H':0.11}
         }
 
 def linattenuation(element,energy):
