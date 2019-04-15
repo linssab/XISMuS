@@ -1,3 +1,9 @@
+#################################################################
+#                                                               #
+#          CORE 	                                        #
+#                        version: null                          #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
 
 import sys
 import Mapping
@@ -71,7 +77,8 @@ an image where the element is displeyd in proportion to the most abundant elemen
         ratiofile = SpecRead.workpath + '/output/ratio_{0}.txt'.format(elementlist[0])
         ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
         ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
-        heightmap = ImgMath.getheightmap(ratiomatrix,'CoBlue',1.32)
-        plt.imshow(heightmap,cmap='gray')
+        heightmap = ImgMath.getheightmap(ratiomatrix,7.2,'AuSheet',elementlist[0])
+        plt.imshow(heightmap,cmap='BuGn')
         plt.show()
-#        ImgMath.plot3D(ratiomatrix)
+        ImgMath.plot3D(heightmap)
+

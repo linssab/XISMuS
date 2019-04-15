@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a2.0                          #
+#                        version: a2.1                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -18,10 +18,10 @@ logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
-dirname = 'C:/MCPbCoAu/'
-firstfile = 'test_1.txt'
+dirname = 'C:/campioneperu/'
+firstfile = 'Cesareo_1.mca'
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg.mc'
+configfile = workpath + '\config.cfg'
 
 def getfirstfile():
     return dirname+firstfile
@@ -59,12 +59,20 @@ def getconfig():
                 elif aux[2] == 'False': modesdict['enhance'] = False
                 logging.info("Enhance image? {0}".format(modesdict.get('enhance')))
                 line = file.readline()
-            if 'thick ratio' in line:
+            if 'thick_ratio' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
                 line=line.replace('\t',' ')
                 aux = line.split()
-                modesdict['thick ratio'] = int(aux[2])
+                modesdict['thickratio'] = int(aux[2])
+                line = file.readline()
+            if 'netpeak_method' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                modesdict['peakmethod'] = str(aux[2])
+                line = file.readline()
         file.close()
     return modesdict
  
@@ -171,7 +179,7 @@ def getdata(mca):
     name = name.replace('_',' ')
     name = name.replace('/',' ')
     name = name.split()
-    if 'test' in name:
+    if 'test' in name or 'obj' in name:
         Data = []
         file = open(mca)
         lines = file.readlines()

@@ -40,7 +40,7 @@ configdict = SpecRead.getconfig()
 
 def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         normalize=configdict.get('enhance'),svg=configdict.get('bgstrip'),\
-        peakmethod='Simple'):
+        peakmethod=configdict.get('peakmethod')):
     
     print(Element)
 
@@ -104,6 +104,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             if svg == 'SNIPBG': background = SpecMath.peakstrip(RAW,24,5)
             else: background = np.zeros([len(specdata)])
             
+            logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
             logging.info("Specfile being processed is: {0}\n".format(spec))
  
 #            plt.semilogy(SpecMath.energyaxis(),specdata)

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: a1.01                         #
+#                        version: a1.2                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -10,6 +10,7 @@ import SpecRead
 import SpecMath
 import Compounds
 import math
+import logging
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -38,18 +39,28 @@ def normalize_fnc(energyaxis):
             configdict.get('bgstrip'),RAW_data)
     return sum
 
-def getheightmap(depth_matrix,compound,thickratio):
+def getheightmap(depth_matrix,thickratio,compound,KaKb='Pb'):
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
     imagey = imagesize[1]
     heightmap = np.zeros([imagex,imagey])
     
-    coefficients = Compounds.coefficients(compound)
+    coefficients = Compounds.coefficients(compound,KaKb)
+    
+    if compound == 'OceanBlue':
+        coefficients = Compounds.mixture([6,4],KaKb,'Air','OceanBlue')
+    if compound == 'CoBlue':
+        coefficients = Compounds.mixture([6,4],KaKb,'Air','CoBlue')
+
     mu1 = coefficients[0]
     mu2 = coefficients[1]
+    logging.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
-            d = -1 * ((math.log(depth_matrix[i][j]/thickratio))/(mu1-mu2))
+            if depth_matrix[i][j] != 0:
+                d = -1 * ((math.sin(90)*math.log((depth_matrix[i][j]+0.00001)\
+                        /thickratio))/(mu1-mu2))
+            else: d = 0
             if d < 0: heightmap[i][j] = 0
             elif depth_matrix[i][j] <= thickratio*1.10 and \
                     depth_matrix[i][j] >= thickratio*0.90:
@@ -72,8 +83,9 @@ def plot3D(depth_matrix):
 
     depth_matrix = depth_matrix.transpose()
     MAP = ax.plot_surface(X,Y,depth_matrix,\
-            cmap='gray',linewidth=0,antialiased=False)
-    ax.set_zlim(0,depth_matrix.max()*1.50)
+            cmap='BuGn',linewidth=0,antialiased=True)
+    ax.set_zlim(-1*depth_matrix.max(),depth_matrix.max()*2)
+#    ax.set_zlim(-10,10)
     ax.set_ylim(-1,imagesize[1]*1.10)
     ax.set_xlim(-1,imagesize[0]*1.10)
     plt.show()
