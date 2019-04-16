@@ -153,12 +153,10 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                         .format(Element,elmap.max()))
                 pass
         
-#        fig = plt.figure()
-        figure = plt.imshow(image)   
+        figure = plt.imshow(image) 
         plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
             .format(Element,configdict.get('bgstrip'),\
             configdict.get('ratio'),configdict.get('enhance')),dpi=150,transparent=False) 
-        plt.clf()        
         print("Execution took %s seconds" % (time.time() - partialtimer))
         partialtimer = time.time()
     
