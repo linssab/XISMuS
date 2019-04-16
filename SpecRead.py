@@ -110,9 +110,9 @@ def RatioMatrixTransform(MatrixArray):
         y=int(MatrixArray[i][1])
         ka=int(MatrixArray[i][2])
         kb=int(MatrixArray[i][3])
-        if kb==0: kb=1
-        RatesMatrix[x,y]=ka/kb
-        if ka/kb > 15: RatesMatrix[x,y]=0  # CUTOFF FILTER FOR PEAK ERRORS #
+        if kb == 0: ka,kb = 0,1
+        RatesMatrix[x,y] = ka/kb
+        if ka/kb > 15: RatesMatrix[x,y] = 0  # CUTOFF FILTER FOR PEAK ERRORS #
     return RatesMatrix
 
 
