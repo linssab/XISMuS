@@ -77,7 +77,7 @@ an image where the element is displeyd in proportion to the most abundant elemen
         ratiofile = SpecRead.workpath + '/output/ratio_{0}.txt'.format(elementlist[0])
         ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
         ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
-        heightmap = ImgMath.getheightmap(ratiomatrix,7.2,'AuSheet',elementlist[0])
+        heightmap = ImgMath.getheightmap(ratiomatrix,7.32,'AuSheet',elementlist[0])
         plt.imshow(heightmap,cmap='BuGn')
         plt.show()
         ImgMath.plot3D(heightmap)

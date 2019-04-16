@@ -21,6 +21,9 @@ config.read(cfg)
 mcafit = ClassMcaTheory.ClassMcaTheory()
 mcafit.configure(config)
 
+# concentrationsTool = ConcentrationsTool.ConcentrationsTool()
+# concentrationsFormat = ConcentrationsTool.ConcentrationsConversion()
+
 currentConfig = mcafit.configure()
 print(currentConfig['detector']['gain'])
 calibration = SpecRead.calibrate(SpecRead.getfirstfile(),'data')
@@ -45,6 +48,17 @@ def fit(specfile):
 #        plt.plot(energy, ydata)
 #        plt.plot(energy, yfit)
 #        plt.show()
+    
+#        concentrationsConfig = concentrationsTool.configure()
+#        concentrationsConfig = mcafit.configure()["concentrations"]
+        
+#        concentrations, info = concentrationsTool.processFitResult(\
+#                             config=concentrationsConfig,
+#                             fitresult={"result":result},
+#                             elementsfrommatrix=False,
+#                             fluorates=mcafit._fluoRates,
+#                             addinfo=True)
+#        print(concentrations)
     else:
         yfit = numpy.zeros([len(channels)])
     return yfit
