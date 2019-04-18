@@ -16,7 +16,7 @@ CompoundList = {
         'PbWhite'       :{'Pb':0.8014,'O':0.1650,'C':0.031,'H':0.0026},
         'PbWhitePrimer' :{'Pb':0.6612,'O':0.1722,'C':0.1328,'H':0.0163,'Ca':0.0174}, \
                 # After Favaro, 2010 and Gonzalez, 2015
-        'AuSheet'       :{'Au':0.75,'Ag':0.25},
+        'AuSheet'       :{'Au':0.917,'Ag':0.083},
         'LinOil'        :{'C':0.78,'O':0.11,'H':0.11}
         }
 
@@ -27,18 +27,30 @@ def linattenuation(element,KaKb):
         mu2 = 0
     elif KaKb == 'Pb': 
         coefficients = EnergyLib.muPb[element]
-        mu1 = coefficients[0]*EnergyLib.density[element]
-        mu2 = coefficients[1]*EnergyLib.density[element]
+        mu1 = coefficients[0]
+        mu2 = coefficients[1]
     elif KaKb == 'Cu':
         coefficients = EnergyLib.muCu[element]
-        mu1 = coefficients[0]*EnergyLib.density[element]
-        mu2 = coefficients[1]*EnergyLib.density[element]
+        mu1 = coefficients[0]
+        mu2 = coefficients[1]
     else:
         print("Impossible to create heightmap for {0}!".format(KaKb))
         logging.warning("{0} is not a valid element for ratio calculation!\n\t\t\
                 Try again using a different element such as Au, Pb or Zn.".format(KaKb))
         raise ValueError
     return mu1,mu2
+
+def density(compound):
+    compound_density = 0
+    for element in CompoundList[compound]:
+        compound_density += EnergyLib.density[element]*CompoundList[compound][element]
+    return compound_density
+
+#############################################
+#   coefficients parameters are: the name   #
+#   of the compound and which energy(ies)   #
+#   it is attenuating                       #
+#############################################
 
 def coefficients(compound,KaKb):
     comp_ele_list = [*CompoundList[compound]]
@@ -49,6 +61,8 @@ def coefficients(compound,KaKb):
         mu2 = coeffs[1]
         mu1weighted += mu1*CompoundList[compound][element]
         mu2weighted += mu2*CompoundList[compound][element]
+    mu1weighted = mu1weighted*density(compound)
+    mu2weighted = mu2weighted*density(compound)
     return mu1weighted, mu2weighted
 
 def mixture(rate,KaKb='Pb',*args):
@@ -72,5 +86,6 @@ def mixture(rate,KaKb='Pb',*args):
         count = count + 1
     return mu1,mu2
 
-#teste = mixture([2,8],'Air','OceanBlue')
-#print(teste)
+#rho_ausheet = density('AuSheet')
+#print(rho_ausheet)
+#print(coefficients('AuSheet','Pb'))
