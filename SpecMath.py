@@ -28,11 +28,12 @@ def dif2(ydata,x,gain):
 
 def getdif2(ydata,xdata,gain):
     dif2curve = []
-    xinterval = xdata
+    xinterval = np.pad(xdata,2,'edge')
     yinterval = np.pad(ydata,2,'edge')
-    for x in range(len(xinterval)):
+    for x in range(len(xinterval)-2):
         difvalue = dif2(yinterval,x,1)
         dif2curve.append(difvalue)
+    dif2curve = dif2curve[1:-1]
     return dif2curve
 
 def energyaxis():
@@ -133,10 +134,11 @@ def setROI(lookup,xarray,yarray,svg):
         
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     
-    lowx_idx = lowx_idx + 2
-    highx_idx = highx_idx - 2
-    
-    return lowx_idx,highx_idx,shift[2],isapeak
+    lowx_idx = lowx_idx + 1
+    highx_idx = highx_idx - 1
+    peak_center = shift[2]-1
+    logging.debug("SHIFT[2] = {0}".format(shift[2])) 
+    return lowx_idx,highx_idx,peak_center,isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
     Area = 0
@@ -156,7 +158,8 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
         isapeak = False
     
     smooth_dif2 = scipy.signal.savgol_filter(\
-            getdif2(original_data,xdata,1),5,3)
+            getdif2(RAW,energyaxis,1),5,3)
+    smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
     
     for i in range(len(smooth_dif2)):
         if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
@@ -193,15 +196,19 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
 #    chi2 = chi2/len(ydata)
 #    print("chi2 = {0:.2f}".format(chi2))
 
+#    print("ydata = {0}".format(ydata))
+#    print("len(ydata) = {0}".format(len(ydata)))
+#    print("ydata[idx[2]] = {0}, smooth_dif2[idx[2]] = {1}".format(\
+#            ydata[idx[2]],smooth_dif2[idx[2]]))
+#    print("idx[2] = {0}".format(idx[2]))
+#    print("Lookup: {0} Area: {1}\n".format(lookup,Area))
+    
 #    plt.plot(xdata,ydata)
 #    plt.plot(xdata,original_data)
 #    plt.plot(xdata,smooth_dif2)
 #    plt.plot(xdata,ROIbg)
 #    plt.show()
-#    print(ydata)
-#    print(len(ydata))
-#    print(ydata[idx[2]],smooth_dif2[idx[2]])
-#    print("Lookup: {0} Area: {1}".format(lookup,Area))
+    
     return Area
 
 # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (2*W)+1       #
