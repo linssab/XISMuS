@@ -101,7 +101,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                     specdata = SpecRead.getdata(spec)
             elif peakmethod == 'Simple': specdata = SpecRead.getdata(spec)   
  
-            if svg == 'SNIPBG': background = SpecMath.peakstrip(RAW,24,5)
+            if svg == 'SNIPBG': background = SpecMath.peakstrip(RAW,24,3)
             else: background = np.zeros([len(specdata)])
             
             logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
