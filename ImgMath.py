@@ -52,7 +52,8 @@ def getheightmap(depth_matrix,thickratio,compound,KaKb='Pb'):
 #    if compound == 'CoBlue':
 #        coefficients = Compounds.mixture([6,4],KaKb,'Air','CoBlue')
     
-    heightfile = open(SpecRead.workpath + '/output/heightmap_{0}.txt'.format(KaKb),'w+')
+    heightfile = open(SpecRead.workpath + '/output/{1}_heightmap_{0}.txt'\
+            .format(KaKb,SpecRead.DIRECTORY),'w+')
     heightfile.write("-"*10 + " Thickness Values (um) of {0} "\
             .format(compound) + 10*"-" + '\n')
     heightfile.write("row\tcolumn\tthickness\n")
@@ -63,7 +64,8 @@ def getheightmap(depth_matrix,thickratio,compound,KaKb='Pb'):
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] != 0:
-                d = -1 * (math.log((depth_matrix[i][j]/thickratio))/(mu1-mu2))
+                d = -1 * math.sin(math.radians(90)) *\
+                        (math.log((depth_matrix[i][j]/thickratio))/(mu1-mu2))
             else: d = 0
             
             if d < 0: heightmap[i][j] = 0

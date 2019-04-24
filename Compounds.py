@@ -17,7 +17,8 @@ CompoundList = {
         'PbWhitePrimer' :{'Pb':0.6612,'O':0.1722,'C':0.1328,'H':0.0163,'Ca':0.0174}, \
                 # After Favaro, 2010 and Gonzalez, 2015
         'AuSheet'       :{'Au':0.917,'Ag':0.083},
-        'LinOil'        :{'C':0.78,'O':0.11,'H':0.11}
+        'LinOil'        :{'C':0.78,'O':0.11,'H':0.11},
+        'Tumbaga'       :{'Au':0.12,'Ag':0.16,'Cu':0.72}
         }
 
 def linattenuation(element,KaKb):
@@ -48,8 +49,8 @@ def density(compound):
 
 #############################################
 #   coefficients parameters are: the name   #
-#   of the compound and which energy(ies)   #
-#   it is attenuating                       #
+#   of the compound and which energy it is  #
+#   attenuating                             #
 #############################################
 
 def coefficients(compound,KaKb):
@@ -86,6 +87,8 @@ def mixture(rate,KaKb='Pb',*args):
         count = count + 1
     return mu1,mu2
 
-#rho_ausheet = density('AuSheet')
-#print(rho_ausheet)
-#print(coefficients('AuSheet','Pb'))
+#rho_tumbaga = density('Tumbaga')
+#print(rho_tumbaga)
+#print(coefficients('AuSheet','E0'))
+
+

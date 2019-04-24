@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a2.20                         #
+#                        version: a2.30                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -13,7 +13,6 @@ import SpecMath
 import SpecRead
 import EnergyLib
 import ImgMath
-import SpecFitter
 from PyMca5.PyMcaPhysics import Elements
 import matplotlib.pyplot as plt
 import time
@@ -31,6 +30,7 @@ imagey = imagsize[1]
 dimension = imagex*imagey
 
 configdict = SpecRead.getconfig()
+if configdict.get('peakmethod') == 'PyMcaFit': import SpecFitter
 
 ################-getpeakmap-#####################
 #   GETPEAKMAP READS THE BATCH OF SPECTRA AND   #
@@ -42,8 +42,6 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         normalize=configdict.get('enhance'),svg=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
     
-    print(Element)
-
     partialtimer = time.time()
     KaElementsEnergy = EnergyLib.Energies
     KbElementsEnergy = EnergyLib.kbEnergies
@@ -69,7 +67,8 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         currenty = scan[1]
         
         if ratio == True: 
-            ratiofile = open(SpecRead.workpath + '/output/ratio_{0}.txt'.format(Element),'w+')
+            ratiofile = open(SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
+                    .format(Element,SpecRead.DIRECTORY),'w+')
             ratiofile.write("-"*10 + " Counts of Element {0} "\
                     .format(Element) + 10*"-" + '\n')
             ratiofile.write("row\tcolumn\tline1\tline2\n")
@@ -96,7 +95,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                 try:
                     specdata = SpecFitter.fit(spec)
                 except:
-                    print("\tCHANNEL COUNT\t")
+                    print("\tCHANNEL COUNT METHOD USED FOR {0}!\t".format(spec))
                     logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD!\t")
                     specdata = SpecRead.getdata(spec)
             elif peakmethod == 'Simple': specdata = SpecRead.getdata(spec)   
@@ -107,21 +106,26 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
             logging.info("Specfile being processed is: {0}\n".format(spec))
  
-#            plt.semilogy(SpecMath.energyaxis(),specdata)
-#            plt.semilogy(SpecMath.energyaxis(),RAW)
-#            plt.semilogy(SpecMath.energyaxis(),background)
+#            plt.plot(SpecMath.energyaxis(),specdata)
+#            plt.plot(SpecMath.energyaxis(),RAW)
+#            plt.plot(SpecMath.energyaxis(),background)
 #            plt.show()
                 
-            netpeak = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
-            elmap[currentx][currenty] = netpeak
+            ka = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
                
-            if ratio == True:
-                ka = netpeak
-                if ka == 0: kb = 0
-                elif ka > 0:
-                    kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg,RAW)
-                row = scan[0]
-                column = scan[1]
+            if ka == 0: kb = 0
+            elif ka > 0:
+                kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg,RAW)
+            
+            if ka > 0 and kb > 0:
+                elmap[currentx][currenty] = ka+kb
+            else:
+                elmap[currentx][currenty] = 1
+                ka, kb = 0, 0
+            
+            row = scan[0]
+            column = scan[1]
+            if ratio == True: 
                 ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
                 logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
                          .format(spec,ka,kb,Element))

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a2.1                          #
+#                        version: a2.2                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -134,10 +134,10 @@ def setROI(lookup,xarray,yarray,svg):
         
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     
-    lowx_idx = lowx_idx + 1
-    highx_idx = highx_idx - 1
-    peak_center = shift[2]-1
-    logging.debug("SHIFT[2] = {0}".format(shift[2])) 
+    lowx_idx = lowx_idx + 2
+    highx_idx = highx_idx - 2
+    peak_center = shift[2]-2
+    logging.debug("peak_center = {0}".format(peak_center)) 
     return lowx_idx,highx_idx,peak_center,isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
@@ -152,14 +152,17 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
     
 # SIGNAL TO NOISE PEAK TEST CRITERIA #
  
-    if original_data.sum() >= (3*ROIbg.sum()):
-        isapeak = True
-    else: 
-        isapeak = False
+    if isapeak == True: 
+        if original_data.sum() <= (3*ROIbg.sum()): isapeak = False
     
-    smooth_dif2 = scipy.signal.savgol_filter(\
-            getdif2(RAW,energyaxis,1),5,3)
-    smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
+    try: 
+        smooth_dif2 = scipy.signal.savgol_filter(getdif2(RAW,energyaxis,1),5,3)
+        smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
+    except:
+        loggin.warning("Cannot apply savgol filter to 2nd derivate! Vector is too short!")
+        smooth_dif2 = getdif2(RAW,energyaxis,1)
+        raise Exception("Cannot smooth 2nd derivate!")
+        pass
     
     for i in range(len(smooth_dif2)):
         if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
@@ -182,32 +185,34 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
         logging.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
             smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
 
-##############
-# TEST BLOCK #          
-##############    
+    ##############
+    # TEST BLOCK #          
+    TESTFNC = False
+    ##############    
     
-#    print("peak: {0}\t bg: {1}".format(original_data.sum(),(3*ROIbg.sum())))
-#    print("\t{0}\t".format(isapeak))
-    chi2 = 0
-    for i in range(len(original_data)):
-        aux = (math.pow(original_data[i],2) - math.pow(ydata[i],2))
-        if aux < 0: aux = aux * -1
-        chi2 += math.sqrt(aux)
-#    chi2 = chi2/len(ydata)
-#    print("chi2 = {0:.2f}".format(chi2))
+    if TESTFNC == True:    
+        print(5*"*" + " IS A PEAK? " + 5*"*" + "\n\t{0}\t".format(isapeak))
+        print("RAW peak: {0}\t bg: {1}\nyDATA peak: {2}"\
+               .format(original_data.sum(),(3*ROIbg.sum()),ydata.sum()))
+        chi2 = 0
+        for i in range(len(original_data)):
+            aux = math.pow((ydata[i] - original_data[i]),2)
+            chi2 += aux
+        chi2 = chi2/len(original_data)
+        print("chi2 = {0:.2f}".format(chi2))
 
-#    print("ydata = {0}".format(ydata))
-#    print("len(ydata) = {0}".format(len(ydata)))
-#    print("ydata[idx[2]] = {0}, smooth_dif2[idx[2]] = {1}".format(\
-#            ydata[idx[2]],smooth_dif2[idx[2]]))
-#    print("idx[2] = {0}".format(idx[2]))
-#    print("Lookup: {0} Area: {1}\n".format(lookup,Area))
+        print("ydata = {0}".format(ydata))
+        print("len(ydata) = {0}".format(len(ydata)))
+        print("ydata[idx[2]] = {0}, smooth_dif2[idx[2]] = {1}".format(\
+                ydata[idx[2]],smooth_dif2[idx[2]]))
+        print("idx[2] = {0}".format(idx[2]))
+        print("Lookup: {0} Area: {1}\n".format(lookup,Area))
     
-#    plt.plot(xdata,ydata)
-#    plt.plot(xdata,original_data)
-#    plt.plot(xdata,smooth_dif2)
-#    plt.plot(xdata,ROIbg)
-#    plt.show()
+        plt.semilogy(xdata,ydata)
+        plt.semilogy(xdata,original_data)
+    #    plt.semilogy(xdata,smooth_dif2)
+        plt.semilogy(xdata,ROIbg)
+        plt.show()
     
     return Area
 
@@ -234,6 +239,11 @@ def peakstrip(spectrum,cycles,w):
     
     background = scipy.signal.savgol_filter(spectrum_filtered,9,3)
     logging.debug("TIMESTAMP: END of background estimation!")
+    
+#    plt.semilogy(background)
+#    plt.semilogy(spectrum)
+#    plt.show()
+    
     return background
    
 

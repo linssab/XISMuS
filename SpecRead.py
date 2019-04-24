@@ -14,14 +14,15 @@ from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-        filename = 'logfile.log',level = logging.INFO)
+        filename = 'logfile.log',level = logging.DEBUG)
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
-dirname = 'C:/campioneperu/'
-firstfile = 'Cesareo_1.mca'
+DIRECTORY = 'bluegoldflag'
+dirname = 'C:/'+DIRECTORY+'/'
+firstfile = 'obj_1.txt'
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg'
+configfile = workpath + '\config.cfg.mc'
 
 def getfirstfile():
     return dirname+firstfile
