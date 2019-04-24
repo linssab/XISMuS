@@ -13,6 +13,15 @@ import SpecMath
 import matplotlib.pyplot as plt
 import random
 
+print(5*'*'+" FIT CONFIGURATION STEP " + 5*'*')
+fit_elements = input('Which elements may be found in your sample?:\
+ (split them with spaces)\n')
+
+import EnergyLib
+PeakList = EnergyLib.SetPeakLines()
+fit_elements = fit_elements.split(' ')
+peaks = {"{0}".format(elt):PeakList[elt] for elt in fit_elements}
+
 print("FIT CONFIG")
 cfg =  ('fitconfigGUI.cfg')
 config = ConfigDict.ConfigDict()
@@ -25,11 +34,15 @@ mcafit.configure(config)
 # concentrationsFormat = ConcentrationsTool.ConcentrationsConversion()
 
 currentConfig = mcafit.configure()
+
 print(currentConfig['detector']['gain'])
 calibration = SpecRead.calibrate(SpecRead.getfirstfile(),'data')
 currentConfig['detector']['gain'] = calibration[1] 
 print(currentConfig['detector']['gain'])
+
 currentConfig['detector']['fano'] = SpecMath.FANO
+
+currentConfig['peaks'] = peaks
 print(currentConfig['peaks'])
 mcafit.configure(currentConfig)
 
