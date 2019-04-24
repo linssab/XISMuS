@@ -120,12 +120,12 @@ def setROI(lookup,xarray,yarray,svg):
         shift = Arithmetic.search_peak(ROIaxis,ROIdata)
         logging.debug("Shift: {0}".format(shift))
         
-        if 1.20*(-FWHM/2) < (shift[0]*1000)-lookup < 1.20*(FWHM/2):
+        if 1.10*(-FWHM/2) < (shift[0]*1000)-lookup < 1.10*(FWHM/2):
             if (shift[0]*1000)-lookup == 0:
                 logging.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
             lookup = shift[0]*1000
             peak_corr = 0
-            logging.debug("GAP IS LESSER THAN {0}!".format(1.05 * FWHM/2))
+            logging.debug("GAP IS LESSER THAN {0}!".format(1.10 * FWHM/2))
         else: 
             logging.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
             lookupcenter = int(len(ROIaxis)/2)
