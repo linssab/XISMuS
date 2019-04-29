@@ -16,29 +16,6 @@ from mpl_toolkits.mplot3d import Axes3D
 
 configdict = SpecRead.getconfig()
 
-def normalize_fnc(energyaxis):
-    MaxDetectedArea = 0
-    spec = SpecRead.getfirstfile()
-    RAW_data = SpecRead.getdata(spec)
-    
-    imagesize = SpecRead.getdimension()
-    imagex = imagesize[0]
-    imagey = imagesize[1]
-    imagedimension = imagex*imagey
-    
-    stackeddata = SpecMath.stacksum(spec,imagedimension)
-    stackedlist = stackeddata.tolist()
-    absenergy = energyaxis[stackedlist.index(stackeddata.max())] * 1000
-    print("ABSENERGY: {0}".format(absenergy))
-    
-    bg = SpecMath.peakstrip(stackeddata,24,3)
-
-# NO FITTING IS USED TO CALCULATE MAX AREA!        
-
-    sum = SpecMath.getpeakarea(absenergy,stackeddata,energyaxis,bg,\
-            configdict.get('bgstrip'),RAW_data)
-    return sum
-
 def getheightmap(depth_matrix,thickratio,compound,KaKb='Pb'):
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
@@ -149,7 +126,7 @@ def colorize(elementmap,color=None):
     A = np.zeros([imagex,imagey])
     elmap = elementmap
     pixel = []
-    myimage = [[]]*(imagex-1)
+    myimage = [[]]*(imagex)
     if color == 'red':
         R=R+elmap
         G=G+0
@@ -175,8 +152,8 @@ def colorize(elementmap,color=None):
         G=G+elmap
         B=B+elmap
         A=A+255
-    for line in range(imagex-1):    
-        for i in range(imagey-1):
+    for line in range(imagex):    
+        for i in range(imagey):
             pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],dtype='float32'))
             myimage[line]=np.asarray(pixel,dtype='uint8')
         pixel = []

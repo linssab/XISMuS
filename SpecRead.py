@@ -18,11 +18,11 @@ logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
-DIRECTORY = 'bluegoldflag'
+DIRECTORY = 'campioneperu'
 dirname = 'C:/'+DIRECTORY+'/'
-firstfile = 'obj_1.txt'
+firstfile = 'Cesareo_1.mca'
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg.mc'
+configfile = workpath + '\config.cfg'
 
 def getfirstfile():
     return dirname+firstfile
