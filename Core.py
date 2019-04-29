@@ -21,7 +21,12 @@ if __name__=="__main__":
     import matplotlib.pyplot as plt
     import logging
 
-    inputlist = ['-findelement','Core.py','-normalize','-getratios'] 
+    inputlist = ['-findelement','Core.py','-normalize','-getratios','-dir']
+    if '-dir' in sys.argv:
+        params = SpecRead.getconfig()
+        print(params)
+        print(SpecRead.dirname)
+
     elementlist = []
     flag1 = sys.argv[1]
     if flag1 == '-help':

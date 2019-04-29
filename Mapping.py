@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a2.30                         #
+#                        version: a2.4                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -210,7 +210,15 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                 pass
         
         print("Execution took %s seconds" % (time.time() - partialtimer))
+        
+        ##################################
+        #  COLORIZING STEP IS DONE HERE  #
+        ##################################
+        
         color_image = ImgMath.colorize(image,'blue')
+        
+        #################################
+
         figure = plt.imshow(color_image) 
         plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
             .format(Element,configdict.get('bgstrip'),\
