@@ -30,7 +30,6 @@ imagey = imagsize[1]
 dimension = imagex*imagey
 
 configdict = SpecRead.getconfig()
-if configdict.get('peakmethod') == 'PyMcaFit': import SpecFitter
 
 ################-getpeakmap-#####################
 #   GETPEAKMAP READS THE BATCH OF SPECTRA AND   #
@@ -42,18 +41,20 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         normalize=configdict.get('enhance'),svg=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
     
-    partialtimer = time.time()
+    if peakmethod == 'PyMcaFit': import SpecFitter
     KaElementsEnergy = EnergyLib.Energies
     KbElementsEnergy = EnergyLib.kbEnergies
     
     logging.info("Started energy axis calibration")
     energyaxis = SpecMath.energyaxis()
     logging.info("Finished energy axis calibration")
-    
+    ymax = 0
+
     if Element in Elements.ElementList:
         logging.info("Started acquisition of {0} map".format(Element))
         print("Fetching map image for %s..." % Element)
         
+        partialtimer = time.time()
         kaindex = Elements.ElementList.index(Element)
         kaenergy = KaElementsEnergy[kaindex]*1000
         
@@ -90,7 +91,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                
             spec = currentspectra
             RAW = SpecRead.getdata(spec)
-               
+            
             if peakmethod == 'PyMcaFit': 
                 try:
                     specdata = SpecFitter.fit(spec)
@@ -102,7 +103,20 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
  
             if svg == 'SNIPBG': background = SpecMath.peakstrip(RAW,24,3)
             else: background = np.zeros([len(specdata)])
-            
+           
+            if ymax < RAW.max(): 
+                ymax = RAW.max()
+                RAW_list = RAW.tolist()
+                ymax_idx = RAW_list.index(ymax)
+                SpecMath.LOCAL_MAX = (ymax, energyaxis[ymax_idx], ymax_idx, currentspectra)
+                target = 0
+                while EnergyLib.Energies[target] <= SpecMath.LOCAL_MAX[1]:
+                   ymax_element = EnergyLib.ElementList[target]
+                   target+=1
+                ymax_index = Elements.ElementList.index(ymax_element)
+                ymax_ka = KaElementsEnergy[ymax_index]
+                ymax_kb = KbElementsEnergy[ymax_index]
+
             logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
             logging.info("Specfile being processed is: {0}\n".format(spec))
  
@@ -145,11 +159,49 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
     #   FINISHED ITERATION PROCESS  #
     #################################
         
-        logging.info("Finished iteration process for element {}\n".format(Element))
-            
         if ratio == True: ratiofile.close()
-           
+        logging.info("Finished iteration process for element {}\n".format(Element))
+     
+    #################################    
+    #    IMAGE NORMALIZATION STEP   #
+    #################################
+
+        if normalize == True:
+            print("Starting image normalization!")
+            logging.info("Maximum peak is being calculated! LOCAL_MAX = {0}"\
+                    .format(SpecMath.LOCAL_MAX))
+            logging.info("Element with highest peak: {0}".format(ymax_element))
+            if peakmethod == 'PyMcaFit': 
+                try:
+                    maxspec = SpecFitter.fit(SpecMath.LOCAL_MAX[3])
+                except:
+                    print("\tCHANNEL COUNT METHOD IN USE FOR MAXIMUM PEAK CALCULATION {0}!\t"\
+                            .format(SpecMath.LOCAL_MAX[3]))
+                    maxspec = SpecRead.getdata(SpecMath.LOCAL_MAX[3])
+            elif peakmethod == 'Simple': maxspec = SpecRead.getdata(SpecMath.LOCAL_MAX[3]) 
+             
+            if svg == 'SNIPBG': 
+                background = SpecMath.peakstrip(RAW,24,3)
+                logging.info("SNIPBG for {0}".format(SpecMath.LOCAL_MAX[3]))
+            else: background = np.zeros([len(maxspec)])
+            max_peak_ka = SpecMath.getmaximum(ymax_ka,maxspec,energyaxis,background,svg)
+            max_peak_kb = SpecMath.getmaximum(ymax_kb,maxspec,energyaxis,background,svg)
+            if max_peak_kb == 0: 
+                logging.info("max_peak_kb = 0!")
+                logging.info("Normalization failed, element {0} is not present!"\
+                        .format(SpecMath.LOCAL_MAX[3]))
+                max_peak = 0
+            else: max_peak = max_peak_ka + max_peak_kb
+
+            try:
+                image = elmap/max_peak*255
+            except ValueError:
+                image = elmap
+                print("ValueError, normalization failed!")
+                pass
+        
         if normalize == False: 
+            print("Image is not normalized!")
             try:
                 image = elmap/elmap.max()*255
             except ValueError: 
@@ -157,13 +209,16 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                         .format(Element,elmap.max()))
                 pass
         
-        figure = plt.imshow(image) 
+        print("Execution took %s seconds" % (time.time() - partialtimer))
+        color_image = ImgMath.colorize(image,'blue')
+        figure = plt.imshow(color_image) 
         plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
             .format(Element,configdict.get('bgstrip'),\
             configdict.get('ratio'),configdict.get('enhance')),dpi=150,transparent=False) 
-        print("Execution took %s seconds" % (time.time() - partialtimer))
+        
         partialtimer = time.time()
-    
+        plt.clf()
+        plt.close()
     logging.info("Finished map acquisition!")
     
     return image
@@ -183,6 +238,7 @@ def getdensitymap():
     logging.info("Started acquisition of density map")
     for ITERATION in range(dimension):
         spec = currentspectra
+
         netcounts = SpecRead.getsum(spec)
         density_map[currentx][currenty] = netcounts
         scan = ImgMath.updateposition(scan[0],scan[1])

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a2.2                          #
+#                        version: a2.3                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -15,6 +15,7 @@ import SpecRead
 import EnergyLib
 from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
 
+LOCAL_MAX = 0
 NOISE = 80
 FANO = 0.114
 
@@ -245,7 +246,13 @@ def peakstrip(spectrum,cycles,w):
 #    plt.show()
     
     return background
-   
+
+def getmaximum(lookup,specdata,energyaxis,background,svg):
+    specfile = LOCAL_MAX[3]
+    lookup = lookup*1000
+    RAW = SpecRead.getdata(specfile)
+    max_peak = getpeakarea(lookup,specdata,energyaxis,background,svg,RAW)
+    return max_peak
 
 if __name__=="__main__":
     dirname = os.path.join(SpecRead.dirname)
