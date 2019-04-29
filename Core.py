@@ -5,9 +5,8 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-def plot(image):
-    image_norm = image/image.max()*255
-    image_color = ImgMath.colorize(image_norm,'green')
+def plot(image,color):
+    image_color = ImgMath.colorize(image,color)
     fig, ax = plt.subplots()
     plt.imshow(image_color)
     plt.show()
@@ -46,15 +45,16 @@ an image where the element is displayed in proportion to the most abundant eleme
         if '-normalize' in sys.argv:
             for element in elementlist:
                 image = Mapping.getpeakmap(element)
-                plot(image)
+#                plot(image,'red')
         else:
             for element in elementlist:
                 image = Mapping.getpeakmap(element)
-                plot(image)
+#                plot(image,'red')
 
     if flag1 == '-plotmap':
+        import Mapping
         print("Fetching density map...")
-        Mapping.plotdensitymap()
+        Mapping.getdensitymap()
     if flag1 == '-plotstack':
         if len(sys.argv) >= 3:
             flag2 = sys.argv[2]
