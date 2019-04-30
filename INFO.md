@@ -1,4 +1,4 @@
-Updated April 29th, 2019
+Updated April 30th, 2019
 
 Here you can find information on how the code actually handles the data and how it calculates certain values.
 To begin with, keep in mind that the files read by the algorithm are always spectra files. These files usually contain information such as the _live time_, _calibration data_ and obviously the _data_ itself. The files supported are \*.mca files or ASCII files containing two rows, one with channels and another with counts. 
@@ -54,7 +54,7 @@ There are more criteria implemented to resolve the peaks, such as signal-to-nois
 It is important to mention that the net peak areas can be calculated in many ways. So far the options `Simple` and `PyMcaFit` are available in _config.cfg_ file. `Simple` means that the area is calculated by summing over the defined ROI. Counts per channel. Corrections for background noise are configured separetely and are independent of the net peak calculation method except from the relation given in the above pragraph. `PyMcaFit` is more complex and therefore requires more processing time. This method fits every spectrum in the batch, spectrum by spectrum according to the input configuration. The fit configuration by now only requires a string of elements as input. FANO, NOISE, energy calibration, incident energy and incident angle are set to default values. The input elements in the configuration step must include all elements that may be present within the sample (excluding elements lighter than Z = 12). This method is slower and can yield slightly larger errors when compared to `Simple` method, but it will perform better if overlapping of peaks if present. For an unknown sample `PyMcaFit` is preferred. A comparison between the implemented peak search and calculation methods is shown below:
 
 <p align="center">
-  <img src="images/methods comparison.png" height = 1200>
+  <img src="images/methods comparison.png" width = 1200>
 </p>
 
 ##### Pixel value
@@ -75,21 +75,25 @@ Last, the normalized 2D-matrix containing the net areas of element J K-Lines (or
 In this process, each element from the 2D-matrix will replace a corresponding element (i,j) in only one color mask, e.g. B(i,j) = M(i,j) while R and G will remain equal to 0 and A equal to 255. This will transform the element M(i,j) = [counts] into Image(i,j) = [0,0,counts,255]
 
 ### Heightmap
-While the spectra batch is processed, the algorithm writes in a separate file the net areas of the calculated peaks for the element(s) chosen. This file is useful for re-plotting an image if desired or to generate more data that takes these values as input, e.g. to calculate the thickness of an overlapping layer. It is located under `'LOCAL_DISK:\installetion_folder\output'`
-Following the theory proposed by Cesareo, R. in a handful of papers, it is possible to estimate the thickness of a given overlapping layer by calculating the attenuation from characteristic lines of an element present in the underlying layer. This method has been extensively applied for single or couple spectra and has proven accurate in certain situations.
-The method requires a precise and accurate calculation of the peaks and a good estimation of the overlapping layer composition, as well as a good estimation of matrix effects. Some authors make use of a calibration curve generated from simulated data (Monte Carlo simulations) while others prefer to actually measure it.
+While the spectra batch is processed, the algorithm writes in a separate file the net areas of the calculated peaks for the element(s) chosen. This file is useful for re-plotting an image if desired or to generate more data that takes these values as input, e.g. to calculate the thickness of an overlapping layer. The file is located under `'LOCAL_DISK:\installetion_folder\output'`
+Following the theory proposed by Cesareo, R. in a handful of papers, it is possible to estimate the thickness of a given overlapping layer by calculating the attenuation from characteristic lines of an element present in the underlying layer. This method has been extensively applied for a single or couple spectra and has proven accurate in certain situations.
+The method requires a precise and accurate calculation of the peaks and a good estimation of the overlapping layer composition, as well as a good estimation of matrix effects. Some authors make use of a calibration curve generated from simulated data (Monte Carlo simulations) while others prefer to actually measure the _thick_ ratio (further information is available in references).
 In general, the more complex the sample structure, the lower the accuracy is.
 Nevertheless, the method has proven quite useful for measuring the thickness of goldleafs since their composition is easy to guess and corrections (if any) are usually done by just lowering the density of the overlapping layer in order to compensate porosity effects.
-The thickness is given by the equation: 
+The thickness is given by the simplified equation: 
 
 <br><img src="https://latex.codecogs.com/gif.latex?d&space;=&space;-\frac{sin(\psi)}{\left&space;[&space;\mu_{1}-\mu_{2}\right&space;]}&space;*&space;\left&space;[ln\left&space;(\frac{\left&space;(\frac{K_{\alpha}}{K_{\beta}}&space;\right&space;)_{M[i,j]}}{\left&space;(\frac{K_{\alpha}}{K_{\beta}}&space;\right&space;)_{thick}}&space;\right&space;)&space;\right&space;]" title="d = -\frac{sin(\psi)}{\left [ \mu_{1}-\mu_{2}\right ]} * \left [ln\left (\frac{\left (\frac{K_{\alpha}}{K_{\beta}} \right )_{M[i,j]}}{\left (\frac{K_{\alpha}}{K_{\beta}} \right )_{thick}} \right ) \right ]" /><br>
 
-Where μ1 and μ2 are the linear total attenuation coefficients of the overlapping layer for the lines Kα and Kβ of an element present in the underlying layer, respectively. Ψ is the incident beam angle (assuming the detector is at -Ψ) in degrees and <img src="https://latex.codecogs.com/gif.latex?\left&space;(K_{\alpha}K_{\beta}&space;\right&space;)_{M_{[i,j]}}" title="\left (K_{\alpha}K_{\beta} \right )_{M_{[i,j]}}" /> is the the value of element i,j within of ratio matrix M.
+Where μ1 and μ2 are the linear total attenuation coefficients of the overlapping layer for the lines Kα and Kβ (or Lα and Lβ) of an element present in the underlying layer, respectively. Ψ is the incident beam angle (assuming the detector is at -Ψ) in degrees and <img src="https://latex.codecogs.com/gif.latex?\left&space;(K_{\alpha}K_{\beta}&space;\right&space;)_{M_{[i,j]}}" title="\left (K_{\alpha}K_{\beta} \right )_{M_{[i,j]}}" /> is the the value of element i,j of ratio matrix M, which in turn contains the Kα/Kβ ratios of the element under analysis from the underlying layer.
 
-For now, a database with few compounds has been created to calculate the attenuation coefficients μ1 and μ2. If the overlapping layer is not mono-elemental, then the attenuation coefficient will be the weighted sum of the coefficients of the elements present within the layer, times the layer density. The database is written inside `Compounds.py` and uses the attenuation coefficients from `EnergyLib.py`. Since this is still an experimental method, the coefficients for single elements were extracted from XCOM and written inside this algorithm library to save time, dismissing the need to calculate these values and being more "general". The algorithm can calculate the attenuations of Pb and Cu.
+For now, a database with few compounds has been created to calculate the attenuation coefficients μ1 and μ2. If the overlapping layer is not mono-elemental, then the layer linear attenuation coefficient will be the weighted sum of the coefficients of the elements present within the layer, times the layer density. The database is written inside `Compounds.py` and uses attenuation coefficients from `EnergyLib.py`. Since this is still an experimental method, the coefficients for single elements were extracted from XCOM and written inside this algorithm library to save time, dismissing the need to calculate these values and being more "particular-case" oriented. So far coefficients for attenuations of Pb and Cu are implemented.
 
-For illustrative purposes, a digital mockup sample was created through the simulation of several spectra. This sample simulates a lead-white priming layer (H, C, O, Ca and Pb) covered with a goldleaf (Au, Ag) and cobal blue pigment (H, C, O, Al and Co) in a way that four distinct regions can be studied: I: pbwhite_primer, II: blue_on_primer, III: blue_on_gold_on_primer, IV: gold_on_primer.
-The results are shown in the image below:
+<p align="center">
+  <img src="images/campione_MC.png" height = 250>
+</p>
+
+For illustrative purposes, a digital mockup sample was created through the simulation of several spectra. This sample simulates a lead-white priming layer (H, C, O, Ca and Pb) covered with a goldleaf (Au, Ag) and cobal blue pigment (H, C, O, Al and Co) in a way that four distinct regions can be studied: 1: pbwhite_primer, 2: blue_on_primer, 3: blue_on_gold_on_primer and 4: gold_on_primer according to the image above.
+Results are shown in the image below:
 
 <p align="center">
   <img src="images/heightmap_comparison_mc_sample.png" height = 600>
