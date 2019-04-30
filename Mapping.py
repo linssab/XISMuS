@@ -48,7 +48,9 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
     logging.info("Started energy axis calibration")
     energyaxis = SpecMath.energyaxis()
     logging.info("Finished energy axis calibration")
-    ymax = 0
+    current_peak_factor = 0
+    max_peak_factor = 0
+    ymax_spec = None
 
     if Element in Elements.ElementList:
         logging.info("Started acquisition of {0} map".format(Element))
@@ -103,19 +105,31 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
  
             if svg == 'SNIPBG': background = SpecMath.peakstrip(RAW,24,3)
             else: background = np.zeros([len(specdata)])
-           
-            if ymax < RAW.max(): 
-                ymax = RAW.max()
-                RAW_list = RAW.tolist()
+            
+            ############################
+            #  VERIFIES THE PEAK SIZE  #
+            ############################
+            
+            if normalize == True:
+                ymax = specdata.max()
+                RAW_list = specdata.tolist()
                 ymax_idx = RAW_list.index(ymax)
-                SpecMath.LOCAL_MAX = (ymax, energyaxis[ymax_idx], ymax_idx, currentspectra)
-                target = 0
-                while EnergyLib.Energies[target] <= SpecMath.LOCAL_MAX[1]:
-                   ymax_element = EnergyLib.ElementList[target]
-                   target+=1
-                ymax_index = Elements.ElementList.index(ymax_element)
-                ymax_ka = KaElementsEnergy[ymax_index]
-                ymax_kb = KbElementsEnergy[ymax_index]
+                LOCAL_MAX = [ymax, energyaxis[ymax_idx], ymax_idx,ymax_spec]
+                FWHM = 2.3548 * SpecMath.sigma(LOCAL_MAX[1]*1000)
+                current_peak_factor = (ymax-background[ymax_idx])*(2*FWHM)
+                
+                if current_peak_factor > max_peak_factor:
+                    max_peak_factor = current_peak_factor
+                    target = 0
+                    while EnergyLib.Energies[target] <= LOCAL_MAX[1]:
+                        ymax_element = EnergyLib.ElementList[target]
+                        target+=1
+                    ymax_index = Elements.ElementList.index(ymax_element)
+                    ymax_ka = KaElementsEnergy[ymax_index]
+                    ymax_kb = KbElementsEnergy[ymax_index]
+                    ymax_spec = currentspectra
+                    
+            #############################
 
             logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
             logging.info("Specfile being processed is: {0}\n".format(spec))
@@ -131,10 +145,10 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             elif ka > 0:
                 kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg,RAW)
             
-            if ka > 0 and kb > 0:
-                elmap[currentx][currenty] = ka+kb
+            if ka > 0 and kb > 0: elmap[currentx][currenty] = ka+kb
+                
             else:
-                elmap[currentx][currenty] = 1
+                elmap[currentx][currenty] = 0
                 ka, kb = 0, 0
             
             row = scan[0]
@@ -162,67 +176,34 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         if ratio == True: ratiofile.close()
         logging.info("Finished iteration process for element {}\n".format(Element))
      
-    #################################    
-    #    IMAGE NORMALIZATION STEP   #
-    #################################
+        try: image = elmap/elmap.max()*255
+        except: 
+            image = elmap+1
+            logging.warning("ValueError, elmap.max() = {0}!".format(elmap.max()))
+        timestamp = time.time() - partialtimer
+        print("Execution took %s seconds" % (timestamp))
+        
+        timestamps = open(SpecRead.workpath + '/timestamps.txt'\
+                    .format(Element,SpecRead.DIRECTORY),'a')
+        timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{4} seconds\n"\
+                    .format(Element,configdict.get('bgstrip'),configdict.get('enhance'),\
+                    configdict.get('peakmethod'),timestamp,\
+                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
 
-        if normalize == True:
-            print("Starting image normalization!")
-            logging.info("Maximum peak is being calculated! LOCAL_MAX = {0}"\
-                    .format(SpecMath.LOCAL_MAX))
-            logging.info("Element with highest peak: {0}".format(ymax_element))
-            if peakmethod == 'PyMcaFit': 
-                try:
-                    maxspec = SpecFitter.fit(SpecMath.LOCAL_MAX[3])
-                except:
-                    print("\tCHANNEL COUNT METHOD IN USE FOR MAXIMUM PEAK CALCULATION {0}!\t"\
-                            .format(SpecMath.LOCAL_MAX[3]))
-                    maxspec = SpecRead.getdata(SpecMath.LOCAL_MAX[3])
-            elif peakmethod == 'Simple': maxspec = SpecRead.getdata(SpecMath.LOCAL_MAX[3]) 
-             
-            if svg == 'SNIPBG': 
-                background = SpecMath.peakstrip(RAW,24,3)
-                logging.info("SNIPBG for {0}".format(SpecMath.LOCAL_MAX[3]))
-            else: background = np.zeros([len(maxspec)])
-            max_peak_ka = SpecMath.getmaximum(ymax_ka,maxspec,energyaxis,background,svg)
-            max_peak_kb = SpecMath.getmaximum(ymax_kb,maxspec,energyaxis,background,svg)
-            if max_peak_kb == 0: 
-                logging.info("max_peak_kb = 0!")
-                logging.info("Normalization failed, element {0} is not present!"\
-                        .format(SpecMath.LOCAL_MAX[3]))
-                max_peak = 0
-            else: max_peak = max_peak_ka + max_peak_kb
-
-            try:
-                image = elmap/max_peak*255
-            except ValueError:
-                image = elmap
-                print("ValueError, normalization failed!")
-                pass
-        
-        if normalize == False: 
-            print("Image is not normalized!")
-            try:
-                image = elmap/elmap.max()*255
-            except ValueError: 
-                logging.warning("Element {0} not present! elmap.max() = {1}!"\
-                        .format(Element,elmap.max()))
-                pass
-        
-        print("Execution took %s seconds" % (time.time() - partialtimer))
-        
         ##################################
         #  COLORIZING STEP IS DONE HERE  #
         ##################################
         
-        color_image = ImgMath.colorize(image,'blue')
+        color_image = ImgMath.colorize(image,'green')
         
         #################################
 
         figure = plt.imshow(color_image) 
-        plt.savefig(SpecRead.workpath+'\output'+'\{0}_bgtrip={1}_ratio={2}_enhance={3}.png'\
-            .format(Element,configdict.get('bgstrip'),\
-            configdict.get('ratio'),configdict.get('enhance')),dpi=150,transparent=False) 
+        plt.savefig(SpecRead.workpath+'\output'+\
+                '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
+                .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
+                ,configdict.get('enhance'),configdict.get('peakmethod')),\
+                dpi=150,transparent=False) 
         
         partialtimer = time.time()
         plt.clf()

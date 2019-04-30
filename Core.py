@@ -81,7 +81,7 @@ an image where the element is displayed in proportion to the most abundant eleme
         ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
         plt.imshow(ratiomatrix)
         plt.show()
-        heightmap = ImgMath.getheightmap(ratiomatrix,1.52,'AuSheet',elementlist[0])
+        heightmap = ImgMath.getheightmap(ratiomatrix,1.4789,'AuSheet',elementlist[0])
         plt.imshow(heightmap,cmap='BuGn')
         plt.show()
         ImgMath.plot3D(heightmap)
