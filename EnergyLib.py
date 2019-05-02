@@ -122,6 +122,9 @@ density = {"{0}".format(index[0]):index[1] for index in ElementsInfo}
 muPb = {"{0}".format(index[0]):(index[5],index[6]) for index in ElementsInfo}
 muE0 = {"{0}".format(index[0]):(index[4]) for index in ElementsInfo} 
 muCu = {"{0}".format(index[0]):(index[7],index[8]) for index in ElementsInfo}
+banlist = []
+for i in range(len(ElementsInfo)):
+    if i < 10: banlist.append(ElementsInfo[i][0])
 
 def SetPeakLines():
     ConfigPeakLines = {'K':['K','Ka','Kb'],'L':['L','L1','L2','L3']}

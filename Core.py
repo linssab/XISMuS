@@ -13,7 +13,7 @@ def plot(image,color):
     return 0
 
 if __name__=="__main__":
-
+    import Compounds
     import sys
     import SpecRead
     import ImgMath
@@ -75,13 +75,30 @@ an image where the element is displayed in proportion to the most abundant eleme
                     pass
                 else: 
                     raise Exception("%s not an element!" % sys.argv[arg])
-        ratiofile = SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
+        
+        try: 
+            ratiofile = SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
                 .format(elementlist[0],SpecRead.DIRECTORY)
-        ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
-        ratiomatrix = SpecRead.RatioMatrixTransform(ratiomatrix)
-        plt.imshow(ratiomatrix)
-        plt.show()
-        heightmap = ImgMath.getheightmap(ratiomatrix,1.4789,'AuSheet',elementlist[0])
+            ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
+        except: raise FileNotFoundError("ratio file for {0} not found.".format(elementlist))
+
+        compound = 'AuSheet'
+        #######################################
+        #  MOST ABUNDANT ELEMENT IN COMPOUND  #
+        #######################################
+
+        mae = Compounds.overlap_element(compound)
+        
+        #######################################
+
+        try: 
+            mae_file = SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
+                .format(mae,SpecRead.DIRECTORY)
+            mae_matrix = SpecRead.RatioMatrixReadFile(mae_file)
+
+        except: raise FileNotFoundError("{0} ratio file not found!".format(mae))
+                
+        heightmap = ImgMath.getheightmap(ratiomatrix,mae_matrix,1.3289,compound,elementlist[0])
         plt.imshow(heightmap,cmap='BuGn')
         plt.show()
         ImgMath.plot3D(heightmap)

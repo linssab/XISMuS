@@ -16,18 +16,13 @@ from mpl_toolkits.mplot3d import Axes3D
 
 configdict = SpecRead.getconfig()
 
-def getheightmap(depth_matrix,thickratio,compound,KaKb='Pb'):
+def getheightmap(depth_matrix,mask,thickratio,compound,KaKb='Pb'):
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
     imagey = imagesize[1]
     heightmap = np.zeros([imagex,imagey])
     
     coefficients = Compounds.coefficients(compound,KaKb)
-    
-#    if compound == 'OceanBlue':
-#        coefficients = Compounds.mixture([6,4],KaKb,'Air','OceanBlue')
-#    if compound == 'CoBlue':
-#        coefficients = Compounds.mixture([6,4],KaKb,'Air','CoBlue')
     
     heightfile = open(SpecRead.workpath + '/output/{1}_heightmap_{0}.txt'\
             .format(KaKb,SpecRead.DIRECTORY),'w+')
@@ -38,19 +33,19 @@ def getheightmap(depth_matrix,thickratio,compound,KaKb='Pb'):
     mu1 = coefficients[0]
     mu2 = coefficients[1]
     logging.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
+    
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
-            if depth_matrix[i][j] != 0:
+            if depth_matrix[i][j] > 0 and mask[i][j] > 0:
                 d = -1 * math.sin(math.radians(90)) *\
                         (math.log((depth_matrix[i][j]/thickratio))/(mu1-mu2))
             else: d = 0
             
-            if d < 0: heightmap[i][j] = 0
+            #############################################
+            #  WRITES d TO HEIGHMAP AND CONVERTS TO UM  #
+            #############################################
 
-#            elif depth_matrix[i][j] <= thickratio*1.10 and \
-#                    depth_matrix[i][j] >= thickratio*0.90:
-#                heightmap[i][j] = 0
-
+            if d <= 0: heightmap[i][j] = 0
             else: heightmap[i][j] = 10000 * d
             
             if heightmap[i][j] != 0:

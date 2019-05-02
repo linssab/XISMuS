@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          COMPOUND LIST                                        #
-#                        version: 1.1                           #
+#                        version: 1.2                           #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -91,4 +91,14 @@ def mixture(rate,KaKb='Pb',*args):
 #print(rho_tumbaga)
 #print(coefficients('AuSheet','E0'))
 
+def overlap_element(compound):
+    # most abundant element (mae) #
+    mae = None
+    mae_concentration = 0
+    for element in CompoundList[compound]:
+        if element not in EnergyLib.banlist:
+            if CompoundList[compound][element] > mae_concentration:
+                mae = element
+                mae_concentration = CompoundList[compound][element]
+    return mae
 
