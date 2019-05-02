@@ -53,7 +53,7 @@ _Attention:_ The data array extrated from the spectrum by _SpecRead.py_ `getdata
 It is important to mention that the net peak areas can be calculated in many ways. So far the options `Simple` and `PyMcaFit` are available in _config.cfg_ file. `Simple` means that the area is calculated by summing over the defined ROI. Counts per channel. Corrections for background noise are configured separetely and are independent of the net peak calculation method except from the relation given in the above pragraph. `PyMcaFit` is more complex and therefore requires more processing time. This method fits every spectrum in the batch, spectrum by spectrum according to the input configuration. The fit configuration by now only requires a string of elements as input. FANO, NOISE, energy calibration, incident energy and incident angle are set to default values. The input elements in the configuration step must include all elements that may be present within the sample (excluding elements lighter than Z = 12). This method is slower and can yield slightly larger errors when compared to `Simple` method, but it will perform better if overlapping of peaks if present. For an unknown sample `PyMcaFit` is preferred. A comparison between the implemented peak search and calculation methods is shown below:
 
 <p align="center">
-  <img src="images/methods comparison.png" width = 1200>
+  <img src="images/methods_comparison.png" width = 1200>
 </p>
 
 ##### Pixel value
