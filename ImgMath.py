@@ -21,7 +21,6 @@ def getheightmap(depth_matrix,mask,thickratio,compound,KaKb='Pb'):
     imagex = imagesize[0]
     imagey = imagesize[1]
     heightmap = np.zeros([imagex,imagey])
-    
     coefficients = Compounds.coefficients(compound,KaKb)
     
     heightfile = open(SpecRead.workpath + '/output/{1}_heightmap_{0}.txt'\
@@ -112,6 +111,10 @@ def plot3D(depth_matrix):
 
 def colorize(elementmap,color=None):
     imagesize = SpecRead.getdimension()
+    try: imagesize = len(elementmap),len(elementmap[0])
+    except: 
+        imagesize = len(elementmap),1
+        elementmap = np.expand_dims(elementmap, axis = 1)
     imagex = imagesize[0]
     imagey = imagesize[1]
     imagedimension = imagex*imagey

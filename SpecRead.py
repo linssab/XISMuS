@@ -18,11 +18,11 @@ logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
-DIRECTORY = 'campioneperu'
+DIRECTORY = 'bluegoldflag'
 dirname = 'C:/'+DIRECTORY+'/'
-firstfile = 'Cesareo_1.mca'
+firstfile = 'obj_1.txt'
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg'
+configfile = workpath + '\config.cfg.mc'
 
 def getfirstfile():
     return dirname+firstfile
@@ -82,28 +82,30 @@ def getconfig():
 # THE FLAG MUST SAY IF THE FILE IS AN MCA 'file' OR A DATA ARRAY 'data'
 
 def RatioMatrixReadFile(ratiofile):
-    Matrix=[]
+    MatrixArray = []
     with open (ratiofile,'rt') as in_file:
         for line in in_file:
-            Matrix.append(line.strip("'\n"))
-        for i in range(len(Matrix)): 
-            Matrix[i]=Matrix[i].split()
-        for j in range(len(Matrix)):
-            for k in range(len(Matrix[j])):
-                if Matrix[j][k].isdigit() == True: Matrix[j][k]=int(Matrix[j][k])
-                else: Matrix[j][k]=1
-        if len(Matrix[-1]) == 0: Matrix[-1]=[1, 1, 1, 1]
-    Matrix = np.asarray(Matrix)
-    return Matrix
-
-def RatioMatrixTransform(MatrixArray):
+            MatrixArray.append(line.strip("\n"))
+        for i in range(len(MatrixArray)): 
+            MatrixArray[i] = MatrixArray[i].split()
+        for j in range(len(MatrixArray)):
+            for k in range(len(MatrixArray[j])):
+                if MatrixArray[j][k].isdigit() == True: MatrixArray[j][k]=int(MatrixArray[j][k])
+                else: MatrixArray[j][k]=1
+        if len(MatrixArray[-1]) == 0: MatrixArray[-1]=[1, 1, 1, 1]
+    MatrixArray = np.asarray(MatrixArray)
     iterx=0
     itery=0
+    
     for i in range(len(MatrixArray)):
         if len(MatrixArray[i]) > 1:
-            if MatrixArray[i][0] > 0 and MatrixArray[i][0] > MatrixArray[i-1][0] and MatrixArray[i][0] > iterx: iterx=int(MatrixArray[i][0])
+            if MatrixArray[i][0] > 0\
+                    and MatrixArray[i][0] > MatrixArray[i-1][0]\
+                    and MatrixArray[i][0] > iterx: iterx=int(MatrixArray[i][0])
         if len(MatrixArray[i]) > 1:
-            if MatrixArray[i][1] > 0  and MatrixArray[i][1] > MatrixArray[i-1][1] and MatrixArray[i][1] > itery: itery=int(MatrixArray[i][1])
+            if MatrixArray[i][1] > 0\
+                    and MatrixArray[i][1] > MatrixArray[i-1][1]\
+                    and MatrixArray[i][1] > itery: itery=int(MatrixArray[i][1])
 
     RatesMatrix=np.zeros((iterx+1,itery+1))
     for i in range(len(MatrixArray)):

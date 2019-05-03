@@ -197,14 +197,16 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         color_image = ImgMath.colorize(image,'green')
         
         #################################
-
-        figure = plt.imshow(color_image) 
+       
+        fig, ax = plt.subplots()
+        mapimage = ax.imshow(color_image)
+        plt.colorbar(mapimage)
         plt.savefig(SpecRead.workpath+'\output'+\
                 '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
                 .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
                 ,configdict.get('enhance'),configdict.get('peakmethod')),\
                 dpi=150,transparent=False) 
-        
+        plt.show()
         partialtimer = time.time()
         plt.clf()
         plt.close()
