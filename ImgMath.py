@@ -141,9 +141,19 @@ def colorize(elementmap,color=None):
         B=B+elmap
         A=A+255
     elif color == 'gold':
-        R=R+elmap
-        G=G+elmap
+        R=(R+elmap+255)
+        R=R/R.max()*255
+        G=(G+elmap+215)
+        G=G/G.max()*215
         B=B+0
+        A=A+255
+    elif color == 'copper':
+        R=(R+elmap+184)
+        R=R/R.max()*184
+        G=(G+elmap+115)
+        G=G/G.max()*115
+        B=(B+elmap+51)
+        B=B/B.max()*51
         A=A+255
     elif color == 'gray':
         R=R+elmap
@@ -152,7 +162,10 @@ def colorize(elementmap,color=None):
         A=A+255
     for line in range(imagex):    
         for i in range(imagey):
-            pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],dtype='float32'))
+            if elmap[line][i] > 0:
+                pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],\
+                        dtype='float32'))
+            else: pixel.append(np.array([0,0,0,A[line][i]],dtype='float32'))
             myimage[line]=np.asarray(pixel,dtype='uint8')
         pixel = []
     image = np.asarray(myimage)

@@ -10,7 +10,6 @@ import os
 import numpy as np
 import logging
 import matplotlib.pyplot as plt
-from PyMca5.PyMcaMath import SimpleMath
 from PyMca5.PyMcaMath.fitting import RateLaw
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
