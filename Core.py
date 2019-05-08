@@ -60,12 +60,14 @@ an image where the element is displayed in proportion to the most abundant eleme
         import Mapping
         print("Fetching density map...")
         Mapping.getdensitymap()
-    if flag1 == '-plotstack':
+    if flag1 == '-roiimage':
+        import Mapping
+        import SpecMath
         if len(sys.argv) >= 3:
             flag2 = sys.argv[2]
         else:
             flag2 = None
-        SpecMath.getstackplot(SpecRead.getfirstfile(),SpecMath.energyaxis())
+        Mapping.ROIimaging('Te')
     if flag1 == '-getratios':
         for arg in range(len(sys.argv)):
             if sys.argv[arg] in Elements.ElementList:
@@ -98,7 +100,7 @@ an image where the element is displayed in proportion to the most abundant eleme
 
         except: raise FileNotFoundError("{0} ratio file not found!".format(mae))
                 
-        heightmap = ImgMath.getheightmap(ratiomatrix,mae_matrix,1.3289,compound,elementlist[0])
+        heightmap = ImgMath.getheightmap(ratiomatrix,mae_matrix,7.36,compound,elementlist[0])
         plt.imshow(heightmap,cmap='BuGn')
         plt.show()
         ImgMath.plot3D(heightmap)
