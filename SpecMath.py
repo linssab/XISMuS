@@ -85,10 +85,12 @@ def creategaussian(channels,energy):
                     Gaussian[i]+=gaussianbuilder(i,energy[k])
     return Gaussian
 
+#####################################################################
 # setROI(lookup,xarray,yarray)                                      #
 # INPUT: eV energy, energy array (x axis) and data array            #
 # OUTPUT: indexes corresponding to 2*FWHM of a gaussian centered    #
 # at eV energy position                                             #
+#####################################################################
 
 def setROI(lookup,xarray,yarray,svg):
     lookup = int(lookup)
@@ -208,13 +210,14 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
         print("idx[2] = {0}".format(idx[2]))
         print("Lookup: {0} Area: {1}\n".format(lookup,Area))
     
-        plt.semilogy(xdata,ydata)
-        plt.semilogy(xdata,original_data)
-    #    plt.semilogy(xdata,smooth_dif2)
-        plt.semilogy(xdata,ROIbg)
+        plt.semilogy(xdata,ydata, label='data')
+        plt.semilogy(xdata,original_data, label='RAW data')
+        plt.semilogy(xdata,smooth_dif2, label='2nd Differential')
+        plt.semilogy(xdata,ROIbg, label='BG estimation')
+        plt.legend()
         plt.show()
     
-    return Area
+    return Area,idx
 
 # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (2*W)+1       #
 # W VALUE MUST BE LARGER THAN 3 AND ODD, SINCE 3 IS THE MINIMUM  #

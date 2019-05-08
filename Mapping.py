@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a2.4                          #
+#                        version: a2.4b                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -51,6 +51,12 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
     current_peak_factor = 0
     max_peak_factor = 0
     ymax_spec = None
+
+    #########################################
+    # ERROR VARIABLES CUMSUM AND CUMSUM_RAW #
+    #########################################
+    CUMSUM = np.zeros([len(energyaxis)])
+    CUMSUM_RAW = np.zeros(len(energyaxis))
 
     if Element in Elements.ElementList:
         logging.info("Started acquisition of {0} map".format(Element))
@@ -108,6 +114,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             
             ############################
             #  VERIFIES THE PEAK SIZE  #
+            # EXPERIMENTAL FOR NRMLIZE #
             ############################
             
             if normalize == True:
@@ -139,11 +146,25 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
 #            plt.plot(SpecMath.energyaxis(),background)
 #            plt.show()
                 
-            ka = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
-               
+            ka_info = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
+            ka = ka_info[0]
+            
+            for channel in range(len(specdata)):
+                if energyaxis[ka_info[1][0]] < energyaxis[channel]\
+                        < energyaxis[ka_info[1][1]]:
+                    CUMSUM[channel] += specdata[channel]
+                    CUMSUM_RAW[channel] += RAW[channel]
+
             if ka == 0: kb = 0
             elif ka > 0:
-                kb = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg,RAW)
+                kb_info = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg,RAW)
+                kb = kb_info[0]
+
+                for channel in range(len(specdata)):
+                    if energyaxis[kb_info[1][0]] < energyaxis[channel]\
+                            < energyaxis[kb_info[1][1]]:
+                        CUMSUM[channel] += specdata[channel]
+                        CUMSUM_RAW[channel] += RAW[channel]
             
             if ka > 0 and kb > 0: elmap[currentx][currenty] = ka+kb
                 
@@ -157,7 +178,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                 ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
                 logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
                          .format(spec,ka,kb,Element))
-    
+
         #########################################
         #   UPDATE ELMAP POSITION AND SPECTRA   #
         #########################################        
@@ -190,16 +211,21 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                     configdict.get('peakmethod'),timestamp,\
                     time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
 
+        plt.plot(energyaxis,CUMSUM)
+        plt.plot(energyaxis,CUMSUM_RAW)
+        plt.show()
+                        
         ##################################
         #  COLORIZING STEP IS DONE HERE  #
         ##################################
         
-        color_image = ImgMath.colorize(image,'green')
+        #color_image = ImgMathcolorize(image,'copper')
+        cmap = ImgMath.createcmap([251,215,51])
         
         #################################
        
         fig, ax = plt.subplots()
-        mapimage = ax.imshow(color_image)
+        mapimage = ax.imshow(image,cmap='BuGn')
         plt.colorbar(mapimage)
         plt.savefig(SpecRead.workpath+'\output'+\
                 '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
@@ -210,8 +236,11 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         partialtimer = time.time()
         plt.clf()
         plt.close()
+    IMAGE_PATH = SpecRead.workpath+'\output'+\
+                '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
+                .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
+                ,configdict.get('enhance'),configdict.get('peakmethod')),
     logging.info("Finished map acquisition!")
-    
     return image
 
 ##########-getdensitymap-############

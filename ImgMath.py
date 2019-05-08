@@ -13,6 +13,7 @@ import math
 import logging
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.colors import ListedColormap
 
 configdict = SpecRead.getconfig()
 
@@ -170,6 +171,18 @@ def colorize(elementmap,color=None):
         pixel = []
     image = np.asarray(myimage)
     return image
+
+def createcmap(color):
+    z = z = np.zeros(256)
+    R = np.linspace(0,1,256)/(256-color[0])
+    G = np.linspace(0,1,256)/(256-color[1])
+    B = np.linspace(0,1,256)/(256-color[2])
+
+    alpha = np.ones(256)
+
+    colorcode = np.c_[R,G,B,alpha]
+    cmap = ListedColormap(colorcode)
+    return cmap
 
 def updateposition(a,b):
     imagesize = SpecRead.getdimension()
