@@ -32,13 +32,13 @@ To save some computing time, Kβ net peak is only searched for and calculated if
 
 ##### ROI definition and peak area calculation
 The algorithm supports two types of ROI set-ups: _basic ROI_ and _auto ROI_.
-in short, simple ROI defines the start and end of kα and kβ peaks for the element being currently search through the stacked sum of peaks. The indexes defined by `setROI` function are then applied to each spectrum "cutting" them in the same range. This can lead to the creation of artefacts or misleading information, but it comes with the advantage of a saving a lot of processing time.
+in short, simple ROI defines the start and end of kα and kβ peaks for the element being currently search through the stacked sum of peaks. The indexes defined by `setROI` function are then applied to each spectrum "cutting" them in the same range. This can lead to the creation of artefacts or misleading information, but it comes with the advantage of a saving a lot of processing time. For reducing the amount of artifacts, SNIPBG mode is advised.
 Auto ROI, on the other hand, locally sets the ROI for each spectrum individually. 
-The fact that the calibration isn't always perfect (even with a correlation coefficient of 1) and that there will always be some slight differences between the observed peak position and the theoretical peak position, makes it necessary that a local definition of ROI is made in order to obtain preciser results.
+The fact that the calibration isn't always perfect (even with a correlation coefficient of 1) and that there will always be some slight differences between the observed peak position and the theoretical peak position, makes it necessary that a local definition of ROI is set in order to obtain preciser results.
 A search interval of 1.10 times that of the peak Full Width at Half Maximum (FWHM) centered at the theoretical peak position is set to locate the peak maximum.
 
 <p align="center">
-  <img src="images/peak_shift.png" height = 400>
+  <img src="images/simpleROI_example.png" height = 700>
 </p>
 
 The FWHM is equivalent to 2.3548 * σ, where σ is given by the following equation proposed by Solè et al., 2007 work and discussed in Van Grieken's Handbook of X-Ray spectrometry (Chapter 4):
@@ -47,9 +47,13 @@ The FWHM is equivalent to 2.3548 * σ, where σ is given by the following equati
 
 Ej is the peak energy/characteristic line, NOISE is the electronic contribution to the peak width, FANO is the fano factor and 3.85 is the energy required to produce an electron-hole pair in silicon.
 
-The algorithm verifies if the observed peak position matches the theoretical value (obtained from _EnegyLib.py_) within the pre-defined ROI. This is done by verifying the maximum y value in the region. If y-max corresponds to the theoretical peak position, then the net peak area corresponding to 2 * FWHM is calculated, if not, and if the x value associated to y-max differs up to (1.10 * FWHM)/2 from the theoretical one, the code shifts the Kα line position for element J to the new x value and repeats the process one more time. This is called _shift_, which is also a variable that contains the y-max value, x-max value and y-max index inside the ROI array.
+The algorithm verifies if the observed peak position matches the theoretical value (obtained from _EnegyLib.py_) within the pre-defined ROI. This is done by verifying the maximum y value in the region. If y-max corresponds to the theoretical peak position, then the net peak area corresponding to 2 * FWHM is calculated, if not, and if the x value associated to y-max differs up to (1.10 * FWHM)/2 from the theoretical one, the code shifts the Kα line position for element J to the new x value and repeats the process one more time. This is called _shift_ (see figure below), which is also a variable that contains the y-max value, x-max value and y-max index inside the ROI array.
 If after the second (or third) shift no correspondence is found between the lookup energy and the theoretical value, Kα peak of element J is said to be _False_. Let that be _True_, the algorithm will repeat the process but now for Kβ peak of the same element J. If Kβ results in a _False_ peak, then both peaks are said to be _False_. 
 There are more criteria implemented to resolve the peaks, such as signal-to-noise ratio (SNR) evaluation and second differential calculation.
+
+<p align="center">
+  <img src="images/peak_shift.png" height = 400>
+</p>
 
 _Attention:_ The data array extrated from the spectrum by _SpecRead.py_ `getdata(spec)` function can be smoothed by _SpecMath.py_ if SNIPBG method was chosen as background estimation method. The smoothening increases the accuracy of peak identification method. It is carried inside `setROI(lookup,xarray,yarray,svg):` function and can be easily deactivated by just commenting a line of code. Nonetheless, second differential will always be calculated for the non-smoothened (RAW) data. The smoothing method is a simple Savitsky-Golay filter with a 11 points window and a 3rd order polynomial approximation. The second differential will also be smoothed regardless of the background stripping method and a cut-off filter at -1 will be applied to it.
 
