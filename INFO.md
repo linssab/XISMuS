@@ -38,7 +38,7 @@ The fact that the calibration isn't always perfect (even with a correlation coef
 A search interval of 1.10 times that of the peak Full Width at Half Maximum (FWHM) centered at the theoretical peak position is set to locate the peak maximum.
 
 <p align="center">
-  <img src="images/simpleROI_example.png" height = 700>
+  <img src="images/simpleROI_example.png" height = 450>
 </p>
 
 The FWHM is equivalent to 2.3548 * σ, where σ is given by the following equation proposed by Solè et al., 2007 work and discussed in Van Grieken's Handbook of X-Ray spectrometry (Chapter 4):
