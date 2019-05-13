@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a2.5a                         #
+#                        version: a3.10                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -31,16 +31,16 @@ dimension = imagex*imagey
 
 configdict = SpecRead.getconfig()
 
-################-getpeakmap-#####################
-#   GETPEAKMAP READS THE BATCH OF SPECTRA AND   #
-#   RETURNS A 2D-ARRAY WITH THE COUNTS FOR THE  #
-#   INPUT ELEMENT.                              #
-#################################################
-
 def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         normalize=configdict.get('enhance'),svg=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
-    
+
+    ################-getpeakmap-#####################
+    #   GETPEAKMAP READS THE BATCH OF SPECTRA AND   #
+    #   RETURNS A 2D-ARRAY WITH THE COUNTS FOR THE  #
+    #   INPUT ELEMENT.                              #
+    #################################################
+
     if peakmethod == 'PyMcaFit': import SpecFitter
     KaElementsEnergy = EnergyLib.Energies
     KbElementsEnergy = EnergyLib.kbEnergies
@@ -90,6 +90,18 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                     .format(kbenergy,Element))
 
+    ################################
+    #  SETS SIMPLE ROI PARAMETERS  #
+    ################################
+
+        if peakmethod == 'simple_roi':
+            stacksum = SpecMath.stacksum(currentspectra,dimension)
+            ka_idx = SpecMath.setROI(kaenergy,energyaxis,stacksum,svg=configdict.get('bgstrip'))
+            kb_idx = SpecMath.setROI(kbenergy,energyaxis,stacksum,svg=configdict.get('bgstrip'))
+            print(ka_idx,kb_idx)
+            ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
+            kb_peakdata = stacksum[kb_idx[0]:kb_idx[1]]
+            
     #############################################
     #   STARTS ITERATION OVER SPECTRA BATCH     #
     #############################################
@@ -100,6 +112,10 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             spec = currentspectra
             RAW = SpecRead.getdata(spec)
             
+            #############################
+            #  FIT OR NOT THE SPECFILE  #
+            #############################
+
             if peakmethod == 'PyMcaFit': 
                 try:
                     specdata = SpecFitter.fit(spec)
@@ -107,8 +123,15 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                     print("\tCHANNEL COUNT METHOD USED FOR {0}!\t".format(spec))
                     logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD!\t")
                     specdata = SpecRead.getdata(spec)
-            elif peakmethod == 'Simple': specdata = SpecRead.getdata(spec)   
+            elif peakmethod == 'simple_roi': specdata = SpecRead.getdata(spec)
+            elif peakmethod == 'auto_roi': specdata = SpecRead.getdata(spec)
+            else: 
+                raise Exception("peakmethod {0} not recognized.".format(peakmethod))
  
+            #########################
+            #  SETS THE BACKGROUND  #
+            #########################
+            
             if svg == 'SNIPBG': 
                 background = SpecMath.peakstrip(RAW,24,3)
                 logging.debug('SNIPGB calculated for spec {0}'.format(spec))
@@ -140,50 +163,77 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                     
             #############################
 
+            #####################################
+            #  ACTUALLY RECORDS NET PEAKS AREA  #
+            #####################################
+            
             logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
             logging.info("Specfile being processed is: {0}\n".format(spec))
  
-#            plt.plot(SpecMath.energyaxis(),specdata)
-#            plt.plot(SpecMath.energyaxis(),RAW)
-#            plt.plot(SpecMath.energyaxis(),background)
-#            plt.show()
-                
-            ka_info = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
-            ka = ka_info[0]
+            if peakmethod == 'auto_roi' or peakmethod == 'PyMcaFit':
+                ka_info = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
+                ka = ka_info[0]
             
-            for channel in range(len(specdata)):
-                if energyaxis[ka_info[1][0]] < energyaxis[channel]\
-                        < energyaxis[ka_info[1][1]]:
-                    CUMSUM[channel] += specdata[channel]
-                    CUMSUM_RAW[channel] += RAW[channel]
-
-            if ka == 0: kb = 0
-            elif ka > 0:
-                kb_info = SpecMath.getpeakarea(kbenergy,specdata,energyaxis,background,svg,RAW)
-                kb = kb_info[0]
-
                 for channel in range(len(specdata)):
-                    if energyaxis[kb_info[1][0]] < energyaxis[channel]\
-                            < energyaxis[kb_info[1][1]]:
+                    if energyaxis[ka_info[1][0]] < energyaxis[channel]\
+                        < energyaxis[ka_info[1][1]]:
                         CUMSUM[channel] += specdata[channel]
                         CUMSUM_RAW[channel] += RAW[channel]
+
+                if ka == 0: kb = 0
+                elif ka > 0:
+                    kb_info = SpecMath.getpeakarea(\
+                            kbenergy,specdata,energyaxis,background,svg,RAW)
+                    kb = kb_info[0]
+
+                    for channel in range(len(specdata)):
+                        if energyaxis[kb_info[1][0]] < energyaxis[channel]\
+                            < energyaxis[kb_info[1][1]]:
+                            CUMSUM[channel] += specdata[channel]
+                            CUMSUM_RAW[channel] += RAW[channel]
             
-            if ka > 0 and kb > 0: elmap[currentx][currenty] = ka+kb
+                if ka > 0 and kb > 0: elmap[currentx][currenty] = ka+kb
                 
-            else:
-                elmap[currentx][currenty] = 0
-                ka, kb = 0, 0
+                else:
+                    elmap[currentx][currenty] = 0
+                    ka, kb = 0, 0
+            
+            elif peakmethod == 'simple_roi':
+
+                ###############################################
+                # Calculates ka and kb with simple roi method #
+                ###############################################
+                
+                ka_ROI = RAW[ka_idx[0]:ka_idx[1]]
+                ka_bg = background[ka_idx[0]:ka_idx[1]]
+                kb_ROI = RAW[kb_idx[0]:kb_idx[1]]
+                kb_bg = background[kb_idx[0]:kb_idx[1]]
+            
+                for channel in range(len(ka_ROI)):
+                    ka = ka_ROI[channel] - ka_bg[channel]
+                for channel in range(len(kb_ROI)):
+                    kb = kb_ROI[channel] - kb_bg[channel]
+            
+                logging.debug("ka {0}, kb {1}".format(ka,kb))
+                elmap[currentx][currenty] = ka+kb
             
             row = scan[0]
             column = scan[1]
-            if ratio == True: 
-                ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
-                logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
-                         .format(spec,ka,kb,Element))
 
-        #########################################
-        #   UPDATE ELMAP POSITION AND SPECTRA   #
-        #########################################        
+            if ratio == True: 
+                try: 
+                    ratiofile.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
+                    logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
+                         .format(spec,ka,kb,Element))
+                except:
+                    print("ka and kb not calculated for some unknown reason. Check Config.cfg for\
+                            the correct spelling of peakmethod option!")
+
+            #####################################
+
+            #########################################
+            #   UPDATE ELMAP POSITION AND SPECTRA   #
+            #########################################        
 
             scan = ImgMath.updateposition(scan[0],scan[1])
             currentx = scan[0]
@@ -192,9 +242,9 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             print("{0:.2f}".format(ITERATION/dimension*100), "Percent complete  \r", end='')
             sys.stdout.flush()
         
-    #################################    
-    #   FINISHED ITERATION PROCESS  #
-    #################################
+        #################################    
+        #   FINISHED ITERATION PROCESS  #
+        #################################
         
         if ratio == True: ratiofile.close()
         logging.info("Finished iteration process for element {}\n".format(Element))
@@ -245,151 +295,32 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
     logging.info("Finished map acquisition!")
     return image
 
-##########-getdensitymap-############
-#   RETUNRS A 2D-ARRAY WITH TOTAL   #
-#   COUNTS PER PIXEL.               #
-#####################################
-
-def ROIimaging(Element):
-    
-    ################################################
-    # SETTING CONFIGDICT PEAKMETHOD TO ROIIMAGING  #
-    # IS PROVISORY, THIS FUNCTION SHOULD BE CALLED #
-    # ACCORDING TO THE REAL INPUT                  #
-    ################################################
-    
-    configdict['peakmethod'] = 'ROIimaging'
-
-    print(Element) 
-    svg = configdict.get('bgstrip') 
-    firstspec = SpecRead.getfirstfile()
-    KaElementsEnergy = EnergyLib.Energies
-    KbElementsEnergy = EnergyLib.kbEnergies
-    energyaxis = SpecMath.energyaxis()
-    kaindex = Elements.ElementList.index(Element)
-    kbindex = Elements.ElementList.index(Element)
-    kaenergy = KaElementsEnergy[kaindex]*1000
-    kbenergy = KbElementsEnergy[kbindex]*1000
-    stacksum = SpecMath.stacksum(firstspec,dimension)
-    ka_idx = SpecMath.setROI(kaenergy,energyaxis,stacksum,svg=configdict.get('bgstrip'))
-    kb_idx = SpecMath.setROI(kbenergy,energyaxis,stacksum,svg=configdict.get('bgstrip'))
-    print(ka_idx,kb_idx)
-    ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
-    kb_peakdata = stacksum[kb_idx[0]:kb_idx[1]]
-    elmap = np.zeros([imagex,imagey])
-    print(elmap.shape)
-    scan = ([0,0])
-    currentx = scan[0]
-    currenty = scan[1]
-        
-    SpecMath.getstackplot(SpecRead.getfirstfile(),SpecMath.energyaxis())
-    currentspectra = firstspec
-    partialtimer = time.time()
-    
-    if Element in Elements.ElementList:
-        for ITERATION in range(dimension):
-               
-            spec = currentspectra
-            RAW = SpecRead.getdata(spec)
-            
-            if svg == 'SNIPBG': background = SpecMath.peakstrip(RAW,24,3)
-            else: background = np.zeros([len(RAW)])
-            
-            logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
-            logging.info("Specfile being processed is: {0}".format(spec))
- 
-            ###########################
-            # ITERATE OVER SPECTRA TO #
-            # GET PEAK AREA           #
-            ###########################
-            
-            ka_ROI = RAW[ka_idx[0]:ka_idx[1]]
-            ka_bg = background[ka_idx[0]:ka_idx[1]]
-            kb_ROI = RAW[kb_idx[0]:kb_idx[1]]
-            kb_bg = background[kb_idx[0]:kb_idx[1]]
-            
-            for channel in range(len(ka_ROI)):
-                ka = ka_ROI[channel] - ka_bg[channel]
-            for channel in range(len(kb_ROI)):
-                kb = kb_ROI[channel] - kb_bg[channel]
-
-            logging.debug("ka {0}, kb {1}".format(ka,kb))
-            elmap[currentx][currenty] = ka+kb
-            
-            row = scan[0]
-            column = scan[1]
-
-            #########################################
-            #   UPDATE ELMAP POSITION AND SPECTRA   #
-            #########################################        
-
-            scan = ImgMath.updateposition(scan[0],scan[1])
-            currentx = scan[0]
-            currenty = scan[1]
-            currentspectra = SpecRead.updatespectra(spec,dimension)
-            print("{0:.2f}".format(ITERATION/dimension*100), "Percent complete  \r", end='')
-            sys.stdout.flush()
-        
-        #################################    
-        #   FINISHED ITERATION PROCESS  #
-        #################################
-        
-        try: image = elmap/elmap.max()*255
-        except: 
-            image = elmap+1
-            logging.warning("ValueError, elmap.max() = {0}!".format(elmap.max()))
-        timestamp = time.time() - partialtimer
-        print("Execution took %s seconds" % (timestamp))
-        
-        timestamps = open(SpecRead.workpath + '/timestamps.txt'\
-                    .format(Element,SpecRead.DIRECTORY),'a')
-        timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{4} seconds\n"\
-                    .format(Element,configdict.get('bgstrip'),configdict.get('enhance'),\
-                    configdict.get('peakmethod'),timestamp,\
-                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
-
-        ##################################
-        #  COLORIZING STEP IS DONE HERE  #
-        ##################################
-        
-        #color_image = ImgMath.colorize(image,'copper')
-        cmap = ImgMath.createcmap([251,215,51])
-        
-        #################################
-       
-        fig, ax = plt.subplots()
-        mapimage = ax.imshow(image,cmap='jet')
-        plt.colorbar(mapimage)
-        plt.savefig(SpecRead.workpath+'\output'+\
-                '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
-                .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
-                ,configdict.get('enhance'),configdict.get('peakmethod')),\
-                dpi=150,transparent=False) 
-        plt.show()
-        partialtimer = time.time()
-        plt.clf()
-        plt.close()
-        IMAGE_PATH = SpecRead.workpath+'\output'+\
-                '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
-                .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
-                ,configdict.get('enhance'),configdict.get('peakmethod')),
-    logging.info("Finished map acquisition!")
-
-    return image
-
 def getdensitymap():
+    
+    ##########-getdensitymap-############
+    #   RETUNRS A 2D-ARRAY WITH TOTAL   #
+    #   COUNTS PER PIXEL.               #
+    #####################################
+
     currentspectra = SpecRead.getfirstfile()
     density_map = np.zeros([imagex,imagey])
     scan=([0,0])
     currentx=scan[0]
     currenty=scan[1]
-    
+
+    print("BG mode: {0}".format(configdict.get('bgstrip')))
     logging.info("Started acquisition of density map")
     for ITERATION in range(dimension):
         spec = currentspectra
-
+ 
+        if configdict.get('bgstrip') == 'SNIPBG': 
+            background = SpecMath.peakstrip(SpecRead.getdata(spec),24,3)
+        else: 
+            background = np.zeros([len(SpecRead.getdata(spec))])
+        
         netcounts = SpecRead.getsum(spec)
-        density_map[currentx][currenty] = netcounts
+        bgcounts = background.sum()
+        density_map[currentx][currenty] = netcounts - bgcounts
         scan = ImgMath.updateposition(scan[0],scan[1])
         currentx=scan[0]
         currenty=scan[1]
@@ -397,6 +328,12 @@ def getdensitymap():
     logging.info("Finished fetching density map!")
     
     print("Execution took %s seconds" % (time.time() - timer))
+    
+    fig, ax = plt.subplots()
+    mapimage = ax.imshow(density_map,cmap='jet',label='Dense Map')
+    plt.savefig(SpecRead.workpath+'\output'+'\{0}_{1}_densitymap.png'\
+            .format(SpecRead.DIRECTORY,configdict.get('bgstrip')),dpi=150,transparent=False) 
+    plt.show()
     return density_map
 
 def stackimages(*args):
