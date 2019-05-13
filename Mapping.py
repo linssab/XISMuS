@@ -32,7 +32,7 @@ dimension = imagex*imagey
 configdict = SpecRead.getconfig()
 
 def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
-        normalize=configdict.get('enhance'),svg=configdict.get('bgstrip'),\
+        normalize=configdict.get('enhance'),bgstrip=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
 
     ################-getpeakmap-#####################
@@ -51,7 +51,8 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
     current_peak_factor = 0
     max_peak_factor = 0
     ymax_spec = None
-
+    usedif2 = True
+    
     #########################################
     # ERROR VARIABLES CUMSUM AND CUMSUM_RAW #
     #########################################
@@ -82,7 +83,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                     .format(Element) + 10*"-" + '\n')
             ratiofile.write("row\tcolumn\tline1\tline2\n")
             
-            if svg != 'None': logging.warning("Background stripping is ON! - slow -")
+            if bgstrip != 'None': logging.warning("Background stripping is ON! - slow -")
             
             logging.warning("Ratio map will be generated!")
             kbindex = Elements.ElementList.index(Element)
@@ -96,8 +97,8 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
 
         if peakmethod == 'simple_roi':
             stacksum = SpecMath.stacksum(currentspectra,dimension)
-            ka_idx = SpecMath.setROI(kaenergy,energyaxis,stacksum,svg=configdict.get('bgstrip'))
-            kb_idx = SpecMath.setROI(kbenergy,energyaxis,stacksum,svg=configdict.get('bgstrip'))
+            ka_idx = SpecMath.setROI(kaenergy,energyaxis,stacksum,bgstrip)
+            kb_idx = SpecMath.setROI(kbenergy,energyaxis,stacksum,bgstrip)
             print(ka_idx,kb_idx)
             ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
             kb_peakdata = stacksum[kb_idx[0]:kb_idx[1]]
@@ -105,23 +106,29 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
     #############################################
     #   STARTS ITERATION OVER SPECTRA BATCH     #
     #############################################
-
+        
+        FITFAIL = 0
         logging.info("Starting iteration over spectra...\n")
         for ITERATION in range(dimension):
                
             spec = currentspectra
             RAW = SpecRead.getdata(spec)
             
-            #############################
-            #  FIT OR NOT THE SPECFILE  #
-            #############################
+            #######################################
+            #     ATTEMPT TO FIT THE SPECFILE     #
+            # PYMCAFIT DOES NOT USE 2ND DIF CHECK #
+            #######################################
 
             if peakmethod == 'PyMcaFit': 
                 try:
+                    usedif2 = False
                     specdata = SpecFitter.fit(spec)
                 except:
+                    FITFAIL += 1
+                    usedif2 = True
                     print("\tCHANNEL COUNT METHOD USED FOR {0}!\t".format(spec))
-                    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD!\t")
+                    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}!\t"\
+                            .format(spec))
                     specdata = SpecRead.getdata(spec)
             elif peakmethod == 'simple_roi': specdata = SpecRead.getdata(spec)
             elif peakmethod == 'auto_roi': specdata = SpecRead.getdata(spec)
@@ -132,7 +139,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             #  SETS THE BACKGROUND  #
             #########################
             
-            if svg == 'SNIPBG': 
+            if bgstrip == 'SNIPBG': 
                 background = SpecMath.peakstrip(RAW,24,3)
                 logging.debug('SNIPGB calculated for spec {0}'.format(spec))
             else: background = np.zeros([len(specdata)])
@@ -171,7 +178,8 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             logging.info("Specfile being processed is: {0}\n".format(spec))
  
             if peakmethod == 'auto_roi' or peakmethod == 'PyMcaFit':
-                ka_info = SpecMath.getpeakarea(kaenergy,specdata,energyaxis,background,svg,RAW)
+                ka_info = SpecMath.getpeakarea(\
+                        kaenergy,specdata,energyaxis,background,configdict,RAW,usedif2)
                 ka = ka_info[0]
             
                 for channel in range(len(specdata)):
@@ -183,7 +191,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                 if ka == 0: kb = 0
                 elif ka > 0:
                     kb_info = SpecMath.getpeakarea(\
-                            kbenergy,specdata,energyaxis,background,svg,RAW)
+                            kbenergy,specdata,energyaxis,background,configdict,RAW,usedif2)
                     kb = kb_info[0]
 
                     for channel in range(len(specdata)):
@@ -231,6 +239,11 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
 
             #####################################
 
+#            plt.plot(energyaxis,specdata,label='specdata')
+#            plt.plot(energyaxis,RAW,label='raw')
+#            plt.legend()
+#            plt.show()
+            
             #########################################
             #   UPDATE ELMAP POSITION AND SPECTRA   #
             #########################################        
@@ -255,6 +268,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             logging.warning("ValueError, elmap.max() = {0}!".format(elmap.max()))
         timestamp = time.time() - partialtimer
         print("Execution took %s seconds" % (timestamp))
+        if peakmethod == 'PyMcaFit': print("Fit fail: {0}%".format(100*FITFAIL/dimension))
         
         timestamps = open(SpecRead.workpath + '/timestamps.txt'\
                     .format(Element,SpecRead.DIRECTORY),'a')
@@ -265,6 +279,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
 
         plt.plot(energyaxis,CUMSUM,label='CUMSUM CURRENT DATA')
         plt.plot(energyaxis,CUMSUM_RAW,label='CUMSUM RAW DATA')
+        plt.legend()
         plt.show()
                         
         ##################################

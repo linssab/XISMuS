@@ -111,11 +111,11 @@ def setROI(lookup,xarray,yarray,svg):
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
-        lowx_idx = idx-2
+        lowx_idx = idx-3
         logging.debug("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx+2
+        highx_idx = idx+3
         logging.debug("highx_idx: %d" % highx_idx)
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
@@ -136,16 +136,16 @@ def setROI(lookup,xarray,yarray,svg):
         
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     
-    lowx_idx = lowx_idx + 2
-    highx_idx = highx_idx - 2
-    peak_center = shift[2]-2
+    lowx_idx = lowx_idx + 3
+    highx_idx = highx_idx - 3
+    peak_center = shift[2]-3
     logging.debug("peak_center = {0}".format(peak_center)) 
     return lowx_idx,highx_idx,peak_center,isapeak
 
-def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
+def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
     Area = 0
-    
-    idx = setROI(lookup,energyaxis,data,svg)
+   
+    idx = setROI(lookup,energyaxis,data,localconfig.get('bgstrip'))
     isapeak = idx[3]
     xdata = energyaxis[idx[0]:idx[1]]
     ydata = data[idx[0]:idx[1]]
@@ -157,42 +157,56 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
     if isapeak == True: 
         if original_data.sum() <= (3*ROIbg.sum()): isapeak = False
     
-    try: 
-        smooth_dif2 = scipy.signal.savgol_filter(getdif2(RAW,energyaxis,1),5,3)
-        smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
-    except:
-        loggin.warning("Cannot apply savgol filter to 2nd derivate! Vector is too short!")
-        smooth_dif2 = getdif2(RAW,energyaxis,1)
-        raise Exception("Cannot smooth 2nd derivate!")
-        pass
+    ##########################
+    # 2ND DIFFERENTIAL CHECK #
+    ##########################
+    if usedif2 == True and isapeak == True:
+        try: 
+            smooth_dif2 = scipy.signal.savgol_filter(getdif2(RAW,energyaxis,1),5,3)
+            smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
+        except:
+            logging.warning("Cannot apply savgol filter to 2nd derivate! Vector is too short!")
+            smooth_dif2 = getdif2(RAW,energyaxis,1)
+            raise Exception("Cannot smooth 2nd derivate!")
+            pass
     
-    for i in range(len(smooth_dif2)):
-        if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
-        elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
+        ##################################
+        # 2ND DIFFERENTIAL CUTOFF FILTER #
+        ##################################
     
-# 2ND DERIVATIVE CHECK - LEFT AND RIGHT - #    
-
-    if smooth_dif2[idx[2]] < 0 and isapeak == True\
-            or smooth_dif2[idx[2]+1] < 0 and isapeak == True\
-            or smooth_dif2[idx[2]-1] < 0 and isapeak == True:
-        logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
-        logging.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
+        for i in range(len(smooth_dif2)):
+            if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
+            elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
+    
+        if smooth_dif2[idx[2]] < 0 or smooth_dif2[idx[2]+1] < 0 or smooth_dif2[idx[2]-1] < 0:
+            logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
+            logging.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
+                    smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
+            for i in range(len(xdata)):
+                if ROIbg[i] < ydata[i]: Area += (ydata[i]-ROIbg[i])
+                logging.debug("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
+        else: 
+            logging.debug("{0} has no peak! Dif2 = {1} and isapeak = {2}\n"\
+                    .format(lookup,smooth_dif2[idx[2]],isapeak))
+            logging.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
                 smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
+    
+    ##########################
+
+    elif localconfig.get('peakmethod') == 'PyMcaFit' and usedif2 == False:
+        logging.info("No dif 2 criteria for {0} method".format(localconfig.get('peakmethod')))
+        smooth_dif2 = np.zeros([len(xdata)])
         for i in range(len(xdata)):
             if ROIbg[i] < ydata[i]: Area += (ydata[i]-ROIbg[i])
             logging.debug("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
-                
-    else: 
-        logging.debug("{0} has no peak! Dif2 = {1}\n".format(lookup,smooth_dif2[idx[2]]))
-        logging.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
-            smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
-
+               
     ##############
     # TEST BLOCK #          
     TESTFNC = False
     ##############    
     
-    if TESTFNC == True:    
+    if TESTFNC == True:
+ 
         print(5*"*" + " IS A PEAK? " + 5*"*" + "\n\t{0}\t".format(isapeak))
         print("RAW peak: {0}\t bg: {1}\nyDATA peak: {2}"\
                .format(original_data.sum(),(3*ROIbg.sum()),ydata.sum()))
@@ -205,15 +219,17 @@ def getpeakarea(lookup,data,energyaxis,continuum,svg,RAW):
 
         print("ydata = {0}".format(ydata))
         print("len(ydata) = {0}".format(len(ydata)))
-        print("ydata[idx[2]] = {0}, smooth_dif2[idx[2]] = {1}".format(\
+        try: print("ydata[idx[2]] = {0}, smooth_dif2[idx[2]] = {1}".format(\
                 ydata[idx[2]],smooth_dif2[idx[2]]))
+        except: pass
         print("idx[2] = {0}".format(idx[2]))
         print("Lookup: {0} Area: {1}\n".format(lookup,Area))
     
-        plt.semilogy(xdata,ydata, label='data')
-        plt.semilogy(xdata,original_data, label='RAW data')
-        plt.semilogy(xdata,smooth_dif2, label='2nd Differential')
-        plt.semilogy(xdata,ROIbg, label='BG estimation')
+        plt.plot(xdata,ydata, label='data')
+        plt.plot(xdata,original_data, label='RAW data')
+        try: plt.plot(xdata,smooth_dif2, label='2nd Differential')
+        except: pass
+        plt.plot(xdata,ROIbg, label='BG estimation')
         plt.legend()
         plt.show()
     

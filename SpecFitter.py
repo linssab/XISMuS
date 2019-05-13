@@ -1,5 +1,7 @@
-#   SPEC FITTER    #
-#   Armando Solè   #
+##########################################
+#              SPEC FITTER               #
+# uses PyMca modules from Armando Solè   #
+##########################################
 
 import os
 import numpy
@@ -47,6 +49,9 @@ print(currentConfig['peaks'])
 mcafit.configure(currentConfig)
 
 def fit(specfile):
+    
+    currentConfig['fit']['stripiterations'] = 0
+    
     counts = SpecRead.getdata(specfile)
     channels = numpy.arange(len(counts))
     if counts.max() <= 13: counts = counts + random.randint(1,2)
@@ -73,6 +78,7 @@ def fit(specfile):
 #                             addinfo=True)
 #        print(concentrations)
     else:
+        logging.warning("yfit = 0! Because counts.max() = {0}".format(counts.max()))
         yfit = numpy.zeros([len(channels)])
     return yfit
 
