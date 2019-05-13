@@ -212,15 +212,16 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                 # Calculates ka and kb with simple roi method #
                 ###############################################
                 
+                ka, kb = 0, 0
                 ka_ROI = RAW[ka_idx[0]:ka_idx[1]]
                 ka_bg = background[ka_idx[0]:ka_idx[1]]
                 kb_ROI = RAW[kb_idx[0]:kb_idx[1]]
                 kb_bg = background[kb_idx[0]:kb_idx[1]]
             
                 for channel in range(len(ka_ROI)):
-                    ka = ka_ROI[channel] - ka_bg[channel]
+                    ka += ka_ROI[channel] - ka_bg[channel]
                 for channel in range(len(kb_ROI)):
-                    kb = kb_ROI[channel] - kb_bg[channel]
+                    kb += kb_ROI[channel] - kb_bg[channel]
             
                 logging.debug("ka {0}, kb {1}".format(ka,kb))
                 elmap[currentx][currenty] = ka+kb
