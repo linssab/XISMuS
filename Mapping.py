@@ -97,8 +97,8 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
 
         if peakmethod == 'simple_roi':
             stacksum = SpecMath.stacksum(currentspectra,dimension)
-            ka_idx = SpecMath.setROI(kaenergy,energyaxis,stacksum,bgstrip)
-            kb_idx = SpecMath.setROI(kbenergy,energyaxis,stacksum,bgstrip)
+            ka_idx = SpecMath.setROI(kaenergy,energyaxis,stacksum,configdict)
+            kb_idx = SpecMath.setROI(kbenergy,energyaxis,stacksum,configdict)
             print(ka_idx,kb_idx)
             ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
             kb_peakdata = stacksum[kb_idx[0]:kb_idx[1]]

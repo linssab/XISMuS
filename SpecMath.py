@@ -92,12 +92,14 @@ def creategaussian(channels,energy):
 # at eV energy position                                             #
 #####################################################################
 
-def setROI(lookup,xarray,yarray,svg):
+def setROI(lookup,xarray,yarray,localconfig):
     lookup = int(lookup)
     peak_corr = 0
     isapeak = True
     
-    if svg == 'SNIPBG': yarray  = scipy.signal.savgol_filter(yarray,5,3)
+    if localconfig.get('bgstrip') == 'SNIPBG' and\
+    localconfig.get('peakmethod') != 'PyMcaFit': 
+        yarray  = scipy.signal.savgol_filter(yarray,5,3)
     
     logging.debug("-"*15 + " Setting ROI " + "-"*15)
     
@@ -145,7 +147,7 @@ def setROI(lookup,xarray,yarray,svg):
 def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
     Area = 0
    
-    idx = setROI(lookup,energyaxis,data,localconfig.get('bgstrip'))
+    idx = setROI(lookup,energyaxis,data,localconfig)
     isapeak = idx[3]
     xdata = energyaxis[idx[0]:idx[1]]
     ydata = data[idx[0]:idx[1]]
