@@ -31,7 +31,7 @@ dimension = imagex*imagey
 
 configdict = SpecRead.getconfig()
 
-def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
+def getpeakmap(Element,ratio=configdict.get('ratio'),\
         normalize=configdict.get('enhance'),bgstrip=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
 
@@ -52,12 +52,13 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
     max_peak_factor = 0
     ymax_spec = None
     usedif2 = True
-    
+   
     #########################################
     # ERROR VARIABLES CUMSUM AND CUMSUM_RAW #
     #########################################
     CUMSUM = np.zeros([len(energyaxis)])
-    CUMSUM_RAW = np.zeros(len(energyaxis))
+    CUMSUM_RAW = np.zeros([len(energyaxis)])
+    BGSUM = np.zeros([len(energyaxis)])
 
     if Element in Elements.ElementList:
         logging.info("Started acquisition of {0} map".format(Element))
@@ -144,6 +145,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                 logging.debug('SNIPGB calculated for spec {0}'.format(spec))
             else: background = np.zeros([len(specdata)])
             
+            BGSUM += background
             ############################
             #  VERIFIES THE PEAK SIZE  #
             # EXPERIMENTAL FOR NRMLIZE #
@@ -178,6 +180,9 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             logging.info("Specfile being processed is: {0}\n".format(spec))
  
             if peakmethod == 'auto_roi' or peakmethod == 'PyMcaFit':
+               
+                # Kx_INFO HAS [0] AS THE NET AREA AND [1] AS THE PEAK INDEXES #
+
                 ka_info = SpecMath.getpeakarea(\
                         kaenergy,specdata,energyaxis,background,configdict,RAW,usedif2)
                 ka = ka_info[0]
@@ -218,10 +223,14 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                 kb_ROI = RAW[kb_idx[0]:kb_idx[1]]
                 kb_bg = background[kb_idx[0]:kb_idx[1]]
             
-                for channel in range(len(ka_ROI)):
-                    ka += ka_ROI[channel] - ka_bg[channel]
-                for channel in range(len(kb_ROI)):
-                    kb += kb_ROI[channel] - kb_bg[channel]
+                if ka_idx[3] == True:
+                    for channel in range(len(ka_ROI)):
+                        ka += ka_ROI[channel] - ka_bg[channel]
+                if kb_idx[3] == True and ka_idx[3] == True:
+                    for channel in range(len(kb_ROI)):
+                        kb += kb_ROI[channel] - kb_bg[channel]
+
+                if kb_idx[3] == False: ka, kb = 0, 0
             
                 logging.debug("ka {0}, kb {1}".format(ka,kb))
                 elmap[currentx][currenty] = ka+kb
@@ -240,11 +249,6 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
 
             #####################################
 
-#            plt.plot(energyaxis,specdata,label='specdata')
-#            plt.plot(energyaxis,RAW,label='raw')
-#            plt.legend()
-#            plt.show()
-            
             #########################################
             #   UPDATE ELMAP POSITION AND SPECTRA   #
             #########################################        
@@ -253,7 +257,10 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
             currentx = scan[0]
             currenty = scan[1]
             currentspectra = SpecRead.updatespectra(spec,dimension)
-            print("{0:.2f}".format(ITERATION/dimension*100), "Percent complete  \r", end='')
+            progress = int(ITERATION/dimension*20)
+            blank = 20 - progress - 1
+            print("[" + progress*"\u25A0" + blank*" " + "]" + " / {0:.2f}"\
+                    .format(ITERATION/dimension*100), "Percent complete  \r", end='')
             sys.stdout.flush()
         
         #################################    
@@ -263,9 +270,9 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         if ratio == True: ratiofile.close()
         logging.info("Finished iteration process for element {}\n".format(Element))
      
-        try: image = elmap/elmap.max()*255
-        except: 
-            image = elmap+1
+        if elmap.max() > 0: image = elmap/elmap.max()*255
+        else: 
+            image = elmap
             logging.warning("ValueError, elmap.max() = {0}!".format(elmap.max()))
         timestamp = time.time() - partialtimer
         print("Execution took %s seconds" % (timestamp))
@@ -278,8 +285,11 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
                     configdict.get('peakmethod'),timestamp,\
                     time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
 
-        plt.plot(energyaxis,CUMSUM,label='CUMSUM CURRENT DATA')
+        stacksum = SpecMath.stacksum(SpecRead.getfirstfile(),dimension)
+        if peakmethod == 'PyMcaFit': plt.plot(energyaxis,CUMSUM,label='CUMSUM CURRENT DATA')
         plt.plot(energyaxis,CUMSUM_RAW,label='CUMSUM RAW DATA')
+        plt.plot(energyaxis,stacksum,label='stackplot')
+        plt.plot(energyaxis,BGSUM,label='background')
         plt.legend()
         plt.show()
                         
@@ -304,11 +314,16 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),plot=None,\
         partialtimer = time.time()
         plt.clf()
         plt.close()
-    IMAGE_PATH = SpecRead.workpath+'\output'+\
+        IMAGE_PATH = SpecRead.workpath+'\output'+\
                 '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
                 .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
                 ,configdict.get('enhance'),configdict.get('peakmethod')),
-    logging.info("Finished map acquisition!")
+        logging.info("Finished map acquisition!")
+    
+    else:
+        logging.warning("{0} not an element!".format(Element))
+        raise ValueError("{0} not an element!".format(Element))
+    
     return image
 
 def getdensitymap():
@@ -365,4 +380,8 @@ def stackimages(*args):
     return stackedimage
 
 if __name__=="__main__":
-    ROIimaging('Cu')
+    print("Test silver map")
+    configdict['peakmethod'] = 'auto_roi'
+    configdict['bgstrip'] = 'SNIPBG'
+    print(configdict)
+    myimage = getpeakmap("Ag")
