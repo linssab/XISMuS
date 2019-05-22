@@ -6,6 +6,7 @@
 #                                                               #
 #################################################################
 
+from ReadConfig import CONFIG
 import sys
 import os
 import numpy as np
@@ -18,65 +19,16 @@ logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
-DIRECTORY = 'campioneperu'
-dirname = 'C:/'+DIRECTORY+'/'
+DIRECTORY = CONFIG.get('directory')
+dirname = 'C:/samples/'+DIRECTORY+'/'
 firstfile = 'Cesareo_1.mca'
 workpath = os.getcwd()
 configfile = workpath + '\config.cfg'
+dimension_file = dirname + '\colonneXrighe.txt'
 
 def getfirstfile():
     return dirname+firstfile
 
-def getconfig():
-    modesdict = {}
-    file = open(configfile, 'r')
-    line = file.readline()
-    if "<<CONFIG_START>>" in line:
-        line = file.readline()
-        while "<<SIZE>>" not in line:
-            if 'bgstrip' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                modesdict['bgstrip'] = str(aux[2])
-                logging.info("Bgstrip mode? {0}".format(modesdict.get('bgstrip')))
-                line = file.readline()
-            if 'ratio' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                if aux[2] == 'True': modesdict['ratio'] = True
-                elif aux[2] == 'False': modesdict['ratio'] = False
-                logging.info("Create ratio matrix? {0}".format(modesdict.get('ratio')))
-                line = file.readline()
-            if 'enhance' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                if aux[2] == 'True': modesdict['enhance'] = True
-                elif aux[2] == 'False': modesdict['enhance'] = False
-                logging.info("Enhance image? {0}".format(modesdict.get('enhance')))
-                line = file.readline()
-            if 'thick_ratio' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                modesdict['thickratio'] = int(aux[2])
-                line = file.readline()
-            if 'netpeak_method' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                modesdict['peakmethod'] = str(aux[2])
-                line = file.readline()
-        file.close()
-    return modesdict
- 
 # MCA MEANS THE INPUT MUST BE AN MCA FILE
 # SELF MEANS THE INPUT CAN BE EITHER A DATA ARRAY OR AN MCA FILE
 # THE FLAG MUST SAY IF THE FILE IS AN MCA 'file' OR A DATA ARRAY 'data'
@@ -280,27 +232,25 @@ def updatespectra(file,size):
     return newfile
 
 def getdimension():
-    if not os.path.exists(configfile):
-        raise IOError("Config file not found!") 
+    if not os.path.exists(dimension_file):
+        raise IOError("Dimension file not found!") 
 
-    file = open(configfile, 'r')
+    file = open(dimension_file, 'r')
     line = file.readline()
-    if "<<CONFIG_START>>" in line:
-        while "<<CALIBRATION>>" not in line:
-            if 'lines' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                x = int(aux[1])
-            if 'rows' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                y = int(aux[1])
-            line = file.readline()
-#        print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
-    else: line = file.readline()
+    if 'righe' in line:
+        line=line.replace('\r','')
+        line=line.replace('\n','')
+        line=line.replace('\t',' ')
+        aux = line.split()
+        x = int(aux[1])
+        line = file.readline() 
+    if 'colonne' in line:
+        line=line.replace('\r','')
+        line=line.replace('\n','')
+        line=line.replace('\t',' ')
+        aux = line.split()
+        y = int(aux[1])
+    line = file.readline()
+#    print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
     return x,y
 
