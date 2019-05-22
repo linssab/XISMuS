@@ -27,13 +27,13 @@ def dif2(ydata,x,gain):
     return value
 
 def getdif2(ydata,xdata,gain):
-    dif2curve = []
     xinterval = np.pad(xdata,2,'edge')
     yinterval = np.pad(ydata,2,'edge')
+    dif2curve = np.zeros([len(yinterval)])
     for x in range(len(xinterval)-2):
         difvalue = dif2(yinterval,x,1)
-        dif2curve.append(difvalue)
-    dif2curve = dif2curve[1:-1]
+        dif2curve[x] = difvalue
+    dif2curve = dif2curve[1:-3]
     return dif2curve
 
 def energyaxis():
@@ -163,14 +163,8 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
     # 2ND DIFFERENTIAL CHECK #
     ##########################
     if usedif2 == True and isapeak == True:
-        try: 
-            smooth_dif2 = scipy.signal.savgol_filter(getdif2(RAW,energyaxis,1),5,3)
-            smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
-        except:
-            logging.warning("Cannot apply savgol filter to 2nd derivate! Vector is too short!")
-            smooth_dif2 = getdif2(RAW,energyaxis,1)
-            raise Exception("Cannot smooth 2nd derivate!")
-            pass
+        smooth_dif2 = scipy.signal.savgol_filter(getdif2(RAW,energyaxis,1),5,3)
+        smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
     
         ##################################
         # 2ND DIFFERENTIAL CUTOFF FILTER #
@@ -294,4 +288,6 @@ if __name__=="__main__":
 #    for i in range(len(smooth_dif2)):
 #        if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
 #        elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
+
+
 

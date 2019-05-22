@@ -14,16 +14,20 @@ def plot(image,color):
 
 if __name__=="__main__":
     import Compounds
+    import numpy as np
     import sys
     import SpecRead
     import ImgMath
     from PyMca5.PyMcaPhysics import Elements
     import matplotlib.pyplot as plt
     import logging
+    
+    config = SpecRead.CONFIG
+    print(SpecRead.getdimension())
 
     inputlist = ['-findelement','Core.py','-normalize','-getratios','-dir']
     if '-dir' in sys.argv:
-        params = SpecRead.getconfig()
+        params = config
         print(params)
         print(SpecRead.dirname)
 
@@ -47,27 +51,36 @@ an image where the element is displayed in proportion to the most abundant eleme
                 raise Exception("%s not an element!" % input_elements[arg])
                 logging.exception("{0} is not a chemical element!".format(input_elements[arg]))
         
+        ####################################################
+        #      UNPACK CONFIG PARAM TO PASS AS ARGUMENTS    #
+        # TO MAPPING.PY / NUMBA CAN'T COMPILE DICTIONARIES #
+        ####################################################
+        ratio = config.get('ratio')
+        normalize = config.get('enhance')
+        bgstrip = config.get('bgstrip')
+        peakmethod = config.get('peakmethod')
+    
         if '-normalize' in sys.argv:
             for element in elementlist:
+                
                 image = Mapping.getpeakmap(element)
 #                plot(image,'red')
         else:
             for element in elementlist:
-                image = Mapping.getpeakmap(element)
+                Mapping.getpeakmap(element)
 #                plot(image,'red')
+    
+    if flag1 == '-plotstack':
+        import SpecMath
+        energyaxis = SpecMath.energyaxis()
+        SpecMath.getstackplot(SpecRead.getfirstfile(),energyaxis)
+        spectra = SpecRead.getdata('Cesareo_135.mca')
 
     if flag1 == '-plotmap':
         import Mapping
         print("Fetching density map...")
         Mapping.getdensitymap()
-    if flag1 == '-roiimage':
-        import Mapping
-        import SpecMath
-        if len(sys.argv) >= 3:
-            flag2 = sys.argv[2]
-        else:
-            flag2 = None
-        Mapping.ROIimaging('Te')
+    
     if flag1 == '-getratios':
         for arg in range(len(sys.argv)):
             if sys.argv[arg] in Elements.ElementList:
@@ -97,11 +110,14 @@ an image where the element is displayed in proportion to the most abundant eleme
             mae_file = SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
                 .format(mae,SpecRead.DIRECTORY)
             mae_matrix = SpecRead.RatioMatrixReadFile(mae_file)
-
+            plt.imshow(mae_matrix)
+            plt.show()
         except: raise FileNotFoundError("{0} ratio file not found!".format(mae))
-                
-        heightmap = ImgMath.getheightmap(ratiomatrix,mae_matrix,7.36,compound,elementlist[0])
-        plt.imshow(heightmap,cmap='BuGn')
+        
+        heightmap = ImgMath.getheightmap(ratiomatrix,mae_matrix,config.get('thickratio'),compound,elementlist[0])
+        plt.imshow(ratiomatrix)
+        plt.show()
+        plt.imshow(heightmap,cmap='gray')
         plt.show()
         ImgMath.plot3D(heightmap)
 

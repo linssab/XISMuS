@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import ListedColormap
 
-configdict = SpecRead.getconfig()
+configdict = SpecRead.CONFIG
 
 def getheightmap(depth_matrix,mask,thickratio,compound,KaKb='Pb'):
     imagesize = SpecRead.getdimension()
@@ -34,15 +34,17 @@ def getheightmap(depth_matrix,mask,thickratio,compound,KaKb='Pb'):
     mu2 = coefficients[1]
     logging.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
     
+    ANGLE = 90  # IN DEGREES #
+    
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0:
-                d = -1 * math.sin(math.radians(90)) *\
+                d = -1 * math.sin(math.radians(ANGLE)) *\
                         (math.log((depth_matrix[i][j]/thickratio))/(mu1-mu2))
             else: d = 0
             
             #############################################
-            #  WRITES d TO HEIGHMAP AND CONVERTS TO UM  #
+            #  WRITES d TO HEIGHMAP AND CONVERTS TO um  #
             #############################################
 
             if d <= 0: heightmap[i][j] = 0

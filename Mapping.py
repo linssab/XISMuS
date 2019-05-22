@@ -29,7 +29,7 @@ imagex = imagsize[0]
 imagey = imagsize[1]
 dimension = imagex*imagey
 
-configdict = SpecRead.getconfig()
+configdict = SpecRead.CONFIG
 
 def getpeakmap(Element,ratio=configdict.get('ratio'),\
         normalize=configdict.get('enhance'),bgstrip=configdict.get('bgstrip'),\
