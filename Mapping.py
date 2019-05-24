@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a3.10                         #
+#                        version: a3.11                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -38,7 +38,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),\
     ################-getpeakmap-#####################
     #   GETPEAKMAP READS THE BATCH OF SPECTRA AND   #
     #   RETURNS A 2D-ARRAY WITH THE COUNTS FOR THE  #
-    #   INPUT ELEMENT.                              #
+    #   KA AND KB LINES OF INPUT ELEMENT(S).        #
     #################################################
 
     if peakmethod == 'PyMcaFit': import SpecFitter
@@ -52,13 +52,16 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),\
     max_peak_factor = 0
     ymax_spec = None
     usedif2 = True
-   
+    
     #########################################
     # ERROR VARIABLES CUMSUM AND CUMSUM_RAW #
     #########################################
+    
     CUMSUM = np.zeros([len(energyaxis)])
     CUMSUM_RAW = np.zeros([len(energyaxis)])
     BGSUM = np.zeros([len(energyaxis)])
+
+    #########################################
 
     if Element in Elements.ElementList:
         logging.info("Started acquisition of {0} map".format(Element))
@@ -78,8 +81,8 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),\
         currenty = scan[1]
         
         if ratio == True: 
-            ratiofile = open(SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
-                    .format(Element,SpecRead.DIRECTORY),'w+')
+            ratiofile = open(SpecRead.workpath + '/output/'+\
+                    '{1}_ratio_{0}.txt'.format(Element,SpecRead.DIRECTORY),'w+')
             ratiofile.write("-"*10 + " Counts of Element {0} "\
                     .format(Element) + 10*"-" + '\n')
             ratiofile.write("row\tcolumn\tline1\tline2\n")
@@ -181,8 +184,12 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),\
  
             if peakmethod == 'auto_roi' or peakmethod == 'PyMcaFit':
                
-                # Kx_INFO HAS [0] AS THE NET AREA AND [1] AS THE PEAK INDEXES #
-
+                ################################################################
+                #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
+                # Be aware that PyMcaFit method peaks are returned always True #
+                # Check SpecMath.py This is due to the high noise in the data  #
+                ################################################################
+                    
                 ka_info = SpecMath.getpeakarea(\
                         kaenergy,specdata,energyaxis,background,configdict,RAW,usedif2)
                 ka = ka_info[0]
@@ -230,7 +237,7 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),\
                     for channel in range(len(kb_ROI)):
                         kb += kb_ROI[channel] - kb_bg[channel]
 
-                if kb_idx[3] == False: ka, kb = 0, 0
+##############  if kb_idx[3] == False: ka, kb = 0, 0
             
                 logging.debug("ka {0}, kb {1}".format(ka,kb))
                 elmap[currentx][currenty] = ka+kb
@@ -298,15 +305,15 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),\
         ##################################
         
         #color_image = ImgMath.colorize(image,'copper')
-        cmap = ImgMath.createcmap([251,215,51])
+        cmap = ImgMath.createcmap([255,215,51])
         
         #################################
        
         fig, ax = plt.subplots()
-        mapimage = ax.imshow(image,cmap='jet')
+        mapimage = ax.imshow(image,cmap='gray')
         plt.colorbar(mapimage)
-        plt.savefig(SpecRead.workpath+'\output'+\
-                '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
+        plt.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
+                '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
                 .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
                 ,configdict.get('enhance'),configdict.get('peakmethod')),\
                 dpi=150,transparent=False) 
@@ -314,8 +321,8 @@ def getpeakmap(Element,ratio=configdict.get('ratio'),\
         partialtimer = time.time()
         plt.clf()
         plt.close()
-        IMAGE_PATH = SpecRead.workpath+'\output'+\
-                '\{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
+        IMAGE_PATH = SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+\
+                '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
                 .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
                 ,configdict.get('enhance'),configdict.get('peakmethod')),
         logging.info("Finished map acquisition!")
@@ -362,7 +369,7 @@ def getdensitymap():
     
     fig, ax = plt.subplots()
     mapimage = ax.imshow(density_map,cmap='jet',label='Dense Map')
-    plt.savefig(SpecRead.workpath+'\output'+'\{0}_{1}_densitymap.png'\
+    plt.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'\{0}_{1}_densitymap.png'\
             .format(SpecRead.DIRECTORY,configdict.get('bgstrip')),dpi=150,transparent=False) 
     plt.show()
     return density_map

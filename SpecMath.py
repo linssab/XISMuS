@@ -1,8 +1,9 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a2.3                          #
+#                        version: a2.31                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#                                                               #
 #################################################################
 
 import logging
@@ -41,7 +42,6 @@ def energyaxis():
     return calibration[0]
 
 def getstackplot(mca,energy,*args):
-    energy = energy
     size = SpecRead.getdimension()
     dimension = size[0]*size[1]
     data = stacksum(mca,dimension)
@@ -188,8 +188,15 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
                 smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
     
     ##########################
+    
+    ####################################################
+    # Isapeak is not invoked for PyMcaFit method       #
+    # this makes it work similar to simple_roi method. #
+    # With low-count datasets this is better to obtain #
+    # images that look better                          #
+    ####################################################
 
-    elif localconfig.get('peakmethod') == 'PyMcaFit' and usedif2 == False:
+    elif localconfig.get('peakmethod') == 'PyMcaFit':
         logging.info("No dif 2 criteria for {0} method".format(localconfig.get('peakmethod')))
         smooth_dif2 = np.zeros([len(xdata)])
         for i in range(len(xdata)):

@@ -73,8 +73,9 @@ an image where the element is displayed in proportion to the most abundant eleme
     if flag1 == '-plotstack':
         import SpecMath
         energyaxis = SpecMath.energyaxis()
+        channels = np.arange(energyaxis.shape[0])
         SpecMath.getstackplot(SpecRead.getfirstfile(),energyaxis)
-        spectra = SpecRead.getdata('Cesareo_135.mca')
+        SpecMath.getstackplot(SpecRead.getfirstfile(),channels)
 
     if flag1 == '-plotmap':
         import Mapping

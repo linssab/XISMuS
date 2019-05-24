@@ -4,6 +4,11 @@ import os
 workpath = os.getcwd()
 configfile = workpath + '\config.cfg'
 
+logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
+        filename = 'logfile.log',level = logging.DEBUG)
+with open('logfile.log','w+') as mylog: mylog.truncate(0)
+logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
+
 def getconfig():
     modesdict = {}
     file = open(configfile, 'r')
