@@ -61,14 +61,9 @@ an image where the element is displayed in proportion to the most abundant eleme
         peakmethod = config.get('peakmethod')
     
         if '-normalize' in sys.argv:
-            for element in elementlist:
-                
-                image = Mapping.getpeakmap(element)
-#                plot(image,'red')
+            Mapping.getpeakmap(elementlist)
         else:
-            for element in elementlist:
-                Mapping.getpeakmap(element)
-#                plot(image,'red')
+            Mapping.getpeakmap(elementlist)
     
     if flag1 == '-plotstack':
         import SpecMath
