@@ -14,6 +14,7 @@ import logging
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import ListedColormap
+import cv2
 
 configdict = SpecRead.CONFIG
 
@@ -210,4 +211,67 @@ def flattenhistogram(image):
     cdf = np.ma.filled(cdf_mask,0).astype('uint8')
     image = cdf[image]
     return image
+
+def split_and_save(map_array,element_list,configdict):
+    
+    imagsize = SpecRead.getdimension()
+    imagex = imagsize[0]
+    imagey = imagsize[1]
+    image = np.zeros([imagex,imagey])
+
+    #color_image = ImgMath.colorize(image,'copper')
+    cmap = createcmap([255,215,51])
+    
+    target_size = 1024
+    factor = target_size/max(imagsize)
+    newX,newY = int(factor*imagex),int(factor*imagey)
+
+    ###################################################
+    # Normalizes every map in respect to each element #
+    ###################################################
+    
+    fig, axs = plt.subplots(1,len(element_list),sharey=True)
+    
+    #mapimage = ax.imshow(image,cmap='gray')
+    #plt.colorbar(mapimage)
+    
+    for Element in range(len(element_list)):
+        for i in range(imagex):
+            for j in range(imagey):
+                image[i][j] = map_array[i][j][Element]
+        if image.max() > 0: image = image/image.max()*255
+
+        if len(element_list) > 1: ax = axs[Element]
+        else: ax=axs
+        ax.imshow(image,cmap='gray')
+        ax.set_title(element_list[Element])
+
+        large_image = cv2.resize(image,(newX,newY),interpolation=cv2.INTER_AREA)
+        cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
+            '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
+            .format(element_list[Element],configdict.get('bgstrip'),configdict.get('ratio')\
+            ,configdict.get('enhance'),configdict.get('peakmethod')),large_image)
+
+    ##################################################
+    
+    #plt.colorbar()
+    plt.show()
+    
+    IMAGE_PATH = SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+\
+            '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
+            .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
+            ,configdict.get('enhance'),configdict.get('peakmethod')),
+
+    return 0
+
+def stackimages(*args):
+    imagelist = args
+    colorlist = ['red','green','blue']
+    color = 0
+    stackedimage = ImgMath.colorize(np.zeros([imagex,imagey]),'none')
+    for image in imagelist:
+        color += 1
+        image = ImgMath.colorize(image,colorlist[color])
+        stackedimage = cv2.addWeighted(stackedimage,1,image,1,0)
+    return stackedimage
 
