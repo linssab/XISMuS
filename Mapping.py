@@ -67,7 +67,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
 
     if element_list[0] in Elements.ElementList:
         logging.info("Started acquisition of {0} map(s)".format(element_list))
-        print("Fetching map image for %s..." % element_list)
+        print("Fetching map image for " + ", ".join(element_list) + "...")
         
         if bgstrip != 'None': logging.warning("Background stripping is ON! - slow -")
         
@@ -251,9 +251,11 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                 
                     if ka_idx[3] == True:
                         for channel in range(len(ka_ROI)):
+                            CUMSUM_RAW[channel+ka_idx[0]] += RAW[channel+ka_idx[0]]
                             ka += ka_ROI[channel] - ka_bg[channel]
                     if kb_idx[3] == True and ka_idx[3] == True:
                         for channel in range(len(kb_ROI)):
+                            CUMSUM_RAW[channel+kb_idx[0]] += RAW[channel+kb_idx[0]]
                             kb += kb_ROI[channel] - kb_bg[channel]
 
                ###  if kb_idx[3] == False: ka, kb = 0, 0
