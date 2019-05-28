@@ -245,8 +245,8 @@ def split_and_save(map_array,element_list,configdict):
         else: ax=axs
         ax.imshow(image,cmap='gray')
         ax.set_title(element_list[Element])
-
-        large_image = cv2.resize(image,(newY,newX),interpolation=cv2.INTER_AREA)
+        if imagex > target_size or imagey > target_size: large_image = image
+        else: large_image = cv2.resize(image,(newY,newX),interpolation=cv2.INTER_AREA)
         cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
             '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
             .format(element_list[Element],configdict.get('bgstrip'),configdict.get('ratio')\
@@ -257,11 +257,8 @@ def split_and_save(map_array,element_list,configdict):
     #plt.colorbar()
     plt.show()
     
-    IMAGE_PATH = SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+\
-            '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
-            .format(Element,configdict.get('bgstrip'),configdict.get('ratio')\
-            ,configdict.get('enhance'),configdict.get('peakmethod')),
-
+    IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
+    print("\nImage(s) saved in {0}\nResized dimension: {1}".format(IMAGE_PATH,(newY,newX)))
     return 0
 
 def stackimages(*args):
