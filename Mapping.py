@@ -301,7 +301,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
         
         
         timestamp = time.time() - partialtimer
-        print("Execution took %s seconds" % (timestamp))
+        print("\nExecution took %s seconds" % (timestamp))
         if peakmethod == 'PyMcaFit': print("Fit fail: {0}%".format(100*FITFAIL/dimension))
         
         timestamps = open(SpecRead.workpath + '/timestamps.txt'\
