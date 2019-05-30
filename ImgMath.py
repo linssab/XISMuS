@@ -13,11 +13,19 @@ import Compounds
 import math
 import logging
 import matplotlib.pyplot as plt
+import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import ListedColormap
 import cv2
 
 configdict = SpecRead.CONFIG
+
+def colorbar(mappable):
+    ax = mappable.axes
+    fig = ax.figure
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    return fig.colorbar(mappable, cax=cax)
 
 def getheightmap(depth_matrix,mask,thickratio,compound):
     imagesize = SpecRead.getdimension()

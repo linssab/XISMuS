@@ -5,21 +5,12 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import matplotlib
-
 def plot(image,color):
     image_color = ImgMath.colorize(image,color)
     fig, ax = plt.subplots()
     plt.imshow(image_color)
     plt.show()
     return 0
-
-def colorbar(mappable):
-    ax = mappable.axes
-    fig = ax.figure
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    return fig.colorbar(mappable, cax=cax)
 
 if __name__=="__main__":
     import Compounds
@@ -131,8 +122,8 @@ an image where the element is displayed in proportion to the most abundant eleme
             ax[0].set_title('{} ratio map'.format(elementlist[0]))
             maps.append(ax[1].imshow(mae_matrix))
             ax[1].set_title('{} ratio map'.format(mae))
-            colorbar(maps[0])
-            colorbar(maps[1])
+            ImgMath.colorbar(maps[0])
+            ImgMath.colorbar(maps[1])
             plt.show()
             plt.cla()
             plt.clf()
@@ -144,7 +135,7 @@ an image where the element is displayed in proportion to the most abundant eleme
         fig, ax = plt.subplots()
         cbar = ax.imshow(heightmap,cmap='gray')
         ax.set_title('heightmap')
-        colorbar(cbar)
+        ImgMath.colorbar(cbar)
         plt.show()
         plt.cla()
         plt.clf()
