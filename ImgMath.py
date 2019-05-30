@@ -1,8 +1,9 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: a1.2                          #
+#                        version: a1.3                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#                                                               #
 #################################################################
 
 import numpy as np
@@ -18,17 +19,17 @@ import cv2
 
 configdict = SpecRead.CONFIG
 
-def getheightmap(depth_matrix,mask,thickratio,compound,KaKb='Pb'):
+def getheightmap(depth_matrix,mask,thickratio,compound):
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
     imagey = imagesize[1]
     heightmap = np.zeros([imagex,imagey])
-    coefficients = Compounds.coefficients(compound,KaKb)
+    coefficients = compound.lin_att
     
-    heightfile = open(SpecRead.workpath + '/output/{1}_heightmap_{0}.txt'\
-            .format(KaKb,SpecRead.DIRECTORY),'w+')
+    heightfile = open(SpecRead.workpath + '/output/{0}_heightmap.txt'\
+            .format(SpecRead.DIRECTORY),'w+')
     heightfile.write("-"*10 + " Thickness Values (um) of {0} "\
-            .format(compound) + 10*"-" + '\n')
+            .format(compound.name) + 10*"-" + '\n')
     heightfile.write("row\tcolumn\tthickness\n")
 
     mu1 = coefficients[0]
@@ -235,6 +236,7 @@ def split_and_save(map_array,element_list,configdict):
     #mapimage = ax.imshow(image,cmap='gray')
     #plt.colorbar(mapimage)
     
+    fig_list = []
     for Element in range(len(element_list)):
         for i in range(imagex):
             for j in range(imagey):
@@ -243,10 +245,10 @@ def split_and_save(map_array,element_list,configdict):
 
         if len(element_list) > 1: ax = axs[Element]
         else: ax=axs
-        ax.imshow(image,cmap='gray')
+        fig_list.append(ax.imshow(image,cmap='gray'))
         ax.set_title(element_list[Element])
         if imagex > target_size or imagey > target_size: large_image = image
-        else: large_image = cv2.resize(image,(newY,newX),interpolation=cv2.INTER_AREA)
+        else: large_image = cv2.resize(image,(newY,newX),interpolation=cv2.INTER_NEAREST)
         cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
             '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
             .format(element_list[Element],configdict.get('bgstrip'),configdict.get('ratio')\
@@ -254,11 +256,13 @@ def split_and_save(map_array,element_list,configdict):
 
     ##################################################
     
-    #plt.colorbar()
+    #plt.colorbar(fig_list[0],ax=axs, orientation = 'horizontal',fraction=.1)
+    #map_ = plt.imshow(axs)
+    #plt.colorbar(map_, orientation = 'vertical')
     plt.show()
     
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
-    print("\nImage(s) saved in {0}\nResized dimension: {1}".format(IMAGE_PATH,(newY,newX)))
+    print("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0
 
 def stackimages(*args):
