@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a2.31                         #
+#                        version: a3.00                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -15,6 +15,19 @@ import matplotlib.pyplot as plt
 import SpecRead
 import EnergyLib
 from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
+from numba import guvectorize, float64, int64
+from numba import cuda
+from numba import jit
+
+os.environ['NUMBAPRO_NVVM']      =\
+        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\bin\nvvm64_33_0.dll'
+
+os.environ['NUMBAPRO_LIBDEVICE'] =\
+        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\libdevice'
+
+os.environ['NUMBAPRO_CUDA_DRIVER']      =\
+        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvcc'
+
 
 NOISE = 80
 FANO = 0.114
@@ -242,40 +255,22 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
 # W VALUE MUST BE LARGER THAN 3 AND ODD, SINCE 3 IS THE MINIMUM  #
 # SATISFACTORY POLYNOMIAL DEGREE TO SMOOTHEN THE DATA            #
 
-def ryan_snip(dataarray,cycles,w):
+@jit
+def ryan_snip(an_array,cycles,width,aout):
     for k in range(cycles):
-        l = w
-        for l in range(len(dataarray)-w):
-            m = (dataarray[l-w] + dataarray[l+w])/2
-            if dataarray[l] > m: dataarray[l] = m
-    return dataarray
+        l = width
+        for l in range(an_array.shape[0]-width):
+            m = (an_array[l-width] + an_array[l+width])/2
+            if an_array[l] > m: aout[l] = m
+            else: aout[l] = an_array[l]
 
-def peakstrip(spectrum,cycles,w):
-    spectrum_sq = np.zeros([len(spectrum)])
-    logging.debug("TIMESTAMP: BEGIN of background estimation!")
-    for i in range(len(spectrum)): spectrum_sq[i] = math.sqrt(spectrum[i])
-    spectrum_smth = scipy.signal.savgol_filter(spectrum_sq,w,2)
-    spectrum_filtered = ryan_snip(spectrum_smth,cycles,w)
-    for j in range(len(spectrum_filtered)):\
-            spectrum_filtered[j] = math.pow(spectrum_filtered[j],2)
-    
-    background = scipy.signal.savgol_filter(spectrum_filtered,9,3)
-    logging.debug("TIMESTAMP: END of background estimation!")
-    
-#    plt.semilogy(background)
-#    plt.semilogy(spectrum)
-#    plt.show()
-    
-    return background
-
-def secondpeak(specdata):
-    first, second = 0, 0
-    for count in specdata:
-        if count > first:
-            first, second = count, first
-        elif first > count > second:
-            second = count
-    return second
+@guvectorize([(float64[:], int64, int64, float64[:])], '(n),(),()->(n)')       
+def peakstrip(an_array,cycles,width,snip_bg):
+    for i in range(an_array.shape[0]): an_array[i] = an_array[i] ** 0.5
+    ryan_snip(an_array,cycles,width,snip_bg)
+    for j in range(an_array.shape[0]): 
+        snip_bg[j] ** 2
+        an_array[j] = an_array[j] ** 2
 
 if __name__=="__main__":
     dirname = os.path.join(SpecRead.dirname)

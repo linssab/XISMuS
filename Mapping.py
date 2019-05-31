@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a3.20                         #
+#                        version: a3.50                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -155,7 +155,8 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
             #########################
             
             if bgstrip == 'SNIPBG': 
-                background = SpecMath.peakstrip(RAW,24,3)
+                background = np.zeros([specdata.shape[0]])
+                SpecMath.peakstrip(specdata,24,3,background)
                 logging.debug('SNIPGB calculated for spec {0}'.format(spec))
             else: background = np.zeros([len(specdata)])
             
@@ -281,6 +282,9 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
             #########################################
             #   UPDATE ELMAP POSITION AND SPECTRA   #
             #########################################        
+
+            # Reset background value since it runs inside a ufunc
+            background = np.zeros([specdata.shape[0]])
 
             scan = ImgMath.updateposition(scan[0],scan[1])
             currentx = scan[0]
