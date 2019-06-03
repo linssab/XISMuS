@@ -263,7 +263,6 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                                 CUMSUM_RAW[channel] += RAW[channel]
                     
                     elmap[currentx][currenty][Element] = ka+kb
-                    ka, kb = 0, 0
                 
                 elif peakmethod == 'simple_roi':
                     if len(element_list) > 1: 
