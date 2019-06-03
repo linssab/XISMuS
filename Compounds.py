@@ -32,16 +32,18 @@ class compound:
         __self__.weight = {}
         __self__.name = 'new_compound'
     
-    def set_compound(__self__,*args,ctype=None,mode='by_atom'):
+    def set_compound(__self__,*args,ctype=None,mode='by_atom',name='new_compound'):
         if ctype == 'custom' and mode == 'by_atom':
-            __self__.create_compound(args[0][0],args[0][1])
+            __self__.create_compound(args[0],args[1])
             __self__.origin = 'by_atom'
         elif ctype == 'custom' and mode == 'by_weight':
-            __self__.create_compound_by_weight(args[0][0],args[0][1])
+            __self__.create_compound_by_weight(args[0],args[1])
         else:
             try: __self__.set_from_database(args[0])
             except: raise ValueError("{} not recognized".format(args[0]))
         pass
+        if ctype == None: name = args[0]
+        __self__.give_name(name)
 
     def create_compound(__self__,atoms,elements):
         __self__.chem = {"{0}".format(elements[i]):(EnergyLib.AtomWeight[elements[i]]*atoms[i])\
@@ -69,6 +71,7 @@ class compound:
         __self__.weightpercent()
         __self__.give_density()
         __self__.origin = 'from_database'
+        __self__.name = name_of_compound
     
     def weightpercent(__self__):
         for element in __self__.chem:
@@ -102,8 +105,11 @@ class compound:
         mixture.give_density()
         mixture.mass = None
         mixture.chem = None
+        name_list = []
+        for ingredient in compounds:
+            name_list.append(ingredient.name)
         mixture.origin = \
-                {'Mode':'by_mixing','Proportion':proportion,'Origin':compounds}
+                {'Mode':'by_mixing','Proportion':proportion,'Origin':name_list}
         return mixture
 
     def set_attenuation(__self__,energy):
@@ -166,17 +172,17 @@ def coefficients(a_compound,KaKb):
 
 if __name__=="__main__":
     
-    rho_coblue = density('CoBlue')
-    print(rho_coblue)
-    print(coefficients('CoBlue','Pb'))
+#    rho_coblue = density('CoBlue')
+#    print(rho_coblue)
+#    print(coefficients('CoBlue','Pb'))
 
     water_chem = [[2,1],['H','O']]
     coblue_perc = [[0.3331,0.3050,0.3619],['Co','Al','O']]
 
     water = compound()
-    water.set_compound(water_chem,ctype='custom')
+    water.set_compound([2,1],['H','O'],ctype='custom')
     coblue = compound()
-    coblue.set_compound(coblue_perc,ctype='custom',mode='by_weight')
+    coblue.set_compound([0.3331,0.3050,0.3619],['Co','Al','O'],ctype='custom',mode='by_weight')
 
     linoil = compound()
     linoil.set_compound('LinOil')
@@ -185,14 +191,19 @@ if __name__=="__main__":
 
     print("Cobalt Blue DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(coblue.weight,coblue.mass,coblue.chem,coblue.density))
 
-    mixture = coblue.mix([10,2,4],[linoil,water])
+    mixture = linoil.mix([2,10],[water])
 
     print("Mixture DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(mixture.weight,mixture.mass,mixture.chem,mixture.density))
-    print(coblue.origin)
     print(water.origin)
+    print(coblue.origin)
     print(linoil.origin)
+    print(mixture.origin)
 
     mixture.set_attenuation('Pb')
     print(mixture.tot_att)
     print(mixture.lin_att)
 
+    mycompound = compound()
+    mycompound.set_compound('AuSheet')
+    mycompound.set_attenuation('Pb')
+    print(mycompound.lin_att,mycompound.tot_att)
