@@ -63,6 +63,14 @@ def getconfig():
                 aux = line.split()
                 modesdict['peakmethod'] = str(aux[2])
                 line = file.readline()
+            if 'alpha_only' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                if aux[2] == 'True': modesdict['alpha_only'] = True
+                elif aux[2] == 'False': modesdict['alpha_only'] = False
+                line = file.readline()
             file.close()
     return modesdict
 

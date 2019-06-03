@@ -48,11 +48,10 @@ currentConfig['peaks'] = peaks
 print(currentConfig['peaks'])
 mcafit.configure(currentConfig)
 
-def fit(specfile):
+def fit(counts):
     
     currentConfig['fit']['stripiterations'] = 0
     
-    counts = SpecRead.getdata(specfile)
     channels = numpy.arange(len(counts))
     if counts.max() <= 13: counts = counts + random.randint(1,2)
     if counts.max() >= 14: 

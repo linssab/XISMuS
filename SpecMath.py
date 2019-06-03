@@ -170,7 +170,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
 # SIGNAL TO NOISE PEAK TEST CRITERIA #
  
     if isapeak == True: 
-        if original_data.sum() <= (3*ROIbg.sum()): isapeak = False
+        if original_data.sum() < 2*ROIbg.sum(): isapeak = False
     
     ##########################
     # 2ND DIFFERENTIAL CHECK #
@@ -256,35 +256,53 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
 # SATISFACTORY POLYNOMIAL DEGREE TO SMOOTHEN THE DATA            #
 
 @jit
-def ryan_snip(an_array,cycles,width,aout):
+def ryan_snip(an_array,cycles,width):
     for k in range(cycles):
         l = width
         for l in range(an_array.shape[0]-width):
             m = (an_array[l-width] + an_array[l+width])/2
-            if an_array[l] > m: aout[l] = m
-            else: aout[l] = an_array[l]
+            if an_array[l] > m: an_array[l] = m
+    return an_array
 
-@guvectorize([(float64[:], int64, int64, float64[:])], '(n),(),()->(n)')       
-def peakstrip(an_array,cycles,width,snip_bg):
-    for i in range(an_array.shape[0]): an_array[i] = an_array[i] ** 0.5
-    ryan_snip(an_array,cycles,width,snip_bg)
-    for j in range(an_array.shape[0]): 
-        snip_bg[j] ** 2
-        an_array[j] = an_array[j] ** 2
+#@guvectorize([(float64[:], int64, int64, float64[:])], '(n),(),()->(n)')       
+def peakstrip(an_array,cycles,width):
+    
+    #initialize snip_bg array
+    snip_bg = np.zeros(an_array.shape[0])
+    
+    #apply savgol filter to input spectrum
+    smooth_sqr = scipy.signal.savgol_filter(an_array,width,3)
+    for i in range(smooth_sqr.shape[0]): 
+        if smooth_sqr[i] < 0: smooth_sqr[i] = 0
+    
+    #squareroot transformation of the spectrum
+    for i in range(an_array.shape[0]): smooth_sqr[i] = smooth_sqr[i] ** 0.5
+    
+    #strip peaks
+    snip_bg = ryan_snip(smooth_sqr,cycles,width)
+    
+    #transform back
+    for j in range(an_array.shape[0]): snip_bg[j] = snip_bg[j] ** 2
+    
+    return snip_bg
 
 if __name__=="__main__":
-    dirname = os.path.join(SpecRead.dirname)
-    specfile = dirname+'Cesareo_74.mca'
+    dirname = SpecRead.dirname
+    specfile = dirname+'Cesareo_217.mca'
     xdata = energyaxis()
-    import SpecFitter
-    testdata = SpecFitter.fit(specfile)
+#    import SpecFitter
+#    testdata = SpecFitter.fit(specfile)
 #    testdata = SpecRead.getdata(specfile)
     RAW_data = SpecRead.getdata(specfile)
     lookup = 9711
     
-#    continuum = peakstrip(testdata,18,3)
-    continuum = np.zeros([len(testdata)])
-    getpeakarea(lookup,testdata,xdata,continuum,'SNIPBG',RAW_data)
+    continuum = peakstrip(RAW_data,24,5)
+    plt.plot(continuum, label='bg')
+    plt.plot(RAW_data, label='raw')
+    plt.show()
+
+#    continuum = np.zeros([len(testdata)])
+#    getpeakarea(lookup,testdata,xdata,continuum,'SNIPBG',RAW_data)
 #    smooth_dif2 = scipy.signal.savgol_filter(\
 #            getdif2(ydata,xdata,1),5,3)
 #    for i in range(len(smooth_dif2)):

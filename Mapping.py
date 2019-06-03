@@ -32,6 +32,36 @@ dimension = imagex*imagey
 
 configdict = SpecRead.CONFIG
 
+class datacube:
+    
+    ndim = 0
+
+    def __init__(__self__,dtypes):
+        __self__.dimension = SpecRead.getdimension()
+        __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+        __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
+        
+        #last dimension is 1024 because of the spectra size
+        __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],1024])
+
+    def compile_cube(__self__):
+        currentspectra = SpecRead.getfirstfile()
+        x,y,scan = 0,0,(0,0)
+        for iteration in range(__self__.img_size):
+            spec = currentspectra
+            specdata = SpecRead.getdata(spec)
+            for i in range(len(specdata)):
+                __self__.matrix[x][y][i] = specdata[i]
+            scan = ImgMath.updateposition(scan[0],scan[1])
+            x,y = scan[0],scan[1]
+            currentspectra = SpecRead.updatespectra(spec,\
+                    __self__.dimension[0]*__self__.dimension[1])
+            progress = int(iteration/__self__.img_size*20)
+            blank = (20 - progress - 1)
+            print("[" + progress*"\u25A0" + blank*" " + "]" + " / {0:.2f}"\
+                    .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
+            sys.stdout.flush()
+ 
 def getpeakmap(element_list,ratio=configdict.get('ratio'),\
         normalize=configdict.get('enhance'),bgstrip=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
@@ -41,6 +71,9 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
     #   RETURNS A 2D-ARRAY WITH THE COUNTS FOR THE  #
     #   KA AND KB LINES OF INPUT ELEMENT(S).        #
     #################################################
+    
+    specbatch = datacube(['xrf'])
+    specbatch.compile_cube()
 
     if peakmethod == 'PyMcaFit': import SpecFitter
     KaElementsEnergy = EnergyLib.Energies
@@ -122,12 +155,14 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
     #   STARTS ITERATION OVER SPECTRA BATCH     #
     #############################################
         
+        debug = False 
         FITFAIL = 0
         logging.info("Starting iteration over spectra...\n")
         for ITERATION in range(dimension):
                
             spec = currentspectra
-            RAW = SpecRead.getdata(spec)
+            RAW = specbatch.matrix[currentx][currenty]
+            specdata = specbatch.matrix[currentx][currenty]
             
             #######################################
             #     ATTEMPT TO FIT THE SPECFILE     #
@@ -137,16 +172,15 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
             if peakmethod == 'PyMcaFit': 
                 try:
                     usedif2 = False
-                    specdata = SpecFitter.fit(spec)
+                    specdata = SpecFitter.fit(specdata)
                 except:
                     FITFAIL += 1
                     usedif2 = True
                     print("\tCHANNEL COUNT METHOD USED FOR {0}!\t".format(spec))
                     logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}!\t"\
                             .format(spec))
-                    specdata = SpecRead.getdata(spec)
-            elif peakmethod == 'simple_roi': specdata = SpecRead.getdata(spec)
-            elif peakmethod == 'auto_roi': specdata = SpecRead.getdata(spec)
+            elif peakmethod == 'simple_roi': specdata = specdata
+            elif peakmethod == 'auto_roi': specdata = specdata
             else: 
                 raise Exception("peakmethod {0} not recognized.".format(peakmethod))
  
@@ -155,10 +189,9 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
             #########################
             
             if bgstrip == 'SNIPBG': 
-                background = np.zeros([specdata.shape[0]])
-                SpecMath.peakstrip(specdata,24,3,background)
+                background = SpecMath.peakstrip(specdata,24,5)
                 logging.debug('SNIPGB calculated for spec {0}'.format(spec))
-            else: background = np.zeros([len(specdata)])
+            else: background = np.zeros([specdata.shape[0]])
             
             BGSUM += background
             ############################
@@ -183,7 +216,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                     ymax_index = Elements.ElementList.index(ymax_element)
                     ymax_ka = KaElementsEnergy[ymax_index]
                     ymax_kb = KbElementsEnergy[ymax_index]
-                    ymax_spec = currentspectra
+                    if debug == True: ymax_spec = currentspectra
                     
             #############################
 
@@ -216,6 +249,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                             CUMSUM_RAW[channel] += RAW[channel]
 
                     if ka == 0: kb = 0
+                    
                     elif ka > 0:
                         kb_info = SpecMath.getpeakarea(kbenergy[Element],specdata,\
                                 energyaxis,background,configdict,RAW,usedif2)
@@ -228,7 +262,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                                 CUMSUM_RAW[channel] += RAW[channel]
                 
                     if ka > 0 and kb > 0: elmap[currentx][currenty][Element] = ka+kb
-                    
+                    elif configdict.get('alpha_only') == True: elmap[currentx][currenty][Element] = ka
                     else:
                         elmap[currentx][currenty][Element] = 0
                         ka, kb = 0, 0
@@ -270,9 +304,11 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                 if ratio == True: 
                     try: 
                         r_file = open(ratiofiles[Element],'a')
-                        r_file.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
-                        logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
-                             .format(spec,ka,kb,element_list[Element]))
+                        if debug == True: 
+                            r_file.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
+                            logging.info("File {0} has net peaks of {1} and {2} for element {3}\n".format(spec,ka,kb,element_list[Element]))
+                        else:
+                            r_file.write("%d\t%d\t%d\t%d\n" % (row, column, ka, kb))
                     except:
                         print("ka and kb not calculated for some unknown reason.\
                                 Check Config.cfg for the correct spelling of peakmethod option!")
@@ -289,7 +325,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
             scan = ImgMath.updateposition(scan[0],scan[1])
             currentx = scan[0]
             currenty = scan[1]
-            currentspectra = SpecRead.updatespectra(spec,dimension)
+            if debug == True: currentspectra = SpecRead.updatespectra(spec,dimension)
             progress = int(ITERATION/dimension*20)
             blank = 20 - progress - 1
             print("[" + progress*"\u25A0" + blank*" " + "]" + " / {0:.2f}"\
@@ -337,35 +373,28 @@ def getdensitymap():
     #   COUNTS PER PIXEL.               #
     #####################################
 
-    currentspectra = SpecRead.getfirstfile()
-    density_map = np.zeros([imagex,imagey])
-    scan=([0,0])
-    currentx=scan[0]
-    currenty=scan[1]
-
     print("BG mode: {0}".format(configdict.get('bgstrip')))
     logging.info("Started acquisition of density map")
-    for ITERATION in range(dimension):
-        spec = currentspectra
- 
-        if configdict.get('bgstrip') == 'SNIPBG': 
-            background = SpecMath.peakstrip(SpecRead.getdata(spec),24,3)
-        else: 
-            background = np.zeros([len(SpecRead.getdata(spec))])
-        
-        netcounts = SpecRead.getsum(spec)
-        bgcounts = background.sum()
-        density_map[currentx][currenty] = netcounts - bgcounts
-        scan = ImgMath.updateposition(scan[0],scan[1])
-        currentx=scan[0]
-        currenty=scan[1]
-        currentspectra = SpecRead.updatespectra(spec,dimension)
-    logging.info("Finished fetching density map!")
     
+    cube = datacube(['xrf']) 
+    cube.compile_cube()
+    density_map = np.zeros([cube.dimension[0],cube.dimension[1]])
+    for x in range(cube.dimension[0]):
+        for y in range(cube.dimension[1]):
+            spec = cube.matrix[x][y]
+            if configdict.get('bgstrip') == 'SNIPBG': 
+                snip_bg = np.zeros([spec.shape[0]])
+                SpecMath.peakstrip(spec,24,3,snip_bg)
+            else: background = np.zeros([spec.shape[0]])
+            density_map[x][y] = sum(spec)-sum(snip_bg)
+     
+    logging.info("Finished fetching density map!")
     print("Execution took %s seconds" % (time.time() - timer))
     
     fig, ax = plt.subplots()
     mapimage = ax.imshow(density_map,cmap='jet',label='Dense Map')
+    ax.set_title('Counts/pixel')
+    ImgMath.colorbar(mapimage)
     plt.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'\{0}_{1}_densitymap.png'\
             .format(SpecRead.DIRECTORY,configdict.get('bgstrip')),dpi=150,transparent=False) 
     plt.show()
