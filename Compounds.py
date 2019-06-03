@@ -13,8 +13,14 @@ import logging
 CompoundList = {
         'Azurite'       :{'Cu':3,'C':2,'O':8,'H':2},
         'CoBlue'        :{'Co':1,'Al':2,'O':4},
+        'Cuprite'       :{'Cu':2,'O':1},
+        'Ethanol'       :{'C':2,'H':6,'O':1},
         'PbWhite'       :{'Pb':3,'O':4,'C':1,'H':2},
+        'PbCarbonate'   :{'Pb':1,'C':1,'O':3},
+        'Tenorite'      :{'Cu':1,'O':1},
+        'Vermilion'     :{'Hg':1,'S':1},
         'Water'         :{'H':2,'O':1},
+        'ZnWhite'       :{'Zn':1,'O':1},
         }
 
 WeightList = {
@@ -201,7 +207,10 @@ if __name__=="__main__":
     print(coblue.origin)
     print(linoil.origin)
     print(mixture.origin)
-
+    
     mixture.set_attenuation('Pb')
 
+    water.set_attenuation('Cu')
+    print(water.lin_att)
+    print(water.tot_att)
     
