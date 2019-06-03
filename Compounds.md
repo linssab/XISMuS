@@ -1,14 +1,13 @@
-# Compounds.py documentations
+# Compounds.py documentation
 
 This module creates virtual compounds either from a database or from user input.
 The virtual compound object will contain its chemical and physical attributes.
-
----
-
 A compound can be initialized either by entering the name of a compound exisitng in the current database or by manually passing the parameters.
 Compounds created via the weights fractions of elements will have .mass and .chem attributes empty. 
 
-### Compounds.set_compound(_\*args,ctype=None,mode='by_atom',name='new_compound'_)
+---
+
+#### Compounds.set_compound(_\*args,ctype=None,mode='by_atom',name='new_compound'_)
   Parameters:
   * **\*args: _compound setup, string or 2 lists_**
   <br>The name of compound from database or two lists containing: first, the ratios or weights of elements, second, the elements.
@@ -27,7 +26,9 @@ Compounds created via the weights fractions of elements will have .mass and .che
   ```
 All compounds in the example will have the same properties.
 
-### Compounds.set_attenuation(_energy_)
+---
+
+#### Compounds.set_attenuation(_energy_)
   Parameters:
   * **energy: _string_**
   <br>The element the compound will be attenuating. E.g. if energy is set as 'Pb', it means the coeficients will be calculated for the attenuation of lead lines.
@@ -43,7 +44,9 @@ All compounds in the example will have the same properties.
   
   (by now the method returns a tuple, it will be changed in the future to return a dictionary with the line names as keys and the coefficients)
   
-### Compounds.mix(_proportion,compounds_)
+---
+
+#### Compounds.mix(_proportion,compounds_)
   Parameters:
   * **proportion: _list_**
   <br>The ratio the compounds will be mixtured, either in weight fraction or in parts.
@@ -60,8 +63,10 @@ All compounds in the example will have the same properties.
   ```
   > {'H': 0.09166666666666667, 'O': 0.09166666666666667, 'C': 0.65}
   <br> 1.4756558333333334
-  
-### Attributes
+
+---  
+
+#### Attributes
 ```python
   water = compound()
   water.set_compound('water')
