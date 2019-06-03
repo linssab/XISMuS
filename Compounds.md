@@ -3,7 +3,8 @@
 This module creates virtual compounds either from a database or from user input.
 The virtual compound object will contain its chemical and physical attributes.
 A compound can be initialized either by entering the name of a compound exisitng in the current database or by manually passing the parameters.
-Compounds created via the weights fractions of elements will have .mass and .chem attributes empty. 
+Compounds created via the weights fractions of elements will have .mass and .chem attributes empty.
+Database can be checked via `Compounds.CompoundList`
 
 ---
 
@@ -49,14 +50,16 @@ All compounds in the example will have the same properties.
 #### Compounds.mix(_proportion,compounds_)
   Parameters:
   * **proportion: _list_**
-  <br>The ratio the compounds will be mixtured, either in weight fraction or in parts.
+  <br>The ratio which the compounds will be mixed, either in weight fraction or in parts. The first value always refers to the compound starting the mixture, i.e. the object where the method is being applied to.
   * **compounds: _list_**
-  <br>List containing the compound(s) objects to be mixtured together.
+  <br>List containing the compound(s) objects to be mixed together.
   
   Example:
   ```python
   water = compound()
-  water.set_compound('LinOil')
+  water.set_compound('water')
+  mycompound = compound()
+  mycompound.set_compound('Linoil')
   mixture = mycompound.mix([2,10],[water])
   print(mixture.weight)
   print(mixture.density)
@@ -110,4 +113,10 @@ All compounds in the example will have the same properties.
   > from_database
 * **.tot_att** and **.lin_att**
   each will return a tuple with the attenuation coefficients of a given element. .tot_att will return the total attenuation while .lin_att will return the linear attenuation (the same as .tot_att divided by the compound's density).
-  
+  ```python
+  water.set_attenuation('Cu')
+  print(water.lin_att)
+  print(water.tot_att)
+  ```
+  > (0.009849807036256424, 0.007272790368341503)
+  <br>(10.192576248612653, 7.525880466148724)
