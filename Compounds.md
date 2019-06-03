@@ -112,7 +112,7 @@ All compounds in the example will have the same properties.
   ```
   > from_database
 * **.tot_att** and **.lin_att**
-  each will return a tuple with the attenuation coefficients of a given element. .tot_att will return the total attenuation while .lin_att will return the linear attenuation (the same as .tot_att divided by the compound's density).
+  each will return a tuple with the attenuation coefficients of a given element. .tot_att will return the total attenuation while .lin_att will returns the linear attenuation (the same as .tot_att multiplied by the compound's density).
   ```python
   water.set_attenuation('Cu')
   print(water.lin_att)
