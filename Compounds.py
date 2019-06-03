@@ -11,16 +11,20 @@ import EnergyLib
 import logging
 
 CompoundList = {
-        'Air'           :{'N':0.66,'O':0.34},
-        'CoBlue'        :{'Co':0.3331,'Al':0.3050,'O':0.3619},
+        'Azurite'       :{'Cu':3,'C':2,'O':8,'H':2},
+        'CoBlue'        :{'Co':1,'Al':2,'O':4},
+        'PbWhite'       :{'Pb':3,'O':4,'C':1,'H':2},
+        'Water'         :{'H':2,'O':1},
+        }
+
+WeightList = {
+
+        'AuSheet'       :{'Au':0.917,'Ag':0.083},
+        'Tumbaga'       :{'Au':0.12,'Ag':0.16,'Cu':0.72},
+        'LinOil'        :{'C':0.78,'O':0.11,'H':0.11},
         'OceanBlue'     :{'H':0.0413,'C':0.2925,'O':0.2674,'Al':0.1907,'Co':0.2082},
-        'Co'            :{'Co':1},
-        'PbWhite'       :{'Pb':0.8014,'O':0.1650,'C':0.031,'H':0.0026},
         'PbWhitePrimer' :{'Pb':0.6612,'O':0.1722,'C':0.1328,'H':0.0163,'Ca':0.0174}, \
                 # After Favaro, 2010 and Gonzalez, 2015
-        'AuSheet'       :{'Au':0.917,'Ag':0.083},
-        'LinOil'        :{'C':0.78,'O':0.11,'H':0.11},
-        'Tumbaga'       :{'Au':0.12,'Ag':0.16,'Cu':0.72}
         }
 
 class compound:
@@ -34,9 +38,12 @@ class compound:
     
     def set_compound(__self__,*args,ctype=None,mode='by_atom',name='new_compound'):
         if ctype == 'custom' and mode == 'by_atom':
+            for atom in range(len(args[0])):
+                if args[0][atom] < 1: raise ValueError("Can't compute fraction of atom!")
             __self__.create_compound(args[0],args[1])
             __self__.origin = 'by_atom'
         elif ctype == 'custom' and mode == 'by_weight':
+            if sum(args[0]) > 1: raise ValueError("Sum of weights exceeds 1!")
             __self__.create_compound_by_weight(args[0],args[1])
         else:
             try: __self__.set_from_database(args[0])
@@ -66,7 +73,10 @@ class compound:
         else: raise ValueError('{0} and {1} have different lenghts'.format(ratios,elements))
 
     def set_from_database(__self__,name_of_compound):
-        __self__.chem = CompoundList[name_of_compound]
+        elements = [element for element in CompoundList[name_of_compound]]
+        atoms = [CompoundList[name_of_compound][atom] for atom in elements]
+        __self__.chem = {"{0}".format(elements[i]):(EnergyLib.AtomWeight[elements[i]]*atoms[i])\
+                for i in range(len(atoms))}
         mass = __self__.total_mass()
         __self__.weightpercent()
         __self__.give_density()
@@ -172,26 +182,19 @@ def coefficients(a_compound,KaKb):
 
 if __name__=="__main__":
     
-#    rho_coblue = density('CoBlue')
-#    print(rho_coblue)
-#    print(coefficients('CoBlue','Pb'))
-
-    water_chem = [[2,1],['H','O']]
-    coblue_perc = [[0.3331,0.3050,0.3619],['Co','Al','O']]
-
     water = compound()
     water.set_compound([2,1],['H','O'],ctype='custom')
     coblue = compound()
-    coblue.set_compound([0.3331,0.3050,0.3619],['Co','Al','O'],ctype='custom',mode='by_weight')
+    coblue.set_compound('CoBlue')
 
     linoil = compound()
-    linoil.set_compound('LinOil')
+    linoil.set_compound([0.78,0.11,0.11],['C','O','H'],ctype='custom',mode='by_weight',name='Linoil')
 
     print("Water DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(water.weight,water.mass,water.chem,water.density))
 
     print("Cobalt Blue DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(coblue.weight,coblue.mass,coblue.chem,coblue.density))
 
-    mixture = linoil.mix([2,10],[water])
+    mixture = linoil.mix([2,10],[coblue])
 
     print("Mixture DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(mixture.weight,mixture.mass,mixture.chem,mixture.density))
     print(water.origin)
@@ -200,10 +203,5 @@ if __name__=="__main__":
     print(mixture.origin)
 
     mixture.set_attenuation('Pb')
-    print(mixture.tot_att)
-    print(mixture.lin_att)
 
-    mycompound = compound()
-    mycompound.set_compound('AuSheet')
-    mycompound.set_attenuation('Pb')
-    print(mycompound.lin_att,mycompound.tot_att)
+    
