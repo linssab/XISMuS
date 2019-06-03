@@ -19,7 +19,6 @@ if __name__=="__main__":
     import SpecRead
     import ImgMath
     from PyMca5.PyMcaPhysics import Elements
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
     import matplotlib.pyplot as plt
     import logging
     
@@ -95,7 +94,6 @@ an image where the element is displayed in proportion to the most abundant eleme
 
         compound = Compounds.compound()
         compound.set_compound('AuSheet')
-        compound.give_name('gold_foil')
         compound.set_attenuation(elementlist[0])
 
         #######################################

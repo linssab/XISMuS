@@ -249,24 +249,21 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                             CUMSUM_RAW[channel] += RAW[channel]
 
                     if ka == 0: kb = 0
+                    elif ka > 0 and ratio == False: kb = 0
                     
-                    elif ka > 0:
+                    elif ka > 0 and ratio == True:
                         kb_info = SpecMath.getpeakarea(kbenergy[Element],specdata,\
                                 energyaxis,background,configdict,RAW,usedif2)
                         kb = kb_info[0]
 
-                        if configdict.get('alpha_only') != True:
-                            for channel in range(len(specdata)):
-                                if energyaxis[kb_info[1][0]] < energyaxis[channel]\
-                                    < energyaxis[kb_info[1][1]]:
-                                    CUMSUM[channel] += specdata[channel]
-                                    CUMSUM_RAW[channel] += RAW[channel]
-                
-                    if ka > 0 and kb > 0: elmap[currentx][currenty][Element] = ka+kb
-                    elif configdict.get('alpha_only') == True: elmap[currentx][currenty][Element] = ka
-                    else:
-                        elmap[currentx][currenty][Element] = 0
-                        ka, kb = 0, 0
+                        for channel in range(len(specdata)):
+                            if energyaxis[kb_info[1][0]] < energyaxis[channel]\
+                                < energyaxis[kb_info[1][1]]:
+                                CUMSUM[channel] += specdata[channel]
+                                CUMSUM_RAW[channel] += RAW[channel]
+                    
+                    elmap[currentx][currenty][Element] = ka+kb
+                    ka, kb = 0, 0
                 
                 elif peakmethod == 'simple_roi':
                     if len(element_list) > 1: 
@@ -291,7 +288,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                             ka += ka_ROI[channel] - ka_bg[channel]
                     if kb_idx[3] == True and ka_idx[3] == True:
                         for channel in range(len(kb_ROI)):
-                            if configdict.get('alpha_only') != True: CUMSUM_RAW[channel+kb_idx[0]] += RAW[channel+kb_idx[0]]
+                            CUMSUM_RAW[channel+kb_idx[0]] += RAW[channel+kb_idx[0]]
                             kb += kb_ROI[channel] - kb_bg[channel]
 
                ###  if kb_idx[3] == False: ka, kb = 0, 0

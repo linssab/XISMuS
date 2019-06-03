@@ -255,15 +255,15 @@ def split_and_save(map_array,element_list,configdict):
         if len(element_list) > 1: ax = axs[Element]
         else: ax=axs
         fig_list.append(ax.imshow(image,cmap='gray'))
-        if configdict.get('alpha_only') == True:
+        if configdict.get('ratio') == False:
             ax.set_title(element_list[Element]+' alpha line')
         else: ax.set_title(element_list[Element])
         if imagex > target_size or imagey > target_size: large_image = image
         else: large_image = cv2.resize(image,(newY,newX),interpolation=cv2.INTER_NEAREST)
         cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
-            '/{0}_bgtrip={1}_ratio={2}_alpha_only={3}_peakmethod={4}.png'\
+            '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
             .format(element_list[Element],configdict.get('bgstrip'),configdict.get('ratio')\
-            ,configdict.get('alpha_only'),configdict.get('peakmethod')),large_image)
+            ,configdict.get('enhance'),configdict.get('peakmethod')),large_image)
 
     ##################################################
     
@@ -271,9 +271,9 @@ def split_and_save(map_array,element_list,configdict):
     #map_ = plt.imshow(axs)
     #plt.colorbar(map_, orientation = 'vertical')
     fig.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
-            '/elements_plot_bgtrip={0}_ratio={1}_alpha_only={2}_peakmethod={3}.png'\
+            '/elements_plot_bgtrip={0}_ratio={1}_enhance={2}_peakmethod={3}.png'\
             .format(configdict.get('bgstrip'),configdict.get('ratio')\
-            ,configdict.get('alpha_only'),configdict.get('peakmethod'))) 
+            ,configdict.get('enhance'),configdict.get('peakmethod'))) 
     plt.show()
     
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
