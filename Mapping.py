@@ -255,11 +255,12 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                                 energyaxis,background,configdict,RAW,usedif2)
                         kb = kb_info[0]
 
-                        for channel in range(len(specdata)):
-                            if energyaxis[kb_info[1][0]] < energyaxis[channel]\
-                                < energyaxis[kb_info[1][1]]:
-                                CUMSUM[channel] += specdata[channel]
-                                CUMSUM_RAW[channel] += RAW[channel]
+                        if configdict.get('alpha_only') != True:
+                            for channel in range(len(specdata)):
+                                if energyaxis[kb_info[1][0]] < energyaxis[channel]\
+                                    < energyaxis[kb_info[1][1]]:
+                                    CUMSUM[channel] += specdata[channel]
+                                    CUMSUM_RAW[channel] += RAW[channel]
                 
                     if ka > 0 and kb > 0: elmap[currentx][currenty][Element] = ka+kb
                     elif configdict.get('alpha_only') == True: elmap[currentx][currenty][Element] = ka
@@ -290,7 +291,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                             ka += ka_ROI[channel] - ka_bg[channel]
                     if kb_idx[3] == True and ka_idx[3] == True:
                         for channel in range(len(kb_ROI)):
-                            CUMSUM_RAW[channel+kb_idx[0]] += RAW[channel+kb_idx[0]]
+                            if configdict.get('alpha_only') != True: CUMSUM_RAW[channel+kb_idx[0]] += RAW[channel+kb_idx[0]]
                             kb += kb_ROI[channel] - kb_bg[channel]
 
                ###  if kb_idx[3] == False: ka, kb = 0, 0
