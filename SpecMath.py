@@ -276,13 +276,13 @@ def peakstrip(an_array,cycles,width):
         if smooth_sqr[i] < 0: smooth_sqr[i] = 0
     
     #squareroot transformation of the spectrum
-    for i in range(an_array.shape[0]): smooth_sqr[i] = smooth_sqr[i] ** 0.5
+    smooth_sqr **= 0.5
     
     #strip peaks
     snip_bg = ryan_snip(smooth_sqr,cycles,width)
     
     #transform back
-    for j in range(an_array.shape[0]): snip_bg[j] = snip_bg[j] ** 2
+    snip_bg **= 2
     
     return snip_bg
 
