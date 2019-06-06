@@ -21,10 +21,12 @@ logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 DIRECTORY = CONFIG.get('directory')
 dirname = 'C:/samples/'+DIRECTORY+'/'
-firstfile = 'Cesareo_1.mca'
+firstfile = 'MUSA_1.mca'
 workpath = os.getcwd()
 configfile = workpath + '\config.cfg'
 dimension_file = dirname + '\colonneXrighe.txt'
+try: os.mkdir(workpath + '\output\\' + DIRECTORY)
+except: pass
 
 def getfirstfile():
     return dirname+firstfile
