@@ -189,7 +189,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
             #########################
             
             if bgstrip == 'SNIPBG': 
-                background = SpecMath.peakstrip(specdata,24,5)
+                background = SpecMath.peakstrip(RAW,24,5)
                 logging.debug('SNIPGB calculated for spec {0}'.format(spec))
             else: background = np.zeros([specdata.shape[0]])
             
