@@ -176,9 +176,10 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                 except:
                     FITFAIL += 1
                     usedif2 = True
-                    print("\tCHANNEL COUNT METHOD USED FOR {0}!\t".format(spec))
-                    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}!\t"\
-                            .format(spec))
+                    print("\tCHANNEL COUNT METHOD USED FOR FILE {0}/{1}!\t"\
+                            .format(ITERATION,specbatch.img_size))
+                    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
+                            .format(ITERATION/specbatch.img_size))
             elif peakmethod == 'simple_roi': specdata = specdata
             elif peakmethod == 'auto_roi': specdata = specdata
             else: 

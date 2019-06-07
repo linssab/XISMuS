@@ -12,6 +12,7 @@ import logging
 
 CompoundList = {
         'Azurite'       :{'Cu':3,'C':2,'O':8,'H':2},
+        'AuSheet'       :{'Au':9,'Ag':1},
         'CoBlue'        :{'Co':1,'Al':2,'O':4},
         'Cuprite'       :{'Cu':2,'O':1},
         'Ethanol'       :{'C':2,'H':6,'O':1},
