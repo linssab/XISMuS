@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a2.1                          #
+#                        version: a2.2                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -21,9 +21,8 @@ logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 DIRECTORY = CONFIG.get('directory')
 dirname = 'C:/samples/'+DIRECTORY+'/'
-firstfile = 'MUSA_1.mca'
+firstfile = 'Cesareo_1.mca'
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg'
 dimension_file = dirname + '\colonneXrighe.txt'
 try: os.mkdir(workpath + '\output\\' + DIRECTORY)
 except: pass
@@ -85,51 +84,9 @@ def getheader(mca):
             break
     return ObjectHeader
 
-def getcalibration(self,flag=None):
-    checker=0
-    CalParam=[]
-    if flag == None:
-        file = open(self)
-        line = file.readline()
-        for line in file:
-            if "<<CALIBRATION>>" in line and flag == None:
-                print("Using calibration data from specfile %s!" % self)
-                checker=1
-        file.close()
-        if checker == 1:
-            file = open(self)
-            line = file.readline()
-            while "<<CALIBRATION>>" not in line:
-                line = file.readline()
-            line = file.readline()
-            line = file.readline()
-            while "<<DATA>>" not in line:
-                aux = line.split(" ")
-                CalParam.append([int(aux[0]),float(aux[1])])
-                line = file.readline()
-            file.close()
-    elif os.path.exists(configfile) and checker==0 or flag == 'data'\
-            and os.path.exists(configfile):
-            file = open(configfile)
-            for line in file:
-                if "<<CALIBRATION>>" in line:
-                    print("Using calibration data from config.cfg!")
-                    checker=1
-            file.close()
-            if checker == 1:
-                file = open(configfile)
-                line = file.readline()
-                while "<<CALIBRATION>>" not in line:
-                    line = file.readline()
-                line = file.readline()
-                while "<<END>>" not in line:
-                    aux = line.split(" ")
-                    CalParam.append([int(aux[0]),float(aux[1])])
-                    line = file.readline()
-                file.close()
-            else: raise IOError("No calibration values on config.cfg!")
-    else: raise IOError("No calibration data available! Or 'config.cfg' does not exist!")
-    return CalParam
+def getcalibration():
+    from ReadConfig import CALIB 
+    return CALIB 
 
 def getdata(mca):
     name = str(mca)
@@ -165,11 +122,8 @@ def getdata(mca):
 # THE MCA FILE CALIBRATION DATA. IT CAN BE OVERRUN USING THE 'data' 
 # FLAG OPTION
 
-def calibrate(self,flag=None):
-    if flag == 'data':
-        param = getcalibration(self,'data')
-    else:
-        param = getcalibration(self,flag=None)
+def calibrate():
+    param = getcalibration()
     x=[]
     y=[]
     for i in range(len(param)):
@@ -183,10 +137,7 @@ def calibrate(self,flag=None):
     B=coefficients[1]
     R=coefficients[2]
     logging.info("Correlation coefficient R = %f!" % R)
-    if flag == 'data':
-        n = len(self)
-    elif flag == 'file':
-        n = len(getdata(self))
+    n = len(getdata(getfirstfile()))
     curve = []
     for i in range(n):
         curve.append((GAIN*i)+B)

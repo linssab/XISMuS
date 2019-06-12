@@ -40,9 +40,9 @@ class datacube:
         __self__.dimension = SpecRead.getdimension()
         __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
         __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
-        
-        #last dimension is 1024 because of the spectra size
-        __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],1024])
+        specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
+        __self__.matrix = np.zeros(\
+                [__self__.dimension[0],__self__.dimension[1],specsize.shape[0]])
 
     def compile_cube(__self__):
         currentspectra = SpecRead.getfirstfile()
@@ -179,7 +179,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                     print("\tCHANNEL COUNT METHOD USED FOR FILE {0}/{1}!\t"\
                             .format(ITERATION,specbatch.img_size))
                     logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
-                            .format(ITERATION/specbatch.img_size))
+                            .format(ITERATION,specbatch.img_size))
             elif peakmethod == 'simple_roi': specdata = specdata
             elif peakmethod == 'auto_roi': specdata = specdata
             else: 

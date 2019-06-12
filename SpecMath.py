@@ -51,7 +51,7 @@ def getdif2(ydata,xdata,gain):
     return dif2curve
 
 def energyaxis():
-    calibration = SpecRead.calibrate(SpecRead.getdata(SpecRead.getfirstfile()),'data')
+    calibration = SpecRead.calibrate()
     return calibration[0]
 
 def getstackplot(mca,energy,*args):
