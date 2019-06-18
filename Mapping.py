@@ -130,7 +130,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                 r_file.truncate()
                 r_file.write("-"*10 + " Counts of Element {0} "\
                         .format(element_list[Element]) + 10*"-" + '\n')
-                r_file.write("row\tcolumn\tline1\tline2\n")
+                r_file.write("row\tcolumn\tline1\tline2\tratio\n")
 
                 # sets kb energy
                 kbindex[Element] = Elements.ElementList.index(element_list[Element])
@@ -255,7 +255,10 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                             CUMSUM[channel] += specdata[channel]
                             CUMSUM_RAW[channel] += RAW[channel]
 
-                    if ka == 0: kb = 0
+                    if ka == 0: 
+                        ka,kb = 1,1
+                        elmap[currentx][currenty][Element] = ka+kb
+                        break
                     elif ka > 0 and ratio == False: kb = 0
                     
                     elif ka > 0 and ratio == True:
@@ -283,7 +286,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                     ###############################################
                     
                     # KA AND KB ARE 0 BY DEFAULT
-                    ka, kb = 0, 0
+                    ka, kb = 1, 1
                     ka_ROI = RAW[ka_idx[0]:ka_idx[1]]
                     ka_bg = background[ka_idx[0]:ka_idx[1]]
                     
@@ -316,9 +319,10 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                         r_file = open(ratiofiles[Element],'a')
                         if debug == True: 
                             r_file.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
-                            logging.info("File {0} has net peaks of {1} and {2} for element {3}\n".format(spec,ka,kb,element_list[Element]))
+                            logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
+                                    .format(spec,ka,kb,element_list[Element]))
                         else:
-                            r_file.write("%d\t%d\t%d\t%d\n" % (row, column, ka, kb))
+                            r_file.write("%d\t%d\t%d\t%d\t%f\n" % (row, column, ka, kb, (ka/kb)))
                     except:
                         print("ka and kb not calculated for some unknown reason.\
                                 Check Config.cfg for the correct spelling of peakmethod option!")
