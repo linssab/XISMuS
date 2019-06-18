@@ -146,11 +146,17 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
         stacksum = SpecMath.stacksum(currentspectra,dimension)
         if peakmethod == 'simple_roi':
             ka_idx = SpecMath.setROI(kaenergy[0],energyaxis,stacksum,configdict)
-            kb_idx = SpecMath.setROI(kbenergy[0],energyaxis,stacksum,configdict)
-            print(ka_idx,kb_idx)
             ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
-            kb_peakdata = stacksum[kb_idx[0]:kb_idx[1]]
-            
+            if ratio == True:
+                kb_idx = SpecMath.setROI(kbenergy[0],energyaxis,stacksum,configdict)
+                kb_peakdata = stacksum[kb_idx[0]:kb_idx[1]]
+                print(ka_idx,kb_idx)
+                if kb_idx[3] == False: 
+                    print("No beta line detected. Continuing with alpha only.")
+                    configdict['ratio'] = False  
+            else:
+                print(ka_idx)
+    
     #############################################
     #   STARTS ITERATION OVER SPECTRA BATCH     #
     #############################################
@@ -276,23 +282,29 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                     # Calculates ka and kb with simple roi method #
                     ###############################################
                     
+                    # KA AND KB ARE 0 BY DEFAULT
                     ka, kb = 0, 0
                     ka_ROI = RAW[ka_idx[0]:ka_idx[1]]
                     ka_bg = background[ka_idx[0]:ka_idx[1]]
-                    kb_ROI = RAW[kb_idx[0]:kb_idx[1]]
-                    kb_bg = background[kb_idx[0]:kb_idx[1]]
-                
+                    
+                    if ratio == True:
+                        kb_ROI = RAW[kb_idx[0]:kb_idx[1]]
+                        kb_bg = background[kb_idx[0]:kb_idx[1]]
+               
+                    # CALCULATES KA
                     if ka_idx[3] == True:
                         for channel in range(len(ka_ROI)):
                             CUMSUM_RAW[channel+ka_idx[0]] += RAW[channel+ka_idx[0]]
                             ka += ka_ROI[channel] - ka_bg[channel]
-                    if kb_idx[3] == True and ka_idx[3] == True:
-                        for channel in range(len(kb_ROI)):
-                            CUMSUM_RAW[channel+kb_idx[0]] += RAW[channel+kb_idx[0]]
-                            kb += kb_ROI[channel] - kb_bg[channel]
-
-               ###  if kb_idx[3] == False: ka, kb = 0, 0
-                
+                   
+                    # CALCULATES KB (MUST CHECK IF RATIO IS TRUE)
+                    # IF RATIO IS FALSE, KB REMAINS AS 0
+                    if ratio == True:
+                        if kb_idx[3] == True and ka_idx[3] == True:
+                            for channel in range(len(kb_ROI)):
+                                CUMSUM_RAW[channel+kb_idx[0]] += RAW[channel+kb_idx[0]]
+                                kb += kb_ROI[channel] - kb_bg[channel]
+                    
                     logging.debug("ka {0}, kb {1}".format(ka,kb))
                     elmap[currentx][currenty][Element] = ka+kb
                 
