@@ -68,7 +68,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
             else: heightmap[i][j] = 10000 * d
             
             if heightmap[i][j] != 0:
-                heightfile.write("%d\t%d\t%d\n" % (i, j, heightmap[i][j]))
+                heightfile.write("%d\t%d\t%f\n" % (i, j, heightmap[i][j]))
             else:  
                 heightfile.write("%d\t%d\n" % (i, j))
     return heightmap
