@@ -21,7 +21,7 @@ logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 DIRECTORY = CONFIG.get('directory')
 dirname = 'C:/samples/'+DIRECTORY+'/'
-firstfile = 'Cesareo_1.mca'
+firstfile = 'Monica_1.mca'
 workpath = os.getcwd()
 dimension_file = dirname + '\colonneXrighe.txt'
 try: os.mkdir(workpath + '\output\\' + DIRECTORY)
@@ -93,7 +93,7 @@ def getdata(mca):
     name = name.replace('_',' ')
     name = name.replace('/',' ')
     name = name.split()
-    if 'test' in name or 'obj' in name:
+    if 'test' in name or 'obj' in name or 'newtest' in name:
         Data = []
         file = open(mca)
         lines = file.readlines()

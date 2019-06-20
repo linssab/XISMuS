@@ -1,0 +1,166 @@
+2019-06-20 11:53:28,075	INFO	********** LOG START! **********
+2019-06-20 11:53:29,323	DEBUG	Using data file: EPDL97_CrossSections.dat
+2019-06-20 11:53:29,323	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\EPDL97_CrossSections.dat>
+2019-06-20 11:53:29,327	DEBUG	Using data file: EADL97_BindingEnergies.dat
+2019-06-20 11:53:29,327	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\EADL97_BindingEnergies.dat>
+2019-06-20 11:53:29,335	DEBUG	Using data file: BindingEnergies.dat
+2019-06-20 11:53:29,335	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\BindingEnergies.dat>
+2019-06-20 11:53:29,339	DEBUG	Using data file: KShellRates.dat
+2019-06-20 11:53:29,339	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\KShellRates.dat>
+2019-06-20 11:53:29,343	DEBUG	Using data file: KShellConstants.dat
+2019-06-20 11:53:29,343	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\KShellConstants.dat>
+2019-06-20 11:53:29,347	DEBUG	Using data file: LShellRates.dat
+2019-06-20 11:53:29,347	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\LShellRates.dat>
+2019-06-20 11:53:29,351	DEBUG	Using data file: LShellConstants.dat
+2019-06-20 11:53:29,351	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\LShellConstants.dat>
+2019-06-20 11:53:29,355	DEBUG	Using data file: EADL97_LShellConstants.dat
+2019-06-20 11:53:29,355	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\EADL97_LShellConstants.dat>
+2019-06-20 11:53:29,363	DEBUG	Using data file: MShellRates.dat
+2019-06-20 11:53:29,363	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\MShellRates.dat>
+2019-06-20 11:53:29,367	DEBUG	Using data file: MShellConstants.dat
+2019-06-20 11:53:29,371	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\MShellConstants.dat>
+2019-06-20 11:53:29,371	DEBUG	Using data file: EADL97_MShellConstants.dat
+2019-06-20 11:53:29,371	DEBUG	Filename from fisx Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\fisx\fisx_data\EADL97_MShellConstants.dat>
+2019-06-20 11:53:29,383	DEBUG	Using data file: Scofield1973.dict
+2019-06-20 11:53:29,383	DEBUG	Filename from PyMca Data Directory <C:\Users\sergi\AppData\Local\Programs\Python\Python37\lib\site-packages\PyMca5\PyMcaData\Scofield1973.dict>
+2019-06-20 11:53:29,903	DEBUG	locator: <matplotlib.colorbar._ColorbarAutoLocator object at 0x000002B3BCF590B8>
+2019-06-20 11:53:29,903	DEBUG	Using auto colorbar locator on colorbar
+2019-06-20 11:53:29,903	DEBUG	locator: <matplotlib.colorbar._ColorbarAutoLocator object at 0x000002B3BCF590B8>
+2019-06-20 11:53:29,903	DEBUG	Setting pcolormesh
+2019-06-20 11:53:29,915	DEBUG	locator: <matplotlib.colorbar._ColorbarAutoLocator object at 0x000002B3BCF84C18>
+2019-06-20 11:53:29,919	DEBUG	Using auto colorbar locator on colorbar
+2019-06-20 11:53:29,919	DEBUG	locator: <matplotlib.colorbar._ColorbarAutoLocator object at 0x000002B3BCF84C18>
+2019-06-20 11:53:29,919	DEBUG	Setting pcolormesh
+2019-06-20 11:53:29,943	DEBUG	update_title_pos
+2019-06-20 11:53:29,995	DEBUG	findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('C:\\Users\\sergi\\AppData\\Local\\Programs\\Python\\Python37\\lib\\site-packages\\matplotlib\\mpl-data\\fonts\\ttf\\DejaVuSans.ttf') with score of 0.050000.
+2019-06-20 11:53:30,043	DEBUG	findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('C:\\Users\\sergi\\AppData\\Local\\Programs\\Python\\Python37\\lib\\site-packages\\matplotlib\\mpl-data\\fonts\\ttf\\DejaVuSans.ttf') with score of 0.050000.
+2019-06-20 11:53:30,047	DEBUG	update_title_pos
+2019-06-20 11:53:30,079	DEBUG	update_title_pos
+2019-06-20 11:53:30,095	DEBUG	update_title_pos
+2019-06-20 11:53:30,143	DEBUG	update_title_pos
+2019-06-20 11:53:30,167	DEBUG	update_title_pos
+2019-06-20 11:53:30,191	DEBUG	update_title_pos
+2019-06-20 11:53:30,199	DEBUG	update_title_pos
+2019-06-20 11:53:44,826	DEBUG	update_title_pos
+2019-06-20 11:53:45,014	DEBUG	update_title_pos
+2019-06-20 11:53:45,082	DEBUG	update_title_pos
+2019-06-20 11:53:45,094	DEBUG	update_title_pos
+2019-06-20 11:53:45,146	DEBUG	update_title_pos
+2019-06-20 11:53:45,214	DEBUG	update_title_pos
+2019-06-20 11:53:45,270	DEBUG	update_title_pos
+2019-06-20 11:53:45,278	DEBUG	update_title_pos
+2019-06-20 11:54:02,657	DEBUG	update_title_pos
+2019-06-20 11:54:02,737	DEBUG	update_title_pos
+2019-06-20 11:54:02,829	DEBUG	update_title_pos
+2019-06-20 11:54:02,841	DEBUG	update_title_pos
+2019-06-20 11:54:05,683	WARNING	mu1 = 2035.970364513287 / mu2 = 1578.2845882900172
+2019-06-20 11:54:05,959	DEBUG	locator: <matplotlib.colorbar._ColorbarAutoLocator object at 0x000002B3B987D7B8>
+2019-06-20 11:54:05,959	DEBUG	Using auto colorbar locator on colorbar
+2019-06-20 11:54:05,959	DEBUG	locator: <matplotlib.colorbar._ColorbarAutoLocator object at 0x000002B3B987D7B8>
+2019-06-20 11:54:05,959	DEBUG	Setting pcolormesh
+2019-06-20 11:54:05,987	DEBUG	update_title_pos
+2019-06-20 11:54:06,067	DEBUG	update_title_pos
+2019-06-20 11:54:06,119	DEBUG	update_title_pos
+2019-06-20 11:54:06,159	DEBUG	update_title_pos
+2019-06-20 11:54:07,482	DEBUG	update_title_pos
+2019-06-20 11:54:07,610	DEBUG	update_title_pos
+2019-06-20 11:54:07,698	DEBUG	update_title_pos
+2019-06-20 11:54:07,766	DEBUG	update_title_pos
+2019-06-20 11:54:12,973	DEBUG	update_title_pos
+2019-06-20 11:54:13,169	DEBUG	update_title_pos
+2019-06-20 11:54:16,208	DEBUG	update_title_pos
+2019-06-20 11:54:16,360	DEBUG	update_title_pos
+2019-06-20 11:54:16,544	DEBUG	update_title_pos
+2019-06-20 11:54:16,696	DEBUG	update_title_pos
+2019-06-20 11:54:16,876	DEBUG	update_title_pos
+2019-06-20 11:54:17,024	DEBUG	update_title_pos
+2019-06-20 11:54:17,487	DEBUG	update_title_pos
+2019-06-20 11:54:17,631	DEBUG	update_title_pos
+2019-06-20 11:54:18,843	DEBUG	update_title_pos
+2019-06-20 11:54:18,999	DEBUG	update_title_pos
+2019-06-20 11:54:19,155	DEBUG	update_title_pos
+2019-06-20 11:54:19,311	DEBUG	update_title_pos
+2019-06-20 11:54:19,463	DEBUG	update_title_pos
+2019-06-20 11:54:19,619	DEBUG	update_title_pos
+2019-06-20 11:54:19,771	DEBUG	update_title_pos
+2019-06-20 11:54:19,923	DEBUG	update_title_pos
+2019-06-20 11:54:20,079	DEBUG	update_title_pos
+2019-06-20 11:54:20,239	DEBUG	update_title_pos
+2019-06-20 11:54:20,391	DEBUG	update_title_pos
+2019-06-20 11:54:20,542	DEBUG	update_title_pos
+2019-06-20 11:54:20,702	DEBUG	update_title_pos
+2019-06-20 11:54:20,854	DEBUG	update_title_pos
+2019-06-20 11:54:21,006	DEBUG	update_title_pos
+2019-06-20 11:54:21,162	DEBUG	update_title_pos
+2019-06-20 11:54:21,314	DEBUG	update_title_pos
+2019-06-20 11:54:23,302	DEBUG	update_title_pos
+2019-06-20 11:54:23,458	DEBUG	update_title_pos
+2019-06-20 11:54:23,606	DEBUG	update_title_pos
+2019-06-20 11:54:23,762	DEBUG	update_title_pos
+2019-06-20 11:54:23,921	DEBUG	update_title_pos
+2019-06-20 11:54:24,201	DEBUG	update_title_pos
+2019-06-20 11:54:24,377	DEBUG	update_title_pos
+2019-06-20 11:54:24,541	DEBUG	update_title_pos
+2019-06-20 11:54:24,705	DEBUG	update_title_pos
+2019-06-20 11:54:24,873	DEBUG	update_title_pos
+2019-06-20 11:54:25,057	DEBUG	update_title_pos
+2019-06-20 11:54:25,217	DEBUG	update_title_pos
+2019-06-20 11:54:25,385	DEBUG	update_title_pos
+2019-06-20 11:54:25,541	DEBUG	update_title_pos
+2019-06-20 11:54:25,705	DEBUG	update_title_pos
+2019-06-20 11:54:25,869	DEBUG	update_title_pos
+2019-06-20 11:54:26,037	DEBUG	update_title_pos
+2019-06-20 11:54:26,201	DEBUG	update_title_pos
+2019-06-20 11:54:26,357	DEBUG	update_title_pos
+2019-06-20 11:54:26,517	DEBUG	update_title_pos
+2019-06-20 11:54:26,677	DEBUG	update_title_pos
+2019-06-20 11:54:26,841	DEBUG	update_title_pos
+2019-06-20 11:54:27,021	DEBUG	update_title_pos
+2019-06-20 11:54:27,185	DEBUG	update_title_pos
+2019-06-20 11:54:27,344	DEBUG	update_title_pos
+2019-06-20 11:54:27,500	DEBUG	update_title_pos
+2019-06-20 11:54:27,660	DEBUG	update_title_pos
+2019-06-20 11:54:27,824	DEBUG	update_title_pos
+2019-06-20 11:54:27,984	DEBUG	update_title_pos
+2019-06-20 11:54:28,396	DEBUG	update_title_pos
+2019-06-20 11:54:28,560	DEBUG	update_title_pos
+2019-06-20 11:54:28,736	DEBUG	update_title_pos
+2019-06-20 11:54:28,912	DEBUG	update_title_pos
+2019-06-20 11:54:29,100	DEBUG	update_title_pos
+2019-06-20 11:54:29,264	DEBUG	update_title_pos
+2019-06-20 11:54:29,432	DEBUG	update_title_pos
+2019-06-20 11:54:29,596	DEBUG	update_title_pos
+2019-06-20 11:54:29,768	DEBUG	update_title_pos
+2019-06-20 11:54:29,936	DEBUG	update_title_pos
+2019-06-20 11:54:30,112	DEBUG	update_title_pos
+2019-06-20 11:54:30,284	DEBUG	update_title_pos
+2019-06-20 11:54:30,456	DEBUG	update_title_pos
+2019-06-20 11:54:30,635	DEBUG	update_title_pos
+2019-06-20 11:54:30,803	DEBUG	update_title_pos
+2019-06-20 11:54:30,975	DEBUG	update_title_pos
+2019-06-20 11:54:31,151	DEBUG	update_title_pos
+2019-06-20 11:54:31,323	DEBUG	update_title_pos
+2019-06-20 11:54:31,503	DEBUG	update_title_pos
+2019-06-20 11:54:31,667	DEBUG	update_title_pos
+2019-06-20 11:54:31,839	DEBUG	update_title_pos
+2019-06-20 11:54:45,556	DEBUG	update_title_pos
+2019-06-20 11:54:45,724	DEBUG	update_title_pos
+2019-06-20 11:54:45,900	DEBUG	update_title_pos
+2019-06-20 11:54:46,080	DEBUG	update_title_pos
+2019-06-20 11:54:46,248	DEBUG	update_title_pos
+2019-06-20 11:54:46,444	DEBUG	update_title_pos
+2019-06-20 11:54:46,616	DEBUG	update_title_pos
+2019-06-20 11:54:46,784	DEBUG	update_title_pos
+2019-06-20 11:54:46,996	DEBUG	update_title_pos
+2019-06-20 11:54:47,164	DEBUG	update_title_pos
+2019-06-20 11:54:47,328	DEBUG	update_title_pos
+2019-06-20 11:54:47,500	DEBUG	update_title_pos
+2019-06-20 11:54:47,676	DEBUG	update_title_pos
+2019-06-20 11:54:47,844	DEBUG	update_title_pos
+2019-06-20 11:54:48,016	DEBUG	update_title_pos
+2019-06-20 11:54:48,183	DEBUG	update_title_pos
+2019-06-20 11:54:48,351	DEBUG	update_title_pos
+2019-06-20 11:54:48,519	DEBUG	update_title_pos
+2019-06-20 11:54:48,691	DEBUG	update_title_pos
+2019-06-20 11:54:48,859	DEBUG	update_title_pos
+2019-06-20 11:54:49,071	DEBUG	update_title_pos

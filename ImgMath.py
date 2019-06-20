@@ -67,10 +67,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
             if d <= 0: heightmap[i][j] = 0
             else: heightmap[i][j] = 10000 * d
             
-            if heightmap[i][j] != 0:
-                heightfile.write("%d\t%d\t%f\n" % (i, j, heightmap[i][j]))
-            else:  
-                heightfile.write("%d\t%d\n" % (i, j))
+            heightfile.write("%d\t%d\t%f\n" % (i, j, heightmap[i][j]))
     return heightmap
 
 def set_axes_equal(ax):
@@ -117,15 +114,12 @@ def plot3D(depth_matrix):
     X, Y = np.meshgrid(imagex,imagey)
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
-            Z.append(depth_matrix[i][j])
-    Z = np.asarray(Z)
+            if depth_matrix[i][j] > 0: Z.append(depth_matrix[i][j])
+            else: Z.append(np.nan)
 
     depth_matrix = depth_matrix.transpose()
     MAP = ax.plot_surface(X,Y,depth_matrix,\
             cmap='BuGn',linewidth=0,antialiased=True)
-#    ax.set_zlim(-1*depth_matrix.max(),depth_matrix.max()*2)
-#    ax.set_ylim(-1,imagesize[1]*1.10)
-#    ax.set_xlim(-1,imagesize[0]*1.10)
     set_axes_equal(ax)
     plt.show()
     return 0

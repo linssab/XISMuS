@@ -93,7 +93,7 @@ an image where the element is displayed in proportion to the most abundant eleme
         except: raise FileNotFoundError("ratio file for {0} not found.".format(elementlist))
 
         compound = Compounds.compound()
-        compound.set_compound('AuSheet')
+        compound.set_compound('PbWhite')
         compound.set_attenuation(elementlist[0])
 
         #######################################

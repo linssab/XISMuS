@@ -38,7 +38,7 @@ mcafit.configure(config)
 currentConfig = mcafit.configure()
 
 print(currentConfig['detector']['gain'])
-calibration = SpecRead.calibrate(SpecRead.getfirstfile(),'data')
+calibration = SpecRead.calibrate()
 currentConfig['detector']['gain'] = calibration[1] 
 print(currentConfig['detector']['gain'])
 
