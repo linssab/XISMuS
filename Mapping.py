@@ -64,7 +64,7 @@ class datacube:
             sys.stdout.flush()
 
 def pickle_cube(p_cube,p_name):
-    p_output = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+p_name+'.cube','wb')
+    p_output = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+p_name+'.cube','wb')
     pickle.dump(p_cube,p_output)
     p_output.close()
     print("File {0} sucessfully compiled.".format(SpecRead.DIRECTORY))
