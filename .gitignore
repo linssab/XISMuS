@@ -1,4 +1,6 @@
 *.pyc
 *.log
 *.png
+timestamps.txt
 output\
+\output
