@@ -15,7 +15,7 @@ def plot(image,color):
 if __name__=="__main__":
     import Compounds
     import numpy as np
-    import sys
+    import sys, os
     import SpecRead
     import ImgMath
     from PyMca5.PyMcaPhysics import Elements
@@ -49,20 +49,29 @@ an image where the element is displayed in proportion to the most abundant eleme
             else: 
                 raise Exception("%s not an element!" % input_elements[arg])
                 logging.exception("{0} is not a chemical element!".format(input_elements[arg]))
-        
-        ####################################################
-        #      UNPACK CONFIG PARAM TO PASS AS ARGUMENTS    #
-        # TO MAPPING.PY / NUMBA CAN'T COMPILE DICTIONARIES #
-        ####################################################
-        ratio = config.get('ratio')
-        normalize = config.get('enhance')
-        bgstrip = config.get('bgstrip')
-        peakmethod = config.get('peakmethod')
+       
+        cube_name = SpecRead.DIRECTORY
+        print(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube')
+        if os.path.exists(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube'):
+
+            if '-normalize' in sys.argv:
+                Mapping.getpeakmap(elementlist,cube_name)
+            else:
+                Mapping.getpeakmap(elementlist,cube_name)
     
-        if '-normalize' in sys.argv:
-            Mapping.getpeakmap(elementlist)
         else:
-            Mapping.getpeakmap(elementlist)
+            
+            #CREATES A DATACUBE 
+            
+            print("Compile is necessary.")
+            specbatch = Mapping.datacube(['xrf'])
+            specbatch.compile_cube()
+            Mapping.pickle_cube(specbatch,cube_name)
+
+            if '-normalize' in sys.argv:
+                Mapping.getpeakmap(elementlist,cube_name)
+            else:
+                Mapping.getpeakmap(elementlist,cube_name)
     
     if flag1 == '-plotstack':
         import SpecMath
