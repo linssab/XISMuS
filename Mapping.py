@@ -10,6 +10,7 @@ import cv2
 import sys
 import numpy as np
 import logging
+import pickle
 import SpecMath
 import SpecRead
 import EnergyLib
@@ -58,11 +59,17 @@ class datacube:
                     __self__.dimension[0]*__self__.dimension[1])
             progress = int(iteration/__self__.img_size*20)
             blank = (20 - progress - 1)
-            print("[" + progress*"\u25A0" + blank*" " + "]" + " / {0:.2f}"\
+            print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
                     .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
             sys.stdout.flush()
- 
-def getpeakmap(element_list,ratio=configdict.get('ratio'),\
+
+def pickle_cube(p_cube,p_name):
+    p_output = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+p_name+'.cube','wb')
+    pickle.dump(p_cube,p_output)
+    p_output.close()
+    print("File {0} sucessfully compiled.".format(SpecRead.DIRECTORY))
+
+def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
         normalize=configdict.get('enhance'),bgstrip=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
 
@@ -72,8 +79,9 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
     #   KA AND KB LINES OF INPUT ELEMENT(S).        #
     #################################################
     
-    specbatch = datacube(['xrf'])
-    specbatch.compile_cube()
+    cube_file = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube','rb')
+    specbatch = pickle.load(cube_file)
+    cube_file.close()     
 
     if peakmethod == 'PyMcaFit': import SpecFitter
     KaElementsEnergy = EnergyLib.Energies
@@ -256,9 +264,9 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                             CUMSUM_RAW[channel] += RAW[channel]
 
                     if ka == 0: 
-                        ka,kb = 1,1
-                        elmap[currentx][currenty][Element] = ka+kb
-                        break
+                        ka,kb = 0, 0
+                        elmap[currentx][currenty][Element] = 0
+                    
                     elif ka > 0 and ratio == False: kb = 0
                     
                     elif ka > 0 and ratio == True:
@@ -286,7 +294,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                     ###############################################
                     
                     # KA AND KB ARE 0 BY DEFAULT
-                    ka, kb = 1, 1
+                    ka, kb = 0, 0
                     ka_ROI = RAW[ka_idx[0]:ka_idx[1]]
                     ka_bg = background[ka_idx[0]:ka_idx[1]]
                     
@@ -313,7 +321,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                 
                 row = scan[0]
                 column = scan[1]
-
+                
                 if ratio == True: 
                     try: 
                         r_file = open(ratiofiles[Element],'a')
@@ -322,10 +330,14 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
                             logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
                                     .format(spec,ka,kb,element_list[Element]))
                         else:
-                            r_file.write("%d\t%d\t%d\t%d\t%f\n" % (row, column, ka, kb, (ka/kb)))
+                            if ka == 0: ka,kb,ka_kb = 0,0,0
+                            elif kb == 0: ka_kb = 0
+                            elif ka > 0 and kb > 0: ka_kb = ka/kb
+                            r_file.write("%d\t%d\t%d\t%d\t%f\n" % (row, column, ka, kb, (ka_kb)))
                     except:
                         print("ka and kb not calculated for some unknown reason.\
-                                Check Config.cfg for the correct spelling of peakmethod option!")
+                    Check Config.cfg for the correct spelling of peakmethod option!\
+                    ka={0},kb={1}".format(ka,kb))
 
             #####################################
 
@@ -342,7 +354,7 @@ def getpeakmap(element_list,ratio=configdict.get('ratio'),\
             if debug == True: currentspectra = SpecRead.updatespectra(spec,dimension)
             progress = int(ITERATION/dimension*20)
             blank = 20 - progress - 1
-            print("[" + progress*"\u25A0" + blank*" " + "]" + " / {0:.2f}"\
+            print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
                     .format(ITERATION/dimension*100), "Percent complete  \r", end='')
             sys.stdout.flush()
         
