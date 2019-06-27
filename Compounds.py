@@ -8,6 +8,7 @@
 
 import numpy as np
 import EnergyLib
+import xraylib as xlib
 import logging
 
 CompoundList = {
@@ -18,6 +19,7 @@ CompoundList = {
         'Ethanol'       :{'C':2,'H':6,'O':1},
         'PbWhite'       :{'Pb':3,'O':4,'C':1,'H':2},
         'PbCarbonate'   :{'Pb':1,'C':1,'O':3},
+        'PureGold'      :{'Au':100},
         'Tenorite'      :{'Cu':1,'O':1},
         'Vermilion'     :{'Hg':1,'S':1},
         'Water'         :{'H':2,'O':1},
@@ -131,11 +133,24 @@ class compound:
 
     def set_attenuation(__self__,energy):
         mu1_w ,mu2_w = 0,0
-        for element in __self__.weight:
-            total_att = linattenuation(element,energy)
-            mu1,mu2 = total_att[0],total_att[1]
-            mu1_w += mu1*__self__.weight[element]
-            mu2_w += mu2*__self__.weight[element]
+        if type(energy) == int:
+            for element in __self__.weight:
+                ele_no = EnergyLib.Element_No[element]
+                mu1 = xlib.CS_Total(ele_no,energy)
+                mu2 = 0
+                mu1_w += mu1*__self__.weight[element]
+                mu2_w += mu2*__self__.weight[element]
+        else:
+            for element in __self__.weight:
+                attenuated_no = EnergyLib.Element_No[energy]
+                ele_no = EnergyLib.Element_No[element]
+                attenergy_a = EnergyLib.Energies[attenuated_no]
+                attenergy_b = EnergyLib.kbEnergies[attenuated_no]
+                #total_att = linattenuation(element,energy)
+                mu1,mu2 = xlib.CS_Total(ele_no,attenergy_a),xlib.CS_Total(ele_no,attenergy_b)
+                #mu1,mu2 = total_att[0],total_att[1]
+                mu1_w += mu1*__self__.weight[element]
+                mu2_w += mu2*__self__.weight[element]
         __self__.tot_att = (mu1_w,mu2_w) 
         __self__.lin_att = (__self__.density * mu1_w , __self__.density * mu2_w)
     
@@ -161,6 +176,11 @@ def linattenuation(element,KaKb):
                 Try again using a different element such as Au, Pb or Zn.".format(KaKb))
         raise ValueError
     return mu1,mu2
+
+def split_energies(element):
+    energy_a = EnergyLib.Energies[EnergyLib.Element_No[element]]
+    energy_b = EnergyLib.kbEnergies[EnergyLib.Εlement_No[element]]
+    return(energy_a,energy_b)
 
 def density(compound):
     compound_density = 0
@@ -191,6 +211,7 @@ if __name__=="__main__":
     
     water = compound()
     water.set_compound([2,1],['H','O'],ctype='custom')
+    
     coblue = compound()
     coblue.set_compound('CoBlue')
 
@@ -209,9 +230,11 @@ if __name__=="__main__":
     print(linoil.origin)
     print(mixture.origin)
     
-    mixture.set_attenuation('Pb')
+    ############################################
 
-    water.set_attenuation('Cu')
-    print(water.lin_att)
-    print(water.tot_att)
+    gold = compound()
+    gold.set_compound('PureGold')
+    gold.set_attenuation(20)
+
+    print(gold.tot_att)
     

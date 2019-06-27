@@ -120,6 +120,7 @@ Energies = [index[3] for index in ElementsInfo]
 kbEnergies = [index[4] for index in ElementsInfo]
 DensityList = {"{0}".format(index[0]):index[1] for index in ElementsInfo}
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
+Element_No = {"{0}".format(index[0]):ElementList.index(index[0])+1 for index in ElementsInfo}
 muPb = {"{0}".format(index[0]):(index[6],index[7]) for index in ElementsInfo}
 muE0 = {"{0}".format(index[0]):(index[5]) for index in ElementsInfo} 
 muCu = {"{0}".format(index[0]):(index[8],index[9]) for index in ElementsInfo}
