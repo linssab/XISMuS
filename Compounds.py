@@ -106,7 +106,7 @@ class compound:
     def give_density(__self__):
         try:
             for element in __self__.weight:
-                __self__.density += __self__.weight[element]*EnergyLib.DensityList[element]
+                __self__.density += __self__.weight[element]*EnergyLib.DensityDict[element]
         except:
             raise ValueError("{} has no property weight!".format(__self__))
 
@@ -185,7 +185,7 @@ def split_energies(element):
 def density(compound):
     compound_density = 0
     for element in CompoundList[compound]:
-        compound_density += EnergyLib.DensityList[element]*CompoundList[compound][element]
+        compound_density += EnergyLib.DensityDict[element]*CompoundList[compound][element]
     return compound_density
 
 #############################################

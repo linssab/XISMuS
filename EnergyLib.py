@@ -1,3 +1,6 @@
+import xraylib as xlib
+import numpy as np
+
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
 
 ElementsInfo = [
@@ -118,7 +121,6 @@ ElementsInfo = [
 ElementList = [index[0] for index in ElementsInfo]
 Energies = [index[3] for index in ElementsInfo]
 kbEnergies = [index[4] for index in ElementsInfo]
-DensityList = {"{0}".format(index[0]):index[1] for index in ElementsInfo}
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0])+1 for index in ElementsInfo}
 muPb = {"{0}".format(index[0]):(index[6],index[7]) for index in ElementsInfo}
@@ -149,4 +151,22 @@ def SetPeakLines():
     PeakConfigDict = {"{0}".format(ElementList[element]):ConfigLines[element] for element in range(len(ElementList))}
     return PeakConfigDict
 
+def set_energies_from_xlib():
+    for index in range(len(ElementList)):
+        print(xlib.LineEnergy(index,0))
+    return 0
+
+def set_densities_from_xlib():
+    DensityDict = {}
+    for i in range(len(ElementList)):
+        loc_element = ElementsInfo[i][0]
+        try: 
+            if ElementList.index(loc_element)+1 < 95: 
+                DensityDict["{0}".format(loc_element)] = xlib.ElementDensity(ElementList.index(loc_element)+1)
+            else:
+                DensityDict["{0}".format(loc_element)] = 0.0 
+        except: DensityDict["{0}".format(loc_element)] = np.nan
+    return DensityDict
+
+DensityDict = set_densities_from_xlib()
 

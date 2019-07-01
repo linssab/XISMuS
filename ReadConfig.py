@@ -91,6 +91,9 @@ def getconfig():
                 line = file.readline()
         line = file.readline()
         while "<<END>>" not in line:
+            line=line.replace('\r','')
+            line=line.replace('\n','')
+            line=line.replace('\t',' ')
             aux = line.split(" ")
             try: CalParam.append([int(aux[0]),float(aux[1])])
             except: CalParam = [[0]]
