@@ -21,7 +21,7 @@ logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 DIRECTORY = CONFIG.get('directory')
 dirname = 'C:/samples/'+DIRECTORY+'/'
-firstfile = 'Monica_1.mca'
+firstfile = CONFIG.get('firstfile')
 workpath = os.getcwd()
 dimension_file = dirname + '\colonneXrighe.txt'
 try: os.mkdir(workpath + '\output\\' + DIRECTORY)

@@ -410,7 +410,7 @@ def getdensitymap():
             spec = cube.matrix[x][y]
             if configdict.get('bgstrip') == 'SNIPBG': 
                 snip_bg = np.zeros([spec.shape[0]])
-                SpecMath.peakstrip(spec,24,3,snip_bg)
+                SpecMath.peakstrip(spec,24,5)
             else: background = np.zeros([spec.shape[0]])
             density_map[x][y] = sum(spec)-sum(snip_bg)
      
@@ -436,4 +436,5 @@ if __name__=="__main__":
     myimage = getpeakmap(myelements,\
             bgstrip=configdict['bgstrip'],peakmethod=configdict['peakmethod'])
     ImgMath.split_and_save(myimage,myelements,configdict)
+
 

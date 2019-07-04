@@ -10,7 +10,7 @@ import logging
 import os
 
 workpath = os.getcwd()
-configfile = workpath + '\config.cfg'
+configfile = workpath + '\config.MC.cfg'
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
         filename = 'logfile.log',level = logging.DEBUG)
@@ -42,6 +42,13 @@ def getconfig():
     if "<<CONFIG_START>>" in line:
         line = file.readline()
         while "<<CALIBRATION>>" not in line:
+            if 'filename' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                modesdict['firstfile'] = str(aux[2])
+                line = file.readline()
             if 'directory' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
@@ -94,7 +101,7 @@ def getconfig():
             line=line.replace('\r','')
             line=line.replace('\n','')
             line=line.replace('\t',' ')
-            aux = line.split(" ")
+            aux = line.split()
             try: CalParam.append([int(aux[0]),float(aux[1])])
             except: CalParam = [[0]]
             line = file.readline()
