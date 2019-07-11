@@ -32,6 +32,7 @@ if __name__=="__main__":
 
     elementlist = []
     flag1 = sys.argv[1]
+
     if flag1 == '-help':
         print("\nUSAGE: '-findelement'; plots a 2D map of elements which are to be set.\
 Additionally, you can type '-normalize' when finding one element to generate\
@@ -39,6 +40,12 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-plotmap'; plots a density map\n\
        '-plotstack'; plots the sum spectra of all sample. Optional: you can add '-semilog' to plot it in semilog mode.\n\
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
+    
+    if flag1 == '-compilecube':
+        specbatch = Mapping.datacube(['xrf'])
+        specbatch.compile_cube()
+        Mapping.pickle_cube(specbatch,cube_name)
+
     if flag1 == '-findelement':    
         import Mapping
         input_elements = input('Please input which elements are to be mapped: \n')
@@ -74,11 +81,19 @@ an image where the element is displayed in proportion to the most abundant eleme
                 Mapping.getpeakmap(elementlist,cube_name)
     
     if flag1 == '-plotstack':
+        try: flag2 = sys.argv[2]
+        except: flag2 = None
         import SpecMath
-        energyaxis = SpecMath.energyaxis()
-        channels = np.arange(energyaxis.shape[0])
-        SpecMath.getstackplot(SpecRead.getfirstfile(),energyaxis)
-        SpecMath.getstackplot(SpecRead.getfirstfile(),channels)
+        import pickle
+        cube_name = SpecRead.DIRECTORY
+        if os.path.exists(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube'):
+            cube_file = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube','rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close()
+            energyaxis = SpecMath.energyaxis()
+            SpecMath.getstackplot(datacube,flag2)
+        else:
+            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
 
     if flag1 == '-plotmap':
         import Mapping
@@ -102,7 +117,7 @@ an image where the element is displayed in proportion to the most abundant eleme
         except: raise FileNotFoundError("ratio file for {0} not found.".format(elementlist))
 
         compound = Compounds.compound()
-        compound.set_compound('PbWhite')
+        compound.set_compound('AuSheet')
         compound.set_attenuation(elementlist[0])
 
         #######################################

@@ -54,29 +54,36 @@ def energyaxis():
     calibration = SpecRead.calibrate()
     return calibration[0]
 
-def getstackplot(mca,energy,*args):
-    size = SpecRead.getdimension()
-    dimension = size[0]*size[1]
-    data = stacksum(mca,dimension)
-    if '-semilog' in args: plt.semilogy(energy,data)
+def getstackplot(datacube,*args):
+    stack = stacksum(datacube)
+    stack = stack/stack.max()
+    mps = MPS(datacube)
+    mps = mps/mps.max()
+    energy = energyaxis()
+    if '-semilog' in args: 
+        plt.semilogy(energy,stack,label="Summation")
+        plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
     else:
-        plt.plot(energy,data)
+        plt.plot(energy,stack,label="Summation")
+        plt.plot(energy,mps,label="Maximum Pixel Spectrum")
+    plt.legend()
     plt.show()
     return 0
 
-def stacksum(firstspec,dimension):
-    # FIRSTSPEC IS A STRING WITH THE NAME OF THE FIRST FILE IN THE BATCH #
-    " DIMENSION STANDS FOR THE MAP DIMENSION, LINES*ROWS (OR THE NUMBER OF FILES) "
-    " SO THE FUNCTION GETS THE TOTAL NUMBER OF SPECTRA TO BE STACKED "
-    aux = SpecRead.getdata(firstspec)
-    currentspectra = firstspec
-    Stack = np.zeros([len(aux)])
-    for i in range(dimension):
-        spec = currentspectra
-        data = SpecRead.getdata(spec)
-        Stack = Stack + data
-        currentspectra = SpecRead.updatespectra(spec,dimension)
-    return Stack
+def MPS(datacube):
+    mps_vector = np.zeros([datacube.matrix.shape[2]])
+    for c in range(datacube.matrix.shape[2]):
+        for x in range(datacube.matrix.shape[0]):
+            for y in range(datacube.matrix.shape[1]):
+                if mps_vector[c] < datacube.matrix[x,y,c]: mps_vector[c] = datacube.matrix[x,y,c]
+    return mps_vector
+
+def stacksum(datacube):
+    stack = np.zeros([datacube.matrix.shape[2]])
+    for x in range(datacube.matrix.shape[0]):
+        for y in range(datacube.matrix.shape[1]):
+            stack += datacube.matrix[x,y]
+    return stack
 
 def sigma(energy):
     return math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))
@@ -98,14 +105,15 @@ def creategaussian(channels,energy):
                     Gaussian[i]+=gaussianbuilder(i,energy[k])
     return Gaussian
 
-#####################################################################
-# setROI(lookup,xarray,yarray)                                      #
-# INPUT: eV energy, energy array (x axis) and data array            #
-# OUTPUT: indexes corresponding to 2*FWHM of a gaussian centered    #
-# at eV energy position                                             #
-#####################################################################
-
 def setROI(lookup,xarray,yarray,localconfig):
+    
+    ####################################################################
+    # setROI(lookup,xarray,yarray,localconfig)                         #
+    # INPUT: eV energy, energy array (x axis) and data array           #
+    # OUTPUT: indexes corresponding to 2*FWHM of a gaussian centered   #
+    # at eV energy position                                            #
+    ####################################################################
+    
     lookup = int(lookup)
     peak_corr = 0
     isapeak = True
@@ -157,7 +165,7 @@ def setROI(lookup,xarray,yarray,localconfig):
     logging.debug("peak_center = {0}".format(peak_center)) 
     return lowx_idx,highx_idx,peak_center,isapeak
 
-def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
+def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     Area = 0
    
     idx = setROI(lookup,energyaxis,data,localconfig)
@@ -167,25 +175,18 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
     original_data = RAW[idx[0]:idx[1]] 
     ROIbg = continuum[idx[0]:idx[1]]
     
-# SIGNAL TO NOISE PEAK TEST CRITERIA #
- 
+    ######################################
+    # SIGNAL TO NOISE PEAK TEST CRITERIA # After Bright, D.S. & Newbury, D.E. 2004 
+    ######################################
+
     if isapeak == True: 
-        if original_data.sum() < 2*ROIbg.sum(): isapeak = False
+        if original_data.sum() - ROIbg.sum() < 3*math.sqrt(ROIbg.sum()): isapeak = False
     
     ##########################
     # 2ND DIFFERENTIAL CHECK #
     ##########################
     if usedif2 == True and isapeak == True:
-        smooth_dif2 = scipy.signal.savgol_filter(getdif2(RAW,energyaxis,1),5,3)
-        smooth_dif2 = smooth_dif2[idx[0]:idx[1]]
-    
-        ##################################
-        # 2ND DIFFERENTIAL CUTOFF FILTER #
-        ##################################
-    
-        for i in range(len(smooth_dif2)):
-            if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
-            elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
+        smooth_dif2 = dif2[idx[0]:idx[1]]
     
         if smooth_dif2[idx[2]] < 0 or smooth_dif2[idx[2]+1] < 0 or smooth_dif2[idx[2]-1] < 0:
             logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
@@ -251,12 +252,15 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2):
     
     return Area,idx
 
-# W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (2*W)+1       #
-# W VALUE MUST BE LARGER THAN 3 AND ODD, SINCE 3 IS THE MINIMUM  #
-# SATISFACTORY POLYNOMIAL DEGREE TO SMOOTHEN THE DATA            #
-
 @jit
 def ryan_snip(an_array,cycles,width):
+    
+    ##################################################################
+    # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (1*W)+1       #
+    # W VALUE MUST BE LARGER THAN 2 AND ODD, SINCE 3 IS THE MINIMUM  #
+    # SATISFACTORY POLYNOMIAL DEGREE TO SMOOTHEN THE DATA            #
+    ##################################################################
+    
     for k in range(cycles):
         l = width
         for l in range(an_array.shape[0]-width):
@@ -287,27 +291,19 @@ def peakstrip(an_array,cycles,width):
     return snip_bg
 
 if __name__=="__main__":
-    dirname = SpecRead.dirname
-    specfile = dirname+'Cesareo_217.mca'
-    xdata = energyaxis()
-#    import SpecFitter
-#    testdata = SpecFitter.fit(specfile)
-#    testdata = SpecRead.getdata(specfile)
-    RAW_data = SpecRead.getdata(specfile)
-    lookup = 9711
-    
-    continuum = peakstrip(RAW_data,24,5)
-    plt.plot(continuum, label='bg')
-    plt.plot(RAW_data, label='raw')
+    import pickle 
+    cube_name = "monica"
+    cube_file = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube','rb')
+    datacube = pickle.load(cube_file)
+    cube_file.close()
+
+    mps_ = MPS(datacube)
+    eV = energyaxis()
+    stack = stacksum(SpecRead.getfirstfile(),datacube.img_size,datacube)
+    stack = stack/stack.max()
+    mps_ = mps_/mps_.max()
+    plt.semilogy(eV,stack,label="Summation")
+    plt.semilogy(eV,mps_,label="MPS")
+    plt.legend()
     plt.show()
-
-#    continuum = np.zeros([len(testdata)])
-#    getpeakarea(lookup,testdata,xdata,continuum,'SNIPBG',RAW_data)
-#    smooth_dif2 = scipy.signal.savgol_filter(\
-#            getdif2(ydata,xdata,1),5,3)
-#    for i in range(len(smooth_dif2)):
-#        if smooth_dif2[i] < -1: smooth_dif2[i] = smooth_dif2[i]
-#        elif smooth_dif2[i] > -1: smooth_dif2[i] = 0
-
-
 

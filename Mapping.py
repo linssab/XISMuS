@@ -89,6 +89,9 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
     
     logging.info("Started energy axis calibration")
     energyaxis = SpecMath.energyaxis()
+    #   save_energy_axis = open(SpecRead.workpath + '/' + 'axis.txt','a')
+    #   for i in range(energyaxis.shape[0]):
+    #       save_energy_axis.write("{0}\n".format(energyaxis[i]))
     logging.info("Finished energy axis calibration")
     current_peak_factor = 0
     max_peak_factor = 0
@@ -96,15 +99,15 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
     usedif2 = True
     ratiofiles = ['' for x in range(len(element_list))]
 
-    #########################################
-    # ERROR VARIABLES CUMSUM AND CUMSUM_RAW #
-    #########################################
+    ######################################################
+    # INITIALIZE CONTROL VARIABLES CUMSUM AND CUMSUM_RAW #
+    ######################################################
     
     CUMSUM = np.zeros([len(energyaxis)])
     CUMSUM_RAW = np.zeros([len(energyaxis)])
     BGSUM = np.zeros([len(energyaxis)])
 
-    #########################################
+    ######################################################
 
     if element_list[0] in Elements.ElementList:
         logging.info("Started acquisition of {0} map(s)".format(element_list))
@@ -112,15 +115,26 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
         
         if bgstrip != 'None': logging.warning("Background stripping is ON! - slow -")
         
-        partialtimer = time.time()
+        ####### this is for debug mode #######
         currentspectra = SpecRead.getfirstfile()
+        debug = False 
+        ####### to register the NAME of the file #######
+
+        ##############################
+        # INITIALIZE OTHER VARIABLES #
+        ##############################
+        
+        FITFAIL = 0
+        partialtimer = time.time()
         elmap = np.zeros([imagex,imagey,len(element_list)])
         scan = ([0,0])
         currentx = scan[0]
         currenty = scan[1]
         kaindex,kbindex,kaenergy,kbenergy = \
                 (np.zeros(len(element_list),dtype='int') for i in range(4))
-         
+        
+        ##############################
+
         for Element in range(len(element_list)):
 
             # sets ka energy
@@ -147,11 +161,11 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
                 logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                         .format(kbenergy[Element],element_list[Element]))
         
-    ################################
-    #  SETS SIMPLE ROI PARAMETERS  #
-    ################################
+        ################################
+        #  SETS SIMPLE ROI PARAMETERS  #
+        ################################
 
-        stacksum = SpecMath.stacksum(currentspectra,dimension)
+        stacksum = SpecMath.stacksum(spectrabatch)
         if peakmethod == 'simple_roi':
             ka_idx = SpecMath.setROI(kaenergy[0],energyaxis,stacksum,configdict)
             ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
@@ -165,16 +179,14 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
             else:
                 print(ka_idx)
     
-    #############################################
-    #   STARTS ITERATION OVER SPECTRA BATCH     #
-    #############################################
-        
-        debug = False 
-        FITFAIL = 0
+        #############################################
+        #   STARTS ITERATION OVER SPECTRA BATCH     #
+        #############################################
+            
         logging.info("Starting iteration over spectra...\n")
         for ITERATION in range(dimension):
                
-            spec = currentspectra
+            spec = currentspectra  #updates the current file name / debug mode only
             RAW = specbatch.matrix[currentx][currenty]
             specdata = specbatch.matrix[currentx][currenty]
             
@@ -199,15 +211,23 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
             else: 
                 raise Exception("peakmethod {0} not recognized.".format(peakmethod))
  
-            #########################
-            #  SETS THE BACKGROUND  #
-            #########################
+            ###########################
+            #   SETS THE BACKGROUND   #
+            # AND SECOND DIFFERENTIAL #
+            ###########################
             
             if bgstrip == 'SNIPBG': 
                 background = SpecMath.peakstrip(RAW,24,5)
                 logging.debug('SNIPGB calculated for spec {0}'.format(spec))
             else: background = np.zeros([specdata.shape[0]])
             
+            if usedif2 == True: 
+                dif2 = SpecMath.getdif2(specdata,energyaxis,1)
+                for i in range(len(dif2)):
+                    if dif2[i] < -1: dif2[i] = dif2[i]
+                    elif dif2[i] > -1: dif2[i] = 0
+            else: dif2 = np.zeros([specdata.shape[0]])
+
             BGSUM += background
             ############################
             #  VERIFIES THE PEAK SIZE  #
@@ -235,13 +255,13 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
                     
             #############################
 
-            #####################################
-            #  ACTUALLY RECORDS NET PEAKS AREA  #
-            #   ITERATE OVER LIST OF ELEMENTS   #
-            #####################################
+            ###################################
+            #  CALCULATE NET PEAKS AREAS AND  #
+            #  ITERATE OVER LIST OF ELEMENTS  #
+            ###################################
             
             logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
-            logging.info("Specfile being processed is: {0}\n".format(spec))
+            if debug == True: logging.info("Specfile being processed is: {0}\n".format(spec))
  
             for Element in range(len(element_list)):
             
@@ -254,7 +274,7 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
                     ################################################################
                         
                     ka_info = SpecMath.getpeakarea(kaenergy[Element],specdata,\
-                            energyaxis,background,configdict,RAW,usedif2)
+                            energyaxis,background,configdict,RAW,usedif2,dif2)
                     ka = ka_info[0]
                 
                     for channel in range(len(specdata)):
@@ -271,7 +291,7 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
                     
                     elif ka > 0 and ratio == True:
                         kb_info = SpecMath.getpeakarea(kbenergy[Element],specdata,\
-                                energyaxis,background,configdict,RAW,usedif2)
+                                energyaxis,background,configdict,RAW,usedif2,dif2)
                         kb = kb_info[0]
 
                         for channel in range(len(specdata)):
