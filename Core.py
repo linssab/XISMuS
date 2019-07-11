@@ -42,6 +42,8 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     
     if flag1 == '-compilecube':
+        import Mapping
+        cube_name = SpecRead.DIRECTORY
         specbatch = Mapping.datacube(['xrf'])
         specbatch.compile_cube()
         Mapping.pickle_cube(specbatch,cube_name)
