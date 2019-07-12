@@ -83,8 +83,8 @@ an image where the element is displayed in proportion to the most abundant eleme
                 Mapping.getpeakmap(elementlist,cube_name)
     
     if flag1 == '-plotstack':
-        try: flag2 = sys.argv[2]
-        except: flag2 = None
+        try: flag2, flag3 = sys.argv[2],sys.argv[3]
+        except: flag2, flag3 = None, None
         import SpecMath
         import pickle
         cube_name = SpecRead.DIRECTORY
@@ -93,7 +93,7 @@ an image where the element is displayed in proportion to the most abundant eleme
             datacube = pickle.load(cube_file)
             cube_file.close()
             energyaxis = SpecMath.energyaxis()
-            SpecMath.getstackplot(datacube,flag2)
+            SpecMath.getstackplot(datacube,flag2,flag3)
         else:
             print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
 

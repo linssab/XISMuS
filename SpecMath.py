@@ -56,11 +56,16 @@ def energyaxis():
 
 def getstackplot(datacube,*args):
     stack = stacksum(datacube)
-    stack = stack/stack.max()
     mps = MPS(datacube)
-    mps = mps/mps.max()
     energy = energyaxis()
-    if '-semilog' in args: 
+    if '-bg' and '-semilog' in args:
+        bg = background_summation(datacube)
+        plt.semilogy(energy,stack,label="Summation")
+        plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
+        plt.semilogy(energy,bg,label="Background estimation")
+    elif '-semilog' in args: 
+        stack = stack/stack.max()
+        mps = mps/mps.max()
         plt.semilogy(energy,stack,label="Summation")
         plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
     else:
@@ -84,6 +89,13 @@ def stacksum(datacube):
         for y in range(datacube.matrix.shape[1]):
             stack += datacube.matrix[x,y]
     return stack
+
+def background_summation(datacube):
+    bg_sum = np.zeros([datacube.matrix.shape[2]])
+    for x in range(datacube.matrix.shape[0]):
+        for y in range(datacube.matrix.shape[1]):
+            bg_sum += peakstrip(datacube.matrix[x,y],24,5)
+    return bg_sum
 
 def sigma(energy):
     return math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))

@@ -165,7 +165,7 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
         #  SETS SIMPLE ROI PARAMETERS  #
         ################################
 
-        stacksum = SpecMath.stacksum(spectrabatch)
+        stacksum = SpecMath.stacksum(specbatch)
         if peakmethod == 'simple_roi':
             ka_idx = SpecMath.setROI(kaenergy[0],energyaxis,stacksum,configdict)
             ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]

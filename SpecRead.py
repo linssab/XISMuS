@@ -144,8 +144,8 @@ def calibrate():
     curve = np.asarray(curve)
     return curve,GAIN
 
-def getgain(self,flag):
-    calibration = calibrate(self,flag)
+def getgain():
+    calibration = calibrate()
     curve = calibration[0]
     n = len(curve)
     GAIN=0
