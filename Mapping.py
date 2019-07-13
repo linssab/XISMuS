@@ -33,43 +33,7 @@ dimension = imagex*imagey
 
 configdict = SpecRead.CONFIG
 
-class datacube:
-    
-    ndim = 0
-
-    def __init__(__self__,dtypes):
-        __self__.dimension = SpecRead.getdimension()
-        __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
-        __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
-        specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
-        __self__.matrix = np.zeros(\
-                [__self__.dimension[0],__self__.dimension[1],specsize.shape[0]])
-
-    def compile_cube(__self__):
-        currentspectra = SpecRead.getfirstfile()
-        x,y,scan = 0,0,(0,0)
-        for iteration in range(__self__.img_size):
-            spec = currentspectra
-            specdata = SpecRead.getdata(spec)
-            for i in range(len(specdata)):
-                __self__.matrix[x][y][i] = specdata[i]
-            scan = ImgMath.updateposition(scan[0],scan[1])
-            x,y = scan[0],scan[1]
-            currentspectra = SpecRead.updatespectra(spec,\
-                    __self__.dimension[0]*__self__.dimension[1])
-            progress = int(iteration/__self__.img_size*20)
-            blank = (20 - progress - 1)
-            print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
-                    .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
-            sys.stdout.flush()
-
-def pickle_cube(p_cube,p_name):
-    p_output = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+p_name+'.cube','wb')
-    pickle.dump(p_cube,p_output)
-    p_output.close()
-    print("File {0} sucessfully compiled.".format(SpecRead.DIRECTORY))
-
-def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
+def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
         normalize=configdict.get('enhance'),bgstrip=configdict.get('bgstrip'),\
         peakmethod=configdict.get('peakmethod')):
 
@@ -79,9 +43,7 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
     #   KA AND KB LINES OF INPUT ELEMENT(S).        #
     #################################################
     
-    cube_file = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube','rb')
-    specbatch = pickle.load(cube_file)
-    cube_file.close()     
+    specbatch = datacube
 
     if peakmethod == 'PyMcaFit': import SpecFitter
     KaElementsEnergy = EnergyLib.Energies
@@ -165,7 +127,7 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
         #  SETS SIMPLE ROI PARAMETERS  #
         ################################
 
-        stacksum = SpecMath.stacksum(specbatch)
+        stacksum = specbatch.sum
         if peakmethod == 'simple_roi':
             ka_idx = SpecMath.setROI(kaenergy[0],energyaxis,stacksum,configdict)
             ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
@@ -368,7 +330,7 @@ def getpeakmap(element_list,cube_name,ratio=configdict.get('ratio'),\
             # Reset background value since it runs inside a ufunc
             background = np.zeros([specdata.shape[0]])
 
-            scan = ImgMath.updateposition(scan[0],scan[1])
+            scan = SpecMath.updateposition(scan[0],scan[1])
             currentx = scan[0]
             currenty = scan[1]
             if debug == True: currentspectra = SpecRead.updatespectra(spec,dimension)

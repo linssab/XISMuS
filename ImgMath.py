@@ -198,21 +198,6 @@ def createcmap(color):
     cmap = ListedColormap(colorcode)
     return cmap
 
-def updateposition(a,b):
-    imagesize = SpecRead.getdimension()
-    imagex = imagesize[0]
-    imagey = imagesize[1]
-    imagedimension = imagex*imagey
-    currentx = a
-    currenty = b 
-    if currenty == imagey-1:
-        currenty=0
-        currentx+=1
-    else:
-        currenty+=1
-    actual=([currentx,currenty])
-    return actual
-
 def flattenhistogram(image):
     hist,bins = np.histogram(image.flatten(),256,[0,256])
     cdf = hist.cumsum()

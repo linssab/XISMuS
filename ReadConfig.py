@@ -10,7 +10,7 @@ import logging
 import os
 
 workpath = os.getcwd()
-configfile = workpath + '\config.MC.cfg'
+configfile = workpath + '\config.cfg'
 
 logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
         filename = 'logfile.log',level = logging.DEBUG)

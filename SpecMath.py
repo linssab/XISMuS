@@ -1,17 +1,19 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a3.00                         #
+#                        version: a3.10                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
 
 import logging
 import os
+import sys
 import numpy as np
 import math
 import scipy.signal
 import matplotlib.pyplot as plt
+import pickle
 import SpecRead
 import EnergyLib
 from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
@@ -31,6 +33,76 @@ os.environ['NUMBAPRO_CUDA_DRIVER']      =\
 
 NOISE = 80
 FANO = 0.114
+
+class datacube:
+    
+    ndim = 0
+
+    def __init__(__self__,dtypes):
+        __self__.dimension = SpecRead.getdimension()
+        __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+        __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
+        specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
+        __self__.matrix = np.zeros(\
+                [__self__.dimension[0],__self__.dimension[1],specsize.shape[0]])
+    
+    def MPS(__self__):
+        __self__.mps = np.zeros([__self__.matrix.shape[2]])
+        for c in range(__self__.matrix.shape[2]):
+            for x in range(__self__.matrix.shape[0]):
+                for y in range(__self__.matrix.shape[1]):
+                    if __self__.mps[c] < __self__.matrix[x,y,c]: __self__.mps[c] = __self__.matrix[x,y,c]
+
+    def stacksum(__self__):
+        __self__.sum = np.zeros([__self__.matrix.shape[2]])
+        for x in range(__self__.matrix.shape[0]):
+            for y in range(__self__.matrix.shape[1]):
+                __self__.sum += __self__.matrix[x,y]
+
+    def save_cube(__self__):
+        cube_name = SpecRead.DIRECTORY
+        p_output = open(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\'+cube_name+'.cube','wb')
+        pickle.dump(__self__,p_output)
+        p_output.close()
+        print("File {0} sucessfully compiled.".format(SpecRead.DIRECTORY))
+
+
+    def compile_cube(__self__):
+        currentspectra = SpecRead.getfirstfile()
+        x,y,scan = 0,0,(0,0)
+        for iteration in range(__self__.img_size):
+            spec = currentspectra
+            specdata = SpecRead.getdata(spec)
+            for i in range(len(specdata)):
+                __self__.matrix[x][y][i] = specdata[i]
+            scan = updateposition(scan[0],scan[1])
+            x,y = scan[0],scan[1]
+            currentspectra = SpecRead.updatespectra(spec,\
+                    __self__.dimension[0]*__self__.dimension[1])
+            progress = int(iteration/__self__.img_size*20)
+            blank = (20 - progress - 1)
+            print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
+                    .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
+            sys.stdout.flush()
+        print("\nCalculating Summation and Maximum Pixel Spectrum...")
+        datacube.MPS(__self__)
+        datacube.stacksum(__self__)
+        datacube.save_cube(__self__)
+
+def updateposition(a,b):
+    imagesize = SpecRead.getdimension()
+    imagex = imagesize[0]
+    imagey = imagesize[1]
+    imagedimension = imagex*imagey
+    currentx = a
+    currenty = b 
+    if currenty == imagey-1:
+        currenty=0
+        currentx+=1
+    else:
+        currenty+=1
+    actual=([currentx,currenty])
+    return actual
 
 def function(ydata,x):
     return ydata[x]
@@ -55,8 +127,8 @@ def energyaxis():
     return calibration[0]
 
 def getstackplot(datacube,*args):
-    stack = stacksum(datacube)
-    mps = MPS(datacube)
+    stack = datacube.sum
+    mps = datacube.mps
     energy = energyaxis()
     if '-bg' and '-semilog' in args:
         bg = background_summation(datacube)
@@ -75,26 +147,11 @@ def getstackplot(datacube,*args):
     plt.show()
     return 0
 
-def MPS(datacube):
-    mps_vector = np.zeros([datacube.matrix.shape[2]])
-    for c in range(datacube.matrix.shape[2]):
-        for x in range(datacube.matrix.shape[0]):
-            for y in range(datacube.matrix.shape[1]):
-                if mps_vector[c] < datacube.matrix[x,y,c]: mps_vector[c] = datacube.matrix[x,y,c]
-    return mps_vector
-
-def stacksum(datacube):
-    stack = np.zeros([datacube.matrix.shape[2]])
-    for x in range(datacube.matrix.shape[0]):
-        for y in range(datacube.matrix.shape[1]):
-            stack += datacube.matrix[x,y]
-    return stack
-
-def background_summation(datacube):
-    bg_sum = np.zeros([datacube.matrix.shape[2]])
-    for x in range(datacube.matrix.shape[0]):
-        for y in range(datacube.matrix.shape[1]):
-            bg_sum += peakstrip(datacube.matrix[x,y],24,5)
+def background_summation(a_datacube):
+    bg_sum = np.zeros([a_datacube.matrix.shape[2]])
+    for x in range(a_datacube.matrix.shape[0]):
+        for y in range(a_datacube.matrix.shape[1]):
+            bg_sum += peakstrip(a_datacube.matrix[x,y],24,5)
     return bg_sum
 
 def sigma(energy):

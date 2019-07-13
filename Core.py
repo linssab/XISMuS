@@ -15,9 +15,11 @@ def plot(image,color):
 if __name__=="__main__":
     import Compounds
     import numpy as np
-    import sys, os
+    import sys, os, pickle
     import SpecRead
+    import SpecMath
     import ImgMath
+    import Mapping
     from PyMca5.PyMcaPhysics import Elements
     import matplotlib.pyplot as plt
     import logging
@@ -42,14 +44,13 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     
     if flag1 == '-compilecube':
-        import Mapping
-        cube_name = SpecRead.DIRECTORY
-        specbatch = Mapping.datacube(['xrf'])
-        specbatch.compile_cube()
-        Mapping.pickle_cube(specbatch,cube_name)
+        if os.path.exists(SpecRead.cube_path):
+            print("Datacube is already compiled.")
+        else:
+            specbatch = SpecMath.datacube(['xrf'])
+            specbatch.compile_cube()
 
     if flag1 == '-findelement':    
-        import Mapping
         input_elements = input('Please input which elements are to be mapped: \n')
         input_elements = input_elements.split(' ')
         for arg in range(len(input_elements)):
@@ -59,29 +60,23 @@ an image where the element is displayed in proportion to the most abundant eleme
                 raise Exception("%s not an element!" % input_elements[arg])
                 logging.exception("{0} is not a chemical element!".format(input_elements[arg]))
        
-        cube_name = SpecRead.DIRECTORY
-        print(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube')
-        if os.path.exists(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube'):
-
+        cube_path = SpecRead.cube_path
+        print(cube_path)
+        if os.path.exists(cube_path):
+        
+            cube_file = open(cube_path,'rb')
+            specbatch = pickle.load(cube_file)
+            cube_file.close() 
+                
             if '-normalize' in sys.argv:
-                Mapping.getpeakmap(elementlist,cube_name)
+                Mapping.getpeakmap(elementlist,specbatch)
             else:
-                Mapping.getpeakmap(elementlist,cube_name)
+                Mapping.getpeakmap(elementlist,specbatch)
     
         else:
-            
-            #CREATES A DATACUBE 
-            
             print("Compile is necessary.")
-            specbatch = Mapping.datacube(['xrf'])
-            specbatch.compile_cube()
-            Mapping.pickle_cube(specbatch,cube_name)
+            print("Please run 'python Core.py -compilecube' and try again.")
 
-            if '-normalize' in sys.argv:
-                Mapping.getpeakmap(elementlist,cube_name)
-            else:
-                Mapping.getpeakmap(elementlist,cube_name)
-    
     if flag1 == '-plotstack':
         try: flag2, flag3 = sys.argv[2],sys.argv[3]
         except: flag2, flag3 = None, None

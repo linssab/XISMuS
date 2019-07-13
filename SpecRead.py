@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a2.2                          #
+#                        version: a2.3                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -20,9 +20,10 @@ with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 DIRECTORY = CONFIG.get('directory')
-dirname = 'C:/samples/'+DIRECTORY+'/'
+dirname = 'C:\samples\\'+DIRECTORY+'\\'
 firstfile = CONFIG.get('firstfile')
 workpath = os.getcwd()
+cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
 dimension_file = dirname + '\colonneXrighe.txt'
 try: os.mkdir(workpath + '\output\\' + DIRECTORY)
 except: pass
