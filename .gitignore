@@ -1,6 +1,9 @@
 *.pyc
 *.log
 *.png
+*.ipynb
 timestamps.txt
 output\
 \output
+.ipynb_checkpoints\
+\.ipynb_checkpoints
