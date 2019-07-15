@@ -370,27 +370,22 @@ def getpeakmap(element_list,datacube):
     ImgMath.split_and_save(datacube,elmap,element_list)
     return elmap
 
-def getdensitymap():
+def getdensitymap(datacube):
     
     ##########-getdensitymap-############
     #   RETUNRS A 2D-ARRAY WITH TOTAL   #
     #   COUNTS PER PIXEL.               #
     #####################################
 
-    print("BG mode: {0}".format(configdict.get('bgstrip')))
+    print("BG mode: {0}".format(datacube.config.get('bgstrip')))
     logging.info("Started acquisition of density map")
     
-    cube = datacube(['xrf']) 
-    cube.compile_cube()
-    density_map = np.zeros([cube.dimension[0],cube.dimension[1]])
-    for x in range(cube.dimension[0]):
-        for y in range(cube.dimension[1]):
-            spec = cube.matrix[x][y]
-            if configdict.get('bgstrip') == 'SNIPBG': 
-                snip_bg = np.zeros([spec.shape[0]])
-                SpecMath.peakstrip(spec,24,5)
-            else: background = np.zeros([spec.shape[0]])
-            density_map[x][y] = sum(spec)-sum(snip_bg)
+    density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]])
+    for x in range(datacube.dimension[0]):
+        for y in range(datacube.dimension[1]):
+            spec = datacube.matrix[x][y]
+            background = datacube.background[x][y]    
+            density_map[x][y] = sum(spec)-sum(background)
      
     logging.info("Finished fetching density map!")
     print("Execution took %s seconds" % (time.time() - timer))
@@ -400,7 +395,7 @@ def getdensitymap():
     ax.set_title('Counts/pixel')
     ImgMath.colorbar(mapimage)
     plt.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'\{0}_{1}_densitymap.png'\
-            .format(SpecRead.DIRECTORY,configdict.get('bgstrip')),dpi=150,transparent=False) 
+            .format(SpecRead.DIRECTORY,datacube.config.get('bgstrip')),dpi=150,transparent=False) 
     plt.show()
     return density_map
 

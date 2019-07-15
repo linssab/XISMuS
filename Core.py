@@ -48,10 +48,12 @@ if __name__=="__main__":
             cube_size = convert_bytes(cube_stats.st_size)
             print("Datacube is compiled. Cube size: {0}".format(cube_size))
             print("Verifying packed elements...")
+            
             import pickle
             cube_file = open(cube_path,'rb')
             datacube = pickle.load(cube_file)
             cube_file.close() 
+            
             packed_elements = datacube.check_packed_elements()
             if len(packed_elements) == 0: print("None found.")
             print("Done.")
@@ -82,9 +84,10 @@ an image where the element is displayed in proportion to the most abundant eleme
                 raise Exception("%s not an element!" % input_elements[arg])
                 logging.exception("{0} is not a chemical element!".format(input_elements[arg]))
        
-        print(cube_path)
+        print("Loading {0}".format(cube_path))
+        sys.stdout.flush()
         if os.path.exists(cube_path):
-        
+            
             cube_file = open(cube_path,'rb')
             datacube = pickle.load(cube_file)
             cube_file.close() 
@@ -106,21 +109,33 @@ an image where the element is displayed in proportion to the most abundant eleme
         except: flag3 = None
         import SpecMath
         import pickle
+        print("Loading {0}".format(cube_path))
+        sys.stdout.flush()
         if os.path.exists(cube_path):
+            
             cube_file = open(cube_path,'rb')
             datacube = pickle.load(cube_file)
             cube_file.close()
+            
             energyaxis = SpecMath.energyaxis()
             SpecMath.getstackplot(datacube,flag2,flag3)
         else:
             print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
 
     if flag1 == '-plotmap':
-        import Mapping
-        # FIX FOR RECEIVEING THE DATACUBE
-        print("Fetching density map...")
-        Mapping.getdensitymap()
-    
+        print("Loading {0}".format(cube_path))
+        sys.stdout.flush()
+        if os.path.exists(cube_path):
+            
+            cube_file = open(cube_path,'rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close()
+            
+            Mapping.getdensitymap(datacube)
+        else:
+            print("Compile is necessary.")
+            print("Please run 'python Core.py -compilecube' and try again.")
+
     if flag1 == '-getratios':
         for arg in range(len(sys.argv)):
             if sys.argv[arg] in Elements.ElementList:
