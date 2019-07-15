@@ -23,6 +23,8 @@ DIRECTORY = CONFIG.get('directory')
 dirname = 'C:\samples\\'+DIRECTORY+'\\'
 firstfile = CONFIG.get('firstfile')
 workpath = os.getcwd()
+
+# cube_path will be changed to the SAMPLE folder in upcoming versions
 cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
 dimension_file = dirname + '\colonneXrighe.txt'
 try: os.mkdir(workpath + '\output\\' + DIRECTORY)

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a3.50                         #
+#                        version: a3.60                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -31,11 +31,13 @@ imagex = imagsize[0]
 imagey = imagsize[1]
 dimension = imagex*imagey
 
-configdict = SpecRead.CONFIG
-
-def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
-        normalize=configdict.get('enhance'),bgstrip=configdict.get('bgstrip'),\
-        peakmethod=configdict.get('peakmethod')):
+def getpeakmap(element_list,datacube):
+    
+    configdict = datacube.config
+    ratio = configdict.get('ratio')
+    normalize = configdict.get('enhance')
+    bgstrip = configdict.get('bgstrip')
+    peakmethod = configdict.get('peakmethod')
 
     ################-getpeakmap-#####################
     #   GETPEAKMAP READS THE BATCH OF SPECTRA AND   #
@@ -43,8 +45,6 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
     #   KA AND KB LINES OF INPUT ELEMENT(S).        #
     #################################################
     
-    specbatch = datacube
-
     if peakmethod == 'PyMcaFit': import SpecFitter
     KaElementsEnergy = EnergyLib.Energies
     KbElementsEnergy = EnergyLib.kbEnergies
@@ -127,7 +127,7 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
         #  SETS SIMPLE ROI PARAMETERS  #
         ################################
 
-        stacksum = specbatch.sum
+        stacksum = datacube.sum
         if peakmethod == 'simple_roi':
             ka_idx = SpecMath.setROI(kaenergy[0],energyaxis,stacksum,configdict)
             ka_peakdata = stacksum[ka_idx[0]:ka_idx[1]]
@@ -137,7 +137,7 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
                 print(ka_idx,kb_idx)
                 if kb_idx[3] == False: 
                     print("No beta line detected. Continuing with alpha only.")
-                    configdict['ratio'] = False  
+                    ratio = False  
             else:
                 print(ka_idx)
     
@@ -149,8 +149,8 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
         for ITERATION in range(dimension):
                
             spec = currentspectra  #updates the current file name / debug mode only
-            RAW = specbatch.matrix[currentx][currenty]
-            specdata = specbatch.matrix[currentx][currenty]
+            RAW = datacube.matrix[currentx][currenty]
+            specdata = datacube.matrix[currentx][currenty]
             
             #######################################
             #     ATTEMPT TO FIT THE SPECFILE     #
@@ -165,9 +165,9 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
                     FITFAIL += 1
                     usedif2 = True
                     print("\tCHANNEL COUNT METHOD USED FOR FILE {0}/{1}!\t"\
-                            .format(ITERATION,specbatch.img_size))
+                            .format(ITERATION,datacube.img_size))
                     logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
-                            .format(ITERATION,specbatch.img_size))
+                            .format(ITERATION,datacube.img_size))
             elif peakmethod == 'simple_roi': specdata = specdata
             elif peakmethod == 'auto_roi': specdata = specdata
             else: 
@@ -178,10 +178,7 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
             # AND SECOND DIFFERENTIAL #
             ###########################
             
-            if bgstrip == 'SNIPBG': 
-                background = SpecMath.peakstrip(RAW,24,5)
-                logging.debug('SNIPGB calculated for spec {0}'.format(spec))
-            else: background = np.zeros([specdata.shape[0]])
+            background = datacube.background[currentx][currenty]
             
             if usedif2 == True: 
                 dif2 = SpecMath.getdif2(specdata,energyaxis,1)
@@ -355,8 +352,7 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
         timestamps = open(SpecRead.workpath + '/timestamps.txt'\
                     .format(Element,SpecRead.DIRECTORY),'a')
         timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{4} seconds\n"\
-                    .format(Element,configdict.get('bgstrip'),configdict.get('enhance'),\
-                    configdict.get('peakmethod'),timestamp,\
+                    .format(Element,bgstrip,normalize,peakmethod,timestamp,\
                     time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
         
         if peakmethod == 'PyMcaFit': plt.plot(energyaxis,CUMSUM,label='CUMSUM CURRENT DATA')
@@ -371,7 +367,7 @@ def getpeakmap(element_list,datacube,ratio=configdict.get('ratio'),\
         logging.warning("{0} not an element!".format(element_list))
         raise ValueError("{0} not an element!".format(element_list))
     
-    ImgMath.split_and_save(elmap,element_list,configdict)
+    ImgMath.split_and_save(datacube,elmap,element_list)
     return elmap
 
 def getdensitymap():

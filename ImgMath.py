@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: a1.3                          #
+#                        version: a1.31                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -208,7 +208,7 @@ def flattenhistogram(image):
     image = cdf[image]
     return image
 
-def split_and_save(map_array,element_list,configdict):
+def split_and_save(datacube,map_array,element_list):
     
     imagsize = SpecRead.getdimension()
     imagex = imagsize[0]
@@ -237,12 +237,12 @@ def split_and_save(map_array,element_list,configdict):
             for j in range(imagey):
                 image[i][j] = map_array[i][j][Element]
         if image.max() > 0: image = image/image.max()*255
-
+        datacube.pack_element(image,element_list[Element])
         if len(element_list) > 1: ax = axs[Element]
         else: ax=axs
         fig_list.append(ax.imshow(image,cmap='gray'))
         colorbar(fig_list[Element])
-        if configdict.get('ratio') == False:
+        if datacube.config.get('ratio') == False:
             ax.set_title(element_list[Element]+' alpha line')
         else: ax.set_title(element_list[Element])
         if imagex > target_size or imagey > target_size: large_image = image
@@ -250,8 +250,8 @@ def split_and_save(map_array,element_list,configdict):
         
         cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
             '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
-            .format(element_list[Element],configdict.get('bgstrip'),configdict.get('ratio')\
-            ,configdict.get('enhance'),configdict.get('peakmethod')),large_image)
+            .format(element_list[Element],datacube.config.get('bgstrip'),datacube.config.get('ratio')\
+            ,datacube.config.get('enhance'),datacube.config.get('peakmethod')),large_image)
 
     ##################################################
     
@@ -261,6 +261,7 @@ def split_and_save(map_array,element_list,configdict):
             ,configdict.get('enhance'),configdict.get('peakmethod'))) 
     plt.show()
     
+    datacube.save_cube() 
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
     print("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0

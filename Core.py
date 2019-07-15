@@ -12,6 +12,15 @@ def plot(image,color):
     plt.show()
     return 0
 
+def convert_bytes(num):
+    """
+    Obtained from https://stackoverflow.com/questions/210408
+    """
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+
 if __name__=="__main__":
     import Compounds
     import numpy as np
@@ -25,15 +34,28 @@ if __name__=="__main__":
     import logging
     
     config = SpecRead.CONFIG
+    cube_path = SpecRead.cube_path
+    elementlist = []
+    flag1 = sys.argv[1]
 
     inputlist = ['-findelement','Core.py','-normalize','-getratios','-dir']
     if '-dir' in sys.argv:
         params = config
         print(params)
         print(SpecRead.dirname)
-
-    elementlist = []
-    flag1 = sys.argv[1]
+        if os.path.exists(cube_path):
+            cube_stats = os.stat(cube_path)
+            cube_size = convert_bytes(cube_stats.st_size)
+            print("Datacube is compiled. Cube size: {0}".format(cube_size))
+            print("Verifying packed elements...")
+            import pickle
+            cube_file = open(cube_path,'rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close() 
+            packed_elements = datacube.check_packed_elements()
+            if len(packed_elements) == 0: print("None found.")
+            print("Done.")
+        else: print("Datacube not compiled. Please run -compilecube command.")
 
     if flag1 == '-help':
         print("\nUSAGE: '-findelement'; plots a 2D map of elements which are to be set.\
@@ -44,10 +66,10 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     
     if flag1 == '-compilecube':
-        if os.path.exists(SpecRead.cube_path):
+        if os.path.exists(cube_path):
             print("Datacube is already compiled.")
         else:
-            specbatch = SpecMath.datacube(['xrf'])
+            specbatch = SpecMath.datacube(['xrf'],config)
             specbatch.compile_cube()
 
     if flag1 == '-findelement':    
@@ -60,31 +82,32 @@ an image where the element is displayed in proportion to the most abundant eleme
                 raise Exception("%s not an element!" % input_elements[arg])
                 logging.exception("{0} is not a chemical element!".format(input_elements[arg]))
        
-        cube_path = SpecRead.cube_path
         print(cube_path)
         if os.path.exists(cube_path):
         
             cube_file = open(cube_path,'rb')
-            specbatch = pickle.load(cube_file)
+            datacube = pickle.load(cube_file)
             cube_file.close() 
-                
+            
             if '-normalize' in sys.argv:
-                Mapping.getpeakmap(elementlist,specbatch)
+                Mapping.getpeakmap(elementlist,datacube)
             else:
-                Mapping.getpeakmap(elementlist,specbatch)
+                Mapping.getpeakmap(elementlist,datacube)
     
         else:
             print("Compile is necessary.")
             print("Please run 'python Core.py -compilecube' and try again.")
 
     if flag1 == '-plotstack':
-        try: flag2, flag3 = sys.argv[2],sys.argv[3]
-        except: flag2, flag3 = None, None
+        cube_name = SpecRead.DIRECTORY
+        try: flag2 = sys.argv[2]
+        except: flag2 = None
+        try: flag3 = sys.argv[3]
+        except: flag3 = None
         import SpecMath
         import pickle
-        cube_name = SpecRead.DIRECTORY
-        if os.path.exists(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube'):
-            cube_file = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube','rb')
+        if os.path.exists(cube_path):
+            cube_file = open(cube_path,'rb')
             datacube = pickle.load(cube_file)
             cube_file.close()
             energyaxis = SpecMath.energyaxis()
@@ -94,6 +117,7 @@ an image where the element is displayed in proportion to the most abundant eleme
 
     if flag1 == '-plotmap':
         import Mapping
+        # FIX FOR RECEIVEING THE DATACUBE
         print("Fetching density map...")
         Mapping.getdensitymap()
     
@@ -114,7 +138,7 @@ an image where the element is displayed in proportion to the most abundant eleme
         except: raise FileNotFoundError("ratio file for {0} not found.".format(elementlist))
 
         compound = Compounds.compound()
-        compound.set_compound('AuSheet')
+        compound.set_compound('PbWhite')
         compound.set_attenuation(elementlist[0])
 
         #######################################

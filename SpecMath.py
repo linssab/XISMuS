@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a3.10                         #
+#                        version: a3.20                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -37,35 +37,48 @@ FANO = 0.114
 class datacube:
     
     ndim = 0
+    specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
 
-    def __init__(__self__,dtypes):
+    def __init__(__self__,dtypes,configuration):
         __self__.dimension = SpecRead.getdimension()
         __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
         __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
-        specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
-        __self__.matrix = np.zeros(\
-                [__self__.dimension[0],__self__.dimension[1],specsize.shape[0]])
+        __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
+                datacube.specsize.shape[0]],dtype='float64',order='C')
+        __self__.config = configuration
     
     def MPS(__self__):
-        __self__.mps = np.zeros([__self__.matrix.shape[2]])
+        __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for c in range(__self__.matrix.shape[2]):
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
                     if __self__.mps[c] < __self__.matrix[x,y,c]: __self__.mps[c] = __self__.matrix[x,y,c]
 
     def stacksum(__self__):
-        __self__.sum = np.zeros([__self__.matrix.shape[2]])
+        __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
+    
+    def strip_background(__self__,bgstrip=None):
+        bgstrip = __self__.config['bgstrip']
+        __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
+                datacube.specsize.shape[0]],dtype='float64',order='C')
+        if bgstrip == None:
+            pass
+        elif bgstrip == 'SNIPBG':
+            __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
+            for x in range(__self__.matrix.shape[0]):
+                for y in range(__self__.matrix.shape[1]):
+                    stripped = peakstrip(__self__.matrix[x,y],24,5)
+                    __self__.background[x,y] = stripped
+                    __self__.sum_bg += stripped
 
     def save_cube(__self__):
-        cube_name = SpecRead.DIRECTORY
-        p_output = open(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\'+cube_name+'.cube','wb')
+        p_output = open(SpecRead.cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
         print("File {0} sucessfully compiled.".format(SpecRead.DIRECTORY))
-
 
     def compile_cube(__self__):
         currentspectra = SpecRead.getfirstfile()
@@ -84,10 +97,28 @@ class datacube:
             print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
                     .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
             sys.stdout.flush()
-        print("\nCalculating Summation and Maximum Pixel Spectrum...")
+        print("\nCalculating Summation and Maximum Pixel Spectrum and stripping background.")
         datacube.MPS(__self__)
         datacube.stacksum(__self__)
+        datacube.strip_background(__self__)
         datacube.save_cube(__self__)
+    
+    def pack_element(__self__,image,element):
+        __self__.__dict__[element] = image
+        print("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
+
+    def unpack_element(__self__,element):
+        unpacked = __self__.element
+        return unpacked
+
+    def check_packed_elements(__self__):
+        packed = []
+        for element in EnergyLib.ElementList:
+            if hasattr(__self__,element): 
+                packed.append(element)
+                print("Found a map for {0}".format(element))
+            else: pass
+        return packed
 
 def updateposition(a,b):
     imagesize = SpecRead.getdimension()
@@ -127,32 +158,28 @@ def energyaxis():
     return calibration[0]
 
 def getstackplot(datacube,*args):
+    print(args)
     stack = datacube.sum
     mps = datacube.mps
+    bg = datacube.sum_bg
     energy = energyaxis()
-    if '-bg' and '-semilog' in args:
-        bg = background_summation(datacube)
+    if '-bg' in args:
         plt.semilogy(energy,stack,label="Summation")
         plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
         plt.semilogy(energy,bg,label="Background estimation")
-    elif '-semilog' in args: 
+    elif '-semilog' in args and '-bg' not in args: 
         stack = stack/stack.max()
         mps = mps/mps.max()
         plt.semilogy(energy,stack,label="Summation")
         plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
+        plt.ylabel("Normalized counts")
     else:
         plt.plot(energy,stack,label="Summation")
         plt.plot(energy,mps,label="Maximum Pixel Spectrum")
     plt.legend()
+    plt.xlabel("Energy (KeV)")
     plt.show()
     return 0
-
-def background_summation(a_datacube):
-    bg_sum = np.zeros([a_datacube.matrix.shape[2]])
-    for x in range(a_datacube.matrix.shape[0]):
-        for y in range(a_datacube.matrix.shape[1]):
-            bg_sum += peakstrip(a_datacube.matrix[x,y],24,5)
-    return bg_sum
 
 def sigma(energy):
     return math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))
@@ -361,7 +388,7 @@ def peakstrip(an_array,cycles,width):
 
 if __name__=="__main__":
     import pickle 
-    cube_name = "monica"
+    cube_name = "cuoio2"
     cube_file = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube','rb')
     datacube = pickle.load(cube_file)
     cube_file.close()
