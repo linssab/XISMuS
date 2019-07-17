@@ -67,7 +67,6 @@ def getpeakmap(element_list,datacube):
     
     CUMSUM = np.zeros([len(energyaxis)])
     CUMSUM_RAW = np.zeros([len(energyaxis)])
-    BGSUM = np.zeros([len(energyaxis)])
 
     ######################################################
 
@@ -135,9 +134,12 @@ def getpeakmap(element_list,datacube):
                 kb_idx = SpecMath.setROI(kbenergy[0],energyaxis,stacksum,configdict)
                 kb_peakdata = stacksum[kb_idx[0]:kb_idx[1]]
                 print(ka_idx,kb_idx)
-                if kb_idx[3] == False: 
+                if kb_idx[3] == False and ka_idx[3] == False:
+                    print("No alpha nor beta lines found. Aborting...")
+                    sys.exit()
+                elif kb_idx[3] == False: 
                     print("No beta line detected. Continuing with alpha only.")
-                    ratio = False  
+                    ratio = False
             else:
                 print(ka_idx)
     
@@ -187,7 +189,6 @@ def getpeakmap(element_list,datacube):
                     elif dif2[i] > -1: dif2[i] = 0
             else: dif2 = np.zeros([specdata.shape[0]])
 
-            BGSUM += background
             ############################
             #  VERIFIES THE PEAK SIZE  #
             # EXPERIMENTAL FOR NRMLIZE #
@@ -302,6 +303,11 @@ def getpeakmap(element_list,datacube):
                 column = scan[1]
                 
                 if ratio == True: 
+                   
+                    #################################
+                    # WRITES NET PEAK AREAS TO FILE #
+                    #################################
+                    
                     try: 
                         r_file = open(ratiofiles[Element],'a')
                         if debug == True: 
@@ -318,14 +324,11 @@ def getpeakmap(element_list,datacube):
                     Check Config.cfg for the correct spelling of peakmethod option!\
                     ka={0},kb={1}".format(ka,kb))
 
-            #####################################
+                    #################################
 
             #########################################
             #   UPDATE ELMAP POSITION AND SPECTRA   #
             #########################################        
-
-            # Reset background value since it runs inside a ufunc
-            background = np.zeros([specdata.shape[0]])
 
             scan = SpecMath.updateposition(scan[0],scan[1])
             currentx = scan[0]
@@ -358,16 +361,17 @@ def getpeakmap(element_list,datacube):
         if peakmethod == 'PyMcaFit': plt.plot(energyaxis,CUMSUM,label='CUMSUM CURRENT DATA')
         plt.plot(energyaxis,CUMSUM_RAW,label='CUMSUM RAW DATA')
         plt.plot(energyaxis,stacksum,label='stackplot')
-        plt.plot(energyaxis,BGSUM,label='background')
+        plt.plot(energyaxis,datacube.sum_bg,label='background')
         plt.legend()
         plt.show()
                         
         logging.info("Finished map acquisition!")
+    
     else:
         logging.warning("{0} not an element!".format(element_list))
         raise ValueError("{0} not an element!".format(element_list))
     
-    ImgMath.split_and_save(datacube,elmap,element_list)
+    ImgMath.split_and_save(datacube,elmap,element_list,ratio)
     return elmap
 
 def getdensitymap(datacube):

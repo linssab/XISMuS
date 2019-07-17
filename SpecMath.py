@@ -78,7 +78,7 @@ class datacube:
         p_output = open(SpecRead.cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
-        print("File {0} sucessfully compiled.".format(SpecRead.DIRECTORY))
+        print("File {0}.cube sucessfully compiled.".format(SpecRead.DIRECTORY))
 
     def compile_cube(__self__):
         currentspectra = SpecRead.getfirstfile()
@@ -98,6 +98,7 @@ class datacube:
                     .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
             sys.stdout.flush()
         print("\nCalculating Summation and Maximum Pixel Spectrum and stripping background.")
+        sys.stdout.flush()
         datacube.MPS(__self__)
         datacube.stacksum(__self__)
         datacube.strip_background(__self__)

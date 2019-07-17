@@ -37,12 +37,20 @@ if __name__=="__main__":
     cube_path = SpecRead.cube_path
     elementlist = []
     flag1 = sys.argv[1]
-
     inputlist = ['-findelement','Core.py','-normalize','-getratios','-dir']
+    
+    if flag1 == '-help':
+        print("\nUSAGE: '-findelement'; plots a 2D map of elements which are to be set.\
+Additionally, you can type '-normalize' when finding one element to generate\
+an image where the element is displayed in proportion to the most abundant element.\n\
+       '-plotmap'; plots a density map\n\
+       '-plotstack'; plots the sum spectra of all sample. Optional: you can add '-semilog' to plot it in semilog mode.\n\
+       '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
+    
     if '-dir' in sys.argv:
-        params = config
-        print(params)
-        print(SpecRead.dirname)
+        print("Sample files location: {0}".format(SpecRead.dirname))
+        print("Configuration from config.cfg:")
+        print(config)
         if os.path.exists(cube_path):
             cube_stats = os.stat(cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
@@ -59,14 +67,6 @@ if __name__=="__main__":
             print("Done.")
         else: print("Datacube not compiled. Please run -compilecube command.")
 
-    if flag1 == '-help':
-        print("\nUSAGE: '-findelement'; plots a 2D map of elements which are to be set.\
-Additionally, you can type '-normalize' when finding one element to generate\
-an image where the element is displayed in proportion to the most abundant element.\n\
-       '-plotmap'; plots a density map\n\
-       '-plotstack'; plots the sum spectra of all sample. Optional: you can add '-semilog' to plot it in semilog mode.\n\
-       '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
-    
     if flag1 == '-compilecube':
         if os.path.exists(cube_path):
             print("Datacube is already compiled.")

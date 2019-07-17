@@ -208,7 +208,7 @@ def flattenhistogram(image):
     image = cdf[image]
     return image
 
-def split_and_save(datacube,map_array,element_list):
+def split_and_save(datacube,map_array,element_list,ratio):
     
     imagsize = SpecRead.getdimension()
     imagex = imagsize[0]
@@ -242,7 +242,7 @@ def split_and_save(datacube,map_array,element_list):
         else: ax=axs
         fig_list.append(ax.imshow(image,cmap='gray'))
         colorbar(fig_list[Element])
-        if datacube.config.get('ratio') == False:
+        if ratio == False:
             ax.set_title(element_list[Element]+' alpha line')
         else: ax.set_title(element_list[Element])
         if imagex > target_size or imagey > target_size: large_image = image
