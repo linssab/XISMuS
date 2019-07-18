@@ -26,8 +26,10 @@ workpath = os.getcwd()
 
 # cube_path will be changed to the SAMPLE folder in upcoming versions
 cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
+output_path = workpath+'\output\\'+DIRECTORY+'\\'
 dimension_file = dirname + '\colonneXrighe.txt'
-try: os.mkdir(workpath + '\output\\' + DIRECTORY)
+
+try: os.mkdir(output_path)
 except: pass
 
 def getfirstfile():

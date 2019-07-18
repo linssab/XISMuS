@@ -44,6 +44,7 @@ class compound:
         __self__.density = 0
         __self__.weight = {}
         __self__.name = 'new_compound'
+        __self__.identity = np.nan
     
     def set_compound(__self__,*args,ctype=None,mode='by_atom',name='new_compound'):
         if ctype == 'custom' and mode == 'by_atom':

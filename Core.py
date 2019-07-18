@@ -34,6 +34,7 @@ if __name__=="__main__":
     import logging
     
     config = SpecRead.CONFIG
+    cube_name = SpecRead.DIRECTORY
     cube_path = SpecRead.cube_path
     elementlist = []
     flag1 = sys.argv[1]
@@ -102,7 +103,6 @@ an image where the element is displayed in proportion to the most abundant eleme
             print("Please run 'python Core.py -compilecube' and try again.")
 
     if flag1 == '-plotstack':
-        cube_name = SpecRead.DIRECTORY
         try: flag2 = sys.argv[2]
         except: flag2 = None
         try: flag3 = sys.argv[3]
@@ -147,39 +147,58 @@ an image where the element is displayed in proportion to the most abundant eleme
                     raise Exception("%s not an element!" % sys.argv[arg])
         
         try: 
-            ratiofile = SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
-                .format(elementlist[0],SpecRead.DIRECTORY)
+            ratiofile = SpecRead.output_path + '{1}_ratio_{0}.txt'\
+                    .format(elementlist[0],SpecRead.DIRECTORY)
             ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
         except: raise FileNotFoundError("ratio file for {0} not found.".format(elementlist))
+        
+        if os.path.exists(cube_path):
+            print("Loading {0} ...".format(cube_path))
+            sys.stdout.flush()
+            cube_file = open(cube_path,'rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close()
+        else:
+            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
 
         compound = Compounds.compound()
         compound.set_compound('PbWhite')
+        compound.identity = 'Pb'
         compound.set_attenuation(elementlist[0])
 
-        #######################################
-        #  MOST ABUNDANT ELEMENT IN COMPOUND  #
-        #######################################
-
-        unpacked = []
-        abundance = 0
-        for key in compound.weight:
-            unpacked.append(key)
-            if compound.weight[key] > abundance: mae, abundance = key, compound.weight[key]
+        #############################
+        # COMPOUND IDENTITY ELEMENT #
+        #############################
+        
+        # abundance element method is deprecated
+        # preference is given for the identy element from database. nonetheless,
+        # if identity element does not exist (for custom or mixture compounds) abundance
+        # element is used
+        
+        mask = ImgMath.mask(datacube,compound)
+        mae = compound.identity
 
         print("Most abundant element in compound: {}".format(mae))
         
+
         #######################################
 
         try:
             maps = []
-            mae_file = SpecRead.workpath + '/output/{1}_ratio_{0}.txt'\
+            """
+            mae_file = SpecRead.output_path + '{1}_ratio_{0}.txt'\
                 .format(mae,SpecRead.DIRECTORY)
             mae_matrix = SpecRead.RatioMatrixReadFile(mae_file)
+            """
             fig, ax = plt.subplots(1,2,sharey=True)
             maps.append(ax[0].imshow(ratiomatrix))
             ax[0].set_title('{} ratio map'.format(elementlist[0]))
+            """
             maps.append(ax[1].imshow(mae_matrix))
             ax[1].set_title('{} ratio map'.format(mae))
+            """
+            maps.append(ax[1].imshow(mask))
+            ax[1].set_title('{} mask'.format(compound.identity))
             ImgMath.colorbar(maps[0])
             ImgMath.colorbar(maps[1])
             plt.show()
@@ -188,7 +207,7 @@ an image where the element is displayed in proportion to the most abundant eleme
             plt.close()
         except: raise FileNotFoundError("{0} ratio file not found!".format(mae))
         
-        heightmap = ImgMath.getheightmap(ratiomatrix,mae_matrix,\
+        heightmap = ImgMath.getheightmap(ratiomatrix,mask,\
                 config.get('thickratio'),compound)
         fig, ax = plt.subplots()
         cbar = ax.imshow(heightmap,cmap='gray')

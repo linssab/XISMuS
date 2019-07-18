@@ -23,7 +23,6 @@ timer = time.time()
 
 #################################################
 #   EXTRACT IMAGE DIMENSIONS FROM CONFIG.CFG    #
-#   AND SETS UP THE CONFIG DICTIONARY           #
 #################################################
 
 imagsize = SpecRead.getdimension()
@@ -74,8 +73,6 @@ def getpeakmap(element_list,datacube):
         logging.info("Started acquisition of {0} map(s)".format(element_list))
         print("Fetching map image for " + ", ".join(element_list) + "...")
         
-        if bgstrip != 'None': logging.warning("Background stripping is ON! - slow -")
-        
         ####### this is for debug mode #######
         currentspectra = SpecRead.getfirstfile()
         debug = False 
@@ -106,7 +103,7 @@ def getpeakmap(element_list,datacube):
                 .format(kaenergy[Element],element_list[Element]))
         
             if ratio == True:
-                ratiofiles[Element] = str(SpecRead.workpath + '/output/'+\
+                ratiofiles[Element] = str(SpecRead.output_path+\
                         '{1}_ratio_{0}.txt'.format(element_list[Element],SpecRead.DIRECTORY))
                 r_file = open(ratiofiles[Element],'w+')
                 r_file.readline()

@@ -34,6 +34,41 @@ def colorbar(mappable):
     cax = divider.append_axes("right", size="5%", pad=0.05)
     return fig.colorbar(mappable, cax=cax)
 
+def median_filter(a_2D_array,x,y):
+    try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] + a_2D_array[x+1,y] +\
+            a_2D_array[x,y-1] + a_2D_array[x-1,y-1] + a_2D_array[x+1,y-1] +\
+            a_2D_array[x,y+1] + a_2D_array[x-1,y+1] + a_2D_array[x+1,y+1])/10
+    except: average = 0
+    return average
+
+def mask(a_datacube,a_compound):
+    try: id_element = a_compound.identity
+    except: 
+        unpacked = []
+        abundance = 0
+        for key in a_compound.weight:
+            unpacked.append(key)
+            if a_compound.weight[key] > abundance: id_element, abundance = key, a_compound.weight[key]
+    
+    try: id_element_matrix = a_datacube.unpack_element(id_element)
+    except:
+        try: 
+            id_element_ratio = SpecRead.output_path + '{1}_ratio_{0}.txt'\
+                .format(id_element,SpecRead.DIRECTORY)
+            id_element_matrix = SpecRead.RatioMatrixReadFile(id_element_ratio)
+        except: raise FileNotFoundError("{0} ratio file not found!".format(id_element))
+    
+    # TO DO:
+    # check histogram to understand contrast and define threshold
+        
+    for x in range(id_element_matrix.shape[0]):
+        for y in range(id_element_matrix.shape[1]):
+            average = median_filter(id_element_matrix,x,y)
+            if id_element_matrix[x,y] < 55 and average < 55: id_element_matrix[x,y] = 0
+    
+    return id_element_matrix
+
+
 def getheightmap(depth_matrix,mask,thickratio,compound):
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
@@ -41,7 +76,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     heightmap = np.zeros([imagex,imagey])
     coefficients = compound.lin_att
     
-    heightfile = open(SpecRead.workpath + '/output/{0}_heightmap.txt'\
+    heightfile = open(SpecRead.output_path + '{0}_heightmap.txt'\
             .format(SpecRead.DIRECTORY),'w+')
     heightfile.write("-"*10 + " Thickness Values (um) of {0} "\
             .format(compound.name) + 10*"-" + '\n')
