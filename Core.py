@@ -29,7 +29,7 @@ if __name__=="__main__":
     import SpecMath
     import ImgMath
     import Mapping
-    from PyMca5.PyMcaPhysics import Elements
+    import EnergyLib
     import matplotlib.pyplot as plt
     import logging
     
@@ -38,7 +38,7 @@ if __name__=="__main__":
     cube_path = SpecRead.cube_path
     elementlist = []
     flag1 = sys.argv[1]
-    inputlist = ['-findelement','Core.py','-normalize','-getratios','-dir']
+    inputlist = ['-findelement','Core.py','-normalize','-getratios','-dir','-threshold']
     
     if flag1 == '-help':
         print("\nUSAGE: '-findelement'; plots a 2D map of elements which are to be set.\
@@ -75,11 +75,38 @@ an image where the element is displayed in proportion to the most abundant eleme
             specbatch = SpecMath.datacube(['xrf'],config)
             specbatch.compile_cube()
 
+    if flag1 == '-threshold':
+        
+        if os.path.exists(cube_path):
+            print("Loading {0} ...".format(cube_path))
+            sys.stdout.flush()
+            cube_file = open(cube_path,'rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close()
+        else:
+            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
+
+        try: 
+            element = sys.argv[2]
+            if sys.argv[3].isdigit(): t = int(sys.argv[3])
+            if element not in EnergyLib.ElementList:
+                raise ValueError("{0} not an element!".format(element))
+        except:
+            raise ValueError("No threshold input.")
+        element_matrix = datacube.unpack_element(element) 
+        element_matrix = ImgMath.threshold(element_matrix,t)
+        
+        fig, ax = plt.subplots()
+        image = ax.imshow(element_matrix,cmap='gray')
+        ImgMath.colorbar(image)
+        ax.set_title("{0} map. Threshold {1}".format(element,t))
+        plt.show()
+
     if flag1 == '-findelement':    
         input_elements = input('Please input which elements are to be mapped: \n')
         input_elements = input_elements.split(' ')
         for arg in range(len(input_elements)):
-            if input_elements[arg] in Elements.ElementList:
+            if input_elements[arg] in EnergyLib.ElementList:
                 elementlist.append(input_elements[arg])
             else: 
                 raise Exception("%s not an element!" % input_elements[arg])
@@ -137,8 +164,17 @@ an image where the element is displayed in proportion to the most abundant eleme
             print("Please run 'python Core.py -compilecube' and try again.")
 
     if flag1 == '-getratios':
+        
+        #######################################################################
+        # Calculates the thickness of a given layer by using the attenuation  #
+        # of the input element. The input element must be from the underlying #
+        # layer. Ex.: '-getratios Pb' will calculate the thickness of the pre #
+        # defined outer layer (reffered as compound) by using the Pb lines    #
+        # attenuation                                                         #
+        #######################################################################
+        
         for arg in range(len(sys.argv)):
-            if sys.argv[arg] in Elements.ElementList:
+            if sys.argv[arg] in EnergyLib.ElementList:
                 elementlist.append(sys.argv[arg])
             else: 
                 if sys.argv[arg] in inputlist:

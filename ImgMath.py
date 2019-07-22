@@ -41,8 +41,18 @@ def median_filter(a_2D_array,x,y):
     except: average = 0
     return average
 
+def threshold(a_2D_array,t):
+    for x in range(a_2D_array.shape[0]):
+        for y in range(a_2D_array.shape[1]):
+            average = median_filter(a_2D_array,x,y)
+            if a_2D_array[x,y] < t and average < t: a_2D_array[x,y] = 0
+    return a_2D_array 
+
+
 def mask(a_datacube,a_compound):
-    try: id_element = a_compound.identity
+    try: 
+        # tries to get identity element from compound
+        id_element = a_compound.identity
     except: 
         unpacked = []
         abundance = 0
@@ -50,7 +60,9 @@ def mask(a_datacube,a_compound):
             unpacked.append(key)
             if a_compound.weight[key] > abundance: id_element, abundance = key, a_compound.weight[key]
     
-    try: id_element_matrix = a_datacube.unpack_element(id_element)
+    try: 
+        # tries to get element map from cube file
+        id_element_matrix = a_datacube.unpack_element(id_element)
     except:
         try: 
             id_element_ratio = SpecRead.output_path + '{1}_ratio_{0}.txt'\
@@ -60,12 +72,8 @@ def mask(a_datacube,a_compound):
     
     # TO DO:
     # check histogram to understand contrast and define threshold
-        
-    for x in range(id_element_matrix.shape[0]):
-        for y in range(id_element_matrix.shape[1]):
-            average = median_filter(id_element_matrix,x,y)
-            if id_element_matrix[x,y] < 55 and average < 55: id_element_matrix[x,y] = 0
-    
+    id_element_matrix = threshold(id_element_matrix,55)
+
     return id_element_matrix
 
 
