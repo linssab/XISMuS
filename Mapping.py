@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: a3.60                         #
+#                        version: a3.61                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -15,7 +15,6 @@ import SpecMath
 import SpecRead
 import EnergyLib
 import ImgMath
-from PyMca5.PyMcaPhysics import Elements
 import matplotlib.pyplot as plt
 import time
 
@@ -69,7 +68,7 @@ def getpeakmap(element_list,datacube):
 
     ######################################################
 
-    if element_list[0] in Elements.ElementList:
+    if element_list[0] in EnergyLib.ElementList:
         logging.info("Started acquisition of {0} map(s)".format(element_list))
         print("Fetching map image for " + ", ".join(element_list) + "...")
         
@@ -96,7 +95,7 @@ def getpeakmap(element_list,datacube):
         for Element in range(len(element_list)):
 
             # sets ka energy
-            kaindex[Element] = Elements.ElementList.index(element_list[Element])
+            kaindex[Element] = EnergyLib.ElementList.index(element_list[Element])
             kaenergy[Element] = KaElementsEnergy[kaindex[Element]]*1000
         
             logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
@@ -113,7 +112,7 @@ def getpeakmap(element_list,datacube):
                 r_file.write("row\tcolumn\tline1\tline2\tratio\n")
 
                 # sets kb energy
-                kbindex[Element] = Elements.ElementList.index(element_list[Element])
+                kbindex[Element] = EnergyLib.ElementList.index(element_list[Element])
                 kbenergy[Element] = EnergyLib.kbEnergies[kbindex[Element]]*1000
                 r_file.close() 
                 logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
@@ -205,7 +204,7 @@ def getpeakmap(element_list,datacube):
                     while EnergyLib.Energies[target] <= LOCAL_MAX[1]:
                         ymax_element = EnergyLib.ElementList[target]
                         target+=1
-                    ymax_index = Elements.ElementList.index(ymax_element)
+                    ymax_index = EnergyLib.ElementList.index(ymax_element)
                     ymax_ka = KaElementsEnergy[ymax_index]
                     ymax_kb = KbElementsEnergy[ymax_index]
                     if debug == True: ymax_spec = currentspectra
@@ -351,9 +350,9 @@ def getpeakmap(element_list,datacube):
         
         timestamps = open(SpecRead.workpath + '/timestamps.txt'\
                     .format(Element,SpecRead.DIRECTORY),'a')
-        timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{4} seconds\n"\
+        timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n"\
                     .format(Element,bgstrip,normalize,peakmethod,timestamp,\
-                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),element_list))
         
         if peakmethod == 'PyMcaFit': plt.plot(energyaxis,CUMSUM,label='CUMSUM CURRENT DATA')
         plt.plot(energyaxis,CUMSUM_RAW,label='CUMSUM RAW DATA')
@@ -368,8 +367,9 @@ def getpeakmap(element_list,datacube):
         logging.warning("{0} not an element!".format(element_list))
         raise ValueError("{0} not an element!".format(element_list))
     
+    if peakmethod == 'auto_roi': elmap = ImgMath.interpolate_zeros(elmap)
     ImgMath.split_and_save(datacube,elmap,element_list,ratio)
-    return elmap
+    return np.nan
 
 def getdensitymap(datacube):
     

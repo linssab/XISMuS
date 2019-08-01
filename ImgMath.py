@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: a1.31                         #
+#                        version: a1.41                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -250,6 +250,13 @@ def flattenhistogram(image):
     cdf = np.ma.filled(cdf_mask,0).astype('uint8')
     image = cdf[image]
     return image
+
+def interpolate_zeros(map_array):
+    for Element in range(map_array.shape[2]):
+        for x in range(map_array.shape[0]):
+            for y in range(map_array.shape[1]):
+                if map_array[x,y,Element] == 0: map_array[x,y,Element] = median_filter(map_array,x,y)
+    return map_array
 
 def split_and_save(datacube,map_array,element_list,ratio):
     

@@ -38,7 +38,7 @@ if __name__=="__main__":
     cube_path = SpecRead.cube_path
     elementlist = []
     flag1 = sys.argv[1]
-    inputlist = ['-findelement','Core.py','-normalize','-getratios','-dir','-threshold']
+    inputlist = ['-findelement','Core.py','-normalize','-getratios','-stat','-threshold']
     
     if flag1 == '-help':
         print("\nUSAGE: '-findelement'; plots a 2D map of elements which are to be set.\
@@ -48,16 +48,15 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-plotstack'; plots the sum spectra of all sample. Optional: you can add '-semilog' to plot it in semilog mode.\n\
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     
-    if '-dir' in sys.argv:
+    if '-stat' in sys.argv:
         print("Sample files location: {0}".format(SpecRead.dirname))
-        print("Configuration from config.cfg:")
-        print(config)
+        sys.stdout.flush()
         if os.path.exists(cube_path):
             cube_stats = os.stat(cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
             print("Datacube is compiled. Cube size: {0}".format(cube_size))
             print("Verifying packed elements...")
-            
+             
             import pickle
             cube_file = open(cube_path,'rb')
             datacube = pickle.load(cube_file)
@@ -66,7 +65,9 @@ an image where the element is displayed in proportion to the most abundant eleme
             packed_elements = datacube.check_packed_elements()
             if len(packed_elements) == 0: print("None found.")
             print("Done.")
+            print("Configuration compiled into cube: {}".format(datacube.config))
         else: print("Datacube not compiled. Please run -compilecube command.")
+        print("Configuration from config.cfg: {}".format(config))
 
     if flag1 == '-compilecube':
         if os.path.exists(cube_path):
@@ -198,7 +199,7 @@ an image where the element is displayed in proportion to the most abundant eleme
             print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
 
         compound = Compounds.compound()
-        compound.set_compound('PbWhite')
+        compound.set_compound('AuSheet')
         compound.identity = 'Pb'
         compound.set_attenuation(elementlist[0])
 
