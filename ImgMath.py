@@ -255,12 +255,18 @@ def interpolate_zeros(map_array):
     for Element in range(map_array.shape[2]):
         for x in range(map_array.shape[0]):
             for y in range(map_array.shape[1]):
-                if map_array[x,y,Element] == 0: map_array[x,y,Element] = median_filter(map_array,x,y)
+                if map_array[x,y,Element] == 0: map_array[x,y,Element] = median_filter(map_array[:,:,Element],x,y)
     return map_array
+
+def plotlastmap(image,name):
+    fig, ax = plt.subplots()
+    plt.imshow(image)
+    ax.set_title(name)
+    plt.show()
 
 def split_and_save(datacube,map_array,element_list,ratio):
     
-    imagsize = SpecRead.getdimension()
+    imagsize = datacube.dimension
     imagex = imagsize[0]
     imagey = imagsize[1]
     image = np.zeros([imagex,imagey])
@@ -283,9 +289,7 @@ def split_and_save(datacube,map_array,element_list,ratio):
     
     fig_list = []
     for Element in range(len(element_list)):
-        for i in range(imagex):
-            for j in range(imagey):
-                image[i][j] = map_array[i][j][Element]
+        image = map_array[:,:,Element]
         if image.max() > 0: image = image/image.max()*255
         datacube.pack_element(image,element_list[Element])
         if len(element_list) > 1: ax = axs[Element]
@@ -302,6 +306,9 @@ def split_and_save(datacube,map_array,element_list,ratio):
             '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
             .format(element_list[Element],datacube.config.get('bgstrip'),datacube.config.get('ratio')\
             ,datacube.config.get('enhance'),datacube.config.get('peakmethod')),large_image)
+    
+        #checker = datacube.unpack_element('Cu')
+        #plotlastmap(checker,element_list[Element])
 
     ##################################################
     

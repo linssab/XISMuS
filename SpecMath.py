@@ -110,6 +110,7 @@ class datacube:
 
     def unpack_element(__self__,element):
         unpacked = __self__.__dict__[element]
+        print("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
         return unpacked
 
     def check_packed_elements(__self__):

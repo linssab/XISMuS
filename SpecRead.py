@@ -96,7 +96,7 @@ def getcalibration():
 def getdata(mca):
     name = str(mca)
     name = name.replace('_',' ')
-    name = name.replace('/',' ')
+    name = name.replace('\\',' ')
     name = name.split()
     if 'test' in name or 'obj' in name or 'newtest' in name:
         Data = []
