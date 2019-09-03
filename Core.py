@@ -37,8 +37,13 @@ if __name__=="__main__":
     cube_name = SpecRead.DIRECTORY
     cube_path = SpecRead.cube_path
     elementlist = []
-    flag1 = sys.argv[1]
-    inputlist = ['-findelement','Core.py','-normalize','-getratios','-stat','-threshold']
+    inputlist = ['-findelement','Core.py','-normalize','-getratios','-stat','-threshold','-lowpass','-listsamples']
+    commands = ['-findelement A B C ...', '-getratios A','-listsamples', '-stat', '-threshold A X', '-lowpass A X','-compilecube','-plotmap','-plotstack -semilog -bg']
+    try: flag1 = sys.argv[1]
+    except: 
+        for command in commands:
+            print(command)
+        flag1 = None
     
     if flag1 == '-help':
         print("\nUSAGE: '-findelement'; plots a 2D map of elements which are to be set.\
@@ -49,7 +54,7 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     
     if '-stat' in sys.argv:
-        print("Sample files location: {0}".format(SpecRead.dirname))
+        print("\nSample files location: {0}\n".format(SpecRead.dirname))
         sys.stdout.flush()
         if os.path.exists(cube_path):
             cube_stats = os.stat(cube_path)
@@ -65,9 +70,26 @@ an image where the element is displayed in proportion to the most abundant eleme
             packed_elements = datacube.check_packed_elements()
             if len(packed_elements) == 0: print("None found.")
             print("Done.")
-            print("Configuration compiled into cube: {}".format(datacube.config))
-        else: print("Datacube not compiled. Please run -compilecube command.")
-        print("Configuration from config.cfg: {}".format(config))
+            #print("Configuration compiled into cube: {}".format(datacube.config))
+            #print("Configuration from config.cfg: {}".format(config))
+            print("Configuration embedded:\n KEY\t\tCUBE.CONFIG\tCONFIG.CFG")
+            values_cube, values_cfg, values_keys = [],[],[]
+            for key in datacube.config:
+                values_cube.append(str(datacube.config[key]))
+                values_cfg.append(str(config[key]))
+                values_keys.append(str(key))
+            for item in range(len(values_cube)):
+                if len(values_cube[item]) < 8: values_cube[item] = values_cube[item]+'\t'
+                if len(values_cfg[item]) < 8: values_cfg[item] = values_cfg[item]+'\t'
+                if len(values_keys[item]) < 8: values_keys[item] = values_keys[item]+'\t'
+                print("{0}\t|{1}\t|{2}".format(values_keys[item],values_cube[item],values_cfg[item]))
+            #print(values_cube,values_cfg,values_keys)
+            
+        else: 
+            print("Datacube not compiled. Please run -compilecube command.")
+            for key in config:
+                if len(key) > 8: print("{0}\t|{1}".format(key,config[key]))
+                else: print("{0}\t\t|{1}".format(key,config[key]))
 
     if flag1 == '-compilecube':
         if os.path.exists(cube_path):
@@ -75,6 +97,28 @@ an image where the element is displayed in proportion to the most abundant eleme
         else:
             specbatch = SpecMath.datacube(['xrf'],config)
             specbatch.compile_cube()
+    
+    if flag1 == '-listsamples':
+        print("FOLDER\t\t|MCA PREFIX")
+        samples = [name for name in os.listdir(SpecRead.samples_folder) \
+                if os.path.isdir(SpecRead.samples_folder+name)]
+        samples_database = {}
+        for folder in samples:
+            if len(folder) >= 8: print("{0}\t".format(folder), end='|')
+            else: print("{0}\t\t".format(folder), end='|')
+            files = [name for name in os.listdir(SpecRead.samples_folder+folder)]
+            for item in range(len(files)): 
+                try:
+                    files[item] = files[item].split("_",1)[0]
+                except: pass
+            counter = dict((x,files.count(x)) for x in files)
+            mca_prefix_count = 0
+            for counts in counter:
+                if counter[counts] > mca_prefix_count:
+                    mca_prefix = counts
+                    mca_prefix_count = counter[counts]
+            samples_database[folder] = mca_prefix
+            print(mca_prefix)
 
     if flag1 == '-threshold':
         
@@ -101,6 +145,33 @@ an image where the element is displayed in proportion to the most abundant eleme
         image = ax.imshow(element_matrix,cmap='gray')
         ImgMath.colorbar(image)
         ax.set_title("{0} map. Threshold {1}".format(element,t))
+        plt.show()
+    
+    if flag1 == '-lowpass':
+        
+        if os.path.exists(cube_path):
+            print("Loading {0} ...".format(cube_path))
+            sys.stdout.flush()
+            cube_file = open(cube_path,'rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close()
+        else:
+            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
+
+        try: 
+            element = sys.argv[2]
+            if sys.argv[3].isdigit(): t = int(sys.argv[3])
+            if element not in EnergyLib.ElementList:
+                raise ValueError("{0} not an element!".format(element))
+        except:
+            raise ValueError("No threshold input.")
+        element_matrix = datacube.unpack_element(element) 
+        element_matrix = ImgMath.low_pass(element_matrix,t)
+        
+        fig, ax = plt.subplots()
+        image = ax.imshow(element_matrix,cmap='gray')
+        ImgMath.colorbar(image)
+        ax.set_title("{0} map. Cutting signals above {1}".format(element,t))
         plt.show()
 
     if flag1 == '-findelement':    
@@ -144,8 +215,6 @@ an image where the element is displayed in proportion to the most abundant eleme
             cube_file = open(cube_path,'rb')
             datacube = pickle.load(cube_file)
             cube_file.close()
-            
-            energyaxis = SpecMath.energyaxis()
             SpecMath.getstackplot(datacube,flag2,flag3)
         else:
             print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
@@ -199,7 +268,7 @@ an image where the element is displayed in proportion to the most abundant eleme
             print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
 
         compound = Compounds.compound()
-        compound.set_compound('AuSheet')
+        compound.set_compound('PbWhite')
         compound.identity = 'Pb'
         compound.set_attenuation(elementlist[0])
 
@@ -213,6 +282,7 @@ an image where the element is displayed in proportion to the most abundant eleme
         # element is used
         
         mask = ImgMath.mask(datacube,compound)
+        mask = ImgMath.threshold(mask,105)
         mae = compound.identity
 
         print("Most abundant element in compound: {}".format(mae))

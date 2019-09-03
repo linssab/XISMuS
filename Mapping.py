@@ -48,10 +48,10 @@ def getpeakmap(element_list,datacube):
     KbElementsEnergy = EnergyLib.kbEnergies
     
     logging.info("Started energy axis calibration")
-    energyaxis = SpecMath.energyaxis()
-    #   save_energy_axis = open(SpecRead.workpath + '/' + 'axis.txt','a')
-    #   for i in range(energyaxis.shape[0]):
-    #       save_energy_axis.write("{0}\n".format(energyaxis[i]))
+    energyaxis = datacube.energyaxis
+    save_energy_axis = open(SpecRead.workpath + '/' + 'axis.txt','a')
+    for i in range(energyaxis.shape[0]):
+        save_energy_axis.write("{0}\n".format(energyaxis[i]))
     logging.info("Finished energy axis calibration")
     current_peak_factor = 0
     max_peak_factor = 0
@@ -367,7 +367,9 @@ def getpeakmap(element_list,datacube):
         logging.warning("{0} not an element!".format(element_list))
         raise ValueError("{0} not an element!".format(element_list))
     
-    if peakmethod == 'auto_roi': elmap = ImgMath.interpolate_zeros(elmap)
+    if peakmethod == 'auto_roi': 
+        print("smoothening")
+        elmap = ImgMath.interpolate_zeros(elmap)
     ImgMath.split_and_save(datacube,elmap,element_list,ratio)
     return np.nan
 

@@ -20,7 +20,8 @@ with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 DIRECTORY = CONFIG.get('directory')
-dirname = 'C:\samples\\'+DIRECTORY+'\\'
+samples_folder = 'C:\samples\\'
+dirname = samples_folder + DIRECTORY+'\\'
 firstfile = CONFIG.get('firstfile')
 workpath = os.getcwd()
 
@@ -90,7 +91,27 @@ def getheader(mca):
     return ObjectHeader
 
 def getcalibration():
-    from ReadConfig import CALIB 
+    if CONFIG['calibration'] == 'manual':
+        from ReadConfig import CALIB 
+    elif CONFIG['calibration'] == 'from_source':
+        param = []
+        mca_file = open(getfirstfile(),'r')
+        line = mca_file.readline()
+        while "<<CALIBRATION>>" not in line:
+            line = mca_file.readline()
+        while "<<DATA>>" not in line:
+            line = mca_file.readline()
+            line=line.replace('\r','')
+            line=line.replace('\n','')
+            line=line.replace('\t',' ')
+            print(line)
+            aux = line.split()
+            try: param.append([int(aux[0]),float(aux[1])])
+            except: pass 
+        mca_file.close()
+        CALIB = param
+    else: 
+        raise ValueError("No calibration parameters found! Check config.cfg or repack the datacube.")
     return CALIB 
 
 def getdata(mca):
@@ -122,12 +143,14 @@ def getdata(mca):
         Data = np.asarray(ObjectData)
     return Data
 
-# CALIBRATE RETURNS A CALIBRATION CURVE USING CALIBRATION INFORMATION
-# FROM EITHER THE MCA FILE OR FROM 'config.cfg'. PRIORITY IS GIVEN TO 
-# THE MCA FILE CALIBRATION DATA. IT CAN BE OVERRUN USING THE 'data' 
-# FLAG OPTION
-
 def calibrate():
+    
+    """
+    Returns the energy axis and gain of the calibrated axis
+    The parameter are taken from config.cfg is calibration is set to manual
+    or from the mca files is calibration is set to from_source
+    
+    """
     param = getcalibration()
     x=[]
     y=[]

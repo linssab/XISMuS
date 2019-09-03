@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a3.20                         #
+#                        version: a3.21                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 import pickle
 import SpecRead
 import EnergyLib
-from PyMca5.PyMcaMath import SpecArithmetic as Arithmetic
 from numba import guvectorize, float64, int64
 from numba import cuda
 from numba import jit
@@ -46,7 +45,9 @@ class datacube:
         __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
                 datacube.specsize.shape[0]],dtype='float64',order='C')
         __self__.config = configuration
-    
+        __self__.calibration = SpecRead.getcalibration()
+        __self__.energyaxis = energyaxis()
+
     def MPS(__self__):
         __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for c in range(__self__.matrix.shape[2]):
@@ -60,6 +61,31 @@ class datacube:
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
     
+    def write_sum(__self__):
+        output_path = SpecRead.output_path
+        sum_file = open(output_path+'stacksum.mca','w')
+        
+        #writes header
+        sum_file.write("<<PMCA SPECTRUM>>\nTAG - live_data_2\nDESCRIPTION -\n")
+        sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - 280\n")
+        sum_file.write("LIVE_TIME - 28.5880\nREAL_TIME - 29.3560\nSTART_TIME - 05/11/2017 22:10:19\n")
+        sum_file.write("SERIAL_NUMBER - 1912\n<<CALIBRATION>>\nLABEL - Channel\n")
+        for pair in __self__.calibration:
+            sum_file.write("{0} {1}\n".format(pair[0],pair[1]))
+        sum_file.write("<<DATA>>\n")
+        ###############
+        
+        for counts in __self__.sum:
+            sum_file.write("{}\n".format(int(counts)))
+        sum_file.write("<<END>>")
+        sum_file.close()
+
+        ANSII_file = open(output_path+'ANSII_SUM.txt','w')
+        ANSII_file.write("counts\tenergy (KeV)\n")
+        for index in range(__self__.sum.shape[0]):
+            ANSII_file.write("{0}\t{1}\n".format(int(__self__.sum[index]),__self__.energyaxis[index]))
+        ANSII_file.close()
+
     def strip_background(__self__,bgstrip=None):
         bgstrip = __self__.config['bgstrip']
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
@@ -103,6 +129,7 @@ class datacube:
         datacube.stacksum(__self__)
         datacube.strip_background(__self__)
         datacube.save_cube(__self__)
+        datacube.write_sum(__self__)
     
     def pack_element(__self__,image,element):
         __self__.__dict__[element] = image
@@ -121,6 +148,12 @@ class datacube:
                 print("Found a map for {0}".format(element))
             else: pass
         return packed
+
+def shift_center(xarray,yarray):
+    ymax = yarray.max()
+    y_list = yarray.tolist()
+    idx = y_list.index(ymax)
+    return xarray[idx],ymax,idx
 
 def updateposition(a,b):
     imagesize = SpecRead.getdimension()
@@ -164,7 +197,7 @@ def getstackplot(datacube,*args):
     stack = datacube.sum
     mps = datacube.mps
     bg = datacube.sum_bg
-    energy = energyaxis()
+    energy = datacube.energyaxis
     if '-bg' in args:
         plt.semilogy(energy,stack,label="Summation")
         plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
@@ -240,7 +273,7 @@ def setROI(lookup,xarray,yarray,localconfig):
         logging.debug("highx_idx: %d" % highx_idx)
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
-        shift = Arithmetic.search_peak(ROIaxis,ROIdata)
+        shift = shift_center(ROIaxis,ROIdata)
         logging.debug("Shift: {0}".format(shift))
         
         if 1.10*(-FWHM/2) < (shift[0]*1000)-lookup < 1.10*(FWHM/2):

@@ -8,8 +8,6 @@
 
 import numpy as np
 import SpecRead
-import SpecMath
-import Compounds
 import math
 import logging
 import matplotlib.pyplot as plt
@@ -48,6 +46,12 @@ def threshold(a_2D_array,t):
             if a_2D_array[x,y] < t and average < t: a_2D_array[x,y] = 0
     return a_2D_array 
 
+def low_pass(a_2D_array,t):
+    for x in range(a_2D_array.shape[0]):
+        for y in range(a_2D_array.shape[1]):
+            average = median_filter(a_2D_array,x,y)
+            if a_2D_array[x,y] > t: a_2D_array[x,y] = 0
+    return a_2D_array 
 
 def mask(a_datacube,a_compound):
     try: 
@@ -255,7 +259,9 @@ def interpolate_zeros(map_array):
     for Element in range(map_array.shape[2]):
         for x in range(map_array.shape[0]):
             for y in range(map_array.shape[1]):
-                if map_array[x,y,Element] == 0: map_array[x,y,Element] = median_filter(map_array[:,:,Element],x,y)
+                if map_array[x,y,Element] == 0: 
+                    newvalue = median_filter(map_array[:,:,Element],x,y)
+                    map_array[x,y,Element] = newvalue
     return map_array
 
 def plotlastmap(image,name):
