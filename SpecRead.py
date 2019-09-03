@@ -19,26 +19,43 @@ logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
+def findprefix():
+    files = [name for name in os.listdir(samples_folder+DIRECTORY)]
+    for item in range(len(files)): 
+        try:
+            files[item] = files[item].split("_",1)[0]
+        except: pass
+    counter = dict((x,files.count(x)) for x in files)
+    mca_prefix_count = 0
+    for counts in counter:
+        if counter[counts] > mca_prefix_count:
+            mca_prefix = counts
+            mca_prefix_count = counter[counts]
+    if os.path.exists(dirname+mca_prefix+'_1.mca'): firstfile_path = dirname+mca_prefix+'_1.mca'
+    elif os.path.exists(dirname+mca_prefix+'_1.txt'): firstfile_path = dirname+mca_prefix+'_1.txt'
+    else: raise IOError("No mca or txt file found in directory {0}".format(dirname))
+    return firstfile_path
+
+def getfirstfile():
+    return FIRSTFILE_ABSPATH
+
+    ######################
+    # DIRECTORIES SETUP! #
+    ######################
+
 DIRECTORY = CONFIG.get('directory')
 samples_folder = 'C:\samples\\'
 dirname = samples_folder + DIRECTORY+'\\'
-firstfile = CONFIG.get('firstfile')
 workpath = os.getcwd()
-
-# cube_path will be changed to the SAMPLE folder in upcoming versions
 cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
 output_path = workpath+'\output\\'+DIRECTORY+'\\'
 dimension_file = dirname + '\colonneXrighe.txt'
+FIRSTFILE_ABSPATH = findprefix()
 
 try: os.mkdir(output_path)
 except: pass
 
-def getfirstfile():
-    return dirname+firstfile
-
-# MCA MEANS THE INPUT MUST BE AN MCA FILE
-# SELF MEANS THE INPUT CAN BE EITHER A DATA ARRAY OR AN MCA FILE
-# THE FLAG MUST SAY IF THE FILE IS AN MCA 'file' OR A DATA ARRAY 'data'
+    ######################
 
 def RatioMatrixReadFile(ratiofile):
     MatrixArray = []
@@ -80,13 +97,13 @@ def RatioMatrixReadFile(ratiofile):
 
 def getheader(mca):
     ObjectHeader=[]
-    file = open(mca)
-    line = file.readline()
+    specile = open(mca)
+    line = specfile.readline()
     while "<<DATA>>" not in line:
         ObjectHeader.append(line.replace('\n',' '))
-        line = file.readline()
+        line = specfile.readline()
         if "<<CALIBRATION>>" in line:
-            file.close()
+            specfile.close()
             break
     return ObjectHeader
 
@@ -104,14 +121,18 @@ def getcalibration():
             line=line.replace('\r','')
             line=line.replace('\n','')
             line=line.replace('\t',' ')
-            print(line)
             aux = line.split()
             try: param.append([int(aux[0]),float(aux[1])])
             except: pass 
         mca_file.close()
+        for parameter in param:
+            if len(param) <= 1: raise IOError("Need at least two calibration points!")
+            if parameter[0] < 0 or parameter[1] < 0: 
+                raise IOError("Cant receive negative channel or energy!")
+        else: pass
         CALIB = param
     else: 
-        raise ValueError("No calibration parameters found! Check config.cfg or repack the datacube.")
+        raise ValueError("Calibration mode {0} unknown! Check config.cfg")
     return CALIB 
 
 def getdata(mca):
@@ -121,8 +142,8 @@ def getdata(mca):
     name = name.split()
     if 'test' in name or 'obj' in name or 'newtest' in name:
         Data = []
-        file = open(mca)
-        lines = file.readlines()
+        datafile = open(mca)
+        lines = datafile.readlines()
         for line in lines:
             line = line.split()
             counts = float(line[1])
@@ -131,16 +152,16 @@ def getdata(mca):
         Data = np.asarray(Data)
     else:
         ObjectData=[]
-        file = open(mca)
-        line = file.readline()
+        datafile = open(mca)
+        line = datafile.readline()
         while "<<DATA>>" not in line:
-            line = file.readline()
-        line = file.readline()
+            line = datafile.readline()
+        line = datafile.readline()
         while "<<END>>" not in line:
             ObjectData.append(int(line))
-            line = file.readline()
-        file.close()
+            line = datafile.readline()
         Data = np.asarray(ObjectData)
+    datafile.close()
     return Data
 
 def calibrate():
@@ -196,8 +217,8 @@ def getplot(mca):
     plt.show()
     return 0
    
-def updatespectra(file,size):
-    name=str(file)
+def updatespectra(specfile,size):
+    name=str(specfile)
     name=name.replace('_',' ')
     name=name.replace('-',' ')
     name=name.replace('.',' ')

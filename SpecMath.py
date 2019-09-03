@@ -116,8 +116,7 @@ class datacube:
                 __self__.matrix[x][y][i] = specdata[i]
             scan = updateposition(scan[0],scan[1])
             x,y = scan[0],scan[1]
-            currentspectra = SpecRead.updatespectra(spec,\
-                    __self__.dimension[0]*__self__.dimension[1])
+            currentspectra = SpecRead.updatespectra(spec,__self__.img_size)
             progress = int(iteration/__self__.img_size*20)
             blank = (20 - progress - 1)
             print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
@@ -422,19 +421,4 @@ def peakstrip(an_array,cycles,width):
     return snip_bg
 
 if __name__=="__main__":
-    import pickle 
-    cube_name = "cuoio2"
-    cube_file = open(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'/'+cube_name+'.cube','rb')
-    datacube = pickle.load(cube_file)
-    cube_file.close()
-
-    mps_ = MPS(datacube)
-    eV = energyaxis()
-    stack = stacksum(SpecRead.getfirstfile(),datacube.img_size,datacube)
-    stack = stack/stack.max()
-    mps_ = mps_/mps_.max()
-    plt.semilogy(eV,stack,label="Summation")
-    plt.semilogy(eV,mps_,label="MPS")
-    plt.legend()
-    plt.show()
-
+    print("Null.")

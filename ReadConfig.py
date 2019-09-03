@@ -43,13 +43,6 @@ def getconfig():
     if "<<CONFIG_START>>" in line:
         line = configfile.readline()
         while "<<CALIBRATION>>" not in line:
-            if 'filename' in line:
-                line=line.replace('\r','')
-                line=line.replace('\n','')
-                line=line.replace('\t',' ')
-                aux = line.split()
-                modesdict['firstfile'] = str(aux[2])
-                line = configfile.readline()
             if 'directory' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
