@@ -32,7 +32,9 @@ if __name__=="__main__":
     import EnergyLib
     import matplotlib.pyplot as plt
     import logging
-    
+   
+   # SpecRead.conditional_setup(name='politoc47')
+    SpecRead.setup()
     config = SpecRead.CONFIG
     cube_name = SpecRead.DIRECTORY
     cube_path = SpecRead.cube_path
@@ -121,7 +123,7 @@ an image where the element is displayed in proportion to the most abundant eleme
             print(mca_prefix)
 
     if flag1 == '-threshold':
-        
+        print(cube_path)
         if os.path.exists(cube_path):
             print("Loading {0} ...".format(cube_path))
             sys.stdout.flush()
@@ -138,6 +140,7 @@ an image where the element is displayed in proportion to the most abundant eleme
                 raise ValueError("{0} not an element!".format(element))
         except:
             raise ValueError("No threshold input.")
+        
         element_matrix = datacube.unpack_element(element) 
         element_matrix = ImgMath.threshold(element_matrix,t)
         
@@ -167,6 +170,33 @@ an image where the element is displayed in proportion to the most abundant eleme
             raise ValueError("No threshold input.")
         element_matrix = datacube.unpack_element(element) 
         element_matrix = ImgMath.low_pass(element_matrix,t)
+        
+        fig, ax = plt.subplots()
+        image = ax.imshow(element_matrix,cmap='gray')
+        ImgMath.colorbar(image)
+        ax.set_title("{0} map. Cutting signals above {1}".format(element,t))
+        plt.show()
+
+    if flag1 == '-smooth':
+
+        if os.path.exists(cube_path):
+            print("Loading {0} ...".format(cube_path))
+            sys.stdout.flush()
+            cube_file = open(cube_path,'rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close()
+        else:
+            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
+
+        try: 
+            element = sys.argv[2]
+            if sys.argv[3].isdigit(): t = int(sys.argv[3])
+            if element not in EnergyLib.ElementList:
+                raise ValueError("{0} not an element!".format(element))
+        except:
+            raise ValueError("No threshold input.")
+        element_matrix = datacube.unpack_element(element) 
+        element_matrix = ImgMath.iteractive_median(element_matrix,t)
         
         fig, ax = plt.subplots()
         image = ax.imshow(element_matrix,cmap='gray')
