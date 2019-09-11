@@ -24,13 +24,13 @@ timer = time.time()
 #   EXTRACT IMAGE DIMENSIONS FROM CONFIG.CFG    #
 #################################################
 
-imagsize = SpecRead.getdimension()
-imagex = imagsize[0]
-imagey = imagsize[1]
-dimension = imagex*imagey
-
 def getpeakmap(element_list,datacube):
-    
+    imagsize = SpecRead.getdimension()
+    imagex = imagsize[0]
+    imagey = imagsize[1]
+    dimension = imagex*imagey
+
+   
     configdict = datacube.config
     ratio = configdict.get('ratio')
     normalize = configdict.get('enhance')
@@ -355,12 +355,12 @@ def getpeakmap(element_list,datacube):
                     time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),element_list))
         
         if peakmethod == 'PyMcaFit': plt.plot(energyaxis,CUMSUM,label='CUMSUM CURRENT DATA')
-        plt.plot(energyaxis,CUMSUM_RAW,label='CUMSUM RAW DATA')
-        plt.plot(energyaxis,stacksum,label='stackplot')
-        plt.plot(energyaxis,datacube.sum_bg,label='background')
-        plt.legend()
-        plt.show()
-                        
+   #     plt.plot(energyaxis,CUMSUM_RAW,label='CUMSUM RAW DATA')
+   #     plt.plot(energyaxis,stacksum,label='stackplot')
+   #     plt.plot(energyaxis,datacube.sum_bg,label='background')
+   #     plt.legend()
+   #     plt.show()
+                  
         logging.info("Finished map acquisition!")
     
     else:
@@ -370,11 +370,16 @@ def getpeakmap(element_list,datacube):
     if peakmethod == 'auto_roi': 
         print("smoothening")
         elmap = ImgMath.interpolate_zeros(elmap)
-    ImgMath.split_and_save(datacube,elmap,element_list,ratio)
-    return np.nan
+    
+    # split_and_save is disabled for use with GUI. MainGUI.find_elements() calls 
+    # it at the end of the execution
+    
+    #ImgMath.split_and_save(datacube,elmap,element_list)
+    return elmap
 
 def getdensitymap(datacube):
     
+    timer = time.time()
     ##########-getdensitymap-############
     #   RETUNRS A 2D-ARRAY WITH TOTAL   #
     #   COUNTS PER PIXEL.               #
@@ -392,14 +397,15 @@ def getdensitymap(datacube):
      
     logging.info("Finished fetching density map!")
     print("Execution took %s seconds" % (time.time() - timer))
-    
+    """
     fig, ax = plt.subplots()
     mapimage = ax.imshow(density_map,cmap='jet',label='Dense Map')
     ax.set_title('Counts/pixel')
     ImgMath.colorbar(mapimage)
-    plt.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+'\{0}_{1}_densitymap.png'\
+    plt.savefig(SpecRead.output_path+'\{0}_{1}_densitymap.png'\
             .format(SpecRead.DIRECTORY,datacube.config.get('bgstrip')),dpi=150,transparent=False) 
     plt.show()
+    """
     return density_map
 
 

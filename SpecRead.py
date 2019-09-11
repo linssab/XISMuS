@@ -1,12 +1,12 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: a2.3                          #
+#                        version: 3.0b                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
 
-from ReadConfig import CONFIG
+from ReadConfig import unpack_cfg as CONFIGURE
 import sys
 import os
 import numpy as np
@@ -20,7 +20,12 @@ with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
 def findprefix():
-    files = [name for name in os.listdir(samples_folder+DIRECTORY)]
+    mca_prefix = 'None'
+    files = [name for name in os.listdir(selected_sample_folder)]
+   
+    print("\nfolder being looked up from findprefix")
+    print(selected_sample_folder+"\n")
+    
     for item in range(len(files)): 
         try:
             files[item] = files[item].split("_",1)[0]
@@ -31,29 +36,87 @@ def findprefix():
         if counter[counts] > mca_prefix_count:
             mca_prefix = counts
             mca_prefix_count = counter[counts]
-    if os.path.exists(dirname+mca_prefix+'_1.mca'): firstfile_path = dirname+mca_prefix+'_1.mca'
-    elif os.path.exists(dirname+mca_prefix+'_1.txt'): firstfile_path = dirname+mca_prefix+'_1.txt'
-    else: raise IOError("No mca or txt file found in directory {0}".format(dirname))
+    if os.path.exists(selected_sample_folder+mca_prefix+'_1.mca'): 
+        firstfile_path = selected_sample_folder+mca_prefix+'_1.mca'
+    elif os.path.exists(selected_sample_folder+mca_prefix+'_1.txt'): 
+        firstfile_path = selected_sample_folder+mca_prefix+'_1.txt'
+    else: raise IOError("No mca or txt file with prefix {1} found in directory {0}".\
+            format(selected_sample_folder,mca_prefix))
     return firstfile_path
 
 def getfirstfile():
     return FIRSTFILE_ABSPATH
 
+def setup():
+    
+    # reads config.cfg file and sets up the configuration according to what is
+    # contained there
+
+    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    CONFIG,CALIB = CONFIGURE()
+    DIRECTORY = CONFIG.get('directory')
+    selected_sample_folder = samples_folder + DIRECTORY + '\\'
+    workpath = os.getcwd()
+    cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
+    output_path = workpath+'\output\\'+DIRECTORY+'\\'
+    dimension_file = selected_sample_folder + '\colonneXrighe.txt'
+    try: FIRSTFILE_ABSPATH = findprefix()
+    except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
+    global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH]
+    return np.nan
+
+def setup_from_datacube(datacube):
+    
+    # setup the configuration according to what is built into the datacube
+
+    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    CONFIG,CALIB = datacube.config, datacube.calibration
+    DIRECTORY = CONFIG.get('directory')
+    selected_sample_folder = samples_folder + DIRECTORY + '\\'
+    workpath = os.getcwd()
+    cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
+    output_path = workpath+'\output\\'+DIRECTORY+'\\'
+    dimension_file = selected_sample_folder + '\colonneXrighe.txt'
+    try: FIRSTFILE_ABSPATH = findprefix()
+    except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
+    global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH]
+    return np.nan 
+
+def conditional_setup(name='None'):
+    
+    # reads the config file but changes the directory to the sample_name variable
+    # before setting up the PATHS
+    
+    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    CONFIG,CALIB = CONFIGURE()
+    CONFIG['directory'] = name
+    #{'directory':None,'bgstrip':None,'ratio':False,'thickratio':1.50,\
+    #        'calibration':'from_source','enhance':False,'peakmethod':'simple_roi'}
+    DIRECTORY = CONFIG.get('directory')
+    selected_sample_folder = samples_folder + DIRECTORY + '\\'
+    workpath = os.getcwd()
+    cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
+    output_path = workpath+'\output\\'+DIRECTORY+'\\'
+    dimension_file = selected_sample_folder + '\colonneXrighe.txt'
+    global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file]
+    return np.nan
+
+samples_folder = 'C:\samples\\'
+
     ######################
     # DIRECTORIES SETUP! #
     ######################
-
+"""
+CONFIG,CALIB = CONFIGURE()
 DIRECTORY = CONFIG.get('directory')
 samples_folder = 'C:\samples\\'
-dirname = samples_folder + DIRECTORY+'\\'
+selected_sample_folder = samples_folder + DIRECTORY+'\\'
 workpath = os.getcwd()
 cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
 output_path = workpath+'\output\\'+DIRECTORY+'\\'
-dimension_file = dirname + '\colonneXrighe.txt'
+dimension_file = selected_sample_folder + '\colonneXrighe.txt'
 FIRSTFILE_ABSPATH = findprefix()
-
-try: os.mkdir(output_path)
-except: pass
+"""
 
     ######################
 
@@ -109,7 +172,7 @@ def getheader(mca):
 
 def getcalibration():
     if CONFIG['calibration'] == 'manual':
-        from ReadConfig import CALIB 
+        param = CALIB 
     elif CONFIG['calibration'] == 'from_source':
         param = []
         mca_file = open(getfirstfile(),'r')
@@ -130,10 +193,9 @@ def getcalibration():
             if parameter[0] < 0 or parameter[1] < 0: 
                 raise IOError("Cant receive negative channel or energy!")
         else: pass
-        CALIB = param
     else: 
         raise ValueError("Calibration mode {0} unknown! Check config.cfg")
-    return CALIB 
+    return param
 
 def getdata(mca):
     name = str(mca)

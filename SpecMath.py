@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: a3.21                         #
+#                        version: 1.0b                          #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import pickle
 import SpecRead
 import EnergyLib
+from Mapping import getdensitymap
 from numba import guvectorize, float64, int64
 from numba import cuda
 from numba import jit
@@ -32,18 +33,20 @@ os.environ['NUMBAPRO_CUDA_DRIVER']      =\
 
 NOISE = 80
 FANO = 0.114
+compilation_progress = 0
 
 class datacube:
     
     ndim = 0
-    specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
-
+    
     def __init__(__self__,dtypes,configuration):
+        try: specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
+        except: specsize = 0
         __self__.dimension = SpecRead.getdimension()
         __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
         __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
         __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
-                datacube.specsize.shape[0]],dtype='float64',order='C')
+                specsize.shape[0]],dtype='float64',order='C')
         __self__.config = configuration
         __self__.calibration = SpecRead.getcalibration()
         __self__.energyaxis = energyaxis()
@@ -89,9 +92,9 @@ class datacube:
     def strip_background(__self__,bgstrip=None):
         bgstrip = __self__.config['bgstrip']
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
-                datacube.specsize.shape[0]],dtype='float64',order='C')
-        if bgstrip == None:
-            pass
+                __self__.energyaxis.shape[0]],dtype='float64',order='C')
+        if bgstrip == 'None':
+            __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
         elif bgstrip == 'SNIPBG':
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
             for x in range(__self__.matrix.shape[0]):
@@ -100,7 +103,12 @@ class datacube:
                     __self__.background[x,y] = stripped
                     __self__.sum_bg += stripped
 
+    def create_densemap(__self__):
+        __self__.densitymap = getdensitymap(__self__)
+
     def save_cube(__self__):
+        try: os.mkdir(SpecRead.output_path)
+        except: pass
         p_output = open(SpecRead.cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
@@ -110,6 +118,7 @@ class datacube:
         currentspectra = SpecRead.getfirstfile()
         x,y,scan = 0,0,(0,0)
         for iteration in range(__self__.img_size):
+            compilation_progress = iteration
             spec = currentspectra
             specdata = SpecRead.getdata(spec)
             for i in range(len(specdata)):
@@ -123,13 +132,15 @@ class datacube:
                     .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
             sys.stdout.flush()
         print("\nCalculating Summation and Maximum Pixel Spectrum and stripping background.")
+        compilation_progress = 0
         sys.stdout.flush()
         datacube.MPS(__self__)
         datacube.stacksum(__self__)
         datacube.strip_background(__self__)
-        datacube.save_cube(__self__)
         datacube.write_sum(__self__)
-    
+        datacube.create_densemap(__self__)
+        datacube.save_cube(__self__)
+
     def pack_element(__self__,image,element):
         __self__.__dict__[element] = image
         print("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
@@ -144,7 +155,7 @@ class datacube:
         for element in EnergyLib.ElementList:
             if hasattr(__self__,element): 
                 packed.append(element)
-                print("Found a map for {0}".format(element))
+                #print("Found a map for {0}".format(element))
             else: pass
         return packed
 
@@ -191,29 +202,36 @@ def energyaxis():
     calibration = SpecRead.calibrate()
     return calibration[0]
 
-def getstackplot(datacube,*args):
-    print(args)
+def getstackplot(datacube,mode=None):
     stack = datacube.sum
     mps = datacube.mps
     bg = datacube.sum_bg
     energy = datacube.energyaxis
-    if '-bg' in args:
-        plt.semilogy(energy,stack,label="Summation")
-        plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
-        plt.semilogy(energy,bg,label="Background estimation")
-    elif '-semilog' in args and '-bg' not in args: 
+    if mode == 'summation':
+        output = stack
+       # plt.semilogy(energy,stack,label="Summation")
+       # plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
+       # plt.semilogy(energy,bg,label="Background estimation")
+    elif mode == 'combined': 
         stack = stack/stack.max()
         mps = mps/mps.max()
-        plt.semilogy(energy,stack,label="Summation")
-        plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
-        plt.ylabel("Normalized counts")
+        output = np.asarray([stack, mps])
+       # plt.semilogy(energy,stack,label="Summation")
+       # plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
+       # plt.ylabel("Normalized counts")
+    elif mode == 'mps':
+        output = mps
+        # plt.semilogy(energy,stack,label="Summation")
+       # plt.ylabel("Counts")
     else:
-        plt.plot(energy,stack,label="Summation")
-        plt.plot(energy,mps,label="Maximum Pixel Spectrum")
-    plt.legend()
-    plt.xlabel("Energy (KeV)")
-    plt.show()
-    return 0
+       # plt.plot(energy,stack,label="Summation")
+    #plt.legend()
+    #plt.title("Sample: {}".format(SpecRead.DIRECTORY))
+    #plt.xlabel("Energy (KeV)")
+    #plt.grid(which='both',axis='both')
+    #plt.show()
+        pass
+    return output
 
 def sigma(energy):
     return math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))
@@ -421,4 +439,6 @@ def peakstrip(an_array,cycles,width):
     return snip_bg
 
 if __name__=="__main__":
-    print("Null.")
+    SpecRead.setup()
+    cube = datacube(['xrf'],SpecRead.CONFIG)
+    cube.compile_cube()

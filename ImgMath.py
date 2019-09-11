@@ -17,8 +17,6 @@ from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cv2
 
-configdict = SpecRead.CONFIG
-
 def colorbar(mappable):
     
     ##############################################
@@ -36,8 +34,46 @@ def median_filter(a_2D_array,x,y):
     try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] + a_2D_array[x+1,y] +\
             a_2D_array[x,y-1] + a_2D_array[x-1,y-1] + a_2D_array[x+1,y-1] +\
             a_2D_array[x,y+1] + a_2D_array[x-1,y+1] + a_2D_array[x+1,y+1])/10
-    except: average = 0
+    except: 
+        # ignore upper row
+        try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] + a_2D_array[x+1,y] +\
+                a_2D_array[x,y-1] + a_2D_array[x-1,y-1] + a_2D_array[x+1,y-1])/7
+        except:
+            # ignore lower row
+            try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] + a_2D_array[x+1,y] +\
+                    a_2D_array[x,y+1] + a_2D_array[x-1,y+1] + a_2D_array[x+1,y+1])/7
+        
+            except:
+                # ignore left column
+                try: average = (2*a_2D_array[x,y] + a_2D_array[x+1,y] +\
+                        a_2D_array[x,y-1] + a_2D_array[x+1,y-1] +\
+                        a_2D_array[x,y+1] + a_2D_array[x+1,y+1])/7
+                except:
+                    # ignore right column
+                    try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] +\
+                            a_2D_array[x,y-1] + a_2D_array[x-1,y-1] +\
+                            a_2D_array[x,y+1] + a_2D_array[x-1,y+1])/7
+                    except:
+                        try: average = (2*a_2D_array[x,y] + a_2D_array[x+1,y] +\
+                                a_2D_array[x,y+1] + a_2D_array[x+1,y+1])/5
+                        except:
+                            try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] +\
+                                    a_2D_array[x,y+1] + a_2D_array[x-1,y+1])/5
+                            except:
+                                try: average = (2*a_2D_array[x,y] + a_2D_array[x+1,y] +\
+                                        a_2D_array[x,y-1] + a_2D_array[x+1,y-1])/5
+                                except:
+                                    try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] +\
+                                            a_2D_array[x,y-1] + a_2D_array[x-1,y-1])/5
+                                    except: print("Something went wrong with the median filter!")
     return average
+
+def iteractive_median(a_2D_array,iterations=1):
+    for i in range(iterations):
+        for x in range(a_2D_array.shape[0]):
+            for y in range(a_2D_array.shape[1]):
+                a_2D_array[x,y] = median_filter(a_2D_array,x,y)
+    return a_2D_array 
 
 def threshold(a_2D_array,t):
     for x in range(a_2D_array.shape[0]):
@@ -270,7 +306,7 @@ def plotlastmap(image,name):
     ax.set_title(name)
     plt.show()
 
-def split_and_save(datacube,map_array,element_list,ratio):
+def split_and_save(datacube,map_array,element_list):
     
     imagsize = datacube.dimension
     imagex = imagsize[0]
@@ -302,7 +338,7 @@ def split_and_save(datacube,map_array,element_list,ratio):
         else: ax=axs
         fig_list.append(ax.imshow(image,cmap='gray'))
         colorbar(fig_list[Element])
-        if ratio == False:
+        if datacube.config['ratio'] == False:
             ax.set_title(element_list[Element]+' alpha line')
         else: ax.set_title(element_list[Element])
         if imagex > target_size or imagey > target_size: large_image = image
@@ -320,13 +356,13 @@ def split_and_save(datacube,map_array,element_list,ratio):
     
     fig.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
             '/elements_plot_bgtrip={0}_ratio={1}_enhance={2}_peakmethod={3}.png'\
-            .format(configdict.get('bgstrip'),configdict.get('ratio')\
-            ,configdict.get('enhance'),configdict.get('peakmethod'))) 
-    plt.show()
+            .format(datacube.config.get('bgstrip'),datacube.config.get('ratio')\
+            ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
     
     datacube.save_cube() 
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
     print("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
+    #plt.show()
     return 0
 
 def stackimages(*args):

@@ -28,14 +28,13 @@ def check_config():
         if "<<CALIBRATION>>" in sentence: tags.append(sentence)
         elif "<<CONFIG_START>>" in sentence: tags.append(sentence)
         elif "<<END>>" in sentence: tags.append(sentence)
-    if "<<CALIBRATION>>" not in tags and modesdict['calibration'] == 'manual': \
-            raise IOError("No <<CALIBRATION>>!")
+    if "<<CALIBRATION>>" not in tags: raise IOError("No <<CALIBRATION>>!")
     if "<<END>>" not in tags: raise IOError("No <<END>> of configuration!")
     if "<<CONFIG_START>>" not in tags: raise IOError("Cant find <<CONFIG_START>>")
-    return True
+    return tags
 
 def getconfig():
-    check_config()
+    tags = check_config()
     modesdict = {}
     CalParam = []
     configfile = open(cfgfile, 'r')
@@ -67,7 +66,7 @@ def getconfig():
                 elif aux[2] == 'False': modesdict['ratio'] = False
                 logging.info("Create ratio matrix? {0}".format(modesdict.get('ratio')))
                 line = configfile.readline()
-            if 'thick_ratio' in line:
+            if 'thickratio' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
                 line=line.replace('\t',' ')
@@ -90,7 +89,7 @@ def getconfig():
                 elif aux[2] == 'False': modesdict['enhance'] = False
                 logging.info("Enhance image? {0}".format(modesdict.get('enhance')))
                 line = configfile.readline()
-            if 'netpeak_method' in line:
+            if 'peakmethod' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
                 line=line.replace('\t',' ')
@@ -104,7 +103,7 @@ def getconfig():
             line=line.replace('\t',' ')
             aux = line.split()
             try: CalParam.append([int(aux[0]),float(aux[1])])
-            except: CalParam = [[0]]
+            except: CalParam = [[0,0]]
             line = configfile.readline()
         configfile.close()
     for parameter in CalParam:
@@ -114,7 +113,9 @@ def getconfig():
         else: pass
     return modesdict,CalParam
 
-all_parameters = getconfig()
-CONFIG = all_parameters[0]
-CALIB = all_parameters[1]
+def unpack_cfg():
+    all_parameters = getconfig()
+    CONFIG = all_parameters[0]
+    CALIB = all_parameters[1]
+    return CONFIG, CALIB
 
