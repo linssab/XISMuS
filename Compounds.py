@@ -7,9 +7,11 @@
 #################################################################
 
 import numpy as np
-import EnergyLib
-import xraylib as xlib
 import logging
+logging.debug("Importing module Compounds.py...")
+import EnergyLib
+try: import xraylib as xlib
+except: print("Failed to load xraylib module!")
 
 CompoundList = {
         'Azurite'       :{'Cu':3,'C':2,'O':8,'H':2},

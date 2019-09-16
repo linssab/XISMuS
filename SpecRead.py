@@ -6,18 +6,16 @@
 #                                                               #
 #################################################################
 
+import logging
+import ReadConfig
 from ReadConfig import unpack_cfg as CONFIGURE
+logging.debug("Importing module SpecRead.py...")
 import sys
 import os
 import numpy as np
-import logging
 import matplotlib.pyplot as plt
 from PyMca5.PyMcaMath.fitting import RateLaw
-
-logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-        filename = 'logfile.log',level = logging.DEBUG)
-with open('logfile.log','w+') as mylog: mylog.truncate(0)
-logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
+logging.debug("Finished SpecRead imports.")
 
 def findprefix():
     mca_prefix = 'None'
@@ -99,9 +97,13 @@ def conditional_setup(name='None'):
     output_path = workpath+'\output\\'+DIRECTORY+'\\'
     dimension_file = selected_sample_folder + '\colonneXrighe.txt'
     global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file]
+    logging.info("Conditional setup! Setup embedded:\n")
+    for item in global_list:
+        logging.info(item)
     return np.nan
 
-samples_folder = 'C:\samples\\'
+samples_folder = r'C:\samples\\'
+logging.info("Samples path: {0}".format(samples_folder))
 
     ######################
     # DIRECTORIES SETUP! #

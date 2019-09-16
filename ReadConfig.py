@@ -16,6 +16,7 @@ logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
         filename = 'logfile.log',level = logging.DEBUG)
 with open('logfile.log','w+') as mylog: mylog.truncate(0)
 logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
+logging.debug("Importing module ReadConfig.py...")
 
 def check_config():
     lines, tags = [],[]
@@ -117,5 +118,6 @@ def unpack_cfg():
     all_parameters = getconfig()
     CONFIG = all_parameters[0]
     CALIB = all_parameters[1]
+    logging.info("CONFIGURATION UNPACKED!\n{0}\n{1}".format(CONFIG,CALIB))
     return CONFIG, CALIB
 

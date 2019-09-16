@@ -6,16 +6,23 @@
 #                                                               #
 #################################################################
 
+import logging
+logging.debug("Importing module ImgMath.py...")
 import numpy as np
 import SpecRead
-import math
-import logging
-import matplotlib.pyplot as plt
 import matplotlib
-from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+logging.debug("Importing module matplotlib.colors...")
 from matplotlib.colors import ListedColormap
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+logging.debug("Importing module mpl_toolkits.axes_grid1...")
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
+try: from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+except: logging.warning("Failed to load make_axes_locatable from mpl_toolkits.axes_grid1.axes_divider")
 import cv2
+import math
+logging.info("Finished ImgMath imports.")
+
+LEVELS = 4096
 
 def colorbar(mappable):
     
@@ -307,7 +314,7 @@ def plotlastmap(image,name):
     plt.show()
 
 def split_and_save(datacube,map_array,element_list):
-    
+
     imagsize = datacube.dimension
     imagex = imagsize[0]
     imagey = imagsize[1]
@@ -332,7 +339,7 @@ def split_and_save(datacube,map_array,element_list):
     fig_list = []
     for Element in range(len(element_list)):
         image = map_array[:,:,Element]
-        if image.max() > 0: image = image/image.max()*255
+        if image.max() > 0: image = image/image.max()*LEVELS
         datacube.pack_element(image,element_list[Element])
         if len(element_list) > 1: ax = axs[Element]
         else: ax=axs

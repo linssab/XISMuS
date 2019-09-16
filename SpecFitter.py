@@ -5,13 +5,15 @@
 
 import os
 import numpy
+import logging
+logging.debug("Importing module SpecFitter.py...")
+import SpecRead
+import SpecMath
 from PyMca5.PyMcaIO import specfilewrapper as Specfile
 from PyMca5.PyMcaIO import ConfigDict
 from PyMca5.PyMcaPhysics.xrf import ClassMcaTheory
 from PyMca5.PyMcaPhysics.xrf import ConcentrationsTool
 from PyMca5 import PyMcaDataDir
-import SpecRead
-import SpecMath
 import matplotlib.pyplot as plt
 import random
 

@@ -26,10 +26,12 @@ import SpecMath
 import Mapping
 import ImgMath
 
+logging.debug("Setting up...")
 global MY_DATACUBE
 MY_DATACUBE = None
 try: load_cube()
 except: pass
+logging.debug("Done.")
 
 def place_topleft(window1,window2):
     
@@ -113,19 +115,23 @@ def call_help():
     return np.nan
 
 def open_analyzer():
-    ImgAnalyzer = ImageAnalyzer()
+    ImgAnalyzer = ImageAnalyzer(root.master)
 
 def call_compilecube():
     
     try: os.mkdir(SpecRead.output_path)
-    except: pass
-    if os.path.exists(SpecRead.cube_path): pass
+    except: 
+        print("Cannot create folder {}".format(SpecRead.output_path))
+        pass
+    
+    if os.path.exists(SpecRead.cube_path): 
+        pass
     else:
-        try: 
-            specbatch = SpecMath.datacube(['xrf'],SpecRead.CONFIG)
-            specbatch.compile_cube()
-        except:
-            ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
+        #try: 
+        specbatch = SpecMath.datacube(['xrf'],SpecRead.CONFIG)
+        specbatch.compile_cube()
+        #except:
+        #    ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
 
 def prompt_folder():
         print("Prompting for samples folder...")
@@ -137,26 +143,40 @@ def call_heightmap():
     print("Opening heightmap dialogue...")
 
 def load_cube():
+    logging.debug("Trying to load cube file.")
+    logging.debug(SpecRead.cube_path)
     if os.path.exists(SpecRead.cube_path):
         cube_file = open(SpecRead.cube_path,'rb')
         global MY_DATACUBE
         MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
-    else: 
+        logging.debug("Loaded cube {} to memory.".format(cube_file))
+    else:
+        logging.debug("No cube found.")
+        MainGUI.toggle_(root,toggle='Off') 
         pass
     return MY_DATACUBE
+
+
+class PeriodicTable:
+
+    def __init__(__self__,parent):
+        __self__.master = Toplevel(parent)
+        __self__.master.title("Periodic Table of Elements")
+        __self__.master.resizable(False,False)
 
 
 class ImageAnalyzer:
 
 
-    def __init__(__self__):
+    def __init__(__self__,parent):
 
         global MY_DATACUBE
         
         __self__.packed_elements = MY_DATACUBE.check_packed_elements()
         print(__self__.packed_elements)
-        __self__.master = Toplevel(master=root.master)
+        __self__.master = Toplevel(master=parent)
+        __self__.master.title("Image Analyzer v1.01a")
         __self__.master.resizable(False,False)
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP)
@@ -225,10 +245,10 @@ class ImageAnalyzer:
         __self__.S2Label.grid(row=2,column=5)
 
         # slider for image 1
-        __self__.T1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=255, \
+        __self__.T1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
                 command=__self__.draw_image1)
         __self__.T1Slider.grid(row=0,column=2)
-        __self__.LP1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=255, \
+        __self__.LP1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
                 command=__self__.draw_image1)
         __self__.LP1Slider.grid(row=1,column=2)
         __self__.S1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=7, \
@@ -249,10 +269,10 @@ class ImageAnalyzer:
         __self__.S2 = Checkbutton(__self__.sliders, variable=__self__.S2check).grid(row=2,column=4)
                
         # slider for image 2
-        __self__.T2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=255, \
+        __self__.T2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
                 command=__self__.draw_image2)
         __self__.T2Slider.grid(row=0,column=6)
-        __self__.LP2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=255, \
+        __self__.LP2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
                 command=__self__.draw_image2)
         __self__.LP2Slider.grid(row=1,column=6)
         __self__.S2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=7, \
@@ -267,7 +287,7 @@ class ImageAnalyzer:
         
         __self__.draw_image1(0)
         __self__.draw_image2(0)
-        __self__.master.mainloop()
+        #__self__.master.mainloop()
  
     def update_sample1(__self__,event):
         global MY_DATACUBE
@@ -377,8 +397,10 @@ class ImageAnalyzer:
         print("draw1")
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
         newimage1 = __self__.transform1(__self__.CACHEMAP1)
-        __self__.CACHEMAP1 = None
+        __self__.CACHEMAP1
+        __self__.plot1.clear()
         __self__.plot1.imshow(newimage1, cmap='gray')
+        __self__.plot1.grid(b=None)
         __self__.canvas1.draw()
     
     def draw_image2(__self__,i):
@@ -386,7 +408,9 @@ class ImageAnalyzer:
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
         newimage2 = __self__.transform2(__self__.CACHEMAP2)
         __self__.CACHEMAP2 = None
+        __self__.plot2.clear()
         __self__.plot2.imshow(newimage2, cmap='gray')
+        __self__.plot2.grid(b=None)
         __self__.canvas2.draw()
 
 
@@ -417,6 +441,20 @@ class PlotWin:
         __self__.toolbar.update()
         __self__.canvas._tkcanvas.pack(anchor=W, fill=BOTH)
 
+    def draw_calibration(__self__):
+        plot_font = {'fontname':'Times New Roman','fontsize':10}
+        __self__.plotdata = MY_DATACUBE.energyaxis
+        channels = np.arange(1,__self__.plotdata.shape[0]+1)
+        anchors = MY_DATACUBE.calibration
+        __self__.plot.set_title('{0} Calibration curve'.format(SpecRead.DIRECTORY),**plot_font)
+        __self__.plot.plot(channels,__self__.plotdata,label="Calibration curve")
+        for pair in anchors:
+            __self__.plot.plot(pair[0],pair[1], marker='+', label="{0}".format(pair))
+        __self__.plot.set_ylabel("Energy (KeV)")
+        __self__.plot.set_xlabel("Channel")
+        __self__.plot.legend()
+        place_center(__self__.master.master,__self__.master)
+
     def draw_spec(__self__,mode,display_mode='-semilog'):
         plot_font = {'fontname':'Times New Roman','fontsize':10}
         if display_mode == '-semilog':
@@ -446,6 +484,7 @@ class Samples:
         __self__.samples_database = {}
 
     def list_all(__self__):
+        logging.info("Loading sample list...")
         samples = [name for name in os.listdir(SpecRead.samples_folder) \
                 if os.path.isdir(SpecRead.samples_folder+name)]
         for folder in samples:
@@ -461,6 +500,7 @@ class Samples:
                     mca_prefix = counts
                     mca_prefix_count = counter[counts]
             __self__.samples_database[folder] = mca_prefix
+        logging.info("Finished.")
     
 
 class MainGUI:
@@ -480,6 +520,7 @@ class MainGUI:
     # disable_
 
     def __init__(__self__,samples):
+        logging.info("Initializing program...")
         __self__.master = Tk()
         __self__.master.title("Piratininga SM v.1.00 pre-α")
         __self__.master.resizable(False,False)
@@ -521,9 +562,8 @@ class MainGUI:
 
     def find_elements(__self__):
         print("Finding elements...")
-        #lista_elementos = ['Cu','S','Cl','Mn','Fe','Co','Pb','Zn']
-        #lista_elementos = ['Ca','Hg','Au','Ag','Sn']
         lista_elementos = ['S','Cl','Ti','Cr','Fe','Cu','Sn','Mn','Ca']
+        #lista_elementos = ['Cr']
         MAPS = Mapping.getpeakmap(lista_elementos,MY_DATACUBE)
         ImgMath.split_and_save(MY_DATACUBE,MAPS,lista_elementos)
         __self__.write_stat()
@@ -621,6 +661,11 @@ class MainGUI:
             __self__.call_configure()
             __self__.master.wait_window(__self__.ConfigDiag)
 
+    def plot_calibration_curve(__self__):
+        master = __self__.master
+        calibration_plot = PlotWin(master)
+        calibration_plot.draw_calibration()
+    
     def call_summation(__self__):
         master = __self__.master
         summation = PlotWin(master)
@@ -628,13 +673,13 @@ class MainGUI:
     
     def call_mps(__self__):
         master = __self__.master
-        summation = PlotWin(master)
-        summation.draw_spec(mode=['mps'],display_mode='-semilog')
+        MPS = PlotWin(master)
+        MPS.draw_spec(mode=['mps'],display_mode='-semilog')
     
     def call_combined(__self__):
         master = __self__.master
-        summation = PlotWin(master)
-        summation.draw_spec(mode=['summation','mps'],display_mode='-semilog')
+        combined = PlotWin(master)
+        combined.draw_spec(mode=['summation','mps'],display_mode='-semilog')
 
     def build_widgets(__self__):
         
@@ -702,7 +747,7 @@ class MainGUI:
         __self__.Toolbox.add_command(label="Reset sample", command=__self__.reset_sample)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_cascade(label="Derived spectra", menu=__self__.derived_spectra)
-        __self__.Toolbox.add_command(label="Check calibration", command=doNothing)
+        __self__.Toolbox.add_command(label="Check calibration", command=__self__.plot_calibration_curve)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Find elements", command=__self__.find_elements)
         __self__.Toolbox.add_command(label="Height-mapping", command=doNothing)
@@ -845,15 +890,15 @@ class MainGUI:
                     padx=10, pady=4, wraplength=250)
             LocalLabel.pack()
             Erase_ico = PhotoImage(file = os.getcwd()+'\images\icons\erase.png')
-            Erase_ico = Erase_ico.zoom(2, 2)
-            EraseLabel = Label(__self__.ResetWindow, image = Erase_ico).pack(side=LEFT, pady=8, padx=16)
+            __self__.Erase_ico = Erase_ico.zoom(2, 2)
+            EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
+                    pack(side=LEFT, pady=8, padx=16)
             YesButton = Button(__self__.ResetWindow, text="Yes", justify=CENTER,\
                     command=lambda: repack(__self__), width=10, bd=3).pack(side=TOP,pady=5)
             NoButton = Button(__self__.ResetWindow, text="No", justify=CENTER,\
                     command=__self__.ResetWindow.destroy, width=10, bd=3).pack(side=TOP, pady=5)
             
             place_center(__self__.master,__self__.ResetWindow)
-            __self__.ResetWindow.mainloop()
 
         else:
             ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
@@ -1070,6 +1115,7 @@ class MainGUI:
 
         return 0
 
+logging.info("Loading GUI...")
 Samples = Samples()
 Samples.list_all()
 root = MainGUI(Samples.samples_database)

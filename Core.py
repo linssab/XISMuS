@@ -258,7 +258,15 @@ an image where the element is displayed in proportion to the most abundant eleme
             datacube = pickle.load(cube_file)
             cube_file.close()
             
-            Mapping.getdensitymap(datacube)
+            density_map = Mapping.getdensitymap(datacube)
+
+            fig, ax = plt.subplots()
+            mapimage = ax.imshow(density_map,cmap='jet',label='Dense Map')
+            ax.set_title('Counts/pixel')
+            ImgMath.colorbar(mapimage)
+            plt.savefig(SpecRead.output_path+'\{0}_{1}_densitymap.png'.format(SpecRead.DIRECTORY,\
+                    datacube.config.get('bgstrip')),dpi=150,transparent=False) 
+            plt.show()
         else:
             print("Compile is necessary.")
             print("Please run 'python Core.py -compilecube' and try again.")

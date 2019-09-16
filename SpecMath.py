@@ -1,34 +1,43 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.0b                          #
+#                        version: 0.0.1α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
 
 import logging
+logging.debug("Importing module SpecMath.py...")
 import os
 import sys
 import numpy as np
-import math
-import scipy.signal
-import matplotlib.pyplot as plt
 import pickle
 import SpecRead
 import EnergyLib
 from Mapping import getdensitymap
-from numba import guvectorize, float64, int64
-from numba import cuda
+import matplotlib.pyplot as plt
+#from numba import guvectorize, float64, int64
+#from numba import cuda
+logging.debug("Importing numba jit...")
+try: from numba import jit
+except: logging.warning("Could not import numba package.")
 from numba import jit
+logging.debug("Importing module math...")
+import math
+logging.debug("Importing module scipy.signal...")
+try: import scipy.signal
+except: logging.warning("Could not import scipy package.")
+logging.debug("Finished SpecMath imports.")
 
-os.environ['NUMBAPRO_NVVM']      =\
-        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\bin\nvvm64_33_0.dll'
-
-os.environ['NUMBAPRO_LIBDEVICE'] =\
-        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\libdevice'
-
-os.environ['NUMBAPRO_CUDA_DRIVER']      =\
-        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvcc'
+#logging.debug("Importing numba environmental variables...")
+#os.environ['NUMBAPRO_NVVM']      =\
+#        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\bin\nvvm64_33_0.dll'
+#
+#os.environ['NUMBAPRO_LIBDEVICE'] =\
+#        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\libdevice'
+#
+#os.environ['NUMBAPRO_CUDA_DRIVER']      =\
+#        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvcc'
 
 
 NOISE = 80
@@ -40,6 +49,7 @@ class datacube:
     ndim = 0
     
     def __init__(__self__,dtypes,configuration):
+        logging.debug("Initializing cube file")
         try: specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
         except: specsize = 0
         __self__.dimension = SpecRead.getdimension()
@@ -52,6 +62,7 @@ class datacube:
         __self__.energyaxis = energyaxis()
 
     def MPS(__self__):
+        logging.debug("Calculating MPS spec")
         __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for c in range(__self__.matrix.shape[2]):
             for x in range(__self__.matrix.shape[0]):
@@ -59,14 +70,18 @@ class datacube:
                     if __self__.mps[c] < __self__.matrix[x,y,c]: __self__.mps[c] = __self__.matrix[x,y,c]
 
     def stacksum(__self__):
+        logging.debug("Calculating summation spec")
         __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
     
     def write_sum(__self__):
+        logging.debug("Writing stacksum.mca and ANSII SUM")
+        try: os.mkdir(SpecRead.output_path)
+        except: pass
         output_path = SpecRead.output_path
-        sum_file = open(output_path+'stacksum.mca','w')
+        sum_file = open(output_path+'stacksum.mca','w+')
         
         #writes header
         sum_file.write("<<PMCA SPECTRUM>>\nTAG - live_data_2\nDESCRIPTION -\n")
@@ -83,13 +98,14 @@ class datacube:
         sum_file.write("<<END>>")
         sum_file.close()
 
-        ANSII_file = open(output_path+'ANSII_SUM.txt','w')
+        ANSII_file = open(output_path+'ANSII_SUM.txt','w+')
         ANSII_file.write("counts\tenergy (KeV)\n")
         for index in range(__self__.sum.shape[0]):
             ANSII_file.write("{0}\t{1}\n".format(int(__self__.sum[index]),__self__.energyaxis[index]))
         ANSII_file.close()
 
     def strip_background(__self__,bgstrip=None):
+        logging.debug("Calculating backgrounds")
         bgstrip = __self__.config['bgstrip']
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
                 __self__.energyaxis.shape[0]],dtype='float64',order='C')
@@ -104,17 +120,24 @@ class datacube:
                     __self__.sum_bg += stripped
 
     def create_densemap(__self__):
+        logging.debug("Calculating sum map")
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
-        try: os.mkdir(SpecRead.output_path)
-        except: pass
+        logging.debug("Writing cube file to disk")
+        try: 
+            logging.info("Creating outputh path {0}".forma(SpecRead.output_path))
+            os.mkdir(SpecRead.output_path)
+        except: 
+            logging.warning("Could not create output folder {}".format(SpecRead.output_path))
+            pass
         p_output = open(SpecRead.cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
         print("File {0}.cube sucessfully compiled.".format(SpecRead.DIRECTORY))
 
     def compile_cube(__self__):
+        logging.debug("Started cube compilation")
         currentspectra = SpecRead.getfirstfile()
         x,y,scan = 0,0,(0,0)
         for iteration in range(__self__.img_size):
@@ -131,7 +154,7 @@ class datacube:
             print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
                     .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
             sys.stdout.flush()
-        print("\nCalculating Summation and Maximum Pixel Spectrum and stripping background.")
+        print("\nCalculating...")
         compilation_progress = 0
         sys.stdout.flush()
         datacube.MPS(__self__)

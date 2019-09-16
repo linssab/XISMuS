@@ -6,10 +6,10 @@
 #                                                               #
 #################################################################
 
-import cv2
+import logging
+logging.debug("Importing module Mapping.py...")
 import sys
 import numpy as np
-import logging
 import pickle
 import SpecMath
 import SpecRead
@@ -17,6 +17,8 @@ import EnergyLib
 import ImgMath
 import matplotlib.pyplot as plt
 import time
+import cv2
+logging.debug("Finished Mapping imports.")
 
 timer = time.time()
 
@@ -397,18 +399,9 @@ def getdensitymap(datacube):
      
     logging.info("Finished fetching density map!")
     print("Execution took %s seconds" % (time.time() - timer))
-    """
-    fig, ax = plt.subplots()
-    mapimage = ax.imshow(density_map,cmap='jet',label='Dense Map')
-    ax.set_title('Counts/pixel')
-    ImgMath.colorbar(mapimage)
-    plt.savefig(SpecRead.output_path+'\{0}_{1}_densitymap.png'\
-            .format(SpecRead.DIRECTORY,datacube.config.get('bgstrip')),dpi=150,transparent=False) 
-    plt.show()
-    """
     return density_map
 
-
+"""
 if __name__=="__main__":
     print("Test silver map")
     configdict['peakmethod'] = 'auto_roi'
@@ -418,5 +411,5 @@ if __name__=="__main__":
     myimage = getpeakmap(myelements,\
             bgstrip=configdict['bgstrip'],peakmethod=configdict['peakmethod'])
     ImgMath.split_and_save(myimage,myelements,configdict)
-
+"""
 

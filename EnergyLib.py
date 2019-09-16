@@ -1,5 +1,8 @@
-import xraylib as xlib
+try: import xraylib as xlib
+except: print("xraylib module not found!")
 import numpy as np
+import logging
+logging.debug("Importing module EnergyLib.py...")
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
 
