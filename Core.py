@@ -28,7 +28,7 @@ if __name__=="__main__":
     import SpecRead
     import SpecMath
     import ImgMath
-    import Mapping
+    import Mapping_NOGUI as Mapping
     import EnergyLib
     import matplotlib.pyplot as plt
     import logging
@@ -56,7 +56,7 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     
     if '-stat' in sys.argv:
-        print("\nSample files location: {0}\n".format(SpecRead.dirname))
+        #print("\nSample files location: {0}\n".format(SpecRead.dirname))
         sys.stdout.flush()
         if os.path.exists(cube_path):
             cube_stats = os.stat(cube_path)
@@ -232,10 +232,6 @@ an image where the element is displayed in proportion to the most abundant eleme
             print("Please run 'python Core.py -compilecube' and try again.")
 
     if flag1 == '-plotstack':
-        try: flag2 = sys.argv[2]
-        except: flag2 = None
-        try: flag3 = sys.argv[3]
-        except: flag3 = None
         import SpecMath
         import pickle
         print("Loading {0}".format(cube_path))
@@ -245,7 +241,12 @@ an image where the element is displayed in proportion to the most abundant eleme
             cube_file = open(cube_path,'rb')
             datacube = pickle.load(cube_file)
             cube_file.close()
-            SpecMath.getstackplot(datacube,flag2,flag3)
+            strip = SpecMath.peakstrip(datacube.sum,24,7)
+            plt.semilogy(strip, label="strip")
+            plt.semilogy(datacube.sum, label="sum")
+            plt.legend()
+            plt.show()
+            #SpecMath.getstackplot(datacube,mode="combined")
         else:
             print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
 
@@ -304,11 +305,27 @@ an image where the element is displayed in proportion to the most abundant eleme
             cube_file.close()
         else:
             print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
-
+        
+        """
         compound = Compounds.compound()
-        compound.set_compound('PbWhite')
-        compound.identity = 'Pb'
+        compound.set_compound([0.13,0.77,0.10],['S','O','Cu'],ctype='custom',mode='by_weight')
+        compound.identity = 'S'
         compound.set_attenuation(elementlist[0])
+        """
+        
+        fibulagold = Compounds.compound()
+        fibulagold.set_compound("FibulaGold")
+        air = Compounds.compound()
+        air.set_compound("Air")
+        
+        # identity creates the mask to restrain the region where the heightmap will be calculated
+        compound = fibulagold.mix([30,70],[air])
+        #compound = fibulagold
+        compound.set_attenuation(elementlist[0])
+        compound.identity = 'Au'
+        
+        for key in compound.__dict__:
+            print(key,compound.__dict__[key])
 
         #############################
         # COMPOUND IDENTITY ELEMENT #
@@ -319,8 +336,9 @@ an image where the element is displayed in proportion to the most abundant eleme
         # if identity element does not exist (for custom or mixture compounds) abundance
         # element is used
         
-        mask = ImgMath.mask(datacube,compound)
-        mask = ImgMath.threshold(mask,105)
+        mask_threshold = int(ImgMath.LEVELS/3)
+        mask = ImgMath.mask(datacube,compound,mask_threshold)
+        #mask = ImgMath.threshold(mask,0)
         mae = compound.identity
 
         print("Most abundant element in compound: {}".format(mae))
