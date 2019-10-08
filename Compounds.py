@@ -10,10 +10,14 @@ import numpy as np
 import logging
 logging.debug("Importing module Compounds.py...")
 import EnergyLib
-try: import xraylib as xlib
-except: print("Failed to load xraylib module!")
+try: 
+    import xraylib as xlib
+    logging.info("Sucessfully imported xraylib module!")
+except: logging.warning("Failed to load xraylib module!")
 
 CompoundList = {
+        
+        'Air'           :{'O':2,'N':2,},
         'Azurite'       :{'Cu':3,'C':2,'O':8,'H':2},
         'AuSheet'       :{'Au':9,'Ag':1},
         'CoBlue'        :{'Co':1,'Al':2,'O':4},
@@ -21,8 +25,10 @@ CompoundList = {
         'Ethanol'       :{'C':2,'H':6,'O':1},
         'PbWhite'       :{'Pb':3,'O':4,'C':1,'H':2},
         'PbCarbonate'   :{'Pb':1,'C':1,'O':3},
-        'PureGold'      :{'Au':100},
+        'PureAu'        :{'Au':1},
+        'PureCu'        :{'Cu':1},
         'Tenorite'      :{'Cu':1,'O':1},
+        'TiWhite'       :{'Ti':1,'O':2},
         'Vermilion'     :{'Hg':1,'S':1},
         'Water'         :{'H':2,'O':1},
         'ZnWhite'       :{'Zn':1,'O':1},
@@ -30,8 +36,10 @@ CompoundList = {
 
 WeightList = {
 
-        'AuSheet'       :{'Au':0.917,'Ag':0.083},
+        'Au24'          :{'Au':0.999,'Ag':0.001},
+        'FibulaGold'    :{'Au':0.8049,'Cu':0.0431,'Hg':0.1519},
         'Tumbaga'       :{'Au':0.12,'Ag':0.16,'Cu':0.72},
+        'SardinianCu'   :{'Cu':0.90,'Sn':0.081,'Pb':0.019},
         'LinOil'        :{'C':0.78,'O':0.11,'H':0.11},
         'OceanBlue'     :{'H':0.0413,'C':0.2925,'O':0.2674,'Al':0.1907,'Co':0.2082},
         'PbWhitePrimer' :{'Pb':0.6612,'O':0.1722,'C':0.1328,'H':0.0163,'Ca':0.0174}, \
@@ -59,7 +67,9 @@ class compound:
             __self__.create_compound_by_weight(args[0],args[1])
         else:
             try: __self__.set_from_database(args[0])
-            except: raise ValueError("{} not recognized".format(args[0]))
+            except: 
+                try: __self__.set_from_w_database(args[0])
+                except: raise ValueError("{} not found in database".format(args[0]))
         pass
         if ctype == None: name = args[0]
         __self__.give_name(name)
@@ -95,6 +105,18 @@ class compound:
         __self__.origin = 'from_database'
         __self__.name = name_of_compound
     
+    def set_from_w_database(__self__,name_of_compound):
+        elements = [element for element in WeightList[name_of_compound]]
+        ratios = []
+        for element in WeightList[name_of_compound]:
+            ratios.append(WeightList[name_of_compound][element])
+        __self__.weight = {"{0}".format(elements[i]):ratios[i] for i in range(len(ratios))}
+        __self__.chem = None
+        __self__.mass = None
+        __self__.give_density()
+        __self__.origin = 'from_weight_database'
+        __self__.name = name_of_compound
+    
     def weightpercent(__self__):
         for element in __self__.chem:
             __self__.weight[element] = __self__.chem[element]/__self__.mass 
@@ -127,11 +149,16 @@ class compound:
         mixture.give_density()
         mixture.mass = None
         mixture.chem = None
+        
         name_list = []
         for ingredient in compounds:
             name_list.append(ingredient.name)
         mixture.origin = \
                 {'Mode':'by_mixing','Proportion':proportion,'Origin':name_list}
+        names = ""
+        for name in name_list: names = names + "" + name
+        mixture.name = names 
+         
         return mixture
 
     def set_attenuation(__self__,energy):
@@ -174,7 +201,7 @@ def linattenuation(element,KaKb):
         mu1 = coefficients[0]
         mu2 = coefficients[1]
     else:
-        print("Impossible to create heightmap for {0}!".format(KaKb))
+        logging.warning("Impossible to create heightmap for {0}!".format(KaKb))
         logging.warning("{0} is not a valid element for ratio calculation!\n\t\t\
                 Try again using a different element such as Au, Pb or Zn.".format(KaKb))
         raise ValueError
@@ -220,24 +247,29 @@ if __name__=="__main__":
 
     linoil = compound()
     linoil.set_compound([0.78,0.11,0.11],['C','O','H'],ctype='custom',mode='by_weight',name='Linoil')
-
+    
+    mixture = linoil.mix([2,10],[coblue])
+    
+    """
     print("Water DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(water.weight,water.mass,water.chem,water.density))
 
     print("Cobalt Blue DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(coblue.weight,coblue.mass,coblue.chem,coblue.density))
 
-    mixture = linoil.mix([2,10],[coblue])
 
     print("Mixture DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(mixture.weight,mixture.mass,mixture.chem,mixture.density))
     print(water.origin)
     print(coblue.origin)
     print(linoil.origin)
     print(mixture.origin)
-    
+    """
     ############################################
 
-    gold = compound()
-    gold.set_compound('PureGold')
-    gold.set_attenuation(20)
+    mycompound = compound()
+    mycompound.set_compound('TiWhite')
+    mycompound.set_attenuation(30)
 
-    print(gold.tot_att)
+    for key in mycompound.__dict__:
+        print(key, mycompound.__dict__[key])
     
+    print(mycompound.lin_att)
+     
