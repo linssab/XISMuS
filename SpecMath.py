@@ -29,6 +29,41 @@ try: import scipy.signal
 except: logging.warning("Could not import scipy package.")
 logging.debug("Finished SpecMath imports.")
 
+from tkinter import *
+from tkinter import ttk
+
+class Busy:
+    
+    def __init__(__self__,max_,min_):
+        __self__.master = Toplevel()
+        __self__.master.resizable(False,False)
+        __self__.master.overrideredirect(True)
+        x = __self__.master.winfo_screenwidth()
+        y = __self__.master.winfo_screenheight()
+        win_x = __self__.master.winfo_width()
+        win_y = __self__.master.winfo_height()
+        __self__.master.geometry('{}x{}+{}+{}'.format(166, 51,\
+                int((x/2)-80), int((y/2)-23)))
+        __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
+        __self__.outerframe.grid(row=0,column=0)
+        __self__.master.label = Label(__self__.outerframe, text="Packing spectra...")
+        __self__.master.label.grid(row=0,column=0)       
+        __self__.master.body = Frame(__self__.outerframe)        
+        __self__.master.body.grid(row=1,column=0)
+        __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
+        __self__.progress.grid(row=0,column=0)
+
+    def updatebar(__self__,value):
+        __self__.progress["value"] = value
+        __self__.progress.update()
+
+    def update_text(__self__,text):
+        __self__.master.label["text"] = text
+        __self__.master.update()
+
+    def destroybar(__self__):
+        __self__.master.destroy()
+
 #logging.debug("Importing numba environmental variables...")
 #os.environ['NUMBAPRO_NVVM']      =\
 #        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\bin\nvvm64_33_0.dll'
@@ -60,9 +95,10 @@ class datacube:
         __self__.config = configuration
         __self__.calibration = SpecRead.getcalibration()
         __self__.energyaxis = energyaxis()
+        __self__.ROI = {}
+        __self__.max_counts = {}
 
     def MPS(__self__):
-        logging.debug("Calculating MPS spec")
         __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for c in range(__self__.matrix.shape[2]):
             for x in range(__self__.matrix.shape[0]):
@@ -70,14 +106,12 @@ class datacube:
                     if __self__.mps[c] < __self__.matrix[x,y,c]: __self__.mps[c] = __self__.matrix[x,y,c]
 
     def stacksum(__self__):
-        logging.debug("Calculating summation spec")
         __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
     
     def write_sum(__self__):
-        logging.debug("Writing stacksum.mca and ANSII SUM")
         try: os.mkdir(SpecRead.output_path)
         except: pass
         output_path = SpecRead.output_path
@@ -105,8 +139,8 @@ class datacube:
         ANSII_file.close()
 
     def strip_background(__self__,bgstrip=None):
-        logging.debug("Calculating backgrounds")
         bgstrip = __self__.config['bgstrip']
+        counter = 0
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
                 __self__.energyaxis.shape[0]],dtype='float64',order='C')
         if bgstrip == 'None':
@@ -115,33 +149,36 @@ class datacube:
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
-                    stripped = peakstrip(__self__.matrix[x,y],24,5)
+                    stripped = peakstrip(__self__.matrix[x,y],24,7)
                     __self__.background[x,y] = stripped
                     __self__.sum_bg += stripped
+                    counter = counter + 1
+                    __self__.progressbar.updatebar(counter)
 
     def create_densemap(__self__):
-        logging.debug("Calculating sum map")
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
-        logging.debug("Writing cube file to disk")
         try: 
-            logging.info("Creating outputh path {0}".forma(SpecRead.output_path))
-            os.mkdir(SpecRead.output_path)
+            if not os.path.exists(SpecRead.output_path):
+                logging.info("Creating outputh path {0}".forma(SpecRead.output_path))
+                os.mkdir(SpecRead.output_path)
+            else: logging.debug("Output path exists")
         except: 
             logging.warning("Could not create output folder {}".format(SpecRead.output_path))
             pass
         p_output = open(SpecRead.cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
-        print("File {0}.cube sucessfully compiled.".format(SpecRead.DIRECTORY))
+        #print("File {0}.cube sucessfully compiled.".format(SpecRead.DIRECTORY))
 
     def compile_cube(__self__):
-        logging.debug("Started cube compilation")
+        logging.debug("Started mca compilation")
+        __self__.progressbar = Busy(__self__.img_size,0)
         currentspectra = SpecRead.getfirstfile()
+        logging.debug("First mca on list: {}".format(currentspectra))
         x,y,scan = 0,0,(0,0)
         for iteration in range(__self__.img_size):
-            compilation_progress = iteration
             spec = currentspectra
             specdata = SpecRead.getdata(spec)
             for i in range(len(specdata)):
@@ -149,28 +186,44 @@ class datacube:
             scan = updateposition(scan[0],scan[1])
             x,y = scan[0],scan[1]
             currentspectra = SpecRead.updatespectra(spec,__self__.img_size)
-            progress = int(iteration/__self__.img_size*20)
-            blank = (20 - progress - 1)
-            print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
-                    .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
-            sys.stdout.flush()
-        print("\nCalculating...")
-        compilation_progress = 0
-        sys.stdout.flush()
+            __self__.progressbar.updatebar(iteration)
+            
+            #progress = int(iteration/__self__.img_size*20)
+            #blank = (20 - progress - 1)
+            #print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
+            #        .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
+            #sys.stdout.flush()
+        
+        logging.debug("Calculating MPS...")
+        __self__.progressbar.update_text("Calculating MPS...")
         datacube.MPS(__self__)
+        logging.debug("Calculating summation spectrum...")
+        __self__.progressbar.update_text("Calculating sum spec...")
         datacube.stacksum(__self__)
+        logging.debug("Stripping background...")
+        __self__.progressbar.update_text("Stripping background...")
         datacube.strip_background(__self__)
+        logging.debug("Writing summation mca and ANSII files...")
         datacube.write_sum(__self__)
+        logging.debug("Calculating sum map...")
+        __self__.progressbar.update_text("Calculating sum map...")
         datacube.create_densemap(__self__)
+        logging.debug("Saving cube file to disk...")
+        __self__.progressbar.update_text("Writing to disk...")
+        __self__.progressbar.destroybar()
+        del __self__.progressbar 
         datacube.save_cube(__self__)
-
+        logging.debug("Finished packing.")
+        
     def pack_element(__self__,image,element):
         __self__.__dict__[element] = image
-        print("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
+        logging.info("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
+        #print("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
 
     def unpack_element(__self__,element):
         unpacked = __self__.__dict__[element]
-        print("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
+        #print("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
+        logging.info("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
         return unpacked
 
     def check_packed_elements(__self__):
@@ -182,6 +235,12 @@ class datacube:
             else: pass
         return packed
 
+    def prepack_elements(__self__,element_list):
+        for element in element_list:
+            __self__.__dict__[element] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
+            __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]])
+            __self__.max_counts[element] = np.nan
+    
 def shift_center(xarray,yarray):
     ymax = yarray.max()
     y_list = yarray.tolist()
@@ -282,7 +341,7 @@ def setROI(lookup,xarray,yarray,localconfig):
     # setROI(lookup,xarray,yarray,localconfig)                         #
     # INPUT: eV energy, energy array (x axis) and data array           #
     # OUTPUT: indexes corresponding to 2*FWHM of a gaussian centered   #
-    # at eV energy position                                            #
+    # at eV energy position (int, int, int, bool)                      #
     ####################################################################
     
     lookup = int(lookup)
@@ -302,6 +361,7 @@ def setROI(lookup,xarray,yarray,localconfig):
         lowx = (lookup - (FWHM))/1000
         highx = (lookup + (FWHM))/1000
         logging.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
+        
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
@@ -311,6 +371,7 @@ def setROI(lookup,xarray,yarray,localconfig):
             idx+=1
         highx_idx = idx+3
         logging.debug("highx_idx: %d" % highx_idx)
+        
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
         shift = shift_center(ROIaxis,ROIdata)
@@ -333,7 +394,8 @@ def setROI(lookup,xarray,yarray,localconfig):
     lowx_idx = lowx_idx + 3
     highx_idx = highx_idx - 3
     peak_center = shift[2]-3
-    logging.debug("peak_center = {0}".format(peak_center)) 
+    logging.info("peak_center = {0}, channels = {1} {2}, peakwidth= {3}"\
+            .format(peak_center,lowx_idx,highx_idx,(highx_idx-lowx_idx))) 
     return lowx_idx,highx_idx,peak_center,isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
@@ -424,8 +486,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     return Area,idx
 
 @jit
-def ryan_snip(an_array,cycles,width):
-    
+def strip(an_array,cycles,width):
     ##################################################################
     # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (1*W)+1       #
     # W VALUE MUST BE LARGER THAN 2 AND ODD, SINCE 3 IS THE MINIMUM  #
@@ -436,29 +497,38 @@ def ryan_snip(an_array,cycles,width):
         l = width
         for l in range(an_array.shape[0]-width):
             m = (an_array[l-width] + an_array[l+width])/2
-            if an_array[l] > m: an_array[l] = m
+            if an_array[l] > m and an_array[l] !=0: an_array[l] = m
     return an_array
 
 #@guvectorize([(float64[:], int64, int64, float64[:])], '(n),(),()->(n)')       
 def peakstrip(an_array,cycles,width):
-    
+   
+    TEST = False
+
     #initialize snip_bg array
     snip_bg = np.zeros(an_array.shape[0])
-    
-    #apply savgol filter to input spectrum
-    smooth_sqr = scipy.signal.savgol_filter(an_array,width,3)
+
+    #square root the data
+    sqr_data = an_array**0.5
+
+    #apply savgol filter to the square root data
+    smooth_sqr = scipy.signal.savgol_filter(sqr_data,width,3)
     for i in range(smooth_sqr.shape[0]): 
         if smooth_sqr[i] < 0: smooth_sqr[i] = 0
     
-    #squareroot transformation of the spectrum
-    smooth_sqr **= 0.5
-    
     #strip peaks
-    snip_bg = ryan_snip(smooth_sqr,cycles,width)
-    
+    snip_bg = strip(smooth_sqr,cycles,width)
+
     #transform back
     snip_bg **= 2
+    snip_bg = scipy.signal.savgol_filter(snip_bg,width,3)
     
+    if TEST == True:
+        plt.semilogy(snip_bg,label="background")
+        plt.semilogy(an_array,label="spectrum")
+        plt.legend()
+        plt.show()
+
     return snip_bg
 
 if __name__=="__main__":
