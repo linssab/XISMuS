@@ -56,7 +56,6 @@ an image where the element is displayed in proportion to the most abundant eleme
        '-getratios x'; creates the ka/kb or la/lb ratio image for element 'x'. K or L are chosen accordingly.")
     
     if '-stat' in sys.argv:
-        #print("\nSample files location: {0}\n".format(SpecRead.dirname))
         sys.stdout.flush()
         if os.path.exists(cube_path):
             cube_stats = os.stat(cube_path)
@@ -70,7 +69,10 @@ an image where the element is displayed in proportion to the most abundant eleme
             cube_file.close() 
             
             packed_elements = datacube.check_packed_elements()
-            if len(packed_elements) == 0: print("None found.")
+            if len(packed_elements) == 0: 
+                print("None found.")
+            else: 
+                for element in packed_elements: print("Found a map for: "+element)
             print("Done.")
             #print("Configuration compiled into cube: {}".format(datacube.config))
             #print("Configuration from config.cfg: {}".format(config))
