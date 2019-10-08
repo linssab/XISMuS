@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: a1.41                         #
+#                        version: 0.0.1α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -12,6 +12,7 @@ import numpy as np
 import SpecRead
 import matplotlib
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 logging.debug("Importing module matplotlib.colors...")
 from matplotlib.colors import ListedColormap
 logging.debug("Importing module mpl_toolkits.axes_grid1...")
@@ -72,7 +73,7 @@ def median_filter(a_2D_array,x,y):
                                 except:
                                     try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] +\
                                             a_2D_array[x,y-1] + a_2D_array[x-1,y-1])/5
-                                    except: print("Something went wrong with the median filter!")
+                                    except: logging.warning("Something went wrong with the median filter!")
     return average
 
 def iteractive_median(a_2D_array,iterations=1):
@@ -96,7 +97,7 @@ def low_pass(a_2D_array,t):
             if a_2D_array[x,y] > t: a_2D_array[x,y] = 0
     return a_2D_array 
 
-def mask(a_datacube,a_compound):
+def mask(a_datacube,a_compound,mask_threshold):
     try: 
         # tries to get identity element from compound
         id_element = a_compound.identity
@@ -119,12 +120,13 @@ def mask(a_datacube,a_compound):
     
     # TO DO:
     # check histogram to understand contrast and define threshold
-    id_element_matrix = threshold(id_element_matrix,55)
+    id_element_matrix = threshold(id_element_matrix,mask_threshold)
 
     return id_element_matrix
 
 
 def getheightmap(depth_matrix,mask,thickratio,compound):
+    average = [[],0]
     imagesize = SpecRead.getdimension()
     imagex = imagesize[0]
     imagey = imagesize[1]
@@ -141,8 +143,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     mu2 = coefficients[1]
     logging.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
     
-    ANGLE = 90  # IN DEGREES #
-    
+    ANGLE = 27  # IN DEGREES #
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0.001:
@@ -156,8 +157,15 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
 
             if d <= 0: heightmap[i][j] = 0
             else: heightmap[i][j] = 10000 * d
-            
+             
             heightfile.write("%d\t%d\t%f\n" % (i, j, heightmap[i][j]))
+            if d > 0: 
+                average[0].append(d)
+                average[1] = average[1]+1
+    median = sum(average[0])/(average[1])
+    print(median*10000)
+    print("max: {0} min: {1}".format(max(average[0])*10000,min(average[0])*10000))
+    heightfile.write("Average: {0}um, sampled points: {1}".format(median*10000,average[1]))
     return heightmap
 
 def set_axes_equal(ax):
@@ -348,8 +356,11 @@ def split_and_save(datacube,map_array,element_list):
         if datacube.config['ratio'] == False:
             ax.set_title(element_list[Element]+' alpha line')
         else: ax.set_title(element_list[Element])
-        if imagex > target_size or imagey > target_size: large_image = image
-        else: large_image = cv2.resize(image,(newY,newX),interpolation=cv2.INTER_NEAREST)
+        
+        if imagex > target_size or imagey > target_size: large_image = image/image.max()*255
+        else: 
+            large_image = image/image.max()*255
+            large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
         
         cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
             '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
@@ -367,8 +378,9 @@ def split_and_save(datacube,map_array,element_list):
             ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
     
     datacube.save_cube() 
+    logging.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
-    print("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
+    logging.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     #plt.show()
     return 0
 
