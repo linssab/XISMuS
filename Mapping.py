@@ -178,7 +178,6 @@ def getpeakmap(element_list,datacube):
                     if kb_idx[Element][3] == False and ka_idx[Element][3] == False:
                         logging.info("No alpha nor beta lines found for {}. Aborting...".\
                                 format(element_list[Element]))
-                        sys.exit()
                     elif kb_idx[Element][3] == False: 
                         logging.warning("No beta line detected for {}. Continuing with alpha only.".\
                                 format(element_list[Element]))
@@ -328,18 +327,20 @@ def getpeakmap(element_list,datacube):
                
                     # CALCULATES KA
                     if ka_idx[Element][3] == True:
-                        for channel in range(len(ka_ROI)):
-                            datacube.ROI[element_list[Element]][channel] += ka_ROI[channel]    
-                            ka += ka_ROI[channel] - ka_bg[channel]
+                        for channel in range(ka_idx[Element][0],ka_idx[Element][1]):
+                            datacube.ROI[element_list[Element]][channel] += \
+                                    ka_ROI[channel-ka_idx[Element][0]]    
+                            ka += ka_ROI[channel-ka_idx[Element][0]] - ka_bg[channel-ka_idx[Element][0]]
                    
                     # CALCULATES KB (MUST CHECK IF RATIO IS TRUE)
                     # IF RATIO IS FALSE, KB REMAINS AS 0
                     if conditional_ratio[Element] == True:
                         if kb_idx[Element][3] == True and ka_idx[Element][3] == True:
-                            for channel in range(len(kb_ROI)):
-                                datacube.ROI[element_list[Element]][channel] += kb_ROI[channel]    
-                                kb += kb_ROI[channel] - kb_bg[channel]
-                    
+                            for channel in range(kb_idx[Element][0],kb_idx[Element][1]):
+                                datacube.ROI[element_list[Element]][channel] += \
+                                        kb_ROI[channel-kb_idx[Element][0]]    
+                                kb += kb_ROI[channel-kb_idx[Element][0]] - kb_bg[channel-kb_idx[Element][0]]
+
                     logging.debug("ka {0}, kb {1}".format(ka,kb))
                     elmap[currentx][currenty][Element] = ka+kb
                     datacube.max_counts[element_list[Element]] = ka
