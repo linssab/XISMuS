@@ -15,6 +15,7 @@ import pickle
 import SpecRead
 import EnergyLib
 from Mapping import getdensitymap
+from ImgMath import LEVELS as LEVELS
 import matplotlib.pyplot as plt
 #from numba import guvectorize, float64, int64
 #from numba import cuda
@@ -96,6 +97,7 @@ class datacube:
         __self__.calibration = SpecRead.getcalibration()
         __self__.energyaxis = energyaxis()
         __self__.ROI = {}
+        __self__.hist = {}
         __self__.max_counts = {}
 
     def MPS(__self__):
@@ -219,7 +221,17 @@ class datacube:
         __self__.__dict__[element] = image
         logging.info("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
         #print("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
-
+    
+    def pack_hist(__self__,hist,bins,element):
+        histfile = open(SpecRead.output_path+"\\"+element+"_hist.txt",'w')
+        histfile.write("<<START>>\n")
+        histfile.write("hist\n")
+        for i in range(len(hist)):
+            histfile.write("{0}\n".format(hist[i]))
+        histfile.write("<<END>>")
+        histfile.close()
+        __self__.hist[element] = [hist,bins]
+     
     def unpack_element(__self__,element):
         unpacked = __self__.__dict__[element]
         #print("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
@@ -240,6 +252,7 @@ class datacube:
             __self__.__dict__[element] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
             __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]])
             __self__.max_counts[element] = np.nan
+            __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
     
 def shift_center(xarray,yarray):
     ymax = yarray.max()

@@ -23,7 +23,7 @@ import cv2
 import math
 logging.info("Finished ImgMath imports.")
 
-LEVELS = 4096
+LEVELS = 255
 
 def colorbar(mappable):
     
@@ -335,9 +335,9 @@ def split_and_save(datacube,map_array,element_list):
     factor = target_size/max(imagsize)
     newX,newY = int(factor*imagex),int(factor*imagey)
 
-    ###################################################
-    # Normalizes every map in respect to each element #
-    ###################################################
+    ####################
+    # Normalizes every #
+    ####################
     
     fig, axs = plt.subplots(1,len(element_list),sharey=True)
     
@@ -348,7 +348,14 @@ def split_and_save(datacube,map_array,element_list):
     for Element in range(len(element_list)):
         image = map_array[:,:,Element]
         if image.max() > 0: image = image/image.max()*LEVELS
+        
+        histogram,bins = np.histogram(image.flatten(),LEVELS,[0,LEVELS])
         datacube.pack_element(image,element_list[Element])
+        datacube.pack_hist(histogram,bins,element_list[Element])
+        
+        #plt.hist(datacube.__dict__[element_list[Element]],bins='auto')
+        #plt.show()
+
         if len(element_list) > 1: ax = axs[Element]
         else: ax=axs
         fig_list.append(ax.imshow(image,cmap='gray'))
