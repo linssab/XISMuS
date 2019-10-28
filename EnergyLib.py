@@ -1,12 +1,13 @@
-try: import xraylib as xlib
-except: print("xraylib module not found!")
 import numpy as np
 import logging
 logging.debug("Importing module EnergyLib.py...")
+try: import xraylib as xlib
+except: logging.warning("xraylib module not found!")
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
 
 ElementsInfo = [
+   ["Custom", 0.0001, 1.01,   0,      0,     0,      0,      0,      0,      0], 
    ["H",    0.0007, 1.01,   0,          0,          0.3695, 0.384,  0.3803, 0.3912, 0.3883],
    ["He",   0.0002, 4.00,   0,          0,          0,      0,      0,      0,      0,],
    ["Li",   0.53,   6.94,   0,          0,          0,      0,      0,      0,      0],
@@ -122,14 +123,6 @@ ElementsInfo = [
 ]
 
 ElementList = [index[0] for index in ElementsInfo]
-Energies = [index[3] for index in ElementsInfo]
-kbEnergies = [index[4] for index in ElementsInfo]
-AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
-Element_No = {"{0}".format(index[0]):ElementList.index(index[0])+1 for index in ElementsInfo}
-muPb = {"{0}".format(index[0]):(index[6],index[7]) for index in ElementsInfo}
-muE0 = {"{0}".format(index[0]):(index[5]) for index in ElementsInfo} 
-muCu = {"{0}".format(index[0]):(index[8],index[9]) for index in ElementsInfo}
-
 banlist = []
 for i in range(len(ElementsInfo)):
     if i < 10: banlist.append(ElementsInfo[i][0])
@@ -155,9 +148,27 @@ def SetPeakLines():
     return PeakConfigDict
 
 def set_energies_from_xlib():
-    for index in range(len(ElementList)):
-        print(xlib.LineEnergy(index,0))
-    return 0
+    #for index in range(len(ElementList)):
+    #    print(ElementList[index],xlib.LineEnergy(index,0),xlib.LineEnergy(index,1))
+    EnergyList, EnergyListKb = [],[]
+    L = False
+    elt = 0
+    while elt in range(len(ElementList)):
+        while ElementList[elt] != 'Mt': 
+            if ElementList[elt] == 'Sb': L = True
+            if L == True:
+                while ElementList[elt] != 'Mt':
+                    EnergyList.append(xlib.LineEnergy(elt,2))
+                    EnergyListKb.append(xlib.LineEnergy(elt,3))
+                    #print(ElementList[elt],xlib.LineEnergy(elt,2),xlib.LineEnergy(elt,3))
+                    elt += 1
+                break 
+            EnergyList.append(xlib.LineEnergy(elt,0))
+            EnergyListKb.append(xlib.LineEnergy(elt,1))
+            #print(ElementList[elt],xlib.LineEnergy(elt,0),xlib.LineEnergy(elt,1))
+            elt += 1
+        break
+    return EnergyList, EnergyListKb
 
 def set_densities_from_xlib():
     DensityDict = {}
@@ -173,3 +184,23 @@ def set_densities_from_xlib():
 
 DensityDict = set_densities_from_xlib()
 
+# Lists below uses the definition written manually in this file
+#Energies = [index[3] for index in ElementsInfo]
+#kbEnergies = [index[4] for index in ElementsInfo]
+
+# Energy lists where updated to use xraylib values:
+Energies, kbEnergies = set_energies_from_xlib()
+
+AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
+Element_No = {"{0}".format(index[0]):ElementList.index(index[0])+1 for index in ElementsInfo}
+muPb = {"{0}".format(index[0]):(index[6],index[7]) for index in ElementsInfo}
+muE0 = {"{0}".format(index[0]):(index[5]) for index in ElementsInfo} 
+muCu = {"{0}".format(index[0]):(index[8],index[9]) for index in ElementsInfo}
+
+
+if __name__ == "__main__":
+    try: 
+        Energies, kbEnergies = set_energies_from_xlib()
+        DensityDict = set_densities_from_xlib()
+        print("pass!")
+    except: print("oops, xraylib is not working for some reason.")
