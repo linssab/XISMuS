@@ -39,10 +39,11 @@ if __name__=="__main__":
     cube_name = SpecRead.DIRECTORY
     cube_path = SpecRead.cube_path
     elementlist = []
-    inputlist = ['-findelement','Core.py','-normalize','-getratios','-stat','-threshold','-lowpass','-listsamples']
-    commands = ['-findelement A B C ...', '-getratios A','-listsamples', '-stat', '-threshold A X', '-lowpass A X','-compilecube','-plotmap','-plotstack -semilog -bg']
+    inputlist = ['-findelement','Core.py','./Core.py','-normalize','-getratios','-stat','-threshold','-lowpass','-listsamples']
+    commands = ['-findelement Ti Ca Fe ...', '-getratios Ti','-listsamples', '-stat\t /this print the current configuration embedded in config.cfg', '-threshold Ti (value from 0 4096)', '-lowpass Ti (value from 0 to 4096)','-compilecube','-plotmap','-plotstack -semilog -bg','ATTENTION: Ti, Ca and Fe are used as examples. In any case the input elements MUST be written according to their acronyms']
     try: flag1 = sys.argv[1]
     except: 
+        print("\nUsage:")
         for command in commands:
             print(command)
         flag1 = None
@@ -76,23 +77,23 @@ an image where the element is displayed in proportion to the most abundant eleme
             print("Done.")
             #print("Configuration compiled into cube: {}".format(datacube.config))
             #print("Configuration from config.cfg: {}".format(config))
-            print("Configuration embedded:\n KEY\t\tCUBE.CONFIG\tCONFIG.CFG")
+            print("Configuration embedded:\nKEY\t\tCUBE.CONFIG\tCONFIG.CFG")
             values_cube, values_cfg, values_keys = [],[],[]
             for key in datacube.config:
                 values_cube.append(str(datacube.config[key]))
                 values_cfg.append(str(config[key]))
                 values_keys.append(str(key))
             for item in range(len(values_cube)):
-                if len(values_cube[item]) < 8: values_cube[item] = values_cube[item]+'\t'
-                if len(values_cfg[item]) < 8: values_cfg[item] = values_cfg[item]+'\t'
-                if len(values_keys[item]) < 8: values_keys[item] = values_keys[item]+'\t'
+                if len(values_cube[item]) <= 7: values_cube[item] = values_cube[item]+'\t'
+                if len(values_cfg[item]) <= 7: values_cfg[item] = values_cfg[item]+'\t'
+                if len(values_keys[item]) <= 7: values_keys[item] = values_keys[item]+'\t'
                 print("{0}\t|{1}\t|{2}".format(values_keys[item],values_cube[item],values_cfg[item]))
             #print(values_cube,values_cfg,values_keys)
             
         else: 
             print("Datacube not compiled. Please run -compilecube command.")
             for key in config:
-                if len(key) > 8: print("{0}\t|{1}".format(key,config[key]))
+                if len(key) >= 8: print("{0}\t|{1}".format(key,config[key]))
                 else: print("{0}\t\t|{1}".format(key,config[key]))
 
     if flag1 == '-compilecube':
@@ -143,7 +144,7 @@ an image where the element is displayed in proportion to the most abundant eleme
         except:
             raise ValueError("No threshold input.")
         
-        element_matrix = datacube.unpack_element(element) 
+        element_matrix = datacube.unpack_element(element,"a") 
         element_matrix = ImgMath.threshold(element_matrix,t)
         
         fig, ax = plt.subplots()
@@ -315,14 +316,13 @@ an image where the element is displayed in proportion to the most abundant eleme
         compound.set_attenuation(elementlist[0])
         """
         
-        fibulagold = Compounds.compound()
-        fibulagold.set_compound("FibulaGold")
+        compound = Compounds.compound()
+        compound.set_compound("FibulaGold")
         air = Compounds.compound()
         air.set_compound("Air")
         
         # identity creates the mask to restrain the region where the heightmap will be calculated
-        compound = fibulagold.mix([30,70],[air])
-        #compound = fibulagold
+        compound = compound.mix([12,88],[air])
         compound.set_attenuation(elementlist[0])
         compound.identity = 'Au'
         
@@ -344,24 +344,47 @@ an image where the element is displayed in proportion to the most abundant eleme
         mae = compound.identity
 
         print("Most abundant element in compound: {}".format(mae))
-        
-
         #######################################
+        
+        custom_mask = np.zeros([datacube.dimension[0],datacube.dimension[1]])
+        counter = 0
+        
+        #creates a ROI mask to calculate thickness values (fibula2 sample)
+        for x in range(1,6):
+            for y in range(26,34):
+                custom_mask[x][y] = 1
+                counter += 1
+        for x in range(11,15):
+            for y in range(30,34):
+                custom_mask[x][y] = 1
+                counter += 1
+        for x in range(6,11):
+            for y in range(4,11):
+                custom_mask[x][y] = 1
+                counter += 1
+         
+        #creates a ROI mask to calculate thickness values (gilded wood sample)
+        """
+        for x in range(0,26):
+            for y in range(34,65):
+                custom_mask[x][y] = 1
+                counter += 1
+        for x in range(0,34):
+            for y in range(74,82):
+                custom_mask[x][y] = 1
+                counter += 1
+        """
+
+        mask = custom_mask
+        #####################################################################
+        # plots the ratio map of element used as contrast and the mask used #
+        #####################################################################
 
         try:
             maps = []
-            """
-            mae_file = SpecRead.output_path + '{1}_ratio_{0}.txt'\
-                .format(mae,SpecRead.DIRECTORY)
-            mae_matrix = SpecRead.RatioMatrixReadFile(mae_file)
-            """
             fig, ax = plt.subplots(1,2,sharey=True)
             maps.append(ax[0].imshow(ratiomatrix))
-            ax[0].set_title('{} ratio map'.format(elementlist[0]))
-            """
-            maps.append(ax[1].imshow(mae_matrix))
-            ax[1].set_title('{} ratio map'.format(mae))
-            """
+            ax[0].set_title('{0} ratio map Matrix={1}'.format(elementlist[0],config.get('thickratio')))
             maps.append(ax[1].imshow(mask))
             ax[1].set_title('{} mask'.format(compound.identity))
             ImgMath.colorbar(maps[0])
@@ -372,7 +395,38 @@ an image where the element is displayed in proportion to the most abundant eleme
             plt.close()
         except: raise FileNotFoundError("{0} ratio file not found!".format(mae))
         
-        heightmap = ImgMath.getheightmap(ratiomatrix,mask,\
+        ####################################################################
+       
+        """
+        maximum_porosity = 40
+        x_axis = np.arange(0,maximum_porosity,1) 
+        average = np.empty(maximum_porosity)
+        average[:] = np.nan
+        std = np.zeros([maximum_porosity])
+        mask = custom_mask
+        
+        ansii_plot_file = open(os.getcwd()+"\\output\\{}\\".format(config.get('directory'))+"porosity_plot.txt","w+")
+        ansii_plot_file.write("Air %\tMean\tStandard Deviation\n")
+        for span in range(0,maximum_porosity,2):
+            compound = Compounds.compound()
+            compound.set_compound("FibulaGold")
+            compound = compound.mix([span,100-span],[air])
+            compound.set_attenuation(elementlist[0])
+            heightmap,average[span],std[span] = ImgMath.getheightmap(ratiomatrix,mask,\
+                    config.get('thickratio'),compound)
+            ansii_plot_file.write("{}\t{}\t{}\n".format(span,average[span],std[span]))
+        
+        ansii_plot_file.close()
+        print(counter)
+        plt.subplot(111)
+        plt.errorbar(x_axis,average,yerr=std,barsabove=True,capsize=3,fmt="P")
+        plt.ylabel("Thickness (um)")
+        plt.xlabel("Simulated porosity (%)")
+        plt.show()
+        """
+
+        average,std = 0,0
+        heightmap, average,std = ImgMath.getheightmap(ratiomatrix,mask,\
                 config.get('thickratio'),compound)
         fig, ax = plt.subplots()
         cbar = ax.imshow(heightmap,cmap='gray')
