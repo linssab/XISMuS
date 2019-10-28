@@ -6,7 +6,7 @@
 #                                                               #
 #################################################################
 
-import logging
+import logging,os
 logging.debug("Importing module ImgMath.py...")
 import numpy as np
 import SpecRead
@@ -143,12 +143,12 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     mu2 = coefficients[1]
     logging.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
     
-    ANGLE = 27  # IN DEGREES #
+    ANGLE = 73  # IN DEGREES #
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0.001:
-                d = -1 * math.sin(math.radians(ANGLE)) *\
-                        (math.log((depth_matrix[i][j]/thickratio))/(mu1-mu2))
+                d = (math.sin(math.radians(ANGLE))/(-mu1+mu2))*\
+                        (math.log((depth_matrix[i][j]/thickratio)))
             else: d = 0
             
             #############################################
@@ -158,15 +158,19 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
             if d <= 0: heightmap[i][j] = 0
             else: heightmap[i][j] = 10000 * d
              
-            heightfile.write("%d\t%d\t%f\n" % (i, j, heightmap[i][j]))
             if d > 0: 
+                heightfile.write("%d\t%d\t%f\n" % (i, j, heightmap[i][j]))
                 average[0].append(d)
-                average[1] = average[1]+1
-    median = sum(average[0])/(average[1])
-    print(median*10000)
+                average[1] = average[1]+1  #counts how many values are
+    
+    median = sum(average[0])/(average[1])*10000  #calculates the average (mean) value
+    deviation = np.std(average[0])*10000         #calculates the standard deviation
+
+    print("Deviation {}".format(deviation))
+    print("Average {}".format(median))
     print("max: {0} min: {1}".format(max(average[0])*10000,min(average[0])*10000))
-    heightfile.write("Average: {0}um, sampled points: {1}".format(median*10000,average[1]))
-    return heightmap
+    heightfile.write("Average: {0}um, sampled points: {1}".format(median,average[1]))
+    return heightmap,median, deviation
 
 def set_axes_equal(ax):
     
@@ -186,6 +190,10 @@ def set_axes_equal(ax):
     x_limits = ax.get_xlim3d()
     y_limits = ax.get_ylim3d()
     z_limits = ax.get_zlim3d()
+    
+    ax.set_xlabel("mm")
+    ax.set_ylabel("mm")
+    ax.set_zlabel("Thickness (μm)")
 
     x_range = abs(x_limits[1] - x_limits[0])
     x_middle = np.mean(x_limits)
@@ -200,7 +208,8 @@ def set_axes_equal(ax):
 
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
-    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+    #ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+    ax.set_zlim3d([0, plot_radius])
 
 def plot3D(depth_matrix):
     fig = plt.figure()
@@ -219,6 +228,7 @@ def plot3D(depth_matrix):
     MAP = ax.plot_surface(X,Y,depth_matrix,\
             cmap='BuGn',linewidth=0,antialiased=True)
     set_axes_equal(ax)
+    fig.savefig(os.getcwd()+'\\myimage.svg', format='svg', dpi=1200)
     plt.show()
     return 0
 
@@ -307,12 +317,13 @@ def flattenhistogram(image):
     return image
 
 def interpolate_zeros(map_array):
-    for Element in range(map_array.shape[2]):
-        for x in range(map_array.shape[0]):
-            for y in range(map_array.shape[1]):
-                if map_array[x,y,Element] == 0: 
-                    newvalue = median_filter(map_array[:,:,Element],x,y)
-                    map_array[x,y,Element] = newvalue
+    for Element in range(map_array.shape[3]):
+        for line in range(map_array.shape[2]):
+            for x in range(map_array.shape[0]):
+                for y in range(map_array.shape[1]):
+                    if map_array[x,y,line,Element] == 0: 
+                        newvalue = median_filter(map_array[:,:,line,Element],x,y)
+                        map_array[x,y,line,Element] = newvalue
     return map_array
 
 def plotlastmap(image,name):
@@ -322,6 +333,9 @@ def plotlastmap(image,name):
     plt.show()
 
 def split_and_save(datacube,map_array,element_list):
+    if datacube.config["ratio"] == True:
+        lines = np.asarray(["a","b"])
+    else: lines = np.asarray(["a"])
 
     imagsize = datacube.dimension
     imagex = imagsize[0]
@@ -346,36 +360,37 @@ def split_and_save(datacube,map_array,element_list):
     
     fig_list = []
     for Element in range(len(element_list)):
-        image = map_array[:,:,Element]
-        if image.max() > 0: image = image/image.max()*LEVELS
+        for line in range(lines.shape[0]):
+            image = map_array[:,:,line,Element]
+            if image.max() > 0: image = image/image.max()*LEVELS
+             
+            histogram,bins = np.histogram(image.flatten(),LEVELS,[0,LEVELS])
+            datacube.pack_element(image,element_list[Element],lines[line])
+            if lines[line] == "a": datacube.pack_hist(histogram,bins,element_list[Element])
+            
+            #plt.hist(datacube.__dict__[element_list[Element]],bins='auto')
+            #plt.show()
+            
+            if len(element_list) > 1: ax = axs[Element]
+            else: ax=axs
+            fig_list.append(ax.imshow(image,cmap='gray'))
+            colorbar(fig_list[Element])
+            if datacube.config['ratio'] == False:
+                ax.set_title(element_list[Element]+' alpha line')
+            else: ax.set_title(element_list[Element])
+            
+            if imagex > target_size or imagey > target_size: large_image = image/image.max()*255
+            else: 
+                large_image = image/image.max()*255
+                large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
+            
+            cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
+                '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
+                .format(element_list[Element]+"_"+lines[line],datacube.config.get('bgstrip'),datacube.config.get('ratio')\
+                ,datacube.config.get('enhance'),datacube.config.get('peakmethod')),large_image)
         
-        histogram,bins = np.histogram(image.flatten(),LEVELS,[0,LEVELS])
-        datacube.pack_element(image,element_list[Element])
-        datacube.pack_hist(histogram,bins,element_list[Element])
-        
-        #plt.hist(datacube.__dict__[element_list[Element]],bins='auto')
-        #plt.show()
-
-        if len(element_list) > 1: ax = axs[Element]
-        else: ax=axs
-        fig_list.append(ax.imshow(image,cmap='gray'))
-        colorbar(fig_list[Element])
-        if datacube.config['ratio'] == False:
-            ax.set_title(element_list[Element]+' alpha line')
-        else: ax.set_title(element_list[Element])
-        
-        if imagex > target_size or imagey > target_size: large_image = image/image.max()*255
-        else: 
-            large_image = image/image.max()*255
-            large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
-        
-        cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
-            '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
-            .format(element_list[Element],datacube.config.get('bgstrip'),datacube.config.get('ratio')\
-            ,datacube.config.get('enhance'),datacube.config.get('peakmethod')),large_image)
-    
-        #checker = datacube.unpack_element('Cu')
-        #plotlastmap(checker,element_list[Element])
+            #checker = datacube.unpack_element('Cu')
+            #plotlastmap(checker,element_list[Element])
 
     ##################################################
     
@@ -402,3 +417,32 @@ def stackimages(*args):
         stackedimage = cv2.addWeighted(stackedimage,1,image,1,0)
     return stackedimage
 
+def binary_thresh(image,thresh):
+    counts = 0
+    for x in range(len(image)):
+        for y in range(len(image[x])):
+            if image[x][y] >= thresh: 
+                image[x][y] = 1
+                counts += 1
+            else: image[x][y] = 0
+        return image, counts
+
+def blacks_(image,thresh):
+    print(image)
+    img = cv2.imread("{}".format(image), cv2.IMREAD_GRAYSCALE)
+    img,counts = binary_thresh(img,thresh)
+    print(counts/len(img))
+    return img
+
+if __name__ == "__main__":
+    import os
+    print("lel")
+    image1 = os.getcwd()+"\\image1.png"
+    image2 = os.getcwd()+"\\image2.png"
+    queue = [image1,image2]
+    img = blacks_(image1,125)
+    img2 = blacks_(image2,125)
+    cv2.imshow("mammamia",img)
+    cv2.imshow("mammamia2",img2)
+    cv2.waitKey(0)
+    

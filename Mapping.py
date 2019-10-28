@@ -120,7 +120,8 @@ def getpeakmap(element_list,datacube):
         
         FITFAIL = 0
         partialtimer = time.time()
-        elmap = np.zeros([imagex,imagey,len(element_list)])
+        if ratio == True: elmap = np.zeros([imagex,imagey,2,len(element_list)])
+        else: elmap = np.zeros([imagex,imagey,1,len(element_list)])
         ka_idx, kb_idx = [],[]
         ka_peakdata, kb_peakdata = [],[]
         for Element in element_list:
@@ -290,7 +291,7 @@ def getpeakmap(element_list,datacube):
 
                     if ka == 0: 
                         ka,kb = 0, 0
-                        elmap[currentx][currenty][Element] = 0
+                        elmap[currentx][currenty][0][Element] = 0
                     
                     elif ka > 0 and ratio == False: kb = 0
                     
@@ -298,15 +299,19 @@ def getpeakmap(element_list,datacube):
                         kb_info = SpecMath.getpeakarea(kbenergy[Element],specdata,\
                                 energyaxis,background,configdict,RAW,usedif2,dif2)
                         kb = kb_info[0]
-
                         for channel in range(len(specdata)):
                             if energyaxis[kb_info[1][0]] < energyaxis[channel]\
                                 < energyaxis[kb_info[1][1]]:
                                 datacube.ROI[element_list[Element]][channel] += specdata[channel]    
+                        elmap[currentx][currenty][1][Element] = kb
                     
-                    elmap[currentx][currenty][Element] = ka+kb
-                    datacube.max_counts[element_list[Element]] = ka
-                
+                    elmap[currentx][currenty][0][Element] = ka
+
+                    if datacube.max_counts[element_list[Element]+"_a"] < ka:
+                        datacube.max_counts[element_list[Element]+"_a"] = ka
+                    if datacube.max_counts[element_list[Element]+"_b"] < kb:
+                        datacube.max_counts[element_list[Element]+"_b"] = kb
+
                 elif peakmethod == 'simple_roi':
                     
                     ################################################
@@ -339,11 +344,16 @@ def getpeakmap(element_list,datacube):
                             for channel in range(kb_idx[Element][0],kb_idx[Element][1]):
                                 datacube.ROI[element_list[Element]][channel] += \
                                         kb_ROI[channel-kb_idx[Element][0]]    
-                                kb += kb_ROI[channel-kb_idx[Element][0]] - kb_bg[channel-kb_idx[Element][0]]
+                                kb += kb_ROI[channel-kb_idx[Element][0]] - \
+                                        kb_bg[channel-kb_idx[Element][0]]
+                        elmap[currentx][currenty][1][Element] = kb
 
                     logging.debug("ka {0}, kb {1}".format(ka,kb))
-                    elmap[currentx][currenty][Element] = ka+kb
-                    datacube.max_counts[element_list[Element]] = ka
+                    elmap[currentx][currenty][0][Element] = ka
+                    if datacube.max_counts[element_list[Element]+"_a"] < ka:
+                        datacube.max_counts[element_list[Element]+"_a"] = ka
+                    if datacube.max_counts[element_list[Element]+"_b"] < kb:
+                        datacube.max_counts[element_list[Element]+"_b"] = kb
                 
                 row = scan[0]
                 column = scan[1]
@@ -382,12 +392,6 @@ def getpeakmap(element_list,datacube):
             
             progressbar.updatebar(ITERATION)
 
-            #progress = int(ITERATION/dimension*20)
-            #blank = 20 - progress - 1
-            #print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
-            #        .format(ITERATION/dimension*100), "Percent complete  \r", end='')
-            #sys.stdout.flush()
-        
         ################################    
         #  FINISHED ITERATION PROCESS  #
         #  OVER THE BATCH OF SPECTRA   #
@@ -406,12 +410,6 @@ def getpeakmap(element_list,datacube):
                     .format(Element,bgstrip,normalize,peakmethod,timestamp,\
                     time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),element_list))
        
-        #for element in element_list:
-        #    plt.plot(energyaxis,datacube.ROI[element],label=element)
-        #plt.plot(energyaxis,datacube.sum)
-        #plt.legend()
-        #plt.show()
-                  
         logging.info("Finished map acquisition!")
     
     else:

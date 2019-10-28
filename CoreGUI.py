@@ -210,6 +210,8 @@ class ImageAnalyzer:
         __self__.RightCanvas.pack(side=RIGHT)
         __self__.sliders = Frame(__self__.master)
         __self__.sliders.pack()
+        __self__.buttons = Frame(__self__.master,bg="blue")
+        __self__.buttons.pack(side=LEFT)
         
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
@@ -316,6 +318,11 @@ class ImageAnalyzer:
                 command=__self__.draw_image2)
         __self__.S2Slider.grid(row=2,column=6)
     
+        # buttons
+        __self__.correlate = Button(__self__.buttons,text="Correlate maps",\
+                command=__self__.get_correlation)
+        __self__.correlate.grid(row=0,column=0)
+
         # Disabled sliders
         __self__.T1Slider.config(state=DISABLED)
         __self__.T2Slider.config(state=DISABLED)
@@ -324,22 +331,23 @@ class ImageAnalyzer:
         
         __self__.draw_image1(0)
         __self__.draw_image2(0)
-        #__self__.master.mainloop()
  
     def update_sample1(__self__,event):
         global MY_DATACUBE
         label1 = "Maximum net counts: {}".format(int(MY_DATACUBE.max_counts[__self__.Map1Var.get()]))
         __self__.Map1Counts.set(label1)
-        #print(__self__.Map1Var.get())
-        __self__.ElementalMap1 = MY_DATACUBE.unpack_element(__self__.Map1Var.get())
+        unpacker = __self__.Map1Var.get()
+        unpacker = unpacker.split("_")
+        __self__.ElementalMap1 = MY_DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.draw_image1(0)
      
     def update_sample2(__self__,event):
         global MY_DATACUBE
         label2 = "Maximum net counts: {}".format(int(MY_DATACUBE.max_counts[__self__.Map2Var.get()]))
         __self__.Map2Counts.set(label2)
-        #print(__self__.Map2Var.get())
-        __self__.ElementalMap2 = MY_DATACUBE.unpack_element(__self__.Map2Var.get())
+        unpacker = __self__.Map2Var.get()
+        unpacker = unpacker.split("_")
+        __self__.ElementalMap2 = MY_DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.draw_image2(0)
     
     def switchT1LP1(__self__):
@@ -413,22 +421,36 @@ class ImageAnalyzer:
     def draw_image1(__self__,i):
         #print("draw1")
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
-        newimage1 = __self__.transform1(__self__.CACHEMAP1)
+        __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
         __self__.CACHEMAP1
         __self__.plot1.clear()
-        __self__.plot1.imshow(newimage1, cmap='gray')
+        __self__.plot1.imshow(__self__.newimage1, cmap='gray')
         __self__.plot1.grid(b=None)
         __self__.canvas1.draw()
     
     def draw_image2(__self__,i):
         #print("draw2")
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
-        newimage2 = __self__.transform2(__self__.CACHEMAP2)
+        __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
         __self__.CACHEMAP2 = None
         __self__.plot2.clear()
-        __self__.plot2.imshow(newimage2, cmap='gray')
+        __self__.plot2.imshow(__self__.newimage2, cmap='gray')
         __self__.plot2.grid(b=None)
         __self__.canvas2.draw()
+
+    def get_correlation(__self__):
+        labels = __self__.Map1Var.get(),__self__.Map2Var.get()
+        corr = SpecMath.correlate(__self__.newimage1,__self__.newimage2)
+
+        # this step is necessary to make a proper correlation between the two
+        # displayed images. Transforming them only cuts the desired signals,
+        # therefore the gray levels remain the same. The image looks brighter when
+        # displayed because matplot adjust the axes maxima and minima when plotting
+        corr[0] = corr[0]/corr[0].max()*ImgMath.LEVELS
+        corr[1] = corr[1]/corr[1].max()*ImgMath.LEVELS
+        
+        corr_plot = PlotWin(root.master)
+        corr_plot.draw_correlation(corr,labels)
 
 
 class PlotWin:
@@ -511,11 +533,19 @@ class PlotWin:
         global MY_DATACUBE
         for element in MY_DATACUBE.ROI:
             __self__.plotdata = MY_DATACUBE.ROI[element]
-            roi_label = element + " Max net: {}".format(int(MY_DATACUBE.max_counts[element]))
+            roi_label = element + " Max net: {}".format(int(MY_DATACUBE.max_counts[element+"_a"]))
             __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=roi_label)
         __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum,label="Sum spectrum")
         __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum_bg,label="Background")
         __self__.plot.legend()
+        place_topleft(__self__.master.master,__self__.master)
+
+    def draw_correlation(__self__,corr,labels):
+        plot_font = {'fontname':'Times New Roman','fontsize':10}
+        __self__.plot.set_title('{0}'.format(SpecRead.DIRECTORY),**plot_font)
+        __self__.plot.set_xlabel(labels[0])
+        __self__.plot.set_ylabel(labels[1])
+        __self__.plot.scatter(corr[0],corr[1])
         place_topleft(__self__.master.master,__self__.master)
 
 class Samples:

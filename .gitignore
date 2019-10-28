@@ -2,6 +2,7 @@
 *.log
 *.png
 *.ipynb
+*.svg
 timestamps.txt
 output\
 \output

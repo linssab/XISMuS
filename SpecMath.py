@@ -217,8 +217,8 @@ class datacube:
         datacube.save_cube(__self__)
         logging.debug("Finished packing.")
         
-    def pack_element(__self__,image,element):
-        __self__.__dict__[element] = image
+    def pack_element(__self__,image,element,line):
+        __self__.__dict__[element+"_"+line] = image
         logging.info("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
         #print("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
     
@@ -232,8 +232,8 @@ class datacube:
         histfile.close()
         __self__.hist[element] = [hist,bins]
      
-    def unpack_element(__self__,element):
-        unpacked = __self__.__dict__[element]
+    def unpack_element(__self__,element,line):
+        unpacked = __self__.__dict__[element+"_"+line]
         #print("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
         logging.info("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
         return unpacked
@@ -241,17 +241,25 @@ class datacube:
     def check_packed_elements(__self__):
         packed = []
         for element in EnergyLib.ElementList:
-            if hasattr(__self__,element): 
-                packed.append(element)
-                #print("Found a map for {0}".format(element))
+            if hasattr(__self__,element+"_a"):
+                if hasattr(__self__,element+"_b"):
+                    if __self__.__dict__[element+"_a"].max() > 0:
+                        packed.append(element+"_a")
+                    if __self__.__dict__[element+"_b"].max() > 0:
+                        packed.append(element+"_b")
+                else:
+                    if __self__.__dict__[element+"_a"].max() > 0:
+                        packed.append(element+"_a")
             else: pass
         return packed
 
     def prepack_elements(__self__,element_list):
         for element in element_list:
-            __self__.__dict__[element] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
+            __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
+            __self__.__dict__[element+"_b"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
             __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]])
-            __self__.max_counts[element] = np.nan
+            __self__.max_counts[element+"_a"] = 0
+            __self__.max_counts[element+"_b"] = 0
             __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
     
 def shift_center(xarray,yarray):
@@ -426,7 +434,9 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     ######################################
 
     if isapeak == True: 
-        if original_data.sum() - ROIbg.sum() < 3*math.sqrt(ROIbg.sum()): isapeak = False
+        #print(original_data.sum(),ROIbg.sum())
+        #sys.stdout.flush()
+        if original_data.sum() - ROIbg.sum() < 3*math.sqrt(abs(ROIbg.sum())): isapeak = False
     
     ##########################
     # 2ND DIFFERENTIAL CHECK #
@@ -544,7 +554,15 @@ def peakstrip(an_array,cycles,width):
 
     return snip_bg
 
+def correlate(map1,map2):
+    correlation_matrix = np.zeros([map1.shape[0],map1.shape[1],2])
+    for x in range(map1.shape[0]):
+        for y in range(map2.shape[1]):
+            correlation_matrix[x][y] = [map1[x][y],map2[x][y]]
+    return correlation_matrix
+
 if __name__=="__main__":
     SpecRead.setup()
     cube = datacube(['xrf'],SpecRead.CONFIG)
     cube.compile_cube()
+
