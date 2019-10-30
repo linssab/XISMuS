@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 0.0.1α                        #
+#                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -13,9 +13,9 @@ import sys
 import numpy as np
 import pickle
 import SpecRead
-import EnergyLib
-from Mapping import getdensitymap
+from EnergyLib import ElementList
 from ImgMath import LEVELS as LEVELS
+from Mapping import getdensitymap
 import matplotlib.pyplot as plt
 #from numba import guvectorize, float64, int64
 #from numba import cuda
@@ -172,7 +172,6 @@ class datacube:
         p_output = open(SpecRead.cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
-        #print("File {0}.cube sucessfully compiled.".format(SpecRead.DIRECTORY))
 
     def compile_cube(__self__):
         logging.debug("Started mca compilation")
@@ -240,7 +239,7 @@ class datacube:
 
     def check_packed_elements(__self__):
         packed = []
-        for element in EnergyLib.ElementList:
+        for element in ElementList:
             if hasattr(__self__,element+"_a"):
                 if hasattr(__self__,element+"_b"):
                     if __self__.__dict__[element+"_a"].max() > 0:
@@ -283,6 +282,22 @@ def updateposition(a,b):
     actual=([currentx,currenty])
     return actual
 
+# implemented for multiprocessing for now
+def refresh_position(a,b,length):
+    imagex = length[0]
+    imagey = length[1]
+    imagedimension = imagex*imagey
+    currentx = a
+    currenty = b 
+    if currenty == imagey-1:
+        currenty=0
+        currentx+=1
+    else:
+        currenty+=1
+    actual=([currentx,currenty])
+    return actual
+
+
 def function(ydata,x):
     return ydata[x]
 
@@ -324,15 +339,7 @@ def getstackplot(datacube,mode=None):
        # plt.ylabel("Normalized counts")
     elif mode == 'mps':
         output = mps
-        # plt.semilogy(energy,stack,label="Summation")
-       # plt.ylabel("Counts")
     else:
-       # plt.plot(energy,stack,label="Summation")
-    #plt.legend()
-    #plt.title("Sample: {}".format(SpecRead.DIRECTORY))
-    #plt.xlabel("Energy (KeV)")
-    #plt.grid(which='both',axis='both')
-    #plt.show()
         pass
     return output
 

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: 0.0.1α                        #
+#                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -317,13 +317,22 @@ def flattenhistogram(image):
     return image
 
 def interpolate_zeros(map_array):
-    for Element in range(map_array.shape[3]):
-        for line in range(map_array.shape[2]):
-            for x in range(map_array.shape[0]):
-                for y in range(map_array.shape[1]):
-                    if map_array[x,y,line,Element] == 0: 
-                        newvalue = median_filter(map_array[:,:,line,Element],x,y)
-                        map_array[x,y,line,Element] = newvalue
+    try: 
+        for Element in range(map_array.shape[3]):
+            for line in range(map_array.shape[2]):
+                for x in range(map_array.shape[0]):
+                    for y in range(map_array.shape[1]):
+                        if map_array[x,y,line,Element] == 0: 
+                            newvalue = median_filter(map_array[:,:,line,Element],x,y)
+                            map_array[x,y,line,Element] = newvalue
+    except:
+    # to work with multiprocess images 
+        for line in range(map_array.shape[0]):
+            for x in range(map_array.shape[1]):
+                for y in range(map_array.shape[2]):
+                    if map_array[line,x,y] == 0: 
+                        newvalue = median_filter(map_array[line,:,:],x,y)
+                        map_array[line,x,y] = newvalue
     return map_array
 
 def plotlastmap(image,name):

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: 3.0b                          #
+#                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #                                                               #
 #################################################################
@@ -21,8 +21,8 @@ def findprefix():
     mca_prefix = 'None'
     files = [name for name in os.listdir(selected_sample_folder)]
    
-    print("\nfolder being looked up from findprefix")
-    print(selected_sample_folder+"\n")
+    #print("\nfolder being looked up from findprefix")
+    #print(selected_sample_folder+"\n")
     
     for item in range(len(files)): 
         try:
@@ -158,7 +158,6 @@ def RatioMatrixReadFile(ratiofile):
         RatesMatrix[x,y] = ka/kb
         if ka/kb > 15: RatesMatrix[x,y] = 0  # CUTOFF FILTER FOR PEAK ERRORS #
     return RatesMatrix
-
 
 def getheader(mca):
     ObjectHeader=[]
@@ -320,3 +319,32 @@ def getdimension():
 #    print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
     return x,y
 
+def dump_ratios(maps_list,element_list):
+    # this is to work with multiprocessing Mapping mode
+    
+    ratiofiles = ['' for x in range(len(element_list))]
+    for Element in range(len(element_list)): 
+        ratiofiles[Element] = str(output_path+\
+                '{1}_ratio_{0}.txt'.format(element_list[Element],DIRECTORY))
+        r_file = open(ratiofiles[Element],'w+')
+        r_file.readline()
+        r_file.truncate()
+        r_file.write("-"*10 + " Counts of Element {0} "\
+                .format(element_list[Element]) + 10*"-" + '\n')
+        r_file.write("row\tcolumn\tline1\tline2\tratio\n")
+        r_file.close() 
+
+    for Element in range(len(element_list)):
+        r_file = open(ratiofiles[Element],'a')
+        for x in range(maps_list[Element][0][0].shape[0]):
+            for y in range(maps_list[Element][0][0].shape[1]):
+                a = int(maps_list[Element][0][0][x][y])
+                b = int(maps_list[Element][0][1][x][y])
+                if b > 0: 
+                    r_file.write("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,a/b))
+                    logging.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,a/b))
+                else: 
+                    r_file.write("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
+                    logging.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
+        r_file.close()
+    return 0
