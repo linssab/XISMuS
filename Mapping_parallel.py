@@ -186,7 +186,19 @@ def netpeak(all_parameters,Element):
     
     return elmap, ROI
 
-def prepare_cube(datacube,element_list):
+def digest_results(datacube,results,element_list):
+    element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)])
+    line = ["_a","_b"]
+    for element in range(len(results)):
+        for dist_map in range(len(results[element][0])):
+            element_map[:,:,dist_map,element] = results[element][0][dist_map]
+            datacube.max_counts[elements[element]+line[dist_map]] = results[element][0][dist_map].max()
+        datacube.ROI[elements[element]] = results[element][1]
+    SpecRead.dump_ratios(results,element_list) 
+    split_and_save(datacube,element_map,element_list)
+    return 0
+
+def image_cube(datacube,element_list):
     print("Searching elements: {}".format(element_list))
     all_parameters = {}
     all_parameters["configure"] = datacube.config
@@ -211,8 +223,11 @@ def prepare_cube(datacube,element_list):
     with multiprocessing.Pool() as pool:
         print("Starting pool")
         results = pool.starmap(netpeak,pool_iterator)
-
+    
+    digest_results(datacube,results,element_list)
     return results
+
+
 
 if __name__=="__main__":
     SpecRead.setup()
@@ -228,19 +243,11 @@ if __name__=="__main__":
     start = input()
     #elements = ["Ca","Mn","Cl","Ti","Cr","Fe","Pb","Hg"]
     elements = ["Au","Ti"]
+    
+    # prepack must be done from GUI before calling image_cube()
     datacube.prepack_elements(elements)
     if start == "Y": 
-        results = prepare_cube(datacube,elements)
+        results = image_cube(datacube,elements)
     else: pass
-  
-    element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)])
-    print(len(results))
-    line = ["_a","_b"]
-    for element in range(len(results)):
-        for dist_map in range(len(results[element][0])):
-            element_map[:,:,dist_map,element] = results[element][0][dist_map]
-            datacube.max_counts[elements[element]+line[dist_map]] = results[element][0][dist_map].max()
-        datacube.ROI[elements[element]] = results[element][1]
-    SpecRead.dump_ratios(results,elements) 
-    split_and_save(datacube,element_map,elements)
+    
 

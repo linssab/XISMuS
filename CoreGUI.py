@@ -7,26 +7,30 @@
 
 VERSION = "0.0.1α"
 
+# tcl/Tk imports
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 import numpy as np
 import sys, os, copy, pickle
 import logging
+
+# matplotlib imports
 import matplotlib
 matplotlib.use("TkAgg")
-
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
-import matplotlib.animation as animation
 from matplotlib import style
 style.use('ggplot')
 
+# internal imports
 import SpecRead
-SpecRead.conditional_setup()
-import SpecMath
-import Mapping
 import ImgMath
+SpecRead.conditional_setup()
+from SpecMath import getstackplot, correlate
+from SpecMath import datacube as Cube
+from Mapping import getpeakmap
+from Mapping_parallel import image_cube 
 
 
 logging.debug("Setting up...")
@@ -159,7 +163,7 @@ def call_compilecube():
         pass
     else:
         #try: 
-        specbatch = SpecMath.datacube(['xrf'],SpecRead.CONFIG)
+        specbatch = Cube(['xrf'],SpecRead.CONFIG)
         specbatch.compile_cube()
         #except:
         #    ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
@@ -440,7 +444,7 @@ class ImageAnalyzer:
 
     def get_correlation(__self__):
         labels = __self__.Map1Var.get(),__self__.Map2Var.get()
-        corr = SpecMath.correlate(__self__.newimage1,__self__.newimage2)
+        corr = correlate(__self__.newimage1,__self__.newimage2)
 
         # this step is necessary to make a proper correlation between the two
         # displayed images. Transforming them only cuts the desired signals,
@@ -514,7 +518,7 @@ class PlotWin:
             __self__.plot.set_ylabel("Counts")
             for option in mode:
                 if len(option) > 0:
-                    __self__.plotdata = SpecMath.getstackplot(MY_DATACUBE,option)
+                    __self__.plotdata = getstackplot(MY_DATACUBE,option)
                     __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
                     __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
             __self__.plot.set_xlabel("Energy (KeV)")
@@ -522,7 +526,7 @@ class PlotWin:
         else:
             for option in mode:
                 if len(option) > 0:
-                    __self__.plotdata = SpecMath.getstackplot(MY_DATACUBE,option)
+                    __self__.plotdata = getstackplot(MY_DATACUBE,option)
                     __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
                     __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
             __self__.plot.set_xlabel("Energy (KeV)")
@@ -731,10 +735,6 @@ class MainGUI:
         __self__.ConfigDiag.destroy()
 
     def refresh_ImageCanvas(__self__,i):
-        
-        # for use with animation
-        # it slows down performance significatvely
-        
         try: 
             __self__.sample_plot.imshow(__self__.densitymap,cmap='jet',label='Counts Map')
         except: 
@@ -1288,9 +1288,13 @@ class PeriodicTable:
                 except: pass
             __self__.go.config(state=DISABLED)
             
-            MAPS = Mapping.getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+            # single-core mode
+            MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
             ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
             
+            # multi-core mode
+            #image_cube(MY_DATACUBE,FIND_ELEMENT_LIST)
+
             # reactivate widgets
             wipe_list(__self__)
             root.toggle_(toggle="on")
