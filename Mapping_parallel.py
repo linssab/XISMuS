@@ -2,7 +2,7 @@ import numpy as np
 import os, sys, logging, multiprocessing
 import pickle
 import time
-import SpecRead
+from SpecRead import dump_ratios, setup
 from matplotlib import pyplot as plt
 from SpecMath import getpeakarea, refresh_position, setROI, getdif2
 from EnergyLib import ElementList, Energies, kbEnergies
@@ -62,7 +62,8 @@ def grab_line_image(all_parameters,lines):
         ###########################
         
         background = all_parameters["background"][currentx][currenty]
-        
+       
+        # low-passes second differential
         if usedif2 == True: 
             dif2 = getdif2(specdata,energyaxis,1)
             for i in range(len(dif2)):
@@ -86,20 +87,12 @@ def grab_line_image(all_parameters,lines):
         ka_info = getpeakarea(lines[0],specdata,\
                 energyaxis,background,all_parameters["configure"],RAW,usedif2,dif2)
         ka = ka_info[0]
-    
-        for channel in range(len(specdata)):
-            if energyaxis[ka_info[1][0]] < energyaxis[channel]\
-                < energyaxis[ka_info[1][1]]:
-                ROI[channel] += specdata[channel]
-        
+        ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
+
         kb_info = getpeakarea(lines[1],specdata,\
                 energyaxis,background,all_parameters["configure"],RAW,usedif2,dif2)
         kb = kb_info[0]
-    
-        for channel in range(len(specdata)):
-            if energyaxis[kb_info[1][0]] < energyaxis[channel]\
-                < energyaxis[kb_info[1][1]]:
-                ROI[channel] += specdata[channel]
+        ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
         
         el_dist_map[0][currentx][currenty] = ka
         el_dist_map[1][currentx][currenty] = kb
@@ -180,10 +173,11 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
             ROI[indexes[0]:indexes[1]] = ROI[indexes[0]:indexes[1]]+matrix[x][y][indexes[0]:indexes[1]]
     return new_image
 
-def netpeak(all_parameters,Element):
-    
+def netpeak(all_parameters,Element,results):
+    all_parameters = all_parameters.get()
+
     '''
-    verifies the configuration and calls
+    verifies the peakmethod and lines and calls
     a function to calculate the peak area throughout
     the spectra matrix
     '''
@@ -212,9 +206,11 @@ def netpeak(all_parameters,Element):
 
     else: elmap, ROI = grab_line_image(all_parameters,lines)
     
+    #results.append((elmap,ROI))
+    results.put((elmap,ROI,Element))
     return elmap, ROI
 
-def digest_results(datacube,results,element_list):
+def digest_results(datacube,results,elements):
     element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)])
     print(element_map.shape)
     print(np.shape(results[0][0]))
@@ -224,12 +220,27 @@ def digest_results(datacube,results,element_list):
             element_map[:,:,dist_map,element] = results[element][0][dist_map]
             datacube.max_counts[elements[element]+line[dist_map]] = results[element][0][dist_map].max()
         datacube.ROI[elements[element]] = results[element][1]
-    SpecRead.dump_ratios(results,element_list) 
-    split_and_save(datacube,element_map,element_list)
+    dump_ratios(results,elements) 
+    split_and_save(datacube,element_map,elements)
     return 0
+
+def load_data(queue_load,no_elements,variable):
+        for i in range(no_elements):
+            queue_load.put(variable)
+
+def sort_results(results,element_list):
+    sorted_results = []
+    for element in range(len(element_list)):
+        for packed in range(len(results)):
+            if results[packed][2] == element_list[element]:
+                print("Matching:")
+                print(results[packed][2],element_list[element])
+                sorted_results.append(results[packed])
+    return sorted_results
 
 def image_cube(datacube,element_list):
     print("Searching elements: {}".format(element_list))
+    
     all_parameters = {}
     all_parameters["configure"] = datacube.config
     all_parameters["matrix"] = datacube.matrix
@@ -243,26 +254,59 @@ def image_cube(datacube,element_list):
     all_parameters["elements"] = element_list
      
     if all_parameters["configure"]["peakmethod"] == "PyMcaFit": import SpecFitter
- 
-    # for each element, launches a process
-    pool_iterator = []
-    for element in element_list:
-        pool_iterator.append((all_parameters,element))
-    print(convert_bytes(sys.getsizeof(all_parameters)))
-    print(convert_bytes(sys.getsizeof(datacube)))
-    with multiprocessing.Pool() as pool:
-        print("Starting pool")
-        results = pool.starmap(netpeak,pool_iterator)
+
+    processes = []
+    results = []
+    queue_load = multiprocessing.Queue()
+    queue_data = multiprocessing.Queue()
     
-    digest_results(datacube,results,element_list)
+    for i in range(len(element_list)):
+        if i == 0:
+            p = multiprocessing.Process(target=load_data,
+                    name="load data",
+                    args=(queue_load,len(element_list),all_parameters))
+            processes.append(p)
+            p.start()
+
+        p = multiprocessing.Process(target=netpeak,
+                name=element_list[i],
+                args=(queue_load,element_list[i],queue_data))
+        processes.append(p)
+        p.start()
+        
+        print(p.name)
+
+    for i in range(len(element_list)):
+        data = queue_data.get()
+        results.append(data)
+
+    for p in processes:
+        p.join()
+    print(processes)
+    
+    
+    #mngr1 = multiprocessing.Manager() 
+    #results = mngr1.list()
+    #jobs= [
+    #    multiprocessing.Process(target=netpeak, name=str(element), args=(all_parameters,element,results))
+    #for element in element_list
+    #]
+    #for job in jobs: job.start()
+    #for job in jobs: 
+    #    job.join()
+    #    print("running {}".format(job.name))
+    #
+     
+    srt_results = sort_results(results,element_list)
+    digest_results(datacube,srt_results,element_list)
     return results
 
 
 
 if __name__=="__main__":
-    SpecRead.setup()
-    cube_name = SpecRead.DIRECTORY
-    cube_path = SpecRead.cube_path
+    setup()
+    from SpecRead import DIRECTORY as cube_name
+    from SpecRead import cube_path
     cube_file = open(cube_path,'rb')
     datacube = pickle.load(cube_file)
     cube_file.close() 
@@ -271,8 +315,8 @@ if __name__=="__main__":
         print(setting,datacube.config[setting])
     print("Start?")
     start = input()
-    elements = ["Ca","Mn","Cl","Ti","Cr","Fe","Pb","Hg"]
-    #elements = ["Au","Ti"]
+    elements = ["Zn","Ca","Mn","Cl","Ti","Cr","Fe","Pb","Hg","S","Cu"]
+    #elements = ["Cu","Ti"]
     
     # prepack must be done from GUI before calling image_cube()
     datacube.prepack_elements(elements)

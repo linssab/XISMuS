@@ -1289,11 +1289,11 @@ class PeriodicTable:
             __self__.go.config(state=DISABLED)
             
             # single-core mode
-            MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
-            ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
+            #MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+            #ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
             
             # multi-core mode
-            #image_cube(MY_DATACUBE,FIND_ELEMENT_LIST)
+            image_cube(MY_DATACUBE,FIND_ELEMENT_LIST)
 
             # reactivate widgets
             wipe_list(__self__)
@@ -1524,10 +1524,10 @@ class PeriodicTable:
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
 
               
-
-logging.info("Loading GUI...")
-#Samples = Samples()
-root = MainGUI()
-#Samples.splash(root)
-root.master.mainloop()
+if __name__ == "__main__":
+    logging.info("Loading GUI...")
+    #Samples = Samples()
+    root = MainGUI()
+    #Samples.splash(root)
+    root.master.mainloop()
 

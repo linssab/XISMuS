@@ -22,7 +22,6 @@ import matplotlib.pyplot as plt
 logging.debug("Importing numba jit...")
 try: from numba import jit
 except: logging.warning("Could not import numba package.")
-from numba import jit
 logging.debug("Importing module math...")
 import math
 logging.debug("Importing module scipy.signal...")
@@ -441,8 +440,6 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     ######################################
 
     if isapeak == True: 
-        #print(original_data.sum(),ROIbg.sum())
-        #sys.stdout.flush()
         if original_data.sum() - ROIbg.sum() < 3*math.sqrt(abs(ROIbg.sum())): isapeak = False
     
     ##########################
@@ -451,13 +448,12 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     if usedif2 == True and isapeak == True:
         smooth_dif2 = dif2[idx[0]:idx[1]]
     
+        # checks second differential and calculates the net area - background
         if smooth_dif2[idx[2]] < 0 or smooth_dif2[idx[2]+1] < 0 or smooth_dif2[idx[2]-1] < 0:
             logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
             logging.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
                     smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
-            for i in range(len(xdata)):
-                if ROIbg[i] < ydata[i]: Area += (ydata[i]-ROIbg[i])
-                logging.debug("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
+            if ROIbg.sum() < ydata.sum(): Area += ydata.sum() - ROIbg.sum()
         else: 
             logging.debug("{0} has no peak! Dif2 = {1} and isapeak = {2}\n"\
                     .format(lookup,smooth_dif2[idx[2]],isapeak))
@@ -472,13 +468,12 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     # With low-count datasets this is better to obtain #
     # images that look better                          #
     ####################################################
-
+    
+    # PyMcaFit method does not check for second differential
     elif localconfig.get('peakmethod') == 'PyMcaFit':
         logging.info("No dif 2 criteria for {0} method".format(localconfig.get('peakmethod')))
         smooth_dif2 = np.zeros([len(xdata)])
-        for i in range(len(xdata)):
-            if ROIbg[i] < ydata[i]: Area += (ydata[i]-ROIbg[i])
-            logging.debug("Area: {0}\t Estimated BG: {1}".format(ydata[i],ROIbg[i]))
+        if ROIbg.sum() < ydata.sum(): Area += ydata.sum() - ROIbg.sum()
                
     ##############
     # TEST BLOCK #          
