@@ -1,5 +1,7 @@
 import numpy as np
 import os, sys, logging, multiprocessing
+from multiprocessing import freeze_support
+freeze_support()
 #in python 3 Queue is lowercase:
 import queue
 import pickle
@@ -69,47 +71,10 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
 
     return new_image
 
-def netpeak(all_parameters,Element,results,p_bar_iterator):
-    all_parameters = all_parameters.get()
-
-    '''
-    verifies the peakmethod and lines and calls
-    a function to calculate the peak area throughout
-    the spectra matrix
-    '''
-    
-    
-    # sets the element energies
-    element_idx = ElementList.index(Element)
-    kaenergy = Energies[element_idx]*1000
-    kbenergy = kbEnergies[element_idx]*1000
-    logging.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
-            format(Element,kaenergy,kbenergy))
-    
-    if all_parameters["configure"]["ratio"] == True:
-        elmap = np.zeros([2,all_parameters["dimension"][0],all_parameters["dimension"][1]])
-        max_counts = [0,0]
-        line_no = 2
-        lines = [kaenergy,kbenergy]
-    else: 
-        elmap = np.zeros([1,all_parameters["dimension"][0],all_parameters["dimension"][1]])
-        max_counts = [0]
-        line_no = 1
-        lines = [kaenergy]
-
-    if all_parameters["configure"]["peakmethod"] == "simple_roi":
-        elmap, ROI = grab_simple_roi_image(all_parameters,lines)
-
-    else: elmap, ROI = grab_line_image(all_parameters,lines,p_bar_iterator)
-    
-    #results.append((elmap,ROI))
-    results.put((elmap,ROI,Element))
-    return elmap, ROI
-
 def digest_results(datacube,results,elements):
     element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)])
-    print(element_map.shape)
-    print(np.shape(results[0][0]))
+    #print(element_map.shape)
+    #print(np.shape(results[0][0]))
     line = ["_a","_b"]
     for element in range(len(results)):
         for dist_map in range(len(results[element][0])):
@@ -133,7 +98,7 @@ def start_reader(cube,Element,iterator,results):
     def grab_line(cube,lines,iterator):
         
         start_time = time.time()
-        print("\nLine(s): {}\n".format(lines))
+        #print("\nLine(s): {}\n".format(lines))
         energyaxis = cube.energyaxis
         matrix = cube.matrix
         matrix_dimension = cube.dimension
@@ -189,7 +154,7 @@ def start_reader(cube,Element,iterator,results):
             #  ITERATE OVER LIST OF ELEMENTS  #
             ###################################
             
-            logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
+            logging.debug("current x = {0} / current y = {1}".format(currentx,currenty))
 
             ################################################################
             #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
@@ -225,22 +190,21 @@ def start_reader(cube,Element,iterator,results):
         #  OVER THE BATCH OF SPECTRA   #
         ################################
         
-        logging.info("Finished iteration process for energy {0}\n".format(lines))
-        
         timestamp = time.time() - start_time
-        logging.info("\nExecution took %s seconds" % (timestamp))
         if cube.config["peakmethod"] == 'PyMcaFit': 
             logging.warning("Fit fail: {0}%".format(100*FITFAIL/cube.dimension))
-        logging.info("Finished map acquisition!")
         #print("Maps maximum: ")
         #print(el_dist_map[0].max())
         #print(el_dist_map[1].max())
 
         if cube.config["peakmethod"] == 'auto_roi': 
             el_dist_map = interpolate_zeros(el_dist_map)
-
-        print("Time:")
-        print(time.time()-start_time)
+        
+        logging.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
+                format(Element,lines[0],lines[1]))
+        logging.info("Runtime for {}: {}".format(Element,time.time()-start_time))
+        #print("Time:")
+        #print(time.time()-start_time)
         return el_dist_map, ROI
     
     def call_peakmethod(cube,Element,iterator,results):
@@ -271,7 +235,7 @@ def start_reader(cube,Element,iterator,results):
 
         if  cube.config["peakmethod"] == "simple_roi":
             #elmap, ROI = grab_simple_roi_image(__self__.cube,lines)
-            print("calling simple_roi method")
+            #print("calling simple_roi method")
             iterator.value = iterator.value + 1
             elmap, ROI = ["mec","melt"],0
 
@@ -307,6 +271,7 @@ class Cube_reader():
                 args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results))
             __self__.processes.append(p)
             __self__.process_names.append(p.name)
+            logging.info("Pooling process {}".format(p))
         
     
         for p in __self__.processes:
@@ -352,6 +317,7 @@ class Cube_reader():
     
     
 if __name__=="__main__":
+    """
     setup()
     from SpecRead import DIRECTORY as cube_name
     from SpecRead import cube_path
@@ -367,6 +333,15 @@ if __name__=="__main__":
     #elements = ["Zn","Ca","Mn","Cl","Ti","Cr","Fe","Pb","Hg","S","Cu"]
     elements = ["Cu","Pb","Fe"]
     
+    from psutil import virtual_memory
+    cube_status = os.stat(cube_path)
+    cube_size = cube_status.st_size
+    sys_mem = dict(virtual_memory()._asdict())
+    rnt_mem = [(cube_size*len(elements)),sys_mem["available"]]
+    process_memory = (convert_bytes(rnt_mem[0]),convert_bytes(rnt_mem[1]))
+    print(process_memory)
+
+
     # prepack must be done from GUI before calling image_cube()
     datacube.prepack_elements(elements)
     if start == "Y": 
@@ -376,4 +351,5 @@ if __name__=="__main__":
         results = reader.start_workers()
         results = sort_results(results,elements)
         digest_results(datacube,results,elements)
-
+    """
+    logging.info("This is Mapping_parallel.py module")
