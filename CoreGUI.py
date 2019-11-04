@@ -30,7 +30,7 @@ SpecRead.conditional_setup()
 from SpecMath import getstackplot, correlate
 from SpecMath import datacube as Cube
 from Mapping import getpeakmap
-from Mapping_parallel import image_cube 
+from Mapping_parallel import Cube_reader, sort_results, digest_results
 
 
 logging.debug("Setting up...")
@@ -710,6 +710,7 @@ class MainGUI:
         try:
             if __self__.SamplesWindow.state() == 'normal': 
                 __self__.SamplesWindow.focus_force()
+                place_topleft(__self__.master,__self__.SamplesWindow)
                 pass
             else: __self__.call_listsamples()
         except: __self__.call_listsamples()
@@ -1288,12 +1289,21 @@ class PeriodicTable:
                 except: pass
             __self__.go.config(state=DISABLED)
             
-            # single-core mode
-            #MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
-            #ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
-            
             # multi-core mode
-            image_cube(MY_DATACUBE,FIND_ELEMENT_LIST)
+            if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 1200:
+                print("MULTI-CORE ENABLED!")
+                cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
+                results = cuber.start_workers()
+                results = sort_results(results,FIND_ELEMENT_LIST)
+                digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
+ 
+            # single-core mode
+            else: 
+                print("SINGLE CORE MODE!")
+                MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+                ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
+                
+
 
             # reactivate widgets
             wipe_list(__self__)
