@@ -4,43 +4,17 @@
 #                        version: 0.0.1α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
+global MY_DATACUBE, FIND_ELEMENT_LIST
+MY_DATACUBE, FIND_ELEMENT_LIST = None, None
 
-VERSION = "0.0.1α"
-
-# tcl/Tk imports
-from tkinter import *
-from tkinter import ttk
-from tkinter import messagebox
-import numpy as np
-import sys, os, copy, pickle
-import logging
-
-# matplotlib imports
-import matplotlib
-matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from matplotlib.figure import Figure
-from matplotlib import style
-style.use('ggplot')
-
-# internal imports
-import SpecRead
-import ImgMath
-SpecRead.conditional_setup()
-from SpecMath import getstackplot, correlate
-from SpecMath import datacube as Cube
-from Mapping import getpeakmap
-from Mapping_parallel import Cube_reader, sort_results, digest_results
-
-
-logging.debug("Setting up...")
-global MY_DATACUBE
-MY_DATACUBE = None
-try: load_cube()
-except: pass
-logging.debug("Done.")
-global FIND_ELEMENT_LIST
-FIND_ELEMENT_LIST = []
+def start_up():
+    SpecRead.conditional_setup()
+    logging.info("Setting up...")
+    try: load_cube()
+    except: pass
+    logging.info("Done.")
+    global FIND_ELEMENT_LIST
+    FIND_ELEMENT_LIST = []
 
 
 def wipe_list(table_object):
@@ -59,13 +33,11 @@ def place_topleft(window1,window2):
     frm_width = window1.winfo_rootx() - window1.winfo_x()
     win_width = width + (2 * frm_width)
     width2 = window2.winfo_width()
-    #print(width,width2)
 
     height = window1.winfo_height()
     titlebar_height = window1.winfo_rooty() - window1.winfo_y()
     win_height = height + titlebar_height + frm_width
     height2 = window2.winfo_height()
-    #print(height,height2)
     
     x = window1.winfo_rootx() + width
     y = window1.winfo_rooty() - titlebar_height
@@ -80,7 +52,6 @@ def place_center(window1,window2):
     frm_width = window1.winfo_rootx() - window1.winfo_x()
     win_width = width + (2 * frm_width)
     width2 = window2.winfo_width()
-    #print(width,win_width)
 
     height = window1.winfo_height()
     titlebar_height = window1.winfo_rooty() - window1.winfo_y()
@@ -170,11 +141,9 @@ def call_compilecube():
 
 def prompt_folder():
     return 0
-    #print("Prompting for samples folder...")
 
 def call_heightmap():
     return 0
-    #print("Opening heightmap dialogue...")
 
 def load_cube():
     logging.debug("Trying to load cube file.")
@@ -200,7 +169,6 @@ class ImageAnalyzer:
         global MY_DATACUBE
         
         __self__.packed_elements = MY_DATACUBE.check_packed_elements()
-        #print(__self__.packed_elements)
         __self__.master = Toplevel(master=parent)
         __self__.master.title("Image Analyzer v1.01a")
         __self__.master.resizable(False,False)
@@ -288,10 +256,10 @@ class ImageAnalyzer:
         __self__.S2Label.grid(row=2,column=5)
 
         # slider for image 1
-        __self__.T1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
+        __self__.T1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image1)
         __self__.T1Slider.grid(row=0,column=2)
-        __self__.LP1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
+        __self__.LP1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image1)
         __self__.LP1Slider.grid(row=1,column=2)
         __self__.S1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=7, \
@@ -312,10 +280,10 @@ class ImageAnalyzer:
         __self__.S2 = Checkbutton(__self__.sliders, variable=__self__.S2check).grid(row=2,column=4)
                
         # slider for image 2
-        __self__.T2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
+        __self__.T2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image2)
         __self__.T2Slider.grid(row=0,column=6)
-        __self__.LP2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=ImgMath.LEVELS, \
+        __self__.LP2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image2)
         __self__.LP2Slider.grid(row=1,column=6)
         __self__.S2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=7, \
@@ -385,37 +353,37 @@ class ImageAnalyzer:
     def transform1(__self__,image):
         if __self__.T1check.get() == True:
             if __self__.S1check.get() == True: 
-                image = ImgMath.threshold(image,__self__.T1Slider.get())
-                image = ImgMath.iteractive_median(image,__self__.S1Slider.get())
+                image = threshold(image,__self__.T1Slider.get())
+                image = iteractive_median(image,__self__.S1Slider.get())
             else:
-                image = ImgMath.threshold(image,__self__.T1Slider.get())
+                image = threshold(image,__self__.T1Slider.get())
         elif __self__.LP1check.get() == True:
             if __self__.S1check.get() == True: 
-                image = ImgMath.low_pass(image,__self__.LP1Slider.get())
-                image = ImgMath.iteractive_median(image,__self__.S1Slider.get())
+                image = low_pass(image,__self__.LP1Slider.get())
+                image = iteractive_median(image,__self__.S1Slider.get())
             else:
-                image = ImgMath.low_pass(image,__self__.LP1Slider.get())
+                image = low_pass(image,__self__.LP1Slider.get())
         else:
             if __self__.S1check.get() == True:
-                image = ImgMath.iteractive_median(image,__self__.S1Slider.get())
+                image = iteractive_median(image,__self__.S1Slider.get())
         return image
  
     def transform2(__self__,image):
         if __self__.T2check.get() == True:
             if __self__.S2check.get() == True: 
-                image = ImgMath.threshold(image,__self__.T2Slider.get())
-                image = ImgMath.iteractive_median(image,__self__.S2Slider.get())
+                image = threshold(image,__self__.T2Slider.get())
+                image = iteractive_median(image,__self__.S2Slider.get())
             else:
-                image = ImgMath.threshold(image,__self__.T2Slider.get())
+                image = threshold(image,__self__.T2Slider.get())
         elif __self__.LP2check.get() == True:
             if __self__.S2check.get() == True: 
-                image = ImgMath.low_pass(image,__self__.LP2Slider.get())
-                image = ImgMath.iteractive_median(image,__self__.S2Slider.get())
+                image = low_pass(image,__self__.LP2Slider.get())
+                image = iteractive_median(image,__self__.S2Slider.get())
             else:
-                image = ImgMath.low_pass(image,__self__.LP2Slider.get())
+                image = low_pass(image,__self__.LP2Slider.get())
         else:
             if __self__.S2check.get() == True:
-                image = ImgMath.iteractive_median(image,__self__.S2Slider.get())
+                image = iteractive_median(image,__self__.S2Slider.get())
         return image   
     
     # the Sliders are the widgets that calls draw_image functions
@@ -423,7 +391,6 @@ class ImageAnalyzer:
     # argument i is there just to make it work. The value passed doesn't change a thing
 
     def draw_image1(__self__,i):
-        #print("draw1")
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
         __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
         __self__.CACHEMAP1
@@ -433,7 +400,6 @@ class ImageAnalyzer:
         __self__.canvas1.draw()
     
     def draw_image2(__self__,i):
-        #print("draw2")
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
         __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
         __self__.CACHEMAP2 = None
@@ -450,11 +416,14 @@ class ImageAnalyzer:
         # displayed images. Transforming them only cuts the desired signals,
         # therefore the gray levels remain the same. The image looks brighter when
         # displayed because matplot adjust the axes maxima and minima when plotting
-        corr[0] = corr[0]/corr[0].max()*ImgMath.LEVELS
-        corr[1] = corr[1]/corr[1].max()*ImgMath.LEVELS
+        try: 
+            corr[0] = corr[0]/corr[0].max()*LEVELS
+            corr[1] = corr[1]/corr[1].max()*LEVELS
         
-        corr_plot = PlotWin(root.master)
-        corr_plot.draw_correlation(corr,labels)
+            corr_plot = PlotWin(root.master)
+            corr_plot.draw_correlation(corr,labels)
+        except:
+            pass
 
 
 class PlotWin:
@@ -764,7 +733,6 @@ class MainGUI:
             global MY_DATACUBE
             SpecRead.cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
             load_cube()
-            #print(MY_DATACUBE.calibration)
             SpecRead.setup_from_datacube(MY_DATACUBE)
             __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
             __self__.toggle_(toggle='on')    
@@ -955,7 +923,6 @@ class MainGUI:
         if os.path.exists(SpecRead.cube_path):
             cube_stats = os.stat(SpecRead.cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
-            #print(SpecRead.cube_path)
             __self__.StatusBox.insert(END,"Datacube is compiled. Cube size: {0}".format(cube_size))
             __self__.StatusBox.insert(END,"Verifying packed elements...")
             
@@ -1130,7 +1097,6 @@ class MainGUI:
                 cfgfile.close()
                 
                 SpecRead.setup()
-                #print(SpecRead.CONFIG)
                 __self__.ConfigDiag.destroy()
                 try: 
                     __self__.ResetWindow.destroy()
@@ -1289,9 +1255,19 @@ class PeriodicTable:
                 except: pass
             __self__.go.config(state=DISABLED)
             
+            cube_status = os.stat(SpecRead.cube_path)
+            cube_size = cube_status.st_size
+            sys_mem = dict(virtual_memory()._asdict())
+            rnt_mem = [(cube_size*len(FIND_ELEMENT_LIST)),sys_mem["available"]]
+            process_memory = (convert_bytes(rnt_mem[0]),convert_bytes(rnt_mem[1]))
+            
+            if cube_size*(len(FIND_ELEMENT_LIST)) > sys_mem["available"]:
+                logging.warning("Non-fatal MEMORY ERROR! Memony size needed for cube copies not available!")
+                messagebox.showerror("Memory Error!","Multiprocessing copies the datacube to for each running instance.\nMemory needed: {}\nMemory available: {}\nProcess will follow in a single instance and may take a while.".format(process_memory[0],process_memory[1]))   
+
             # multi-core mode
-            if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 1200:
-                print("MULTI-CORE ENABLED!")
+            if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 1200\
+                    and cube_size*len(FIND_ELEMENT_LIST) < sys_mem["available"]:
                 cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
                 results = cuber.start_workers()
                 results = sort_results(results,FIND_ELEMENT_LIST)
@@ -1299,9 +1275,8 @@ class PeriodicTable:
  
             # single-core mode
             else: 
-                print("SINGLE CORE MODE!")
                 MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
-                ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
+                #ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
                 
 
 
@@ -1535,9 +1510,46 @@ class PeriodicTable:
 
               
 if __name__ == "__main__":
+    import logging
+    from multiprocessing import freeze_support
+    freeze_support()
+    logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
+            filename = 'logfile.log',level = logging.DEBUG)
+    with open('logfile.log','w+') as mylog: mylog.truncate(0)
+    logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
+
+    VERSION = "0.0.1α"
+
+    # tcl/Tk imports
+    from tkinter import *
+    from tkinter import ttk
+    from tkinter import messagebox
+
+    # general utilities
+    import numpy as np
+    import sys, os, copy, pickle
+    from psutil import virtual_memory
+
+    # matplotlib imports
+    import matplotlib
+    matplotlib.use("TkAgg")
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.figure import Figure
+    from matplotlib import style
+    style.use('ggplot')
+
+    # internal imports
+    from ImgMath import LEVELS
+    from ImgMath import threshold, low_pass, iteractive_median
+    from SpecMath import getstackplot, correlate
+    from SpecMath import datacube as Cube
+    from Mapping import getpeakmap
+    from Mapping_parallel import Cube_reader, sort_results, digest_results
+
+
+    import SpecRead
     logging.info("Loading GUI...")
-    #Samples = Samples()
+    start_up()
     root = MainGUI()
-    #Samples.splash(root)
     root.master.mainloop()
 

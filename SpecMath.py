@@ -12,9 +12,9 @@ import os
 import sys
 import numpy as np
 import pickle
-import SpecRead
+from SpecRead import getdata, getdimension, getcalibration, getfirstfile, calibrate, updatespectra
 from EnergyLib import ElementList
-from ImgMath import LEVELS as LEVELS
+from ImgMath import LEVELS
 from Mapping import getdensitymap
 import matplotlib.pyplot as plt
 #from numba import guvectorize, float64, int64
@@ -27,7 +27,7 @@ import math
 logging.debug("Importing module scipy.signal...")
 try: import scipy.signal
 except: logging.warning("Could not import scipy package.")
-logging.debug("Finished SpecMath imports.")
+logging.info("Finished SpecMath imports.")
 
 from tkinter import *
 from tkinter import ttk
@@ -85,15 +85,15 @@ class datacube:
     
     def __init__(__self__,dtypes,configuration):
         logging.debug("Initializing cube file")
-        try: specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
+        try: specsize = getdata(getfirstfile()) 
         except: specsize = 0
-        __self__.dimension = SpecRead.getdimension()
+        __self__.dimension = getdimension()
         __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
         __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
         __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
                 specsize.shape[0]],dtype='float64',order='C')
         __self__.config = configuration
-        __self__.calibration = SpecRead.getcalibration()
+        __self__.calibration = getcalibration()
         __self__.energyaxis = energyaxis()
         __self__.ROI = {}
         __self__.hist = {}
@@ -113,9 +113,10 @@ class datacube:
                 __self__.sum += __self__.matrix[x,y]
     
     def write_sum(__self__):
-        try: os.mkdir(SpecRead.output_path)
+        from SpecRead import output_path, cube_path
+        try: os.mkdir(output_path)
         except: pass
-        output_path = SpecRead.output_path
+        output_path = output_path
         sum_file = open(output_path+'stacksum.mca','w+')
         
         #writes header
@@ -160,32 +161,33 @@ class datacube:
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
+        from SpecRead import output_path, cube_path
         try: 
-            if not os.path.exists(SpecRead.output_path):
-                logging.info("Creating outputh path {0}".forma(SpecRead.output_path))
-                os.mkdir(SpecRead.output_path)
+            if not os.path.exists(output_path):
+                logging.info("Creating outputh path {0}".forma(output_path))
+                os.mkdir(output_path)
             else: logging.debug("Output path exists")
         except: 
-            logging.warning("Could not create output folder {}".format(SpecRead.output_path))
+            logging.warning("Could not create output folder {}".format(output_path))
             pass
-        p_output = open(SpecRead.cube_path,'wb')
+        p_output = open(cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
 
     def compile_cube(__self__):
         logging.debug("Started mca compilation")
         __self__.progressbar = Busy(__self__.img_size,0)
-        currentspectra = SpecRead.getfirstfile()
+        currentspectra = getfirstfile()
         logging.debug("First mca on list: {}".format(currentspectra))
         x,y,scan = 0,0,(0,0)
         for iteration in range(__self__.img_size):
             spec = currentspectra
-            specdata = SpecRead.getdata(spec)
+            specdata = getdata(spec)
             for i in range(len(specdata)):
                 __self__.matrix[x][y][i] = specdata[i]
             scan = updateposition(scan[0],scan[1])
             x,y = scan[0],scan[1]
-            currentspectra = SpecRead.updatespectra(spec,__self__.img_size)
+            currentspectra = updatespectra(spec,__self__.img_size)
             __self__.progressbar.updatebar(iteration)
             
             #progress = int(iteration/__self__.img_size*20)
@@ -216,12 +218,14 @@ class datacube:
         logging.debug("Finished packing.")
         
     def pack_element(__self__,image,element,line):
+        from SpecRead import output_path, cube_path
         __self__.__dict__[element+"_"+line] = image
-        logging.info("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
-        #print("Packed {0} map to datacube {1}".format(element,SpecRead.cube_path))
+        logging.info("Packed {0} map to datacube {1}".format(element,cube_path))
+        #print("Packed {0} map to datacube {1}".format(element,cube_path))
     
     def pack_hist(__self__,hist,bins,element):
-        histfile = open(SpecRead.output_path+"\\"+element+"_hist.txt",'w')
+        from SpecRead import output_path, cube_path
+        histfile = open(output_path+"\\"+element+"_hist.txt",'w')
         histfile.write("<<START>>\n")
         histfile.write("hist\n")
         for i in range(len(hist)):
@@ -231,9 +235,10 @@ class datacube:
         __self__.hist[element] = [hist,bins]
      
     def unpack_element(__self__,element,line):
+        from SpecRead import output_path, cube_path
         unpacked = __self__.__dict__[element+"_"+line]
-        #print("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
-        logging.info("Unpacked {0} map from datacube {1}".format(element,SpecRead.cube_path))
+        #print("Unpacked {0} map from datacube {1}".format(element,cube_path))
+        logging.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
         return unpacked
 
     def check_packed_elements(__self__):
@@ -267,7 +272,7 @@ def shift_center(xarray,yarray):
     return xarray[idx],ymax,idx
 
 def updateposition(a,b):
-    imagesize = SpecRead.getdimension()
+    imagesize = getdimension()
     imagex = imagesize[0]
     imagey = imagesize[1]
     imagedimension = imagex*imagey
@@ -316,7 +321,7 @@ def getdif2(ydata,xdata,gain):
     return dif2curve
 
 def energyaxis():
-    calibration = SpecRead.calibrate()
+    calibration = calibrate()
     return calibration[0]
 
 def getstackplot(datacube,mode=None):
@@ -421,7 +426,7 @@ def setROI(lookup,xarray,yarray,localconfig):
     lowx_idx = lowx_idx + 3
     highx_idx = highx_idx - 3
     peak_center = shift[2]-3
-    logging.info("peak_center = {0}, channels = {1} {2}, peakwidth= {3}"\
+    logging.debug("peak_center = {0}, channels = {1} {2}, peakwidth= {3}"\
             .format(peak_center,lowx_idx,highx_idx,(highx_idx-lowx_idx))) 
     return lowx_idx,highx_idx,peak_center,isapeak
 
@@ -564,7 +569,5 @@ def correlate(map1,map2):
     return correlation_matrix
 
 if __name__=="__main__":
-    SpecRead.setup()
-    cube = datacube(['xrf'],SpecRead.CONFIG)
-    cube.compile_cube()
+    logging.info("This is SpecMath")
 

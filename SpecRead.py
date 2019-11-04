@@ -7,7 +7,6 @@
 #################################################################
 
 import logging
-import ReadConfig
 from ReadConfig import unpack_cfg as CONFIGURE
 logging.debug("Importing module SpecRead.py...")
 import sys
@@ -348,3 +347,6 @@ def dump_ratios(maps_list,element_list):
                     logging.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
         r_file.close()
     return 0
+
+if __name__ == "__main__":
+    logging.info("This is SpecRead")
