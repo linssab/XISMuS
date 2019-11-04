@@ -20,7 +20,6 @@ import time
 import cv2
 logging.debug("Finished Mapping imports.")
 
-timer = time.time()
 
 from tkinter import *
 from tkinter import ttk
@@ -63,6 +62,7 @@ class Busy:
 #################################################
 
 def getpeakmap(element_list,datacube):
+    timer = time.time()
     imagsize = SpecRead.getdimension()
     imagex = imagsize[0]
     imagey = imagsize[1]
@@ -284,10 +284,8 @@ def getpeakmap(element_list,datacube):
                             energyaxis,background,configdict,RAW,usedif2,dif2)
                     ka = ka_info[0]
                 
-                    for channel in range(len(specdata)):
-                        if energyaxis[ka_info[1][0]] < energyaxis[channel]\
-                            < energyaxis[ka_info[1][1]]:
-                            datacube.ROI[element_list[Element]][channel] += specdata[channel]
+                    datacube.ROI[element_list[Element]][ka_info[1][0]:ka_info[1][1]] += \
+                            specdata[ka_info[1][0]:ka_info[1][1]]
 
                     if ka == 0: 
                         ka,kb = 0, 0
@@ -299,10 +297,10 @@ def getpeakmap(element_list,datacube):
                         kb_info = SpecMath.getpeakarea(kbenergy[Element],specdata,\
                                 energyaxis,background,configdict,RAW,usedif2,dif2)
                         kb = kb_info[0]
-                        for channel in range(len(specdata)):
-                            if energyaxis[kb_info[1][0]] < energyaxis[channel]\
-                                < energyaxis[kb_info[1][1]]:
-                                datacube.ROI[element_list[Element]][channel] += specdata[channel]    
+                        
+                        datacube.ROI[element_list[Element]][kb_info[1][0]:kb_info[1][1]] += \
+                            specdata[kb_info[1][0]:kb_info[1][1]]
+
                         elmap[currentx][currenty][1][Element] = kb
                     
                     elmap[currentx][currenty][0][Element] = ka
@@ -332,20 +330,17 @@ def getpeakmap(element_list,datacube):
                
                     # CALCULATES KA
                     if ka_idx[Element][3] == True:
-                        for channel in range(ka_idx[Element][0],ka_idx[Element][1]):
-                            datacube.ROI[element_list[Element]][channel] += \
-                                    ka_ROI[channel-ka_idx[Element][0]]    
-                            ka += ka_ROI[channel-ka_idx[Element][0]] - ka_bg[channel-ka_idx[Element][0]]
+                        datacube.ROI[element_list[Element]]\
+                                [ka_idx[Element][0]:ka_idx[Element][1]] += ka_ROI
+                        ka += ka_ROI.sum() - ka_bg.sum()
                    
                     # CALCULATES KB (MUST CHECK IF RATIO IS TRUE)
                     # IF RATIO IS FALSE, KB REMAINS AS 0
                     if conditional_ratio[Element] == True:
-                        if kb_idx[Element][3] == True and ka_idx[Element][3] == True:
-                            for channel in range(kb_idx[Element][0],kb_idx[Element][1]):
-                                datacube.ROI[element_list[Element]][channel] += \
-                                        kb_ROI[channel-kb_idx[Element][0]]    
-                                kb += kb_ROI[channel-kb_idx[Element][0]] - \
-                                        kb_bg[channel-kb_idx[Element][0]]
+                        datacube.ROI[element_list[Element]]\
+                                [kb_idx[Element][0]:kb_idx[Element][1]] += kb_ROI
+                        kb += kb_ROI.sum() - kb_bg.sum()
+
                         elmap[currentx][currenty][1][Element] = kb
 
                     logging.debug("ka {0}, kb {1}".format(ka,kb))
@@ -421,8 +416,9 @@ def getpeakmap(element_list,datacube):
     
     # split_and_save is disabled for use with GUI. MainGUI.find_elements() calls 
     # it at the end of the execution
-    
-    #ImgMath.split_and_save(datacube,elmap,element_list)
+    print("Time:")
+    print(time.time()-timer)
+    ImgMath.split_and_save(datacube,elmap,element_list)
     return elmap
 
 def getdensitymap(datacube):
@@ -447,15 +443,15 @@ def getdensitymap(datacube):
     logging.info("Execution took %s seconds" % (time.time() - timer))
     return density_map
 
-"""
 if __name__=="__main__":
-    print("Test silver map")
-    configdict['peakmethod'] = 'auto_roi'
-    configdict['bgstrip'] = 'SNIPBG'
-    print(configdict)
-    myelements = ['Ag', 'Pb', 'Ca', 'Fe', 'Cu']
-    myimage = getpeakmap(myelements,\
-            bgstrip=configdict['bgstrip'],peakmethod=configdict['peakmethod'])
-    ImgMath.split_and_save(myimage,myelements,configdict)
-"""
-
+    SpecRead.setup()
+    cube_name = SpecRead.DIRECTORY
+    cube_path = SpecRead.cube_path
+    cube_file = open(cube_path,'rb')
+    datacube = pickle.load(cube_file)
+    cube_file.close() 
+    print(cube_name)
+    configdict = datacube.config
+    myelements = ["Cu","Au","Fe","Pb"]
+    myimage = getpeakmap(myelements,datacube)
+   
