@@ -1,8 +1,17 @@
+#################################################################
+#                                                               #
+#          DATABASE FOR ELEMENTS (XRAYLIB BASED)                #
+#                        version: 1.0                           #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#                                                               #
+#################################################################
+
 import numpy as np
 import logging
 logging.debug("Importing module EnergyLib.py...")
 try: import xraylib as xlib
 except: logging.warning("xraylib module not found!")
+xlib.SetErrorMessages(0)
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
 
@@ -148,8 +157,6 @@ def SetPeakLines():
     return PeakConfigDict
 
 def set_energies_from_xlib():
-    #for index in range(len(ElementList)):
-    #    print(ElementList[index],xlib.LineEnergy(index,0),xlib.LineEnergy(index,1))
     EnergyList, EnergyListKb = [],[]
     L = False
     elt = 0
@@ -158,15 +165,19 @@ def set_energies_from_xlib():
             if ElementList[elt] == 'Sb': L = True
             if L == True:
                 while ElementList[elt] != 'Mt':
-                    EnergyList.append(xlib.LineEnergy(elt,2))
-                    EnergyListKb.append(xlib.LineEnergy(elt,3))
-                    #print(ElementList[elt],xlib.LineEnergy(elt,2),xlib.LineEnergy(elt,3))
-                    elt += 1
+                    try: 
+                        EnergyList.append(xlib.LineEnergy(elt,2))
+                        EnergyListKb.append(xlib.LineEnergy(elt,3))
+                        #print(ElementList[elt],xlib.LineEnergy(elt,2),xlib.LineEnergy(elt,3))
+                        elt += 1
+                    except: pass
                 break 
-            EnergyList.append(xlib.LineEnergy(elt,0))
-            EnergyListKb.append(xlib.LineEnergy(elt,1))
-            #print(ElementList[elt],xlib.LineEnergy(elt,0),xlib.LineEnergy(elt,1))
-            elt += 1
+            try:
+                EnergyList.append(xlib.LineEnergy(elt,0))
+                EnergyListKb.append(xlib.LineEnergy(elt,1))
+                #print(ElementList[elt],xlib.LineEnergy(elt,0),xlib.LineEnergy(elt,1))
+                elt += 1
+            except: pass
         break
     return EnergyList, EnergyListKb
 
@@ -193,14 +204,18 @@ Energies, kbEnergies = set_energies_from_xlib()
 
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0])+1 for index in ElementsInfo}
+
+# These will become deprected
 muPb = {"{0}".format(index[0]):(index[6],index[7]) for index in ElementsInfo}
 muE0 = {"{0}".format(index[0]):(index[5]) for index in ElementsInfo} 
 muCu = {"{0}".format(index[0]):(index[8],index[9]) for index in ElementsInfo}
 
 
 if __name__ == "__main__":
+    """
     try: 
         Energies, kbEnergies = set_energies_from_xlib()
         DensityDict = set_densities_from_xlib()
         print("pass!")
     except: print("oops, xraylib is not working for some reason.")
+    """
