@@ -407,7 +407,10 @@ def split_and_save(datacube,map_array,element_list):
             
             if imagex > target_size or imagey > target_size: large_image = image/image.max()*255
             else: 
-                large_image = image/image.max()*255
+                if image.max() > 0: 
+                    large_image = image/image.max()*255
+                else:
+                    large_image = image
                 large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
             
             cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
@@ -429,7 +432,6 @@ def split_and_save(datacube,map_array,element_list):
     logging.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
     logging.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
-    #plt.show()
     return 0
 
 def stackimages(*args):
