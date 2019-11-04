@@ -109,8 +109,8 @@ def mask(a_datacube,a_compound,mask_threshold):
             if a_compound.weight[key] > abundance: id_element, abundance = key, a_compound.weight[key]
     
     try: 
-        # tries to get element map from cube file
-        id_element_matrix = a_datacube.unpack_element(id_element)
+        # tries to get element map (of line series A) from cube file
+        id_element_matrix = a_datacube.unpack_element(id_element,"a")
     except:
         try: 
             id_element_ratio = SpecRead.output_path + '{1}_ratio_{0}.txt'\
@@ -317,23 +317,40 @@ def flattenhistogram(image):
     return image
 
 def interpolate_zeros(map_array):
+    new_map = map_array[:]
     try: 
         for Element in range(map_array.shape[3]):
             for line in range(map_array.shape[2]):
-                for x in range(map_array.shape[0]):
-                    for y in range(map_array.shape[1]):
-                        if map_array[x,y,line,Element] == 0: 
+                for x in range(1,map_array.shape[0]-1,1):
+                    for y in range(1,map_array.shape[1]-1,1):
+                        a,b,c = map_array[x-1,y-1,line,Element],\
+                                map_array[x-1,y,line,Element],\
+                                map_array[x-1,y+1,line,Element]
+                        before = [a,b,c]
+                        d,e,f = map_array[x-1,y-1,line,Element],\
+                                map_array[x-1,y,line,Element],\
+                                map_array[x-1,y+1,line,Element]
+                        after = [d,e,f]
+                        if map_array[x,y,line,Element] == 0 and any(before) and any(after): 
                             newvalue = median_filter(map_array[:,:,line,Element],x,y)
-                            map_array[x,y,line,Element] = newvalue
+                            new_map[x,y,line,Element] = newvalue
     except:
-    # to work with multiprocess images 
+    # to work with multiprocess images were the input objects shape is different
         for line in range(map_array.shape[0]):
-            for x in range(map_array.shape[1]):
-                for y in range(map_array.shape[2]):
-                    if map_array[line,x,y] == 0: 
+            for x in range(1,map_array.shape[1]-1,1):
+                for y in range(1,map_array.shape[2]-1,1):
+                    a,b,c = map_array[line,x-1,y-1],\
+                            map_array[line,x-1,y],\
+                            map_array[line,x-1,y+1]
+                    before = [a,b,c]
+                    d,e,f = map_array[line,x-1,y-1],\
+                            map_array[line,x-1,y],\
+                            map_array[line,x-1,y+1]
+                    after = [d,e,f]
+                    if map_array[line,x,y] == 0 and any(before) and any(after): 
                         newvalue = median_filter(map_array[line,:,:],x,y)
-                        map_array[line,x,y] = newvalue
-    return map_array
+                        new_map[line,x,y] = newvalue
+    return new_map
 
 def plotlastmap(image,name):
     fig, ax = plt.subplots()
@@ -443,15 +460,38 @@ def blacks_(image,thresh):
     print(counts/len(img))
     return img
 
+def large_pixel_smoother(image,iterations):
+    for i in range(iterations):
+        for x in range(0,image.shape[0],1):
+            for y in range(0,image.shape[1],1):
+                try:
+                    if image[x,y] != image[x,y+1]:
+                        image[x,y] = (image[x,y]+image[x,y+1])/2
+                        image[x,y+1] = image[x,y]
+                        y+=y
+                    else: pass
+                except: pass
+            try:
+                if image[x,y] != image[x+1,y]:
+                    image[x,y] = (image[x,y]+image[x+1,y])/2
+                    image[x+1,y] = image[x,y]
+                    x+=x
+                else: pass
+            except: pass
+
+    return image
+
 if __name__ == "__main__":
     import os
-    print("lel")
-    image1 = os.getcwd()+"\\image1.png"
+    image1 = os.getcwd()+"\\mumble.png"
+    """ 
     image2 = os.getcwd()+"\\image2.png"
     queue = [image1,image2]
     img = blacks_(image1,125)
     img2 = blacks_(image2,125)
     cv2.imshow("mammamia",img)
-    cv2.imshow("mammamia2",img2)
+    """
+    img = cv2.imread("{}".format(image1), cv2.IMREAD_GRAYSCALE)
+    img1 = large_pixel_smoother(img,10)
+    cv2.imshow("mammamia2",img1)
     cv2.waitKey(0)
-    
