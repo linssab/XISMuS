@@ -17,10 +17,10 @@ def start_up():
     FIND_ELEMENT_LIST = []
 
 
-def wipe_list(table_object):
+def wipe_list():
     global FIND_ELEMENT_LIST
     FIND_ELEMENT_LIST = []
-    table_object.master.destroy()
+    root.find_elements_diag.master.destroy()
 
 def place_topleft(window1,window2):
     
@@ -444,8 +444,8 @@ class PlotWin:
         __self__.lower.pack(side=TOP, anchor=N, fill=BOTH)
         __self__.master.bind("<Configure>", __self__.resize)
         
-        __self__.figure = Figure(figsize=(5,4), dpi=100)
-        __self__.plot =__self__.figure.add_subplot(111)
+        __self__.figure = Figure(figsize=(5,4), dpi=75)
+        __self__.plot = __self__.figure.add_subplot(111)
         __self__.plot.grid(which='both',axis='both')
         __self__.plot.axis('On')
         __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
@@ -480,27 +480,43 @@ class PlotWin:
         __self__.plot.legend()
         place_topleft(__self__.master.master,__self__.master)
 
-    def draw_spec(__self__,mode,display_mode='-semilog'):
+    def draw_spec(__self__,mode,display_mode='-semilog',lines=False):
+        global FIND_ELEMENT_LIST
+        __self__.plot.clear()
         plot_font = {'fontname':'Times New Roman','fontsize':10}
         if display_mode == '-semilog':
             __self__.plot.set_title('{0}'.format(SpecRead.DIRECTORY),**plot_font)
             __self__.plot.set_ylabel("Counts")
             for option in mode:
-                if len(option) > 0:
-                    __self__.plotdata = getstackplot(MY_DATACUBE,option)
-                    __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                    __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+                __self__.plotdata = getstackplot(MY_DATACUBE,option)
+                __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
+                __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+            if lines==True:
+                for element in FIND_ELEMENT_LIST:
+                    energies = plottables(element)
+                    __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
+                                label=element)
+
             __self__.plot.set_xlabel("Energy (KeV)")
             __self__.plot.legend()
         else:
             for option in mode:
-                if len(option) > 0:
-                    __self__.plotdata = getstackplot(MY_DATACUBE,option)
-                    __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                    __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+                __self__.plotdata = getstackplot(MY_DATACUBE,option)
+                __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
+                __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+            if lines==True:
+                for element in FIND_ELEMENT_LIST:
+                    energies = plottables(element)
+                    __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
+                                label=element)
+
             __self__.plot.set_xlabel("Energy (KeV)")
             __self__.plot.legend()
-        place_topleft(__self__.master.master,__self__.master)
+        __self__.canvas.draw()
+        
+        # only moves to tep left when spawning the graph for the first time. If lines is True,
+        # then the plot is already spawned as seen in refresh_plots() function
+        if lines == False: place_topleft(__self__.master.master,__self__.master)
 
     def draw_ROI(__self__):
         global MY_DATACUBE
@@ -605,6 +621,7 @@ class MainGUI:
         samples.splash_screen(__self__)
         __self__.master.after(100,samples.list_all())
         __self__.samples = samples.samples_database
+        __self__.find_elements_diag = None
         
         __self__.master.title("Piratininga SM {}".format(VERSION))
         __self__.master.resizable(False,False)
@@ -651,9 +668,18 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Height-mapping",state=DISABLED)
 
     def find_elements(__self__):
-        __self__.find_elements_diag = PeriodicTable(__self__.master)
-        __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",\
-                lambda: wipe_list(__self__.find_elements_diag))
+        try:
+            if __self__.find_elements_diag.master.winfo_exists() == False:
+                __self__.find_elements_diag = PeriodicTable(__self__)
+                __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",\
+                        lambda: wipe_list())
+            else:
+                pass
+        except:
+            __self__.find_elements_diag = PeriodicTable(__self__)
+            __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",\
+                    lambda: wipe_list())
+        
         
     def call_listsamples(__self__):
         __self__.SamplesWindow = Toplevel(master=__self__.master)
@@ -733,7 +759,7 @@ class MainGUI:
             global MY_DATACUBE
             SpecRead.cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
             load_cube()
-            SpecRead.setup_from_datacube(MY_DATACUBE)
+            SpecRead.setup_from_datacube(MY_DATACUBE,__self__.samples)
             __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
             __self__.toggle_(toggle='on')    
             __self__.write_stat()   
@@ -756,18 +782,18 @@ class MainGUI:
     
     def call_summation(__self__):
         master = __self__.master
-        summation = PlotWin(master)
-        summation.draw_spec(mode=['summation'],display_mode='-semilog')
+        __self__.summation = PlotWin(master)
+        __self__.summation.draw_spec(mode=['summation'],display_mode='-semilog',lines=False)
     
     def call_mps(__self__):
         master = __self__.master
-        MPS = PlotWin(master)
-        MPS.draw_spec(mode=['mps'],display_mode='-semilog')
+        __self__.MPS = PlotWin(master)
+        __self__.MPS.draw_spec(mode=['mps'],display_mode='-semilog',lines=False)
     
     def call_combined(__self__):
         master = __self__.master
-        combined = PlotWin(master)
-        combined.draw_spec(mode=['summation','mps'],display_mode='-semilog')
+        __self__.combined = PlotWin(master)
+        __self__.combined.draw_spec(mode=['summation','mps'],display_mode='-semilog',lines=False)
 
     def build_widgets(__self__):
         
@@ -1208,25 +1234,13 @@ class MainGUI:
 
         return 0
 
-def add_element(toggle_btn):
-    global DEFAULTBTN_COLOR
-    global FIND_ELEMENT_LIST
-    if toggle_btn.config('relief')[-1] == 'sunken':
-        toggle_btn.config(relief="raised")
-        toggle_btn.config(bg=DEFAULTBTN_COLOR)
-        FIND_ELEMENT_LIST.remove(toggle_btn.cget("text"))
-    else:
-        toggle_btn.config(relief="sunken")
-        toggle_btn.config(bg="yellow")
-        FIND_ELEMENT_LIST.append(toggle_btn.cget("text"))
-
 
 class PeriodicTable:
 
     # Creates the periodic table and starts find_elements module from Mapping.py
 
     def __init__(__self__,parent):
-        __self__.master = Toplevel(parent)
+        __self__.master = Toplevel(parent.master)
         __self__.master.title("Periodic Table of Elements")
         __self__.master.resizable(False,False)
         __self__.master.header = Label(__self__.master, text="Periodic Table of Elements.")
@@ -1238,6 +1252,43 @@ class PeriodicTable:
 
         __self__.draw_buttons() 
     
+    def refresh_plots(__self__):
+        global FIND_ELEMENT_LIST
+        if len(FIND_ELEMENT_LIST) > 0: lines = True
+        else: 
+            lines = False
+        try:
+            root.MPS.draw_spec(\
+                mode=['mps'],display_mode='-semilog',lines=lines)
+            root.MPS.update_idletasks()
+        except: pass
+        try: 
+            root.summation.draw_spec(\
+                mode=['summation'],display_mode='-semilog',lines=lines)
+            root.summation.update_idletasks()
+        except: pass
+        try: 
+            root.combined.draw_spec(\
+                mode=['combined'],display_mode='-semilog',lines=lines)
+            root.combined.update_idletasks()
+        except: pass
+        root.find_elements_diag.master.focus_force()
+        return np.nan
+
+    def add_element(__self__,toggle_btn):
+        global DEFAULTBTN_COLOR
+        global FIND_ELEMENT_LIST
+        if toggle_btn.config('relief')[-1] == 'sunken':
+            toggle_btn.config(relief="raised")
+            toggle_btn.config(bg=DEFAULTBTN_COLOR)
+            FIND_ELEMENT_LIST.remove(toggle_btn.cget("text"))
+            __self__.refresh_plots()
+        else:
+            toggle_btn.config(relief="sunken")
+            toggle_btn.config(bg="yellow")
+            FIND_ELEMENT_LIST.append(toggle_btn.cget("text"))
+            __self__.refresh_plots()
+       
     def save_and_run(__self__):
         
         if not FIND_ELEMENT_LIST: 
@@ -1281,7 +1332,7 @@ class PeriodicTable:
 
 
             # reactivate widgets
-            wipe_list(__self__)
+            wipe_list()
             root.toggle_(toggle="on")
             root.MenuBar.entryconfig("Toolbox", state=NORMAL)
             root.ButtonLoad.config(state=NORMAL)
@@ -1290,219 +1341,219 @@ class PeriodicTable:
     def draw_buttons(__self__):
         btnsize_w = 3
         btnsize_h = 1
-        __self__.H = Button(__self__.master.body, text="H",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.H))
+        __self__.H = Button(__self__.master.body, text="H",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.H))
         global DEFAULTBTN_COLOR
         DEFAULTBTN_COLOR = __self__.H.cget("background")
         __self__.H.grid(row=0,column=0)
-        __self__.He = Button(__self__.master.body, text="He",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.He))
+        __self__.He = Button(__self__.master.body, text="He",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.He))
         __self__.He.grid(row=0,column=17)
-        __self__.Li = Button(__self__.master.body, text="Li",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Li))
+        __self__.Li = Button(__self__.master.body, text="Li",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Li))
         __self__.Li.grid(row=1,column=0)
-        __self__.Be = Button(__self__.master.body, text="Be",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Be))
+        __self__.Be = Button(__self__.master.body, text="Be",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Be))
         __self__.Be.grid(row=1,column=1)
-        __self__.B = Button(__self__.master.body, text="B",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.B))
+        __self__.B = Button(__self__.master.body, text="B",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.B))
         __self__.B.grid(row=1,column=12)
-        __self__.C = Button(__self__.master.body, text="C",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.C))
+        __self__.C = Button(__self__.master.body, text="C",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.C))
         __self__.C.grid(row=1,column=13)
-        __self__.N = Button(__self__.master.body, text="N",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.N))
+        __self__.N = Button(__self__.master.body, text="N",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.N))
         __self__.N.grid(row=1,column=14)
-        __self__.O = Button(__self__.master.body, text="O",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.O))
+        __self__.O = Button(__self__.master.body, text="O",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.O))
         __self__.O.grid(row=1,column=15)
-        __self__.F = Button(__self__.master.body, text="F",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.F))
+        __self__.F = Button(__self__.master.body, text="F",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.F))
         __self__.F.grid(row=1,column=16)
-        __self__.Ne = Button(__self__.master.body, text="Ne",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ne))
+        __self__.Ne = Button(__self__.master.body, text="Ne",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ne))
         __self__.Ne.grid(row=1,column=17)
-        __self__.Na = Button(__self__.master.body, text="Na",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Na))
+        __self__.Na = Button(__self__.master.body, text="Na",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Na))
         __self__.Na.grid(row=2,column=0)
-        __self__.Mg = Button(__self__.master.body, text="Mg",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Mg))
+        __self__.Mg = Button(__self__.master.body, text="Mg",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Mg))
         __self__.Mg.grid(row=2,column=1)
-        __self__.Al = Button(__self__.master.body, text="Al",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Al))
+        __self__.Al = Button(__self__.master.body, text="Al",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Al))
         __self__.Al.grid(row=2,column=12)
-        __self__.Si = Button(__self__.master.body, text="Si",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Si))
+        __self__.Si = Button(__self__.master.body, text="Si",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Si))
         __self__.Si.grid(row=2,column=13)
-        __self__.P = Button(__self__.master.body, text="P",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.P))
+        __self__.P = Button(__self__.master.body, text="P",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.P))
         __self__.P.grid(row=2,column=14)
-        __self__.S = Button(__self__.master.body, text="S",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.S))
+        __self__.S = Button(__self__.master.body, text="S",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.S))
         __self__.S.grid(row=2,column=15)
-        __self__.Cl = Button(__self__.master.body, text="Cl",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Cl))
+        __self__.Cl = Button(__self__.master.body, text="Cl",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cl))
         __self__.Cl.grid(row=2,column=16)
-        __self__.Ar = Button(__self__.master.body, text="Ar",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ar))
+        __self__.Ar = Button(__self__.master.body, text="Ar",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ar))
         __self__.Ar.grid(row=2,column=17)
         
-        __self__.K = Button(__self__.master.body, text="K",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.K))
+        __self__.K = Button(__self__.master.body, text="K",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.K))
         __self__.K.grid(row=3,column=0)
-        __self__.Ca = Button(__self__.master.body, text="Ca",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ca))
+        __self__.Ca = Button(__self__.master.body, text="Ca",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ca))
         __self__.Ca.grid(row=3,column=1)
-        __self__.Sc = Button(__self__.master.body, text="Sc",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Sc))
+        __self__.Sc = Button(__self__.master.body, text="Sc",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sc))
         __self__.Sc.grid(row=3,column=2)
-        __self__.Ti = Button(__self__.master.body, text="Ti",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ti))
+        __self__.Ti = Button(__self__.master.body, text="Ti",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ti))
         __self__.Ti.grid(row=3,column=3)
-        __self__.V = Button(__self__.master.body, text="V",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.V))
+        __self__.V = Button(__self__.master.body, text="V",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.V))
         __self__.V.grid(row=3,column=4)
-        __self__.Cr = Button(__self__.master.body, text="Cr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Cr))
+        __self__.Cr = Button(__self__.master.body, text="Cr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cr))
         __self__.Cr.grid(row=3,column=5)
-        __self__.Mn = Button(__self__.master.body, text="Mn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Mn))
+        __self__.Mn = Button(__self__.master.body, text="Mn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Mn))
         __self__.Mn.grid(row=3,column=6)
-        __self__.Fe = Button(__self__.master.body, text="Fe",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Fe))
+        __self__.Fe = Button(__self__.master.body, text="Fe",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Fe))
         __self__.Fe.grid(row=3,column=7)
-        __self__.Co = Button(__self__.master.body, text="Co",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Co))
+        __self__.Co = Button(__self__.master.body, text="Co",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Co))
         __self__.Co.grid(row=3,column=8)
-        __self__.Ni = Button(__self__.master.body, text="Ni",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ni))
+        __self__.Ni = Button(__self__.master.body, text="Ni",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ni))
         __self__.Ni.grid(row=3,column=9)
-        __self__.Cu = Button(__self__.master.body, text="Cu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Cu))
+        __self__.Cu = Button(__self__.master.body, text="Cu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cu))
         __self__.Cu.grid(row=3,column=10)
-        __self__.Zn = Button(__self__.master.body, text="Zn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Zn))
+        __self__.Zn = Button(__self__.master.body, text="Zn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Zn))
         __self__.Zn.grid(row=3,column=11)
-        __self__.Ga = Button(__self__.master.body, text="Ga",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ga))
+        __self__.Ga = Button(__self__.master.body, text="Ga",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ga))
         __self__.Ga.grid(row=3,column=12)
-        __self__.Ge = Button(__self__.master.body, text="Ge",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ge))
+        __self__.Ge = Button(__self__.master.body, text="Ge",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ge))
         __self__.Ge.grid(row=3,column=13)
-        __self__.As = Button(__self__.master.body, text="As",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.As))
+        __self__.As = Button(__self__.master.body, text="As",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.As))
         __self__.As.grid(row=3,column=14)
-        __self__.Se = Button(__self__.master.body, text="Se",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Se))
+        __self__.Se = Button(__self__.master.body, text="Se",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Se))
         __self__.Se.grid(row=3,column=15)
-        __self__.Br = Button(__self__.master.body, text="Br",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Br))
+        __self__.Br = Button(__self__.master.body, text="Br",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Br))
         __self__.Br.grid(row=3,column=16)
-        __self__.Kr = Button(__self__.master.body, text="Kr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Kr))
+        __self__.Kr = Button(__self__.master.body, text="Kr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Kr))
         __self__.Kr.grid(row=3,column=17)
         
-        __self__.Rb = Button(__self__.master.body, text="Rb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Rb))
+        __self__.Rb = Button(__self__.master.body, text="Rb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Rb))
         __self__.Rb.grid(row=4,column=0)
-        __self__.Sr = Button(__self__.master.body, text="Sr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Sr))
+        __self__.Sr = Button(__self__.master.body, text="Sr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sr))
         __self__.Sr.grid(row=4,column=1)
-        __self__.Y = Button(__self__.master.body, text="Y",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Y))
+        __self__.Y = Button(__self__.master.body, text="Y",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Y))
         __self__.Y.grid(row=4,column=2)
-        __self__.Zr = Button(__self__.master.body, text="Zr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Zr))
+        __self__.Zr = Button(__self__.master.body, text="Zr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Zr))
         __self__.Zr.grid(row=4,column=3)
-        __self__.Nb = Button(__self__.master.body, text="Nb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Nb))
+        __self__.Nb = Button(__self__.master.body, text="Nb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Nb))
         __self__.Nb.grid(row=4,column=4)
-        __self__.Mo = Button(__self__.master.body, text="Mo",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Mo))
+        __self__.Mo = Button(__self__.master.body, text="Mo",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Mo))
         __self__.Mo.grid(row=4,column=5)
-        __self__.Tc = Button(__self__.master.body, text="Tc",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Tc))
+        __self__.Tc = Button(__self__.master.body, text="Tc",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tc))
         __self__.Tc.grid(row=4,column=6)
-        __self__.Ru = Button(__self__.master.body, text="Ru",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ru))
+        __self__.Ru = Button(__self__.master.body, text="Ru",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ru))
         __self__.Ru.grid(row=4,column=7)
-        __self__.Rh = Button(__self__.master.body, text="Rh",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Rh))
+        __self__.Rh = Button(__self__.master.body, text="Rh",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Rh))
         __self__.Rh.grid(row=4,column=8)
-        __self__.Pd = Button(__self__.master.body, text="Pd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Pd))
+        __self__.Pd = Button(__self__.master.body, text="Pd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pd))
         __self__.Pd.grid(row=4,column=9)
-        __self__.Ag = Button(__self__.master.body, text="Ag",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ag))
+        __self__.Ag = Button(__self__.master.body, text="Ag",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ag))
         __self__.Ag.grid(row=4,column=10)
-        __self__.Cd = Button(__self__.master.body, text="Cd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Cd))
+        __self__.Cd = Button(__self__.master.body, text="Cd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cd))
         __self__.Cd.grid(row=4,column=11)
-        __self__.In = Button(__self__.master.body, text="In",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.In))
+        __self__.In = Button(__self__.master.body, text="In",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.In))
         __self__.In.grid(row=4,column=12)
-        __self__.Sn = Button(__self__.master.body, text="Sn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Sn))
+        __self__.Sn = Button(__self__.master.body, text="Sn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sn))
         __self__.Sn.grid(row=4,column=13)
-        __self__.Sb = Button(__self__.master.body, text="Sb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Sb))
+        __self__.Sb = Button(__self__.master.body, text="Sb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sb))
         __self__.Sb.grid(row=4,column=14)
-        __self__.Te = Button(__self__.master.body, text="Te",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Te))
+        __self__.Te = Button(__self__.master.body, text="Te",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Te))
         __self__.Te.grid(row=4,column=15)
-        __self__.I = Button(__self__.master.body, text="I",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.I))
+        __self__.I = Button(__self__.master.body, text="I",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.I))
         __self__.I.grid(row=4,column=16)
-        __self__.Xe = Button(__self__.master.body, text="Xe",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Xe))
+        __self__.Xe = Button(__self__.master.body, text="Xe",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Xe))
         __self__.Xe.grid(row=4,column=17)
         
-        __self__.Cs = Button(__self__.master.body, text="Cs",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Cs))
+        __self__.Cs = Button(__self__.master.body, text="Cs",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cs))
         __self__.Cs.grid(row=5,column=0)
-        __self__.Ba = Button(__self__.master.body, text="Ba",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ba))
+        __self__.Ba = Button(__self__.master.body, text="Ba",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ba))
         __self__.Ba.grid(row=5,column=1)
-        __self__.La = Button(__self__.master.body, text="La",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.La))
+        __self__.La = Button(__self__.master.body, text="La",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.La))
         __self__.La.grid(row=5,column=2)
-        __self__.Hf = Button(__self__.master.body, text="Hf",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Hf))
+        __self__.Hf = Button(__self__.master.body, text="Hf",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Hf))
         __self__.Hf.grid(row=5,column=3)
-        __self__.Ta = Button(__self__.master.body, text="Ta",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ta))
+        __self__.Ta = Button(__self__.master.body, text="Ta",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ta))
         __self__.Ta.grid(row=5,column=4)
-        __self__.W = Button(__self__.master.body, text="W",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.W))
+        __self__.W = Button(__self__.master.body, text="W",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.W))
         __self__.W.grid(row=5,column=5)
-        __self__.Re = Button(__self__.master.body, text="Re",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Re))
+        __self__.Re = Button(__self__.master.body, text="Re",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Re))
         __self__.Re.grid(row=5,column=6)
-        __self__.Os = Button(__self__.master.body, text="Os",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Os))
+        __self__.Os = Button(__self__.master.body, text="Os",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Os))
         __self__.Os.grid(row=5,column=7)
-        __self__.Ir = Button(__self__.master.body, text="Ir",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ir))
+        __self__.Ir = Button(__self__.master.body, text="Ir",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ir))
         __self__.Ir.grid(row=5,column=8)
-        __self__.Pt = Button(__self__.master.body, text="Pt",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Pt))
+        __self__.Pt = Button(__self__.master.body, text="Pt",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pt))
         __self__.Pt.grid(row=5,column=9)
-        __self__.Au = Button(__self__.master.body, text="Au",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Au))
+        __self__.Au = Button(__self__.master.body, text="Au",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Au))
         __self__.Au.grid(row=5,column=10)
-        __self__.Hg = Button(__self__.master.body, text="Hg",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Hg))
+        __self__.Hg = Button(__self__.master.body, text="Hg",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Hg))
         __self__.Hg.grid(row=5,column=11)
-        __self__.Tl = Button(__self__.master.body, text="Tl",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Tl))
+        __self__.Tl = Button(__self__.master.body, text="Tl",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tl))
         __self__.Tl.grid(row=5,column=12)
-        __self__.Pb = Button(__self__.master.body, text="Pb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Pb))
+        __self__.Pb = Button(__self__.master.body, text="Pb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pb))
         __self__.Pb.grid(row=5,column=13)
-        __self__.Bi = Button(__self__.master.body, text="Bi",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Bi))
+        __self__.Bi = Button(__self__.master.body, text="Bi",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Bi))
         __self__.Bi.grid(row=5,column=14)
-        __self__.Po = Button(__self__.master.body, text="Po",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Po))
+        __self__.Po = Button(__self__.master.body, text="Po",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Po))
         __self__.Po.grid(row=5,column=15)
-        __self__.At = Button(__self__.master.body, text="At",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.At))
+        __self__.At = Button(__self__.master.body, text="At",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.At))
         __self__.At.grid(row=5,column=16)
-        __self__.Rn = Button(__self__.master.body, text="Rn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Rn))
+        __self__.Rn = Button(__self__.master.body, text="Rn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Rn))
         __self__.Rn.grid(row=5,column=17)
         
-        __self__.Fr = Button(__self__.master.body, text="Fr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Fr))
+        __self__.Fr = Button(__self__.master.body, text="Fr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Fr))
         __self__.Fr.grid(row=6,column=0)
-        __self__.Ra = Button(__self__.master.body, text="Ra",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ra))
+        __self__.Ra = Button(__self__.master.body, text="Ra",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ra))
         __self__.Ra.grid(row=6,column=1)
-        __self__.Ac = Button(__self__.master.body, text="Ac",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ac))
+        __self__.Ac = Button(__self__.master.body, text="Ac",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ac))
         __self__.Ac.grid(row=6,column=2)
 
-        __self__.Ce = Button(__self__.master.body, text="Ce",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ce))
+        __self__.Ce = Button(__self__.master.body, text="Ce",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ce))
         __self__.Ce.grid(row=7,column=4)
-        __self__.Pr = Button(__self__.master.body, text="Pr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Pr))
+        __self__.Pr = Button(__self__.master.body, text="Pr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pr))
         __self__.Pr.grid(row=7,column=5)
-        __self__.Nd = Button(__self__.master.body, text="Nd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Nd))
+        __self__.Nd = Button(__self__.master.body, text="Nd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Nd))
         __self__.Nd.grid(row=7,column=6)
-        __self__.Pm = Button(__self__.master.body, text="Pm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Pm))
+        __self__.Pm = Button(__self__.master.body, text="Pm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pm))
         __self__.Pm.grid(row=7,column=7)
-        __self__.Sm = Button(__self__.master.body, text="Sm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Sm))
+        __self__.Sm = Button(__self__.master.body, text="Sm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sm))
         __self__.Sm.grid(row=7,column=8)
-        __self__.Eu = Button(__self__.master.body, text="Eu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Eu))
+        __self__.Eu = Button(__self__.master.body, text="Eu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Eu))
         __self__.Eu.grid(row=7,column=9)
-        __self__.Gd = Button(__self__.master.body, text="Gd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Gd))
+        __self__.Gd = Button(__self__.master.body, text="Gd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Gd))
         __self__.Gd.grid(row=7,column=10)
-        __self__.Tb = Button(__self__.master.body, text="Tb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Tb))
+        __self__.Tb = Button(__self__.master.body, text="Tb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tb))
         __self__.Tb.grid(row=7,column=11)
-        __self__.Dy = Button(__self__.master.body, text="Dy",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Dy))
+        __self__.Dy = Button(__self__.master.body, text="Dy",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Dy))
         __self__.Dy.grid(row=7,column=12)
-        __self__.Ho = Button(__self__.master.body, text="Ho",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Ho))
+        __self__.Ho = Button(__self__.master.body, text="Ho",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ho))
         __self__.Ho.grid(row=7,column=13)
-        __self__.Er = Button(__self__.master.body, text="Er",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Er))
+        __self__.Er = Button(__self__.master.body, text="Er",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Er))
         __self__.Er.grid(row=7,column=14)
-        __self__.Tm = Button(__self__.master.body, text="Tm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Tm))
+        __self__.Tm = Button(__self__.master.body, text="Tm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tm))
         __self__.Tm.grid(row=7,column=15)
-        __self__.Yb = Button(__self__.master.body, text="Yb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Yb))
+        __self__.Yb = Button(__self__.master.body, text="Yb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Yb))
         __self__.Yb.grid(row=7,column=16)
-        __self__.Lu = Button(__self__.master.body, text="Lu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Lu))
+        __self__.Lu = Button(__self__.master.body, text="Lu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Lu))
         __self__.Lu.grid(row=7,column=17)
 
-        __self__.Th = Button(__self__.master.body, text="Th",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Th))
+        __self__.Th = Button(__self__.master.body, text="Th",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Th))
         __self__.Th.grid(row=8,column=4)
-        __self__.Pa = Button(__self__.master.body, text="Pa",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Pa))
+        __self__.Pa = Button(__self__.master.body, text="Pa",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pa))
         __self__.Pa.grid(row=8,column=5)
-        __self__.U = Button(__self__.master.body, text="U",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.U))
+        __self__.U = Button(__self__.master.body, text="U",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.U))
         __self__.U.grid(row=8,column=6)
-        __self__.Np = Button(__self__.master.body, text="Np",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Np))
+        __self__.Np = Button(__self__.master.body, text="Np",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Np))
         __self__.Np.grid(row=8,column=7)
-        __self__.Pu = Button(__self__.master.body, text="Pu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Pu))
+        __self__.Pu = Button(__self__.master.body, text="Pu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pu))
         __self__.Pu.grid(row=8,column=8)
-        __self__.Am = Button(__self__.master.body, text="Am",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Am))
+        __self__.Am = Button(__self__.master.body, text="Am",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Am))
         __self__.Am.grid(row=8,column=9)
-        __self__.Cm = Button(__self__.master.body, text="Cm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Cm))
+        __self__.Cm = Button(__self__.master.body, text="Cm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cm))
         __self__.Cm.grid(row=8,column=10)
-        __self__.Bk = Button(__self__.master.body, text="Bk",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Bk))
+        __self__.Bk = Button(__self__.master.body, text="Bk",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Bk))
         __self__.Bk.grid(row=8,column=11)
-        __self__.Cf = Button(__self__.master.body, text="Cf",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Cf))
+        __self__.Cf = Button(__self__.master.body, text="Cf",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cf))
         __self__.Cf.grid(row=8,column=12)
-        __self__.Es = Button(__self__.master.body, text="Es",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Es))
+        __self__.Es = Button(__self__.master.body, text="Es",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Es))
         __self__.Es.grid(row=8,column=13)
-        __self__.Fm = Button(__self__.master.body, text="Fm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Fm))
+        __self__.Fm = Button(__self__.master.body, text="Fm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Fm))
         __self__.Fm.grid(row=8,column=14)
-        __self__.Md = Button(__self__.master.body, text="Md",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Md))
+        __self__.Md = Button(__self__.master.body, text="Md",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Md))
         __self__.Md.grid(row=8,column=15)
-        __self__.No = Button(__self__.master.body, text="No",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.No))
+        __self__.No = Button(__self__.master.body, text="No",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.No))
         __self__.No.grid(row=8,column=16)
-        __self__.Lr = Button(__self__.master.body, text="Lr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: add_element(__self__.Lr))
+        __self__.Lr = Button(__self__.master.body, text="Lr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Lr))
         __self__.Lr.grid(row=8,column=17)
 
         __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
@@ -1543,6 +1594,7 @@ if __name__ == "__main__":
     from ImgMath import threshold, low_pass, iteractive_median
     from SpecMath import getstackplot, correlate
     from SpecMath import datacube as Cube
+    from CheckPeaks import plottables
     from Mapping import getpeakmap
     from Mapping_parallel import Cube_reader, sort_results, digest_results
 

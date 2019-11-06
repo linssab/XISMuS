@@ -58,6 +58,19 @@ for i in range(n):
     CHANNEL[i]=i
     ENERGY[i]=E(i)/1000
 
+def plottables(ele):
+    Analytic, Rate, plottables_ = [],[],[]
+    for rays in Elements.Element[ele]['rays']:
+        for transition in Elements.Element[ele][rays]:
+            Analytic.append(Elements.Element[ele][transition]['energy']*1000)
+            Rate.append(Elements.Element[ele][transition]['rate'])
+    energies = Analytic
+    lines = GiEj(energies)
+    lines = lines/lines.max()
+    for i in range(len(energies)):
+        if energies[i]/1000 < 35 and Rate[i] > 0.20:
+            plottables_.append(energies[i]/1000)
+    return plottables_
 
 if __name__=="__main__":
     ele = sys.argv[1]
@@ -91,7 +104,6 @@ if __name__=="__main__":
     for i in range(len(energies)):
         if energies[i]/1000 < 35 and Rate[i] > 0.20:
             plt.axvline(x=energies[i]/1000,color="blue", linestyle="--")
-    #plt.plot(SpecMath.energyaxis(),single_data,label=specname)
     plt.legend()
     plt.show()
 

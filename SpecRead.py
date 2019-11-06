@@ -62,7 +62,7 @@ def setup():
     global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH]
     return np.nan
 
-def setup_from_datacube(datacube):
+def setup_from_datacube(datacube,sample_database):
     
     # setup the configuration according to what is built into the datacube
 
@@ -74,9 +74,15 @@ def setup_from_datacube(datacube):
     cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
     output_path = workpath+'\output\\'+DIRECTORY+'\\'
     dimension_file = selected_sample_folder + '\colonneXrighe.txt'
-    try: FIRSTFILE_ABSPATH = findprefix()
+    
+    #try: FIRSTFILE_ABSPATH = findprefix()
+    try: FIRSTFILE_ABSPATH = sample_database[DIRECTORY]
     except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
-    global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH]
+    
+    global_list =  [CONFIG, CALIB, DIRECTORY,
+            samples_folder, selected_sample_folder, workpath,
+            cube_path, output_path, dimension_file,
+            FIRSTFILE_ABSPATH]
     return np.nan 
 
 def conditional_setup(name='None'):
@@ -87,15 +93,15 @@ def conditional_setup(name='None'):
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
     CONFIG,CALIB = CONFIGURE()
     CONFIG['directory'] = name
-    #{'directory':None,'bgstrip':None,'ratio':False,'thickratio':1.50,\
-    #        'calibration':'from_source','enhance':False,'peakmethod':'simple_roi'}
     DIRECTORY = CONFIG.get('directory')
     selected_sample_folder = samples_folder + DIRECTORY + '\\'
     workpath = os.getcwd()
     cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
     output_path = workpath+'\output\\'+DIRECTORY+'\\'
     dimension_file = selected_sample_folder + '\colonneXrighe.txt'
-    global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file]
+    global_list =  [CONFIG, CALIB, DIRECTORY,
+            samples_folder, selected_sample_folder, workpath,
+            cube_path, output_path, dimension_file]
     logging.info("Conditional setup! Setup embedded:\n")
     for item in global_list:
         logging.info(item)
