@@ -455,7 +455,13 @@ class PlotWin:
         __self__.toolbar = NavigationToolbar2Tk(__self__.canvas,__self__.lower)
         __self__.toolbar.update()
         __self__.canvas._tkcanvas.pack()
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
     
+    def wipe_plot(__self__):
+        __self__.plot.clear()
+        __self__.master.destroy()
+        del __self__
+
     def resize(__self__, event):
         #__self__.master.update_idletasks()
         wi = __self__.upper.winfo_width()
@@ -481,43 +487,40 @@ class PlotWin:
         place_topleft(__self__.master.master,__self__.master)
 
     def draw_spec(__self__,mode,display_mode='-semilog',lines=False):
-        global FIND_ELEMENT_LIST
-        __self__.plot.clear()
-        plot_font = {'fontname':'Times New Roman','fontsize':10}
-        if display_mode == '-semilog':
-            __self__.plot.set_title('{0}'.format(SpecRead.DIRECTORY),**plot_font)
-            __self__.plot.set_ylabel("Counts")
-            for option in mode:
-                __self__.plotdata = getstackplot(MY_DATACUBE,option)
-                __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
-            if lines==True:
-                for element in FIND_ELEMENT_LIST:
-                    energies = plottables(element)
-                    __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
-                                label=element)
+        if __self__.master.winfo_exists() == True:
+            global FIND_ELEMENT_LIST
+            __self__.plot.clear()
+            plot_font = {'fontname':'Times New Roman','fontsize':10}
+            if display_mode == '-semilog':
+                __self__.plot.set_title('{0}'.format(SpecRead.DIRECTORY),**plot_font)
+                __self__.plot.set_ylabel("Counts")
+                for option in mode:
+                    __self__.plotdata = getstackplot(MY_DATACUBE,option)
+                    __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
+                    __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+                if lines==True:
+                    for element in FIND_ELEMENT_LIST:
+                        energies = plottables(element)
+                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
+                                    label=element)
 
-            __self__.plot.set_xlabel("Energy (KeV)")
-            __self__.plot.legend()
-        else:
-            for option in mode:
-                __self__.plotdata = getstackplot(MY_DATACUBE,option)
-                __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
-            if lines==True:
-                for element in FIND_ELEMENT_LIST:
-                    energies = plottables(element)
-                    __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
-                                label=element)
+                __self__.plot.set_xlabel("Energy (KeV)")
+                __self__.plot.legend()
+            else:
+                for option in mode:
+                    __self__.plotdata = getstackplot(MY_DATACUBE,option)
+                    __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
+                    __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+                if lines==True:
+                    for element in FIND_ELEMENT_LIST:
+                        energies = plottables(element)
+                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
+                                    label=element)
 
-            __self__.plot.set_xlabel("Energy (KeV)")
-            __self__.plot.legend()
-        __self__.canvas.draw()
-        
-        # only moves to tep left when spawning the graph for the first time. If lines is True,
-        # then the plot is already spawned as seen in refresh_plots() function
-        if lines == False: place_topleft(__self__.master.master,__self__.master)
-
+                __self__.plot.set_xlabel("Energy (KeV)")
+                __self__.plot.legend()
+            __self__.canvas.draw()
+    
     def draw_ROI(__self__):
         global MY_DATACUBE
         for element in MY_DATACUBE.ROI:
@@ -674,6 +677,7 @@ class MainGUI:
                 __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",\
                         lambda: wipe_list())
             else:
+                __self__.find_elements_diag.master.focus_force()
                 pass
         except:
             __self__.find_elements_diag = PeriodicTable(__self__)
@@ -784,16 +788,19 @@ class MainGUI:
         master = __self__.master
         __self__.summation = PlotWin(master)
         __self__.summation.draw_spec(mode=['summation'],display_mode='-semilog',lines=False)
+        place_topleft(__self__.master,__self__.summation.master)
     
     def call_mps(__self__):
         master = __self__.master
         __self__.MPS = PlotWin(master)
         __self__.MPS.draw_spec(mode=['mps'],display_mode='-semilog',lines=False)
+        place_topleft(__self__.master,__self__.MPS.master)
     
     def call_combined(__self__):
         master = __self__.master
         __self__.combined = PlotWin(master)
         __self__.combined.draw_spec(mode=['summation','mps'],display_mode='-semilog',lines=False)
+        place_topleft(__self__.master,__self__.combined.master)
 
     def build_widgets(__self__):
         
@@ -1254,9 +1261,11 @@ class PeriodicTable:
     
     def refresh_plots(__self__):
         global FIND_ELEMENT_LIST
-        if len(FIND_ELEMENT_LIST) > 0: lines = True
+        if len(FIND_ELEMENT_LIST) > 0: 
+            lines = True
         else: 
             lines = False
+        
         try:
             root.MPS.draw_spec(\
                 mode=['mps'],display_mode='-semilog',lines=lines)
@@ -1269,9 +1278,10 @@ class PeriodicTable:
         except: pass
         try: 
             root.combined.draw_spec(\
-                mode=['combined'],display_mode='-semilog',lines=lines)
+                mode=['mps','summation'],display_mode='-semilog',lines=lines)
             root.combined.update_idletasks()
         except: pass
+        
         root.find_elements_diag.master.focus_force()
         return np.nan
 
