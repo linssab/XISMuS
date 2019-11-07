@@ -161,6 +161,100 @@ def load_cube():
     return MY_DATACUBE
 
 
+class Annotator:
+
+    def __init__(__self__,datacube,application):
+        __self__.datacube = datacube
+        __self__.element1 = application.Map1Var.get()
+        __self__.element2 = application.Map2Var.get()
+        __self__.plot1 = application.plot1
+        __self__.plot2 = application.plot2
+        __self__.canvas1 = application.canvas1
+        __self__.canvas2 = application.canvas2
+        __self__.figure1 = application.figure1
+        __self__.figure2 = application.figure2
+        __self__.roibox1 = application.roibox1
+        __self__.roibox2 = application.roibox2
+        __self__.area1 = Rectangle((0,0),1,1,fill=False,snap=True,color="yellow")
+        __self__.area2 = Rectangle((0,0),1,1,fill=False,snap=True,color="yellow")
+        __self__.x0 = None
+        __self__.y0 = None
+        __self__.x1 = None
+        __self__.y1 = None
+        __self__.plot1.add_patch(__self__.area1)
+        __self__.plot2.add_patch(__self__.area2)
+        __self__.canvas1.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas1.mpl_connect("button_release_event",__self__.on_release)
+        __self__.canvas2.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas2.mpl_connect("button_release_event",__self__.on_release)
+
+    def refresh_annotator(__self__,application):
+        __self__.element1 = application.Map1Var.get()
+        __self__.element2 = application.Map2Var.get()
+        __self__.area1.remove()
+        __self__.area2.remove()
+        __self__.canvas1.draw()
+        __self__.canvas2.draw()
+        __self__.plot1 = application.plot1
+        __self__.plot2 = application.plot2
+        __self__.canvas1 = application.canvas1
+        __self__.canvas2 = application.canvas2
+        __self__.figure1 = application.figure1
+        __self__.figure2 = application.figure2
+        __self__.plot1.add_patch(__self__.area1)
+        __self__.plot2.add_patch(__self__.area2)
+        __self__.canvas1.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas1.mpl_connect("button_release_event",__self__.on_release)
+        __self__.canvas2.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas2.mpl_connect("button_release_event",__self__.on_release)
+
+    def wipe_annotator(__self__,application):
+        __self__.area1.remove()
+        __self__.area2.remove()
+        __self__.canvas1.draw()
+        __self__.canvas2.draw()
+        __self__.roibox1["text"] = "Roi 1: None"
+        __self__.roibox2["text"] = "Roi 2: None"
+
+    def on_press(__self__,event):
+        __self__.x0 = int(event.xdata)
+        __self__.y0 = int(event.ydata)
+
+    def on_release(__self__,event):
+        __self__.x1 = int(event.xdata)
+        __self__.y1 = int(event.ydata)
+        __self__.area1.set_width(__self__.x1 - __self__.x0)
+        __self__.area2.set_width(__self__.x1 - __self__.x0)
+        __self__.area1.set_height(__self__.y1 - __self__.y0)
+        __self__.area2.set_height(__self__.y1 - __self__.y0)
+        __self__.area1.set_xy((__self__.x0,__self__.y0))
+        __self__.area2.set_xy((__self__.x0,__self__.y0))
+        __self__.canvas1.draw()
+        __self__.canvas2.draw()
+        __self__.calculate_area()
+
+    def calculate_area(__self__):
+        __self__.area1_sum = 0
+        __self__.area2_sum = 0
+        unpacker1 = __self__.element1.split("_")
+        unpacker2 = __self__.element2.split("_")
+        
+        # unpacks raw image, notice no normalization is done to match LEVELS levels of gray
+        image1 = __self__.datacube.unpack_element(unpacker1[0],unpacker1[1])
+        image2 = __self__.datacube.unpack_element(unpacker2[0],unpacker2[1])
+        
+        x_ = [__self__.x0,__self__.x1]
+        y_ = [__self__.y0,__self__.y1]
+        x_.sort()
+        y_.sort()
+        for x in range(y_[0],y_[1]):
+            for y in range(x_[0],x_[1]):
+                __self__.area1_sum += image1[x][y]
+                __self__.area2_sum += image2[x][y]
+        __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
+        __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
+
+
 class ImageAnalyzer:
 
 
@@ -181,9 +275,9 @@ class ImageAnalyzer:
         __self__.RightCanvas = Canvas(__self__.SampleFrame)
         __self__.RightCanvas.pack(side=RIGHT)
         __self__.sliders = Frame(__self__.master)
-        __self__.sliders.pack()
-        __self__.buttons = Frame(__self__.master,bg="blue")
-        __self__.buttons.pack(side=LEFT)
+        __self__.sliders.pack(side=BOTTOM)
+        __self__.buttons = Frame(__self__.sliders,padx=30)
+        __self__.buttons.grid(row=0,column=0,rowspan=4)
         
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
@@ -233,69 +327,76 @@ class ImageAnalyzer:
         __self__.T1check = BooleanVar()
         __self__.T1check.set(False)
         __self__.T1 = Checkbutton(__self__.sliders, variable=__self__.T1check, \
-                command=__self__.switchLP1T1).grid(row=0,column=0)
+                command=__self__.switchLP1T1).grid(row=0,column=2)
         __self__.LP1check = BooleanVar()
         __self__.LP1check.set(False)
         __self__.LP1 = Checkbutton(__self__.sliders, variable=__self__.LP1check, \
-                command=__self__.switchT1LP1).grid(row=1,column=0)
+                command=__self__.switchT1LP1).grid(row=1,column=2)
         __self__.S1check = BooleanVar()
         __self__.S1check.set(False)
-        __self__.S1 = Checkbutton(__self__.sliders, variable=__self__.S1check).grid(row=2,column=0)
+        __self__.S1 = Checkbutton(__self__.sliders, variable=__self__.S1check).grid(row=2,column=2)
        
         __self__.T1Label = Label(__self__.sliders, text="Threshold ")
-        __self__.T1Label.grid(row=0,column=1)
+        __self__.T1Label.grid(row=0,column=3)
         __self__.T2Label = Label(__self__.sliders, text="Threshold ")
-        __self__.T2Label.grid(row=0,column=5)
+        __self__.T2Label.grid(row=0,column=7)
         __self__.LP1Label = Label(__self__.sliders, text="Low Pass ")
-        __self__.LP1Label.grid(row=1,column=1)
+        __self__.LP1Label.grid(row=1,column=3)
         __self__.LP2Label = Label(__self__.sliders, text="Low Pass ")
-        __self__.LP2Label.grid(row=1,column=5)
+        __self__.LP2Label.grid(row=1,column=7)
         __self__.S1Label = Label(__self__.sliders, text="Smooth ")
-        __self__.S1Label.grid(row=2,column=1)
+        __self__.S1Label.grid(row=2,column=3)
         __self__.S2Label = Label(__self__.sliders, text="Smooth ")
-        __self__.S2Label.grid(row=2,column=5)
+        __self__.S2Label.grid(row=2,column=7)
 
         # slider for image 1
         __self__.T1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image1)
-        __self__.T1Slider.grid(row=0,column=2)
+        __self__.T1Slider.grid(row=0,column=4)
         __self__.LP1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image1)
-        __self__.LP1Slider.grid(row=1,column=2)
+        __self__.LP1Slider.grid(row=1,column=4)
         __self__.S1Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=7, \
                 command=__self__.draw_image1)
-        __self__.S1Slider.grid(row=2,column=2)
+        __self__.S1Slider.grid(row=2,column=4)
 
         # image controls Threshold, LowPass and Smooth
         __self__.T2check = BooleanVar()
         __self__.T2check.set(False)
         __self__.T2 = Checkbutton(__self__.sliders, variable=__self__.T2check, \
-                command=__self__.switchLP2T2).grid(row=0,column=4)
+                command=__self__.switchLP2T2).grid(row=0,column=6)
         __self__.LP2check = BooleanVar()
         __self__.LP2check.set(0)
         __self__.LP2 = Checkbutton(__self__.sliders, variable=__self__.LP2check, \
-                command=__self__.switchT2LP2).grid(row=1,column=4)
+                command=__self__.switchT2LP2).grid(row=1,column=6)
         __self__.S2check = BooleanVar()
         __self__.S2check.set(0)
-        __self__.S2 = Checkbutton(__self__.sliders, variable=__self__.S2check).grid(row=2,column=4)
+        __self__.S2 = Checkbutton(__self__.sliders, variable=__self__.S2check).grid(row=2,column=6)
                
         # slider for image 2
         __self__.T2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image2)
-        __self__.T2Slider.grid(row=0,column=6)
+        __self__.T2Slider.grid(row=0,column=8)
         __self__.LP2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=LEVELS, \
                 command=__self__.draw_image2)
-        __self__.LP2Slider.grid(row=1,column=6)
+        __self__.LP2Slider.grid(row=1,column=8)
         __self__.S2Slider = Scale(__self__.sliders, orient='horizontal', from_=0, to=7, \
                 command=__self__.draw_image2)
-        __self__.S2Slider.grid(row=2,column=6)
+        __self__.S2Slider.grid(row=2,column=8)
     
         # buttons
+        __self__.roibox1 = Label(__self__.buttons,text="Roi 1: None") 
+        __self__.roibox1.grid(row=0,column=0,columnspan=2)
+        __self__.roibox2 = Label(__self__.buttons,text="Roi 2: None") 
+        __self__.roibox2.grid(row=1,column=0,columnspan=2)
         __self__.correlate = Button(__self__.buttons,text="Correlate maps",\
-                command=__self__.get_correlation)
-        __self__.correlate.grid(row=0,column=0)
+                command=__self__.get_correlation,width=15)
+        __self__.correlate.grid(row=2,column=0)
+        __self__.annotate = Button(__self__.buttons,text="Set ROI",\
+                command=__self__.toggle_annotator,relief="raised",width=15)
+        __self__.annotate.grid(row=3,column=0)
 
-        # Disabled sliders
+        # Disable sliders
         __self__.T1Slider.config(state=DISABLED)
         __self__.T2Slider.config(state=DISABLED)
         __self__.LP1Slider.config(state=DISABLED)
@@ -303,6 +404,26 @@ class ImageAnalyzer:
         
         __self__.draw_image1(0)
         __self__.draw_image2(0)
+
+    def toggle_annotator(__self__):
+        """
+        passes the current datacube, so if the user changes it, for the current ImgAnal api open when
+        using the annotation function, the cube is still the one loaded when ImgAnal was opened
+        the api is passed as argument so the annotator knows where to draw
+        """
+        if __self__.annotate.config("relief")[-1] == "raised":
+            __self__.annotate.config(relief="sunken")
+            __self__.annotate.config(bg="yellow")
+            __self__.annotator = Annotator(MY_DATACUBE,__self__) 
+        else:
+            __self__.annotate.config(relief="raised")
+            # the easiest way to recover the default color button is pointing to an existing button
+            # that never changes its color
+            __self__.annotate.config(bg=__self__.correlate.cget("background"))
+            __self__.annotator.wipe_annotator(__self__)
+            del __self__.annotator
+        
+
  
     def update_sample1(__self__,event):
         global MY_DATACUBE
@@ -311,7 +432,10 @@ class ImageAnalyzer:
         unpacker = __self__.Map1Var.get()
         unpacker = unpacker.split("_")
         __self__.ElementalMap1 = MY_DATACUBE.unpack_element(unpacker[0],unpacker[1])
+        __self__.ElementalMap1 = __self__.ElementalMap1/__self__.ElementalMap1.max()*LEVELS
         __self__.draw_image1(0)
+        try: __self__.annotator.refresh_annotator(__self__)
+        except: pass
      
     def update_sample2(__self__,event):
         global MY_DATACUBE
@@ -320,7 +444,10 @@ class ImageAnalyzer:
         unpacker = __self__.Map2Var.get()
         unpacker = unpacker.split("_")
         __self__.ElementalMap2 = MY_DATACUBE.unpack_element(unpacker[0],unpacker[1])
+        __self__.ElementalMap2 = __self__.ElementalMap2/__self__.ElementalMap2.max()*LEVELS
         __self__.draw_image2(0)
+        try: __self__.annotator.refresh_annotator(__self__)
+        except: pass
     
     def switchT1LP1(__self__):
         if __self__.LP1check.get() == True: __self__.LP1Slider.config(state=NORMAL)
@@ -366,6 +493,13 @@ class ImageAnalyzer:
         else:
             if __self__.S1check.get() == True:
                 image = iteractive_median(image,__self__.S1Slider.get())
+        try:
+            __self__.annotate.config(relief="raised")
+            __self__.annotate.config(bg=__self__.correlate.cget("background"))
+            __self__.annotator.wipe_annotator(__self__)
+            del __self__.annotator
+        except: pass
+            
         return image
  
     def transform2(__self__,image):
@@ -384,6 +518,13 @@ class ImageAnalyzer:
         else:
             if __self__.S2check.get() == True:
                 image = iteractive_median(image,__self__.S2Slider.get())
+        try:
+            __self__.annotate.config(relief="raised")
+            __self__.annotate.config(bg=__self__.correlate.cget("background"))
+            __self__.annotator.wipe_annotator(__self__)
+            del __self__.annotator
+        except: pass
+         
         return image   
     
     # the Sliders are the widgets that calls draw_image functions
@@ -420,7 +561,7 @@ class ImageAnalyzer:
             corr[0] = corr[0]/corr[0].max()*LEVELS
             corr[1] = corr[1]/corr[1].max()*LEVELS
         
-            corr_plot = PlotWin(root.master)
+            corr_plot = PlotWin(__self__.master)
             corr_plot.draw_correlation(corr,labels)
         except:
             pass
@@ -500,9 +641,8 @@ class PlotWin:
                     __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
                 if lines==True:
                     for element in FIND_ELEMENT_LIST:
-                        energies = plottables(element)
-                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
-                                    label=element)
+                        energies = plottables_dict[element]
+                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--')
 
                 __self__.plot.set_xlabel("Energy (KeV)")
                 __self__.plot.legend()
@@ -513,9 +653,8 @@ class PlotWin:
                     __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
                 if lines==True:
                     for element in FIND_ELEMENT_LIST:
-                        energies = plottables(element)
-                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--',\
-                                    label=element)
+                        energies = plottables_dict[element]
+                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--')
 
                 __self__.plot.set_xlabel("Energy (KeV)")
                 __self__.plot.legend()
@@ -525,7 +664,11 @@ class PlotWin:
         global MY_DATACUBE
         for element in MY_DATACUBE.ROI:
             __self__.plotdata = MY_DATACUBE.ROI[element]
-            roi_label = element + " Max net: {}".format(int(MY_DATACUBE.max_counts[element+"_a"]))
+            if MY_DATACUBE.max_counts[element+"_a"] == 0:
+                try: net = (MY_DATACUBE.max_counts[element+"_b"],"Beta")
+                except: net = (MY_DATACUBE.max_counts[element+"_a"],"Alpha")
+            else: net = (MY_DATACUBE.max_counts[element+"_a"],"Alpha")
+            roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
             __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=roi_label)
         __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum,label="Sum spectrum")
         __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum_bg,label="Background")
@@ -1282,7 +1425,8 @@ class PeriodicTable:
             root.combined.update_idletasks()
         except: pass
         
-        root.find_elements_diag.master.focus_force()
+        try: root.find_elements_diag.master.focus_force()
+        except: pass
         return np.nan
 
     def add_element(__self__,toggle_btn):
@@ -1347,6 +1491,7 @@ class PeriodicTable:
             root.MenuBar.entryconfig("Toolbox", state=NORMAL)
             root.ButtonLoad.config(state=NORMAL)
             root.write_stat()
+            __self__.refresh_plots()
 
     def draw_buttons(__self__):
         btnsize_w = 3
@@ -1569,6 +1714,14 @@ class PeriodicTable:
         __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
 
+def check_screen_resolution():
+    import ctypes
+    user32 = ctypes.windll.user32
+    user32.SetProcessDPIAware()
+    w, h = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+    if w > 1920 or h > 1080:
+        messagebox.showinfo("Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too small or if any problems are experienced with buttons and icons, please try lowering your screen resolution and setting the Windows scaling option to 100%.")
+
               
 if __name__ == "__main__":
     import logging
@@ -1596,22 +1749,23 @@ if __name__ == "__main__":
     matplotlib.use("TkAgg")
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
     from matplotlib.figure import Figure
+    from matplotlib.patches import Rectangle
     from matplotlib import style
     style.use('ggplot')
 
     # internal imports
+    import SpecRead
     from ImgMath import LEVELS
     from ImgMath import threshold, low_pass, iteractive_median
     from SpecMath import getstackplot, correlate
     from SpecMath import datacube as Cube
-    from CheckPeaks import plottables
+    from EnergyLib import plottables_dict
     from Mapping import getpeakmap
     from Mapping_parallel import Cube_reader, sort_results, digest_results
 
-
-    import SpecRead
     logging.info("Loading GUI...")
     start_up()
+    check_screen_resolution()
     root = MainGUI()
     root.master.mainloop()
 
