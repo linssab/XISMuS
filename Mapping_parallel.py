@@ -293,6 +293,8 @@ class Cube_reader():
             if p.exitcode != 0:
                 p.join()
 
+        __self__.p_bar.destroybar()
+
         return partial_ 
     
     def checkbar(__self__):
@@ -301,7 +303,7 @@ class Cube_reader():
         # a "fix" to this situation is breaking the loop when the iterator reaches 97% of maximum value
         while __self__.p_bar_iterator.value < int(__self__.p_bar.progress["maximum"]*0.97):
             __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
-        __self__.p_bar.destroybar()
+        __self__.p_bar.updatebar(__self__.p_bar.progress["maximum"])
 
     def periodic_check(__self__):
         __self__.checkbar()
