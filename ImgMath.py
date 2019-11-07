@@ -7,7 +7,7 @@
 #################################################################
 
 import logging,os
-logging.debug("Importing module ImgMath.py...")
+logging.info("Importing module ImgMath.py...")
 import numpy as np
 import SpecRead
 import matplotlib
@@ -388,10 +388,11 @@ def split_and_save(datacube,map_array,element_list):
     for Element in range(len(element_list)):
         for line in range(lines.shape[0]):
             image = map_array[:,:,line,Element]
+            raw_image = map_array[:,:,line,Element]
             if image.max() > 0: image = image/image.max()*LEVELS
              
             histogram,bins = np.histogram(image.flatten(),LEVELS,[0,LEVELS])
-            datacube.pack_element(image,element_list[Element],lines[line])
+            datacube.pack_element(raw_image,element_list[Element],lines[line])
             if lines[line] == "a": datacube.pack_hist(histogram,bins,element_list[Element])
             
             #plt.hist(datacube.__dict__[element_list[Element]],bins='auto')
