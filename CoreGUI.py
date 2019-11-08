@@ -140,6 +140,10 @@ def call_compilecube():
         #    ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
 
 def prompt_folder():
+    folder = filedialog.askdirectory()
+    SpecRead.samples_folder = folder+"//"
+    print(SpecRead.samples_folder)
+    root.refresh_samples()
     return 0
 
 def call_heightmap():
@@ -752,26 +756,58 @@ class Samples:
 
     def list_all(__self__):
         logging.info("Loading sample list...")
-        samples = [name for name in os.listdir(SpecRead.samples_folder) \
-                if os.path.isdir(SpecRead.samples_folder+name)]
-        for folder in samples:
-            files = [name for name in os.listdir(SpecRead.samples_folder+folder)]
-            for item in range(len(files)): 
-                __self__.filequeue.set("{}".format(files[item]))
-                __self__.label2.update()
-                __self__.splash.update_idletasks()
-                try:
-                    files[item] = files[item].split("_",1)[0]
-                except: pass
-            counter = dict((x,files.count(x)) for x in files)
-            mca_prefix_count = 0
-            for counts in counter:
-                if counter[counts] > mca_prefix_count:
-                    mca_prefix = counts
-                    mca_prefix_count = counter[counts]
-            __self__.samples_database[folder] = mca_prefix
-        logging.info("Finished.")
+        try:
+            samples = [name for name in os.listdir(SpecRead.samples_folder) \
+                    if os.path.isdir(SpecRead.samples_folder+name)]
+            for folder in samples:
+                files = [name for name in os.listdir(SpecRead.samples_folder+folder) \
+                        if name.lower().endswith('.mca')]
+                if files == []: pass
+                else:
+                    for item in range(len(files)): 
+                        __self__.filequeue.set("{}".format(files[item]))
+                        __self__.label2.update()
+                        __self__.splash.update_idletasks()
+                        try:
+                            files[item] = files[item].split("_",1)[0]
+                        except: pass
+                    counter = dict((x,files.count(x)) for x in files)
+                    mca_prefix_count = 0
+                    for counts in counter:
+                        if counter[counts] > mca_prefix_count:
+                            mca_prefix = counts
+                            mca_prefix_count = counter[counts]
+                    __self__.samples_database[folder] = mca_prefix
+        except IOError as exception:
+            logging.info("Cannot load samples. Error {}.".format(exception.__class__.__name__))
+            messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
         __self__.splash_kill()
+
+    def refresh_samples(__self__):
+        try:
+            mca_prefix = None
+            __self__.samples_database = {}
+            samples = [name for name in os.listdir(SpecRead.samples_folder) \
+                    if os.path.isdir(SpecRead.samples_folder+name)]
+            for folder in samples:
+                files = [name for name in os.listdir(SpecRead.samples_folder+folder)\
+                        if name.lower().endswith('.mca')]
+                if files == []: pass
+                else:
+                    for item in range(len(files)): 
+                        try:
+                            files[item] = files[item].split("_",1)[0]
+                        except: pass
+                    counter = dict((x,files.count(x)) for x in files)
+                    mca_prefix_count = 0
+                    for counts in counter:
+                        if counter[counts] > mca_prefix_count:
+                            mca_prefix = counts
+                            mca_prefix_count = counter[counts]
+                    __self__.samples_database[folder] = mca_prefix
+        except IOError as exception:
+            messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
+       
 
 class MainGUI:
     
@@ -794,10 +830,10 @@ class MainGUI:
         __self__.master = Tk()
         __self__.master.withdraw() 
         
-        samples = Samples()
-        samples.splash_screen(__self__)
-        __self__.master.after(100,samples.list_all())
-        __self__.samples = samples.samples_database
+        __self__.SampleLoader = Samples()
+        __self__.SampleLoader.splash_screen(__self__)
+        __self__.master.after(100,__self__.SampleLoader.list_all())
+        __self__.samples = __self__.SampleLoader.samples_database
         __self__.find_elements_diag = None
         
         __self__.master.title("Piratininga SM {}".format(VERSION))
@@ -811,7 +847,6 @@ class MainGUI:
         __self__.build_widgets()
         __self__.toggle_(toggle='off')
         __self__.master.deiconify()
-        
        
     def root_quit(__self__):
         for widget in __self__.master.winfo_children():
@@ -843,6 +878,14 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=DISABLED)
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.Toolbox.entryconfig("Height-mapping",state=DISABLED)
+
+    def refresh_samples(__self__):
+        __self__.SampleLoader.refresh_samples()
+        __self__.samples = __self__.SampleLoader.samples_database
+        try: 
+            __self__.SamplesWindow.destroy()
+            __self__.list_samples()
+        except: __self__.list_samples()
 
     def find_elements(__self__):
         try:
@@ -1038,7 +1081,7 @@ class MainGUI:
         __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)", \
                 command=__self__.call_mps)
         __self__.derived_spectra.add_command(label="Combined", command=__self__.call_combined)
-        __self__.Toolbox.add_command(label="Set samples folder . . .", command=doNothing)
+        __self__.Toolbox.add_command(label="Change samples folder . . .", command=prompt_folder)
         __self__.Toolbox.add_command(label="Load sample", command=__self__.list_samples)
         __self__.Toolbox.add_command(label="Reset sample", command=__self__.reset_sample)
         __self__.Toolbox.add_separator()
@@ -1774,6 +1817,7 @@ if __name__ == "__main__":
     from tkinter import *
     from tkinter import ttk
     from tkinter import messagebox
+    from tkinter import filedialog
 
     # general utilities
     import numpy as np

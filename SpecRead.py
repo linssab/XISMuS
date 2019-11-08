@@ -16,6 +16,15 @@ import matplotlib.pyplot as plt
 from PyMca5.PyMcaMath.fitting import RateLaw
 logging.debug("Finished SpecRead imports.")
 
+def get_samples_folder(inifile):
+    ini = open(inifile,"r")
+    folder = ini.readline()
+    ini.close() 
+    return folder
+
+samples_folder = get_samples_folder(os.getcwd()+"\\folder.ini")
+logging.info("Samples path: {0}".format(samples_folder))
+
 def findprefix():
     mca_prefix = 'None'
     files = [name for name in os.listdir(selected_sample_folder)]
@@ -106,26 +115,6 @@ def conditional_setup(name='None'):
     for item in global_list:
         logging.info(item)
     return np.nan
-
-samples_folder = r'C:\samples\\'
-logging.info("Samples path: {0}".format(samples_folder))
-
-    ######################
-    # DIRECTORIES SETUP! #
-    ######################
-"""
-CONFIG,CALIB = CONFIGURE()
-DIRECTORY = CONFIG.get('directory')
-samples_folder = 'C:\samples\\'
-selected_sample_folder = samples_folder + DIRECTORY+'\\'
-workpath = os.getcwd()
-cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
-output_path = workpath+'\output\\'+DIRECTORY+'\\'
-dimension_file = selected_sample_folder + '\colonneXrighe.txt'
-FIRSTFILE_ABSPATH = findprefix()
-"""
-
-    ######################
 
 def RatioMatrixReadFile(ratiofile):
     MatrixArray = []
