@@ -175,8 +175,9 @@ class Annotator:
         __self__.figure2 = application.figure2
         __self__.roibox1 = application.roibox1
         __self__.roibox2 = application.roibox2
-        __self__.area1 = Rectangle((0,0),1,1,fill=False,snap=True,color="yellow")
-        __self__.area2 = Rectangle((0,0),1,1,fill=False,snap=True,color="yellow")
+        __self__.ratebox = application.ratebox
+        __self__.area1 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
+        __self__.area2 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
         __self__.x0 = None
         __self__.y0 = None
         __self__.x1 = None
@@ -184,9 +185,12 @@ class Annotator:
         __self__.plot1.add_patch(__self__.area1)
         __self__.plot2.add_patch(__self__.area2)
         __self__.canvas1.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas1.mpl_connect("motion_notify_event",__self__.on_drag)
         __self__.canvas1.mpl_connect("button_release_event",__self__.on_release)
         __self__.canvas2.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas2.mpl_connect("motion_notify_event",__self__.on_drag)
         __self__.canvas2.mpl_connect("button_release_event",__self__.on_release)
+        __self__.press, __self__.move = False, False
 
     def refresh_annotator(__self__,application):
         __self__.element1 = application.Map1Var.get()
@@ -204,8 +208,10 @@ class Annotator:
         __self__.plot1.add_patch(__self__.area1)
         __self__.plot2.add_patch(__self__.area2)
         __self__.canvas1.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas1.mpl_connect("motion_notify_event",__self__.on_drag)
         __self__.canvas1.mpl_connect("button_release_event",__self__.on_release)
         __self__.canvas2.mpl_connect("button_press_event",__self__.on_press)
+        __self__.canvas2.mpl_connect("motion_notify_event",__self__.on_drag)
         __self__.canvas2.mpl_connect("button_release_event",__self__.on_release)
 
     def wipe_annotator(__self__,application):
@@ -215,23 +221,37 @@ class Annotator:
         __self__.canvas2.draw()
         __self__.roibox1["text"] = "Roi 1: None"
         __self__.roibox2["text"] = "Roi 2: None"
+        __self__.ratebox["text"] = "Ratio: None"
 
     def on_press(__self__,event):
-        __self__.x0 = int(event.xdata)
-        __self__.y0 = int(event.ydata)
+        __self__.press = True
+        try: __self__.x0 = int(event.xdata)
+        except: pass
+        try: __self__.y0 = int(event.ydata)
+        except: pass
+
+    def on_drag(__self__,event):
+        if __self__.press:
+            __self__.move = True
+            try: __self__.x1 = int(event.xdata)
+            except: pass
+            try: __self__.y1 = int(event.ydata)
+            except: pass
+            __self__.area1.set_width(__self__.x1 - __self__.x0)
+            __self__.area2.set_width(__self__.x1 - __self__.x0)
+            __self__.area1.set_height(__self__.y1 - __self__.y0)
+            __self__.area2.set_height(__self__.y1 - __self__.y0)
+            __self__.area1.set_xy((__self__.x0,__self__.y0))
+            __self__.area2.set_xy((__self__.x0,__self__.y0))
+            __self__.canvas1.draw()
+            __self__.canvas2.draw()
+            __self__.calculate_area()
 
     def on_release(__self__,event):
-        __self__.x1 = int(event.xdata)
-        __self__.y1 = int(event.ydata)
-        __self__.area1.set_width(__self__.x1 - __self__.x0)
-        __self__.area2.set_width(__self__.x1 - __self__.x0)
-        __self__.area1.set_height(__self__.y1 - __self__.y0)
-        __self__.area2.set_height(__self__.y1 - __self__.y0)
-        __self__.area1.set_xy((__self__.x0,__self__.y0))
-        __self__.area2.set_xy((__self__.x0,__self__.y0))
-        __self__.canvas1.draw()
-        __self__.canvas2.draw()
-        __self__.calculate_area()
+        __self__.press = False
+        if __self__.press and not __self__.move:
+            __self__.press = False
+            __self__.move = False
 
     def calculate_area(__self__):
         __self__.area1_sum = 0
@@ -253,6 +273,8 @@ class Annotator:
                 __self__.area2_sum += image2[x][y]
         __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
         __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
+        if __self__.area2_sum > 0:
+            __self__.ratebox["text"] = "Ratio: {:.2f}".format(__self__.area1_sum/__self__.area2_sum)
 
 
 class ImageAnalyzer:
@@ -264,6 +286,7 @@ class ImageAnalyzer:
         
         __self__.packed_elements = MY_DATACUBE.check_packed_elements()
         __self__.master = Toplevel(master=parent)
+        #__self__.master.bind("<Configure>", __self__.resize)
         __self__.master.title("Image Analyzer v1.01a")
         __self__.master.resizable(False,False)
         __self__.sampler = Frame(__self__.master)
@@ -389,12 +412,14 @@ class ImageAnalyzer:
         __self__.roibox1.grid(row=0,column=0,columnspan=2)
         __self__.roibox2 = Label(__self__.buttons,text="Roi 2: None") 
         __self__.roibox2.grid(row=1,column=0,columnspan=2)
+        __self__.ratebox = Label(__self__.buttons,text="Ratio: None") 
+        __self__.ratebox.grid(row=2,column=0,columnspan=2)
         __self__.correlate = Button(__self__.buttons,text="Correlate maps",\
                 command=__self__.get_correlation,width=15)
-        __self__.correlate.grid(row=2,column=0)
+        __self__.correlate.grid(row=3,column=0)
         __self__.annotate = Button(__self__.buttons,text="Set ROI",\
                 command=__self__.toggle_annotator,relief="raised",width=15)
-        __self__.annotate.grid(row=3,column=0)
+        __self__.annotate.grid(row=4,column=0)
 
         # Disable sliders
         __self__.T1Slider.config(state=DISABLED)
@@ -404,6 +429,12 @@ class ImageAnalyzer:
         
         __self__.draw_image1(0)
         __self__.draw_image2(0)
+    
+    def resize(__self__, event):
+        wi = __self__.LeftCanvas.winfo_width()
+        hi = __self__.LeftCanvas.winfo_height()
+        wi_t = __self__.RightCanvas.winfo_width()
+        hi_t = __self__.RightCanvas.winfo_height()
 
     def toggle_annotator(__self__):
         """
@@ -1714,13 +1745,17 @@ class PeriodicTable:
         __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
 
-def check_screen_resolution():
+def check_screen_resolution(resolution_tuple):
+    pop = Tk()
+    pop.withdraw()
+    limit_w, limit_h = resolution_tuple[0], resolution_tuple[1]
     import ctypes
     user32 = ctypes.windll.user32
     user32.SetProcessDPIAware()
     w, h = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
-    if w > 1920 or h > 1080:
-        messagebox.showinfo("Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too small or if any problems are experienced with buttons and icons, please try lowering your screen resolution and setting the Windows scaling option to 100%.")
+    if w > limit_w or h > limit_h:
+        messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too small or if any problems are experienced with buttons and icons, please try lowering your screen resolution and setting the Windows scaling option to 100%.".format(w,h))
+    pop.destroy()
 
               
 if __name__ == "__main__":
@@ -1733,6 +1768,7 @@ if __name__ == "__main__":
     logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 
     VERSION = "0.0.1α"
+    optimum_resolution = (1920,1080)
 
     # tcl/Tk imports
     from tkinter import *
@@ -1752,7 +1788,8 @@ if __name__ == "__main__":
     from matplotlib.patches import Rectangle
     from matplotlib import style
     style.use('ggplot')
-
+    
+    check_screen_resolution(optimum_resolution)
     # internal imports
     import SpecRead
     from ImgMath import LEVELS
@@ -1765,7 +1802,6 @@ if __name__ == "__main__":
 
     logging.info("Loading GUI...")
     start_up()
-    check_screen_resolution()
     root = MainGUI()
     root.master.mainloop()
 
