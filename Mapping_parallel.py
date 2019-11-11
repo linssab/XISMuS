@@ -22,7 +22,7 @@ def convert_bytes(num):
             return "%3.1f %s" % (num, x)
         num /= 1024.0
 
-def grab_simple_roi_image(all_parameters,lines):
+def grab_simple_roi_image(cube,lines,iterator):
     
     '''
     Prepare the variables to pass into the matrix slicer
@@ -32,34 +32,38 @@ def grab_simple_roi_image(all_parameters,lines):
     
     idea: verify the existence of the peak in MPS AND stacksum
     '''
+    results = []
     
-    ROI = np.zeros(all_parameters["energyaxis"].shape[0])
-    ka_idx = setROI(lines[0],all_parameters["energyaxis"],all_parameters["stacksum"],\
-            all_parameters["configure"])
-    ka_peakdata = all_parameters["stacksum"][ka_idx[0]:ka_idx[1]]
-    ka_map = np.zeros([all_parameters["dimension"][0],all_parameters["dimension"][1]])
-    if all_parameters["configure"]["ratio"] == True:
-        kb_idx = setROI(lines[1],all_parameters["energyaxis"],all_parameters["stacksum"],\
-                all_parameters["configure"])
-        kb_peakdata = all_parameters["stacksum"][kb_idx[0]:kb_idx[1]]
-        kb_map = np.zeros([all_parameters["dimension"][0],all_parameters["dimension"][1]])
+    ROI = np.zeros(cube.energyaxis.shape[0])
+    ka_idx = setROI(lines[0],cube.energyaxis,cube.sum,cube.config)
+    ka_peakdata = cube.sum[ka_idx[0]:ka_idx[1]]
+    ka_map = np.zeros([cube.dimension[0],cube.dimension[1]])
+    kb_map = np.zeros([cube.dimension[0],cube.dimension[1]])
+    if cube.config["ratio"] == True:
+        kb_idx = setROI(lines[1],cube.energyaxis,cube.sum,cube.config)
+        kb_peakdata = cube.sum[kb_idx[0]:kb_idx[1]]
         if kb_idx[3] == False and ka_idx[3] == False:
-            logging.info("No alpha {} nor beta {} lines found. Aborting...".format(lines[0],lines[1]))
+            logging.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
         elif kb_idx[3] == False: 
             logging.warning("No beta line {} detected. Continuing with alpha only.".format(lines[1]))
     else:
         pass
-    slice_matrix(all_parameters["matrix"],all_parameters["background"],ka_map,ka_idx,ROI)
-    if all_parameters["configure"]["ratio"] == True:
-        slice_matrix(all_parameters["matrix"],all_parameters["background"],kb_map,kb_idx,ROI)
     
-    results = []
+    slice_matrix(cube.matrix,cube.background,ka_map,ka_idx,ROI,iterator)
+    if cube.config["ratio"] == True:
+        if kb_idx[3] == True:
+            slice_matrix(cube.matrix,cube.background,kb_map,kb_idx,ROI,iterator)
+    
     results.append(ka_map)
     results.append(kb_map)
     return results, ROI
 
-@jit
-def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
+#@jit
+def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI,iterator):
+    """
+    Slices the matrix
+    """
+    c = 0
     for x in range(matrix.shape[0]):
         for y in range(matrix.shape[1]):
             a = float(matrix[x][y][indexes[0]:indexes[1]].sum())
@@ -67,9 +71,125 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
             if b > a: c == 0
             else: c = a-b
             new_image[x,y] = c
+            iterator.value = iterator.value + 1
             ROI[indexes[0]:indexes[1]]=ROI[indexes[0]:indexes[1]] + matrix[x][y][indexes[0]:indexes[1]]
-
     return new_image
+
+def grab_line(cube,lines,iterator):
+    """
+    Uses SpecMath library to get the net area of the energies passed as
+    arguments to this funcion
+    This funcion is called by call_peakmethod inside start_reader function 
+    """
+    
+    start_time = time.time()
+    energyaxis = cube.energyaxis
+    matrix = cube.matrix
+    matrix_dimension = cube.dimension
+    usedif2 = True
+    scan = ([0,0])
+    currentx = scan[0]
+    currenty = scan[1]
+    el_dist_map = np.zeros([2,matrix_dimension[0],matrix_dimension[1]]) 
+    ROI = np.zeros([energyaxis.shape[0]])
+
+    for pos in range(cube.img_size):
+               
+        RAW = matrix[currentx][currenty]
+        specdata = matrix[currentx][currenty]
+        
+        #######################################
+        #     ATTEMPT TO FIT THE SPECFILE     #
+        # PYMCAFIT DOES NOT USE 2ND DIF CHECK #
+        #######################################
+
+        if cube.config["peakmethod"] == 'PyMcaFit': 
+            try:
+                usedif2 = False
+                specdata = SpecFitter.fit(specdata)
+            except:
+                FITFAIL += 1
+                usedif2 = True
+                logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
+                        .format(pos,cube.img_size))
+        elif cube.config["peakmethod"] == 'simple_roi': specdata = specdata
+        elif cube.config["peakmethod"] == 'auto_roi': specdata = specdata
+        else: 
+            raise Exception("peakmethod {0} not recognized.".\
+                    format(cube.config["peakmethod"]))
+
+        ###########################
+        #   SETS THE BACKGROUND   #
+        # AND SECOND DIFFERENTIAL #
+        ###########################
+        
+        background = cube.background[currentx][currenty]
+       
+        # low-passes second differential
+        if usedif2 == True: 
+            dif2 = getdif2(specdata,energyaxis,1)
+            for i in range(len(dif2)):
+                if dif2[i] < -1: dif2[i] = dif2[i]
+                elif dif2[i] > -1: dif2[i] = 0
+        else: dif2 = np.zeros([specdata.shape[0]])
+
+        ###################################
+        #  CALCULATE NET PEAKS AREAS AND  #
+        #  ITERATE OVER LIST OF ELEMENTS  #
+        ###################################
+        
+        logging.debug("current x = {0} / current y = {1}".format(currentx,currenty))
+
+        ################################################################
+        #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
+        # Be aware that PyMcaFit method peaks are returned always True #
+        # Check SpecMath.py This is due to the high noise in the data  #
+        ################################################################
+            
+        ka_info = getpeakarea(lines[0],specdata,\
+                energyaxis,background,cube.config,RAW,usedif2,dif2)
+        ka = ka_info[0]
+        ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
+
+        kb_info = getpeakarea(lines[1],specdata,\
+                energyaxis,background,cube.config,RAW,usedif2,dif2)
+        kb = kb_info[0]
+        ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
+        
+        el_dist_map[0][currentx][currenty] = ka
+        el_dist_map[1][currentx][currenty] = kb
+        
+        iterator.value = iterator.value + 1
+
+        #########################################
+        #   UPDATE ELMAP POSITION AND SPECTRA   #
+        #########################################        
+        
+        scan = refresh_position(scan[0],scan[1],matrix_dimension)
+        currentx = scan[0]
+        currenty = scan[1]
+        
+    ################################    
+    #  FINISHED ITERATION PROCESS  #
+    #  OVER THE BATCH OF SPECTRA   #
+    ################################
+    
+    timestamp = time.time() - start_time
+    if cube.config["peakmethod"] == 'PyMcaFit': 
+        logging.warning("Fit fail: {0}%".format(100*FITFAIL/cube.dimension))
+    #print("Maps maximum: ")
+    #print(el_dist_map[0].max())
+    #print(el_dist_map[1].max())
+
+    if cube.config["peakmethod"] == 'auto_roi': 
+        el_dist_map = interpolate_zeros(el_dist_map)
+    
+    logging.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
+            format(Element,lines[0],lines[1]))
+    logging.info("Runtime for {}: {}".format(Element,time.time()-start_time))
+    #print("Time:")
+    #print(time.time()-start_time)
+    return el_dist_map, ROI
 
 def digest_results(datacube,results,elements):
     element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)])
@@ -94,118 +214,6 @@ def sort_results(results,element_list):
     return sorted_results
 
 def start_reader(cube,Element,iterator,results):
-
-    def grab_line(cube,lines,iterator):
-        
-        start_time = time.time()
-        #print("\nLine(s): {}\n".format(lines))
-        energyaxis = cube.energyaxis
-        matrix = cube.matrix
-        matrix_dimension = cube.dimension
-        usedif2 = True
-        scan = ([0,0])
-        currentx = scan[0]
-        currenty = scan[1]
-        el_dist_map = np.zeros([2,matrix_dimension[0],matrix_dimension[1]]) 
-        ROI = np.zeros([energyaxis.shape[0]])
-
-        for pos in range(cube.img_size):
-                   
-            RAW = matrix[currentx][currenty]
-            specdata = matrix[currentx][currenty]
-            
-            #######################################
-            #     ATTEMPT TO FIT THE SPECFILE     #
-            # PYMCAFIT DOES NOT USE 2ND DIF CHECK #
-            #######################################
-
-            if cube.config["peakmethod"] == 'PyMcaFit': 
-                try:
-                    usedif2 = False
-                    specdata = SpecFitter.fit(specdata)
-                except:
-                    FITFAIL += 1
-                    usedif2 = True
-                    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
-                            .format(pos,cube.img_size))
-            elif cube.config["peakmethod"] == 'simple_roi': specdata = specdata
-            elif cube.config["peakmethod"] == 'auto_roi': specdata = specdata
-            else: 
-                raise Exception("peakmethod {0} not recognized.".\
-                        format(cube.config["peakmethod"]))
-
-            ###########################
-            #   SETS THE BACKGROUND   #
-            # AND SECOND DIFFERENTIAL #
-            ###########################
-            
-            background = cube.background[currentx][currenty]
-           
-            # low-passes second differential
-            if usedif2 == True: 
-                dif2 = getdif2(specdata,energyaxis,1)
-                for i in range(len(dif2)):
-                    if dif2[i] < -1: dif2[i] = dif2[i]
-                    elif dif2[i] > -1: dif2[i] = 0
-            else: dif2 = np.zeros([specdata.shape[0]])
-
-            ###################################
-            #  CALCULATE NET PEAKS AREAS AND  #
-            #  ITERATE OVER LIST OF ELEMENTS  #
-            ###################################
-            
-            logging.debug("current x = {0} / current y = {1}".format(currentx,currenty))
-
-            ################################################################
-            #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
-            # Be aware that PyMcaFit method peaks are returned always True #
-            # Check SpecMath.py This is due to the high noise in the data  #
-            ################################################################
-                
-            ka_info = getpeakarea(lines[0],specdata,\
-                    energyaxis,background,cube.config,RAW,usedif2,dif2)
-            ka = ka_info[0]
-            ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
-
-            kb_info = getpeakarea(lines[1],specdata,\
-                    energyaxis,background,cube.config,RAW,usedif2,dif2)
-            kb = kb_info[0]
-            ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
-            
-            el_dist_map[0][currentx][currenty] = ka
-            el_dist_map[1][currentx][currenty] = kb
-            
-            iterator.value = iterator.value + 1
-
-            #########################################
-            #   UPDATE ELMAP POSITION AND SPECTRA   #
-            #########################################        
-            
-            scan = refresh_position(scan[0],scan[1],matrix_dimension)
-            currentx = scan[0]
-            currenty = scan[1]
-            
-        ################################    
-        #  FINISHED ITERATION PROCESS  #
-        #  OVER THE BATCH OF SPECTRA   #
-        ################################
-        
-        timestamp = time.time() - start_time
-        if cube.config["peakmethod"] == 'PyMcaFit': 
-            logging.warning("Fit fail: {0}%".format(100*FITFAIL/cube.dimension))
-        #print("Maps maximum: ")
-        #print(el_dist_map[0].max())
-        #print(el_dist_map[1].max())
-
-        if cube.config["peakmethod"] == 'auto_roi': 
-            el_dist_map = interpolate_zeros(el_dist_map)
-        
-        logging.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
-                format(Element,lines[0],lines[1]))
-        logging.info("Runtime for {}: {}".format(Element,time.time()-start_time))
-        #print("Time:")
-        #print(time.time()-start_time)
-        return el_dist_map, ROI
     
     def call_peakmethod(cube,Element,iterator,results):
         '''
@@ -231,14 +239,10 @@ def start_reader(cube,Element,iterator,results):
             elmap = np.zeros([1,cube.dimension[0],cube.dimension[1]])
             max_counts = [0]
             line_no = 1
-            lines = [kaenergy]
+            lines = [kaenergy,0]
 
         if  cube.config["peakmethod"] == "simple_roi":
-            #elmap, ROI = grab_simple_roi_image(__self__.cube,lines)
-            #print("calling simple_roi method")
-            iterator.value = iterator.value + 1
-            elmap, ROI = ["mec","melt"],0
-
+            elmap, ROI = grab_simple_roi_image(cube,lines,iterator)
         else: 
             elmap, ROI = grab_line(cube,lines,iterator)
         
