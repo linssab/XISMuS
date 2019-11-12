@@ -75,7 +75,7 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI,iterator):
             ROI[indexes[0]:indexes[1]]=ROI[indexes[0]:indexes[1]] + matrix[x][y][indexes[0]:indexes[1]]
     return new_image
 
-def grab_line(cube,lines,iterator):
+def grab_line(cube,lines,iterator,Element):
     """
     Uses SpecMath library to get the net area of the energies passed as
     arguments to this funcion
@@ -150,14 +150,14 @@ def grab_line(cube,lines,iterator):
                 energyaxis,background,cube.config,RAW,usedif2,dif2)
         ka = ka_info[0]
         ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
-
-        kb_info = getpeakarea(lines[1],specdata,\
-                energyaxis,background,cube.config,RAW,usedif2,dif2)
-        kb = kb_info[0]
-        ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
-        
         el_dist_map[0][currentx][currenty] = ka
-        el_dist_map[1][currentx][currenty] = kb
+
+        if cube.config["ratio"]: 
+            kb_info = getpeakarea(lines[1],specdata,\
+                    energyaxis,background,cube.config,RAW,usedif2,dif2)
+            kb = kb_info[0]
+            ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
+            el_dist_map[1][currentx][currenty] = kb
         
         iterator.value = iterator.value + 1
 
@@ -177,9 +177,6 @@ def grab_line(cube,lines,iterator):
     timestamp = time.time() - start_time
     if cube.config["peakmethod"] == 'PyMcaFit': 
         logging.warning("Fit fail: {0}%".format(100*FITFAIL/cube.dimension))
-    #print("Maps maximum: ")
-    #print(el_dist_map[0].max())
-    #print(el_dist_map[1].max())
 
     if cube.config["peakmethod"] == 'auto_roi': 
         el_dist_map = interpolate_zeros(el_dist_map)
@@ -187,14 +184,10 @@ def grab_line(cube,lines,iterator):
     logging.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
             format(Element,lines[0],lines[1]))
     logging.info("Runtime for {}: {}".format(Element,time.time()-start_time))
-    #print("Time:")
-    #print(time.time()-start_time)
     return el_dist_map, ROI
 
 def digest_results(datacube,results,elements):
     element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)])
-    #print(element_map.shape)
-    #print(np.shape(results[0][0]))
     line = ["_a","_b"]
     for element in range(len(results)):
         for dist_map in range(len(results[element][0])):
@@ -244,7 +237,7 @@ def start_reader(cube,Element,iterator,results):
         if  cube.config["peakmethod"] == "simple_roi":
             elmap, ROI = grab_simple_roi_image(cube,lines,iterator)
         else: 
-            elmap, ROI = grab_line(cube,lines,iterator)
+            elmap, ROI = grab_line(cube,lines,iterator,Element)
         
         results.put((elmap,ROI,Element))
         return results
