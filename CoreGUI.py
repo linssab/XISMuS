@@ -16,7 +16,6 @@ def start_up():
     global FIND_ELEMENT_LIST
     FIND_ELEMENT_LIST = []
 
-
 def wipe_list():
     global FIND_ELEMENT_LIST
     FIND_ELEMENT_LIST = []
@@ -81,6 +80,12 @@ def convert_bytes(num):
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
+        
+def restore_bytes(num,unit):
+    units = ['KB', 'MB', 'GB', 'TB']
+    for x in units:
+        if unit == x:
+            return num * (1024**(units.index(x)+1))
 
 def ErrorMessage(message):
     
@@ -126,23 +131,26 @@ def open_analyzer():
 def call_compilecube():
     
     try: os.mkdir(SpecRead.output_path)
-    except: 
-        #print("Cannot create folder {}".format(SpecRead.output_path))
-        pass
+    except IOError as exception:
+        logging.warning("Error {}.".format(exception.__class__.__name__))
+        logging.warning("Can't create output folder {}".format(SpecRead.output_path))
     
     if os.path.exists(SpecRead.cube_path): 
         pass
     else:
-        #try: 
+        root.ButtonLoad.config(state=DISABLED)
+        root.MenuBar.entryconfig("Toolbox", state=DISABLED)
+        try: root.SamplesWindow.destroy()
+        except: pass
+        logging.warning("Starting cube {} compilation!".format(SpecRead.CONFIG["directory"]))
         specbatch = Cube(['xrf'],SpecRead.CONFIG)
         specbatch.compile_cube()
-        #except:
-        #    ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
+        root.ButtonLoad.config(state=NORMAL)
+        root.MenuBar.entryconfig("Toolbox", state=NORMAL)
 
 def prompt_folder():
     folder = filedialog.askdirectory()
-    SpecRead.samples_folder = folder+"//"
-    print(SpecRead.samples_folder)
+    SpecRead.samples_folder = folder+"\\"
     root.refresh_samples()
     return 0
 
@@ -320,21 +328,23 @@ class ImageAnalyzer:
             __self__.ElementalMap1 = np.zeros([1,1])
             __self__.ElementalMap2 = np.zeros([1,1])
         
-
+        # map 1
         __self__.Map1Label = Label(__self__.sampler, textvariable=__self__.Map1Counts,width=30)
         __self__.Map1Label.grid(row=0, column=0, columnspan=3, sticky=W)
         __self__.Map1Combo = ttk.Combobox(__self__.sampler, textvariable=__self__.Map1Var,\
-                values=__self__.packed_elements,width=5)
+                values=__self__.packed_elements,width=5,state="readonly")
         __self__.Map1Combo.grid(row=0,column=3, sticky=W,padx=(16,16),pady=(8,4))
+        __self__.Map1Combo.bind("<<ComboboxSelected>>", __self__.update_sample1)
         
+        # map 2
         __self__.Map2Label = Label(__self__.sampler, textvariable=__self__.Map2Counts,width=30)
         __self__.Map2Label.grid(row=0, column=5, columnspan=3, sticky=E)
         __self__.Map2Combo = ttk.Combobox(__self__.sampler, textvariable=__self__.Map2Var,\
-                values=__self__.packed_elements,width=5)
+                values=__self__.packed_elements,width=5,state="readonly")
         __self__.Map2Combo.grid(row=0,column=4, sticky=E,padx=(16,16),pady=(8,4))
-        __self__.Map1Combo.bind("<<ComboboxSelected>>", __self__.update_sample1)
         __self__.Map2Combo.bind("<<ComboboxSelected>>", __self__.update_sample2)
 
+        # matplotlib canvases
         __self__.figure1 = Figure(figsize=(5,4), dpi=75)
         __self__.plot1 = __self__.figure1.add_subplot(111)
         __self__.plot1.axis('On')
@@ -433,6 +443,28 @@ class ImageAnalyzer:
         
         __self__.draw_image1(0)
         __self__.draw_image2(0)
+        
+        icon = os.getcwd()+"\\images\\icons\\img_anal.ico"
+        __self__.master.iconbitmap(icon)  
+        
+        # presents a first image. displays a "no data image if no packed element exists"
+        try: 
+            try: __self__.Map1Combo.current(0)
+            except: pass
+            try: __self__.Map2Combo.current(1)
+            except: 
+                try: __self__.Map2Combo.current(0)
+                except: pass
+            if __self__.ElementalMap1.max() == 0:
+                __self__.ElementalMap1 = np.array(plt.imread(os.getcwd()+"\\images\\no_data.png"))
+                __self__.draw_image1(0)
+            if __self__.ElementalMap2.max() == 0:
+                __self__.ElementalMap2 = np.array(plt.imread(os.getcwd()+"\\images\\no_data.png"))
+                __self__.draw_image2(0)
+            __self__.update_sample1(None)
+            __self__.update_sample2(None)
+        except: 
+            pass
     
     def resize(__self__, event):
         wi = __self__.LeftCanvas.winfo_width()
@@ -457,8 +489,6 @@ class ImageAnalyzer:
             __self__.annotate.config(bg=__self__.correlate.cget("background"))
             __self__.annotator.wipe_annotator(__self__)
             del __self__.annotator
-        
-
  
     def update_sample1(__self__,event):
         global MY_DATACUBE
@@ -662,7 +692,7 @@ class PlotWin:
         __self__.plot.legend()
         place_topleft(__self__.master.master,__self__.master)
 
-    def draw_spec(__self__,mode,display_mode='-semilog',lines=False):
+    def draw_spec(__self__,mode,display_mode=None,lines=False):
         if __self__.master.winfo_exists() == True:
             global FIND_ELEMENT_LIST
             __self__.plot.clear()
@@ -807,7 +837,118 @@ class Samples:
                     __self__.samples_database[folder] = mca_prefix
         except IOError as exception:
             messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
-       
+        
+class Settings:        
+        
+    def __init__(__self__,parent):
+        __self__.Settings = Toplevel(master=parent.master)
+        __self__.Settings.resizable(False,False)
+        __self__.CoreCount = cpu_count()
+        __self__.ScreenFrame = Frame(__self__.Settings,padx=15,pady=15)
+        __self__.ScreenFrame.grid(row=0,column=1)
+        __self__.TextFrame = Frame(__self__.Settings,padx=15,pady=15)
+        __self__.TextFrame.grid(row=0,column=0)
+        sys_mem = dict(virtual_memory()._asdict())
+        __self__.RAM_tot = convert_bytes(sys_mem["total"])
+        __self__.RAM_free = convert_bytes(sys_mem["available"])
+        __self__.build_widgets()
+        __self__.Settings.title("Settings")
+        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        __self__.Settings.iconbitmap(icon)  
+        __self__.Settings.master.protocol("WM_DELETE_WINDOW",__self__.kill_window)
+        place_center(root.master,__self__.Settings)
+
+    def build_widgets(__self__):
+        __self__.PlotMode = StringVar()
+        __self__.CoreMode = BooleanVar()
+        __self__.RAMMode = BooleanVar()
+        __self__.RAMEntry = DoubleVar()
+        __self__.RAMUnit = StringVar()
+        
+        __self__.PlotMode.set(root.PlotMode)
+        __self__.CoreMode.set(root.MultiCore)
+        __self__.RAMMode.set(root.RAM_limit)
+        __self__.RAMEntry.set(convert_bytes(root.RAM_limit_value).split(" ")[0])
+        __self__.RAMUnit.set(convert_bytes(root.RAM_limit_value).split(" ")[1])
+        
+        PlotLabel = Label(__self__.TextFrame,text="Plot mode: ")
+        PlotLabel.grid(row=0,column=0,sticky=W)
+        PlotOption = ttk.Combobox(__self__.ScreenFrame, textvariable=__self__.PlotMode, values=("Linear","Logarithmic"),width=13,state="readonly")
+        PlotOption.grid(row=0,column=0,columnspan=3,sticky=E)
+        
+        CoreLabel = Label(__self__.TextFrame,text="Enable multi-core processing? ")
+        CoreLabel.grid(row=1,column=0,sticky=W)
+        CoreOption = Checkbutton(__self__.ScreenFrame, variable=__self__.CoreMode,pady=3)
+        CoreOption.grid(row=1,rowspan=2,column=0,columnspan=2,sticky=E)
+        CoreOptionText = Label(__self__.ScreenFrame, text="Yes",pady=3)
+        CoreOptionText.grid(row=1,rowspan=2,column=2,sticky=E)
+        CoreCountLabel = Label(__self__.TextFrame,text="Total number of cores: "+str(__self__.CoreCount))
+        CoreCountLabel.grid(row=2,column=0,sticky=W)
+        
+        RAMLabel = Label(__self__.TextFrame,text="Limit RAM usage for multi-core? ")
+        RAMLabel.grid(row=3,column=0,sticky=W)
+        RAMUnit = Label(__self__.ScreenFrame, text=__self__.RAMUnit.get())
+        RAMUnit.grid(row=4,column=2,sticky=W)
+        RAMOption = Checkbutton(__self__.ScreenFrame, variable=__self__.RAMMode)
+        RAMOption.grid(row=3,column=0,columnspan=2,sticky=E)
+        RAMOptionText = Label(__self__.ScreenFrame, text="Yes")
+        RAMOptionText.grid(row=3,column=2,sticky=E)
+        __self__.RAMEntry = Entry(__self__.ScreenFrame, textvariable=__self__.RAMEntry,width=13-RAMUnit.winfo_width())
+        __self__.RAMEntry.grid(row=4,column=0,columnspan=2,sticky=W)
+        RAMCountLabel = Label(__self__.TextFrame,text="Available RAM: "+str(__self__.RAM_free))
+        RAMCountLabel.grid(row=4,column=0,sticky=W)
+
+        __self__.ScreenFrame.grid_columnconfigure(1,pad=8)
+        
+        ButtonsFrame = Frame(__self__.Settings, padx=10, pady=10)
+        ButtonsFrame.grid(row=3,column=0,columnspan=2)
+        OKButton = Button(ButtonsFrame, text="OK", justify=CENTER,width=10,command=__self__.save_settings)
+        OKButton.grid(row=3,column=0)
+        CancelButton = Button(ButtonsFrame, text="Cancel", justify=CENTER,width=10,command=__self__.kill_window)
+        CancelButton.grid(row=3,column=1)
+    
+    def write_to_ini(__self__):
+        try: 
+            inipath = os.getcwd() + "\settings.tag"
+            ini = open(inipath,'w+')
+            ini.write("{}\n".format(SpecRead.samples_folder))
+            ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
+            ini.write("<PlotMode>\t{}\n".format(root.PlotMode))
+            ini.write("<RAMLimit>\t{}".format(root.RAM_limit))
+            ini.close()
+            __self__.kill_window()
+        except: 
+            messagebox.showerror("Error","File inifile.ini not found.")
+            root.master.destroy()
+
+    def kill_window(__self__):
+        del root.SettingsWin 
+        __self__.Settings.destroy()
+
+    def save_settings(__self__):
+        root.RAM_limit = __self__.RAMMode.get()
+        root.RAM_limit_value = restore_bytes(float(__self__.RAMEntry.get()),__self__.RAMUnit.get())
+        root.MultiCore = __self__.CoreMode.get()
+        root.PlotMode = __self__.PlotMode.get()
+        if root.PlotMode == "Logarithmic": root.plot_display = "-semilog"
+        if root.PlotMode == "Linear": root.plot_display = None
+
+        refresh_plots()
+        __self__.write_to_ini()
+
+
+def grab_GUI_config(inifile):
+    CoreMode,PlotMode,RAMMode = None, None, None
+    ini = open(inifile,"r")
+    for line in ini:
+        line = line.replace("\n","")
+        line = line.replace("\r","")
+        if line.split("\t")[0] == "<MultiCore>": CoreMode = bool(line.split("\t")[1])
+        if line.split("\t")[0] == "<PlotMode>": PlotMode = str(line.split("\t")[1])
+        if line.split("\t")[0] == "<RAMLimit>": RAMMode = bool(line.split("\t")[1])
+    ini.close() 
+    return CoreMode, PlotMode, RAMMode
+
 
 class MainGUI:
     
@@ -816,14 +957,16 @@ class MainGUI:
     # root_quit()
     # find_elements()
     # list_samples()
+    # call_listsamples()
     # sample_select(event)
     # build_widgets()
     # write_stat()
-    # call_listsamples()
     # reset_sample()
     # call_configure()
-    # enable_
-    # disable_
+    # call_settings()
+    # refresh_samples()
+    # toggle_
+    # wipe()
 
     def __init__(__self__):
         logging.info("Initializing program...")
@@ -844,6 +987,14 @@ class MainGUI:
         __self__.sample_plot.axis('off')
         mapfont = {'fontname':'Times New Roman','fontsize':10}
         __self__.sample_plot.set_title('Sample Counts Map',**mapfont)
+
+        sys_mem = dict(virtual_memory()._asdict())
+        inipath = os.getcwd()+"\settings.tag"
+        __self__.MultiCore, __self__.PlotMode, __self__.RAM_limit = grab_GUI_config(inipath)
+        __self__.RAM_limit_value = sys_mem["available"]
+        if __self__.PlotMode == "Logarithmic": __self__.plot_display = "-semilog"
+        if __self__.PlotMode == "Linear": __self__.plot_display = None
+        
         __self__.build_widgets()
         __self__.toggle_(toggle='off')
         __self__.master.deiconify()
@@ -895,12 +1046,12 @@ class MainGUI:
                         lambda: wipe_list())
             else:
                 __self__.find_elements_diag.master.focus_force()
+                place_center(__self__.master,__self__.find_elements_diag.master)
                 pass
         except:
             __self__.find_elements_diag = PeriodicTable(__self__)
             __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",\
                     lambda: wipe_list())
-        
         
     def call_listsamples(__self__):
         __self__.SamplesWindow = Toplevel(master=__self__.master)
@@ -957,7 +1108,6 @@ class MainGUI:
         except: 
             __self__.sample_plot.imshow(np.zeros([20,20]))
     
-
     def sample_select(__self__,event):
         
         __self__.toggle_('off')
@@ -1004,21 +1154,32 @@ class MainGUI:
     def call_summation(__self__):
         master = __self__.master
         __self__.summation = PlotWin(master)
-        __self__.summation.draw_spec(mode=['summation'],display_mode='-semilog',lines=False)
+        __self__.summation.draw_spec(mode=['summation'],display_mode=root.plot_display,lines=False)
         place_topleft(__self__.master,__self__.summation.master)
     
     def call_mps(__self__):
         master = __self__.master
         __self__.MPS = PlotWin(master)
-        __self__.MPS.draw_spec(mode=['mps'],display_mode='-semilog',lines=False)
+        __self__.MPS.draw_spec(mode=['mps'],display_mode=root.plot_display,lines=False)
         place_topleft(__self__.master,__self__.MPS.master)
     
     def call_combined(__self__):
         master = __self__.master
         __self__.combined = PlotWin(master)
-        __self__.combined.draw_spec(mode=['summation','mps'],display_mode='-semilog',lines=False)
+        __self__.combined.draw_spec(mode=['summation','mps'],display_mode=root.plot_display,lines=False)
         place_topleft(__self__.master,__self__.combined.master)
 
+    def call_settings(__self__):
+        try:
+            if __self__.SettingsWin.Settings.winfo_exists() == False:
+                __self__.SettingsWin = Settings(__self__)
+            else:
+                __self__.SettingsWin.Settings.focus_force()
+                place_center(__self__.master,__self__.SettingsWin.Settings)
+                pass
+        except:
+            __self__.SettingsWin = Settings(__self__)
+        
     def build_widgets(__self__):
         
         # define the frame and layout
@@ -1093,7 +1254,7 @@ class MainGUI:
         __self__.Toolbox.add_command(label="Height-mapping", command=doNothing)
         __self__.Toolbox.add_command(label="Image Analyzer . . .", command=open_analyzer)
         __self__.Toolbox.add_separator()
-        __self__.Toolbox.add_command(label="Settings", command=doNothing)
+        __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
         __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
 
         __self__.master.config(menu=__self__.MenuBar)
@@ -1131,7 +1292,7 @@ class MainGUI:
                 image=__self__.QuitButton_icon, compound=LEFT, bd=3, command=__self__.root_quit)
         __self__.QuitButton.grid(row=2,column=1,sticky=W+E)
         __self__.SettingsButton = Button(__self__.ButtonsFrame, text="  Settings", anchor=W,\
-                image=__self__.SettingsButton_icon, compound=LEFT, bd=3, command=doNothing)
+                image=__self__.SettingsButton_icon, compound=LEFT, bd=3, command=__self__.call_settings)
         __self__.SettingsButton.grid(row=2,column=0,sticky=W+E)
         
         #####
@@ -1209,11 +1370,10 @@ class MainGUI:
         __self__.TableMiddle.config(state=DISABLED)
         __self__.TableRight.config(state=DISABLED)
        
-    
     def reset_sample(__self__):
         
         def repack(__self__):
-            import shutil
+            logging.warning("Cube {} and its output contents were erased!".format(MY_DATACUBE.config["directory"]))
             shutil.rmtree(SpecRead.output_path)
             #os.remove(SpecRead.cube_path)
             load_cube()
@@ -1246,7 +1406,6 @@ class MainGUI:
 
         else:
             ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
-
 
     def call_configure(__self__):
         
@@ -1352,7 +1511,7 @@ class MainGUI:
                     __self__.ResetWindow.destroy()
                     CalibDiag.destroy()
                 except: pass
-                
+                 
                 call_compilecube()
                 __self__.write_stat()
                 __self__.draw_map()
@@ -1458,6 +1617,33 @@ class MainGUI:
 
         return 0
 
+def refresh_plots():
+        global FIND_ELEMENT_LIST
+        if len(FIND_ELEMENT_LIST) > 0: 
+            lines = True
+        else: 
+            lines = False
+        
+        try:
+            root.MPS.draw_spec(\
+                mode=['mps'],display_mode=root.plot_display,lines=lines)
+            root.MPS.update_idletasks()
+        except: pass
+        try: 
+            root.summation.draw_spec(\
+                mode=['summation'],display_mode=root.plot_display,lines=lines)
+            root.summation.update_idletasks()
+        except: pass
+        try: 
+            root.combined.draw_spec(\
+                mode=['mps','summation'],display_mode=root.plot_display,lines=lines)
+            root.combined.update_idletasks()
+        except: pass
+        
+        try: root.find_elements_diag.master.focus_force()
+        except: pass
+        return np.nan
+
 
 class PeriodicTable:
 
@@ -1473,36 +1659,12 @@ class PeriodicTable:
         __self__.master.body.grid(row=1,column=0, rowspan=9, columnspan=18,padx=(3,3),pady=(3,0))
         __self__.master.footer = Frame(__self__.master)
         __self__.master.footer.grid(row=10,column=0, columnspan=18)
-
         __self__.draw_buttons() 
-    
-    def refresh_plots(__self__):
-        global FIND_ELEMENT_LIST
-        if len(FIND_ELEMENT_LIST) > 0: 
-            lines = True
-        else: 
-            lines = False
-        
-        try:
-            root.MPS.draw_spec(\
-                mode=['mps'],display_mode='-semilog',lines=lines)
-            root.MPS.update_idletasks()
-        except: pass
-        try: 
-            root.summation.draw_spec(\
-                mode=['summation'],display_mode='-semilog',lines=lines)
-            root.summation.update_idletasks()
-        except: pass
-        try: 
-            root.combined.draw_spec(\
-                mode=['mps','summation'],display_mode='-semilog',lines=lines)
-            root.combined.update_idletasks()
-        except: pass
-        
-        try: root.find_elements_diag.master.focus_force()
-        except: pass
-        return np.nan
+        icon = os.getcwd()+"\\images\\icons\\rubik.ico"
+        __self__.master.iconbitmap(icon)
+        place_center(parent.master,__self__.master)
 
+    
     def add_element(__self__,toggle_btn):
         global DEFAULTBTN_COLOR
         global FIND_ELEMENT_LIST
@@ -1510,12 +1672,12 @@ class PeriodicTable:
             toggle_btn.config(relief="raised")
             toggle_btn.config(bg=DEFAULTBTN_COLOR)
             FIND_ELEMENT_LIST.remove(toggle_btn.cget("text"))
-            __self__.refresh_plots()
+            refresh_plots()
         else:
             toggle_btn.config(relief="sunken")
             toggle_btn.config(bg="yellow")
             FIND_ELEMENT_LIST.append(toggle_btn.cget("text"))
-            __self__.refresh_plots()
+            refresh_plots()
        
     def save_and_run(__self__):
         
@@ -1542,11 +1704,14 @@ class PeriodicTable:
             
             if cube_size*(len(FIND_ELEMENT_LIST)) > sys_mem["available"]:
                 logging.warning("Non-fatal MEMORY ERROR! Memony size needed for cube copies not available!")
-                messagebox.showerror("Memory Error!","Multiprocessing copies the datacube to for each running instance.\nMemory needed: {}\nMemory available: {}\nProcess will follow in a single instance and may take a while.".format(process_memory[0],process_memory[1]))   
+                messagebox.showerror("Memory Error!","Multiprocessing copies the datacube for each running instance.\nMemory needed: {}\nMemory available: {}\nProcess will follow in a single instance and may take a while.".format(process_memory[0],process_memory[1]))   
 
             # multi-core mode
-            if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 1200\
-                    and cube_size*len(FIND_ELEMENT_LIST) < sys_mem["available"]:
+            needed_memory = cube_size*len(FIND_ELEMENT_LIST)
+            if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 999\
+                    and needed_memory < sys_mem["available"] and\
+                    needed_memory < root.RAM_limit_value and root.MultiCore == True:
+
                 cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
                 results = cuber.start_workers()
                 results = sort_results(results,FIND_ELEMENT_LIST)
@@ -1555,9 +1720,6 @@ class PeriodicTable:
             # single-core mode
             else: 
                 MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
-                #ImgMath.split_and_save(MY_DATACUBE,MAPS,FIND_ELEMENT_LIST)
-                
-
 
             # reactivate widgets
             wipe_list()
@@ -1565,7 +1727,7 @@ class PeriodicTable:
             root.MenuBar.entryconfig("Toolbox", state=NORMAL)
             root.ButtonLoad.config(state=NORMAL)
             root.write_stat()
-            __self__.refresh_plots()
+            refresh_plots()
 
     def draw_buttons(__self__):
         btnsize_w = 3
@@ -1802,13 +1964,16 @@ def check_screen_resolution(resolution_tuple):
 
               
 if __name__ == "__main__":
-    import logging
+    import logging, time
     from multiprocessing import freeze_support
     freeze_support()
     logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-            filename = 'logfile.log',level = logging.DEBUG)
+            filename = 'logfile.log',level = logging.INFO)
     with open('logfile.log','w+') as mylog: mylog.truncate(0)
     logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
+    log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    logging.info(log_start)   
+
 
     VERSION = "0.0.1α"
     optimum_resolution = (1920,1080)
@@ -1821,11 +1986,14 @@ if __name__ == "__main__":
 
     # general utilities
     import numpy as np
-    import sys, os, copy, pickle
+    import sys, os, copy, pickle, stat
+    import shutil
     from psutil import virtual_memory
+    from psutil import cpu_count
 
     # matplotlib imports
     import matplotlib
+    import matplotlib.pyplot as plt
     matplotlib.use("TkAgg")
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
     from matplotlib.figure import Figure
@@ -1847,5 +2015,7 @@ if __name__ == "__main__":
     logging.info("Loading GUI...")
     start_up()
     root = MainGUI()
+    GUIicon = os.getcwd()+"\\images\\icons\\icon.ico"
+    root.master.iconbitmap(GUIicon)  
     root.master.mainloop()
 
