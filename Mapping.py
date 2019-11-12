@@ -88,7 +88,7 @@ def getpeakmap(element_list,datacube):
     
     logging.info("Started energy axis calibration")
     energyaxis = datacube.energyaxis
-    save_energy_axis = open(SpecRead.workpath + '/' + 'axis.txt','a')
+    save_energy_axis = open(SpecRead.workpath + '/' + 'axis.txt','w+')
     for i in range(energyaxis.shape[0]):
         save_energy_axis.write("{0}\n".format(energyaxis[i]))
     logging.info("Finished energy axis calibration")
@@ -267,7 +267,7 @@ def getpeakmap(element_list,datacube):
             #  ITERATE OVER LIST OF ELEMENTS  #
             ###################################
             
-            logging.info("current x = {0} / current y = {1}".format(currentx,currenty))
+            logging.debug("current x = {0} / current y = {1}".format(currentx,currenty))
             if debug == True: logging.info("Specfile being processed is: {0}\n".format(spec))
  
             for Element in range(len(element_list)):
@@ -392,11 +392,11 @@ def getpeakmap(element_list,datacube):
         #  OVER THE BATCH OF SPECTRA   #
         ################################
         
-        logging.info("Finished iteration process for element(s) {0}\n".format(element_list))
+        logging.info("Finished iteration process for element(s) {0}".format(element_list))
         
         
         timestamp = time.time() - partialtimer
-        logging.info("\nExecution took %s seconds" % (timestamp))
+        logging.info("Execution took %s seconds" % (timestamp))
         if peakmethod == 'PyMcaFit': logging.warning("Fit fail: {0}%".format(100*FITFAIL/dimension))
         
         timestamps = open(SpecRead.workpath + '/timestamps.txt'\
@@ -414,10 +414,8 @@ def getpeakmap(element_list,datacube):
     if peakmethod == 'auto_roi': 
         elmap = ImgMath.interpolate_zeros(elmap)
     
-    # split_and_save is disabled for use with GUI. MainGUI.find_elements() calls 
-    # it at the end of the execution
-    print("Time:")
-    print(time.time()-timer)
+    #print("Time:")
+    #print(time.time()-timer)
     ImgMath.split_and_save(datacube,elmap,element_list)
     return elmap
 
