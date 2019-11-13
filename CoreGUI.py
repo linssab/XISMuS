@@ -21,6 +21,26 @@ def wipe_list():
     FIND_ELEMENT_LIST = []
     root.find_elements_diag.master.destroy()
 
+def break_list(element_list):
+    #cores = cpu_count()
+    cores = 4
+    chunks = []
+    chunk_slice = 0
+    quo = int(len(element_list)/cores)
+    rest = int(len(element_list)%cores)
+    for i in range(quo):
+        slice1 = []
+        if i >= 1: chunk_slice += 1
+        for j in range(cores):
+            slice1.append(element_list[chunk_slice*cores+j])
+        chunks.append(slice1)
+    if rest >= 1:
+        slice1 = []
+        for i in range(rest):
+            slice1.append(element_list[quo*cores+i])
+        chunks.append(slice1)
+    return chunks
+
 def place_topleft(window1,window2):
     
     # adapted from: https://stackoverflow.com/questions/3352918/
@@ -1701,21 +1721,32 @@ class PeriodicTable:
             sys_mem = dict(virtual_memory()._asdict())
             rnt_mem = [(cube_size*len(FIND_ELEMENT_LIST)),sys_mem["available"]]
             process_memory = (convert_bytes(rnt_mem[0]),convert_bytes(rnt_mem[1]))
+            needed_memory = cube_size*len(FIND_ELEMENT_LIST)
             
             if cube_size*(len(FIND_ELEMENT_LIST)) > sys_mem["available"]:
                 logging.warning("Non-fatal MEMORY ERROR! Memony size needed for cube copies not available!")
                 messagebox.showerror("Memory Error!","Multiprocessing copies the datacube for each running instance.\nMemory needed: {}\nMemory available: {}\nProcess will follow in a single instance and may take a while.".format(process_memory[0],process_memory[1]))   
 
             # multi-core mode
-            needed_memory = cube_size*len(FIND_ELEMENT_LIST)
             if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 999\
                     and needed_memory < sys_mem["available"] and\
                     needed_memory < root.RAM_limit_value and root.MultiCore == True:
-
-                cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
-                results = cuber.start_workers()
-                results = sort_results(results,FIND_ELEMENT_LIST)
-                digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
+                
+                # break element_list if the number of cores is 
+                # considerably lower than the number of processes
+                if len(FIND_ELEMENT_LIST)%cpu_count() > 1.5:
+                    chunks = break_list(FIND_ELEMENT_LIST)
+                    messagebox.showinfo("Info","Too many elements were selected. The process will now follow in {} parts.".format(len(chunks)))
+                    for chunk in chunks:
+                        cuber = Cube_reader(MY_DATACUBE,chunk)
+                        results = cuber.start_workers()
+                        results = sort_results(results,chunk)
+                        digest_results(MY_DATACUBE,results,chunk)
+                else: 
+                    cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
+                    results = cuber.start_workers()
+                    results = sort_results(results,FIND_ELEMENT_LIST)
+                    digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
  
             # single-core mode
             else: 
