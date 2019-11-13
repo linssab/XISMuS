@@ -13,6 +13,7 @@ CUDAtest.py
 CheckPeaks.py
 Mapping_NOGUI.py
 PeriodicTable.py
+OpenCamera.py
 Core.py
 setup.py
 config.MC.cfg
