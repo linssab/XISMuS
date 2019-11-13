@@ -1,9 +1,10 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 0.0.1α                        #
+#                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
+
 global MY_DATACUBE, FIND_ELEMENT_LIST
 MY_DATACUBE, FIND_ELEMENT_LIST = None, None
 
@@ -20,26 +21,6 @@ def wipe_list():
     global FIND_ELEMENT_LIST
     FIND_ELEMENT_LIST = []
     root.find_elements_diag.master.destroy()
-
-def break_list(element_list):
-    #cores = cpu_count()
-    cores = 4
-    chunks = []
-    chunk_slice = 0
-    quo = int(len(element_list)/cores)
-    rest = int(len(element_list)%cores)
-    for i in range(quo):
-        slice1 = []
-        if i >= 1: chunk_slice += 1
-        for j in range(cores):
-            slice1.append(element_list[chunk_slice*cores+j])
-        chunks.append(slice1)
-    if rest >= 1:
-        slice1 = []
-        for i in range(rest):
-            slice1.append(element_list[quo*cores+i])
-        chunks.append(slice1)
-    return chunks
 
 def place_topleft(window1,window2):
     
@@ -829,6 +810,7 @@ class Samples:
                             mca_prefix_count = counter[counts]
                     __self__.samples_database[folder] = mca_prefix
         except IOError as exception:
+            __self__.splash_kill()
             logging.info("Cannot load samples. Error {}.".format(exception.__class__.__name__))
             messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
         __self__.splash_kill()
@@ -1732,22 +1714,13 @@ class PeriodicTable:
                     and needed_memory < sys_mem["available"] and\
                     needed_memory < root.RAM_limit_value and root.MultiCore == True:
                 
-                # break element_list if the number of cores is 
-                # considerably lower than the number of processes
-                if len(FIND_ELEMENT_LIST)%cpu_count() > 1.5:
-                    chunks = break_list(FIND_ELEMENT_LIST)
-                    messagebox.showinfo("Info","Too many elements were selected. The process will now follow in {} parts.".format(len(chunks)))
-                    for chunk in chunks:
-                        cuber = Cube_reader(MY_DATACUBE,chunk)
-                        results = cuber.start_workers()
-                        results = sort_results(results,chunk)
-                        digest_results(MY_DATACUBE,results,chunk)
-                else: 
-                    cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
-                    results = cuber.start_workers()
-                    results = sort_results(results,FIND_ELEMENT_LIST)
-                    digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
- 
+                cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
+                results = cuber.start_workers()
+                cuber.p_bar.update_text("Digesting results...")
+                results = sort_results(results,FIND_ELEMENT_LIST)
+                digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
+                cuber.p_bar.destroybar()
+
             # single-core mode
             else: 
                 MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
@@ -2000,7 +1973,11 @@ if __name__ == "__main__":
     freeze_support()
     logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
             filename = 'logfile.log',level = logging.INFO)
-    with open('logfile.log','w+') as mylog: mylog.truncate(0)
+    try: 
+        with open('logfile.log','w+') as mylog: mylog.truncate(0)
+    except IOError as exception:
+        logging.info("Cannot create logfile! Error {}.".format(exception.__class__.__name__))
+        messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.getcwd()))
     logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
     log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     logging.info(log_start)   

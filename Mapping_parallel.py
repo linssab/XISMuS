@@ -1,3 +1,10 @@
+#################################################################
+#                                                               #
+#          Mapping module for multi-core processing             #
+#                        version: 1.0 - Nov - 2019              #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
 import numpy as np
 import os, sys, logging, multiprocessing
 from multiprocessing import freeze_support
@@ -21,6 +28,26 @@ def convert_bytes(num):
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
+
+def break_list(element_list):
+    cores = cpu_count()
+    #cores = 3
+    chunks = []
+    chunk_slice = 0
+    quo = int(len(element_list)/cores)
+    rest = int(len(element_list)%cores)
+    for i in range(quo):
+        slice1 = []
+        if i >= 1: chunk_slice += 1
+        for j in range(cores):
+            slice1.append(element_list[chunk_slice*cores+j])
+        chunks.append(slice1)
+    if rest >= 1:
+        slice1 = []
+        for i in range(rest):
+            slice1.append(element_list[quo*cores+i])
+        chunks.append(slice1)
+    return chunks
 
 def grab_simple_roi_image(cube,lines,iterator):
     
@@ -258,62 +285,74 @@ class Cube_reader():
         __self__.p_bar_iterator.value = 0
         __self__.processes = []
         __self__.process_names = []
+        __self__.run_count = 0 
+        __self__.chunks = break_list(__self__.element_list)
     
     def start_workers(__self__):
-        partial_ = []
-        i = 0
-        for element in __self__.element_list:
-            p = multiprocessing.Process(target=start_reader,
-                name=element,
-                args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results))
-            __self__.processes.append(p)
-            __self__.process_names.append(p.name)
-            logging.info("Pooling process {}".format(p))
-        
-    
-        for p in __self__.processes:
-            i = i + 1
-            __self__.p_bar.update_text("Queueing "+p.name)
-            __self__.p_bar.updatebar(i)
-            p.start()
-            if i == len(__self__.element_list): 
-                __self__.p_bar.progress["maximum"] = __self__.cube.img_size*len(__self__.element_list)
-                __self__.p_bar.update_text("Processing data...")
-                __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
-                __self__.periodic_check()
-        
-        for i in range(len(__self__.element_list)):
-            data = __self__.results.get()
-            partial_.append(data)
-        
-        for p in __self__.processes:
-            if p.exitcode != 0:
-                p.join()
+        __self__.p_bar.progress["maximum"] = __self__.cube.img_size*len(__self__.element_list)
+        __self__.p_bar.update_text("Processing data...")
+        __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
 
-        __self__.p_bar.destroybar()
+
+        partial_ = []
+        for chunk in __self__.chunks:
+            try:
+                for p in __self__.processes:
+                    p.terminate()
+                    logging.info("Terminated {}".format(p))
+            except: pass
+            __self__.processes = []
+            __self__.process_names = []
+            i = 0
+            for element in chunk:
+                p = multiprocessing.Process(target=start_reader,
+                    name=element,
+                    args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results))
+                __self__.processes.append(p)
+                __self__.process_names.append(p.name)
+                logging.info("Pooling process {}".format(p))
+            
+        
+            for p in __self__.processes:
+                """
+                This has been modified to fit an iterative pooling process
+                The commented lines were used to update the bar with the name of the processed 
+                being pooled at the moment. This is deprecated.
+                """
+                i = i + 1
+                __self__.p_bar.update_text("Queueing "+p.name)
+                __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
+                p.start()
+                
+            __self__.run_count += 1
+            __self__.periodic_check()
+        
+            for i in range(len(chunk)):
+                data = __self__.results.get()
+                partial_.append(data)
+            
+            for p in __self__.processes:
+                if p.exitcode != 0:
+                    p.join()
+
+        #__self__.p_bar.destroybar()
 
         return partial_ 
     
     def checkbar(__self__):
-
-        # for some weird reason the iteration number will never reach the maximum supposed value
-        # a "fix" to this situation is breaking the loop when the iterator reaches 97% of maximum value
-        while __self__.p_bar_iterator.value < int(__self__.p_bar.progress["maximum"]*0.97):
+        __self__.p_bar.update_text("Processing data...")
+        while __self__.p_bar_iterator.value < \
+                int(len(__self__.chunks[__self__.run_count-1]*__self__.run_count)*\
+                __self__.cube.img_size*0.98):
             __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
-        __self__.p_bar.updatebar(__self__.p_bar.progress["maximum"])
+        if __self__.run_count == len(__self__.chunks):
+            while __self__.p_bar_iterator.value < int(__self__.p_bar.progress["maximum"]*0.98):
+                __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
+        return 0
 
     def periodic_check(__self__):
         __self__.checkbar()
-        # since the while loop enters active in checkbar(), there is no sense to create a callback
-        #__self__.p_bar.master.after(1000, __self__.periodic_check)
-        
-   
-    def do_smth(__self__):
-        __self__.p_bar_iterator.value = __self__.p_bar_iterator.value + 1
-        __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
-        time.sleep(1.5)
-        return 0
-    
+      
     
 if __name__=="__main__":
     """
@@ -329,10 +368,11 @@ if __name__=="__main__":
     print("Start?")
     #start = input()
     start = "N"
-    #elements = ["Zn","Ca","Mn","Cl","Ti","Cr","Fe","Pb","Hg","S","Cu"]
-    elements = ["Cu","Pb","Fe"]
+    elements = ["Zn","Ca","Ti","Cr","Fe","Pb","Hg","Cu"]
+    #elements = ["Cu","Pb","Fe"]
     
     from psutil import virtual_memory
+    from psutil import cpu_count
     cube_status = os.stat(cube_path)
     cube_size = cube_status.st_size
     sys_mem = dict(virtual_memory()._asdict())
@@ -348,7 +388,9 @@ if __name__=="__main__":
     else:
         reader = Cube_reader(datacube,elements)
         results = reader.start_workers()
+        reader.p_bar.update_text("Sorting maps...")
         results = sort_results(results,elements)
+        reader.p_bar.update_text("Digesting results...")
         digest_results(datacube,results,elements)
     """
     logging.info("This is Mapping_parallel.py module")
