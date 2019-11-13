@@ -7,8 +7,8 @@ import os
 import numpy
 import logging
 logging.debug("Importing module SpecFitter.py...")
-import SpecRead
-import SpecMath
+from SpecRead import calibrate
+from SpecMath import FANO
 from PyMca5.PyMcaIO import specfilewrapper as Specfile
 from PyMca5.PyMcaIO import ConfigDict
 from PyMca5.PyMcaPhysics.xrf import ClassMcaTheory
@@ -17,9 +17,10 @@ from PyMca5 import PyMcaDataDir
 import matplotlib.pyplot as plt
 import random
 
-print(5*'*'+" FIT CONFIGURATION STEP " + 5*'*')
-fit_elements = input('Which elements may be found in your sample?:\
- (split them with spaces)\n')
+#print(5*'*'+" FIT CONFIGURATION STEP " + 5*'*')
+#fit_elements = input('Which elements may be found in your sample?:\
+# (split them with spaces)\n')
+fit_elements = 'Cu Hg Au'
 
 import EnergyLib
 PeakList = EnergyLib.SetPeakLines()
@@ -40,11 +41,11 @@ mcafit.configure(config)
 currentConfig = mcafit.configure()
 
 print(currentConfig['detector']['gain'])
-calibration = SpecRead.calibrate()
+calibration = calibrate()
 currentConfig['detector']['gain'] = calibration[1] 
 print(currentConfig['detector']['gain'])
 
-currentConfig['detector']['fano'] = SpecMath.FANO
+currentConfig['detector']['fano'] = FANO
 
 currentConfig['peaks'] = peaks
 print(currentConfig['peaks'])
