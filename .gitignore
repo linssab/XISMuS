@@ -4,6 +4,7 @@
 *.ipynb
 *.svg
 timestamps.txt
+axis.txt
 output\
 \output
 .ipynb_checkpoints\
@@ -12,4 +13,6 @@ CUDAtest.py
 CheckPeaks.py
 Mapping_NOGUI.py
 PeriodicTable.py
-axis.txt
+setup.py
+config.MC.cfg
+CoreGUI.spec
