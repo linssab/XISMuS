@@ -9,4 +9,7 @@ output\
 .ipynb_checkpoints\
 \.ipynb_checkpoints
 CUDAtest.py
+CheckPeaks.py
+Mapping_NOGUI.py
+PeriodicTable.py
 axis.txt
