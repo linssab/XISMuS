@@ -3,7 +3,6 @@
 #          SPEC MATHEMATICS                                     #
 #                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#                                                               #
 #################################################################
 
 import logging
@@ -189,12 +188,6 @@ class datacube:
             x,y = scan[0],scan[1]
             currentspectra = updatespectra(spec,__self__.img_size)
             __self__.progressbar.updatebar(iteration)
-            
-            #progress = int(iteration/__self__.img_size*20)
-            #blank = (20 - progress - 1)
-            #print("[" + progress*"#" + blank*" " + "]" + " / {0:.2f}"\
-            #        .format(iteration/__self__.img_size*100), "Compiling cube...  \r", end='')
-            #sys.stdout.flush()
         
         logging.debug("Calculating MPS...")
         __self__.progressbar.update_text("Calculating MPS...")
@@ -221,7 +214,6 @@ class datacube:
         from SpecRead import output_path, cube_path
         __self__.__dict__[element+"_"+line] = image
         logging.info("Packed {0} map to datacube {1}".format(element,cube_path))
-        #print("Packed {0} map to datacube {1}".format(element,cube_path))
     
     def pack_hist(__self__,hist,bins,element):
         from SpecRead import output_path, cube_path
@@ -237,7 +229,6 @@ class datacube:
     def unpack_element(__self__,element,line):
         from SpecRead import output_path, cube_path
         unpacked = __self__.__dict__[element+"_"+line]
-        #print("Unpacked {0} map from datacube {1}".format(element,cube_path))
         logging.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
         return unpacked
 

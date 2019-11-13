@@ -3,7 +3,6 @@
 #          SPEC READER                                          #
 #                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#                                                               #
 #################################################################
 
 import logging
@@ -111,9 +110,6 @@ def conditional_setup(name='None'):
     global_list =  [CONFIG, CALIB, DIRECTORY,
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file]
-    logging.info("Conditional setup! Setup embedded:\n")
-    for item in global_list:
-        logging.info(item)
     return np.nan
 
 def RatioMatrixReadFile(ratiofile):

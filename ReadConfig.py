@@ -1,9 +1,8 @@
 #################################################################
 #                                                               #
 #          CONFIGURATION PARSER                                 #
-#                                                               #
+#                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#                                                               #
 #################################################################
 
 import logging
@@ -11,11 +10,6 @@ import os
 
 workpath = os.getcwd()
 cfgfile = workpath + '\config.cfg'
-
-logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-        filename = 'logfile.log',level = logging.DEBUG)
-with open('logfile.log','w+') as mylog: mylog.truncate(0)
-logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
 logging.debug("Importing module ReadConfig.py...")
 
 def check_config():
@@ -118,6 +112,7 @@ def unpack_cfg():
     all_parameters = getconfig()
     CONFIG = all_parameters[0]
     CALIB = all_parameters[1]
-    logging.info("CONFIGURATION UNPACKED!\n{0}\n{1}".format(CONFIG,CALIB))
     return CONFIG, CALIB
 
+if __name__ == "__main__":
+    logging.info("This is ReadConfig")

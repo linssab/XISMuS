@@ -1,9 +1,8 @@
 #################################################################
 #                                                               #
 #          DATABASE FOR ELEMENTS (XRAYLIB BASED)                #
-#                        version: 1.0                           #
+#                        version: 1.0 - Nov - 2019              #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#                                                               #
 #################################################################
 
 import numpy as np

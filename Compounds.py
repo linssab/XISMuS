@@ -1,9 +1,8 @@
 #################################################################
 #                                                               #
-#          CHEMEX                                               #
-#                        version: 2.0                           #
+#          CHEMEX (Compounds handler)                           #
+#                        version: 2.0 - Oct - 2019              #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#                                                               #
 #################################################################
 
 import numpy as np
@@ -37,7 +36,7 @@ CompoundList = {
 WeightList = {
 
         'Au24'          :{'Au':0.999,'Ag':0.001},
-        'FibulaGold'    :{'Au':0.8049,'Cu':0.0431,'Hg':0.1519},
+        'FibulaGold'    :{'Au':0.88,'Hg':0.12},
         'Tumbaga'       :{'Au':0.12,'Ag':0.16,'Cu':0.72},
         'SardinianCu'   :{'Cu':0.90,'Sn':0.081,'Pb':0.019},
         'LinOil'        :{'C':0.78,'O':0.11,'H':0.11},
@@ -265,8 +264,8 @@ if __name__=="__main__":
     ############################################
 
     mycompound = compound()
-    mycompound.set_compound('TiWhite')
-    mycompound.set_attenuation(30)
+    mycompound.set_compound('FibulaGold')
+    mycompound.set_attenuation("Cu")
 
     for key in mycompound.__dict__:
         print(key, mycompound.__dict__[key])

@@ -3,7 +3,6 @@
 #          IMAGE MATH	                                        #
 #                        version: 0.0.2α                        #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#                                                               #
 #################################################################
 
 import logging,os
