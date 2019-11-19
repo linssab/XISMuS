@@ -45,6 +45,12 @@ WeightList = {
                 # After Favaro, 2010 and Gonzalez, 2015
         }
 
+def ListDatabase():
+    ListDatabase = dict(CompoundList,**WeightList)
+    for key in ListDatabase:
+        print(key,ListDatabase[key])
+    return 0
+
 class compound:
     
     def __init__(__self__):
@@ -271,4 +277,4 @@ if __name__=="__main__":
         print(key, mycompound.__dict__[key])
     
     print(mycompound.lin_att)
-     
+    ListDatabase() 
