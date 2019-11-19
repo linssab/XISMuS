@@ -4,7 +4,7 @@ This module creates virtual compounds either from a database or from user input.
 The virtual compound object will contain its chemical and physical attributes.
 A compound can be initialized either by entering the name of a compound exisitng in the current database or by manually passing the parameters.
 Compounds created via the weights fractions of elements will have .mass and .chem attributes empty.
-Database can be checked via `Compounds.CompoundList`
+Database can be checked via `Compounds.ListDatabase()`
 
 ---
 
@@ -31,8 +31,8 @@ All compounds in the example will have the same properties.
 
 #### Compounds.set_attenuation(_energy_)
   Parameters:
-  * **energy: _string_**
-  <br>The element the compound will be attenuating. E.g. if energy is set as 'Pb', it means the coeficients will be calculated for the attenuation of lead lines.
+  * **energy: _string_ or _integer_**
+  <br>The element the compound will be attenuating. _E.g._ if energy is set as 'Pb', it means the coeficients will be calculated for the attenuation of lead lines. If an integer is entered, the coefficients will be calculated for that one specific energy. It will still return a tuple, but with the second element equal to 0.
   
   Example:
   ```python
