@@ -857,7 +857,7 @@ class Settings:
         __self__.Settings.title("Settings")
         icon = os.getcwd()+"\\images\\icons\\settings.ico"
         __self__.Settings.iconbitmap(icon)  
-        __self__.Settings.master.protocol("WM_DELETE_WINDOW",__self__.kill_window)
+        __self__.Settings.protocol("WM_DELETE_WINDOW",__self__.kill_window)
         place_center(root.master,__self__.Settings)
 
     def build_widgets(__self__):
@@ -870,7 +870,7 @@ class Settings:
         __self__.PlotMode.set(root.PlotMode)
         __self__.CoreMode.set(root.MultiCore)
         __self__.RAMMode.set(root.RAM_limit)
-        __self__.RAMEntry.set(convert_bytes(root.RAM_limit_value).split(" ")[0])
+        __self__.RAMEntry.set('%.2f'%(float(convert_bytes(root.RAM_limit_value).split(" ")[0])*0.75))
         __self__.RAMUnit.set(convert_bytes(root.RAM_limit_value).split(" ")[1])
         
         PlotLabel = Label(__self__.TextFrame,text="Plot mode: ")
@@ -895,8 +895,8 @@ class Settings:
         RAMOption.grid(row=3,column=0,columnspan=2,sticky=E)
         RAMOptionText = Label(__self__.ScreenFrame, text="Yes")
         RAMOptionText.grid(row=3,column=2,sticky=E)
-        __self__.RAMEntry = Entry(__self__.ScreenFrame, textvariable=__self__.RAMEntry,width=13-RAMUnit.winfo_width())
-        __self__.RAMEntry.grid(row=4,column=0,columnspan=2,sticky=W)
+        __self__.RAMEntryBox = Entry(__self__.ScreenFrame, textvariable=__self__.RAMEntry,width=13-RAMUnit.winfo_width())
+        __self__.RAMEntryBox.grid(row=4,column=0,columnspan=2,sticky=W)
         RAMCountLabel = Label(__self__.TextFrame,text="Available RAM: "+str(__self__.RAM_free))
         RAMCountLabel.grid(row=4,column=0,sticky=W)
 
@@ -924,8 +924,10 @@ class Settings:
             root.master.destroy()
 
     def kill_window(__self__):
-        del root.SettingsWin 
-        __self__.Settings.destroy()
+        try: 
+            del root.SettingsWin 
+            __self__.Settings.destroy()
+        except: pass
 
     def save_settings(__self__):
         root.RAM_limit = __self__.RAMMode.get()
@@ -1551,43 +1553,55 @@ class MainGUI:
         __self__.ConfigDiag = Toplevel()
         __self__.ConfigDiag.resizable(False,False)
         __self__.ConfigDiag.title("Configuration")
+        __self__.ConfigDiagFrame = Frame(__self__.ConfigDiag,padx=15,pady=15)
+        __self__.ConfigDiagLabels = Frame(__self__.ConfigDiag,padx=15,pady=15)
+        __self__.ConfigDiagFrame.grid(row=0, column=1)
+        __self__.ConfigDiagLabels.grid(row=0, column=0)
 
-        Label1 = Label(__self__.ConfigDiag, text="Sample directory:")
-        Label2 = Label(__self__.ConfigDiag, text="Background strip mode:")
-        Label3 = Label(__self__.ConfigDiag, text="Calculate ratios?")
-        Label4 = Label(__self__.ConfigDiag, text="Thick ratio:")
-        Label5 = Label(__self__.ConfigDiag, text="Calibration:")
-        Label6 = Label(__self__.ConfigDiag, text="Enhance image?")
-        Label7 = Label(__self__.ConfigDiag, text="Netpeak area method:")
+        #Label1 = Label(__self__.ConfigDiagLabels, text="Sample directory:")
+        Label2 = Label(__self__.ConfigDiagLabels, text="Background strip mode:")
+        Label3 = Label(__self__.ConfigDiagLabels, text="Calculate ratios?")
+        #Label4 = Label(__self__.ConfigDiagLabels, text="Thick ratio:")
+        Label5 = Label(__self__.ConfigDiagLabels, text="Calibration:")
+        Label6 = Label(__self__.ConfigDiagLabels, text="Enhance image?")
+        Label7 = Label(__self__.ConfigDiagLabels, text="Netpeak area method:")
         
-        Label1.grid(row=0,column=0,sticky=W,pady=3)
-        Label2.grid(row=1,column=0,sticky=W,pady=3)
-        Label3.grid(row=2,column=0,sticky=W,pady=3)
-        Label4.grid(row=3,column=0,sticky=W,pady=3)
-        Label5.grid(row=4,column=0,sticky=W,pady=3)
-        Label6.grid(row=5,column=0,sticky=W,pady=3)
-        Label7.grid(row=6,column=0,sticky=W,pady=3)
+        #Label1.grid(row=0,column=0,sticky=W,pady=2)
+        Label2.grid(row=1,column=0,sticky=W,pady=2)
+        Label3.grid(row=2,column=0,sticky=W,pady=2)
+        #Label4.grid(row=3,column=0,sticky=W,pady=2)
+        Label5.grid(row=4,column=0,sticky=W,pady=2)
+        Label6.grid(row=5,column=0,sticky=W,pady=2)
+        Label7.grid(row=6,column=0,sticky=W,pady=2)
         
-        DirectoryVar = StringVar(__self__.ConfigDiag)
-        __self__.ConfigDiagDirectory = Entry(__self__.ConfigDiag,textvariable=DirectoryVar)
+        ConfigDiagRatioYes = Label(__self__.ConfigDiagFrame, text="Yes")
+        ConfigDiagRatioYes.grid(row=2,column=1,sticky=E,pady=2)
+        ConfigDiagEnhanceYes = Label(__self__.ConfigDiagFrame, text="Yes")
+        ConfigDiagEnhanceYes.grid(row=5,column=1,sticky=E,pady=2)
         
-        BgstripVar = StringVar(__self__.ConfigDiag)
-        __self__.ConfigDiagBgstrip = ttk.Combobox(__self__.ConfigDiag, textvariable=BgstripVar, values=("None","SNIPBG"))
+        BgstripVar = StringVar()
+        __self__.ConfigDiagBgstrip = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=BgstripVar, values=("None","SNIPBG"),\
+                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
+        
+        DirectoryVar = StringVar()
+        #__self__.ConfigDiagDirectory = Entry(__self__.ConfigDiagFrame,textvariable=DirectoryVar,width=__self__.ConfigDiagBgstrip.winfo_width())
         
         RatioVar = BooleanVar()
-        __self__.ConfigDiagRatio = Checkbutton(__self__.ConfigDiag, variable=RatioVar)
+        __self__.ConfigDiagRatio = Checkbutton(__self__.ConfigDiagFrame, variable=RatioVar)
         
         ThickVar = DoubleVar()
-        __self__.ConfigDiagThick = Entry(__self__.ConfigDiag, textvariable=ThickVar)
+        #__self__.ConfigDiagThick = Entry(__self__.ConfigDiagFrame, textvariable=ThickVar,width=13)
         
-        CalibVar = StringVar(__self__.ConfigDiag)
-        __self__.ConfigDiagCalib = ttk.Combobox(__self__.ConfigDiag, textvariable=CalibVar, values=("from_source","manual"))
+        CalibVar = StringVar()
+        __self__.ConfigDiagCalib = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=CalibVar, values=("from_source","manual"),\
+                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
 
         EnhanceVar = BooleanVar()
-        __self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiag, variable=EnhanceVar)
+        __self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiagFrame, variable=EnhanceVar)
         
-        MethodVar = StringVar(__self__.ConfigDiag)
-        __self__.ConfigDiagMethod = ttk.Combobox(__self__.ConfigDiag, textvariable=MethodVar, values=("simple_roi","auto_roi","PyMcaFit"))
+        MethodVar = StringVar()
+        __self__.ConfigDiagMethod = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=MethodVar, values=("simple_roi","auto_roi","PyMcaFit"),\
+                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
         
         DirectoryVar.set(SpecRead.CONFIG.get('directory'))
         BgstripVar.set(SpecRead.CONFIG.get('bgstrip'))
@@ -1597,23 +1611,22 @@ class MainGUI:
         MethodVar.set(SpecRead.CONFIG.get('peakmethod'))
         EnhanceVar.set(SpecRead.CONFIG.get('enhance'))
 
-        __self__.ConfigDiagDirectory.grid(row=0,column=1,sticky=E,padx=16)
-        __self__.ConfigDiagBgstrip.grid(row=1,column=1,sticky=E,padx=16)
-        __self__.ConfigDiagRatio.grid(row=2,column=1,sticky=E,padx=16)
-        __self__.ConfigDiagThick.grid(row=3,column=1,sticky=E,padx=16)
-        __self__.ConfigDiagCalib.grid(row=4,column=1,sticky=E,padx=16)
-        __self__.ConfigDiagEnhance.grid(row=5,column=1,sticky=E,padx=16)
-        __self__.ConfigDiagMethod.grid(row=6,column=1,sticky=E,padx=16)
+        #__self__.ConfigDiagDirectory.grid(row=0,column=1,sticky=E)
+        __self__.ConfigDiagBgstrip.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagRatio.grid(row=2,column=0,sticky=E,pady=2)
+        #__self__.ConfigDiagThick.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagCalib.grid(row=4,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagEnhance.grid(row=5,column=0,sticky=E,pady=2)
+        __self__.ConfigDiagMethod.grid(row=6,column=0,columnspan=2,sticky=E,pady=2)
         
-        Label(__self__.ConfigDiag).grid(row=7)
         ButtonsFrame = Frame(__self__.ConfigDiag)
-        ButtonsFrame.grid(row=8,columnspan=2)
-        SaveButton = Button(ButtonsFrame, text="SAVE", justify=CENTER, width=12, pady=4, bd=3,\
+        ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
+        SaveButton = Button(ButtonsFrame, text="Save", justify=CENTER, width=10,\
                 command=check_method_and_save)
-        SaveButton.grid(row=8,column=0,sticky=S,padx=16)
-        CancelButton = Button(ButtonsFrame, text="CANCEL", justify=CENTER, width=12, pady=4, bd=3,\
+        SaveButton.grid(row=8,column=0,sticky=S)
+        CancelButton = Button(ButtonsFrame, text="Cancel", justify=CENTER, width=10,\
                 command=__self__.wipe)
-        CancelButton.grid(row=8,column=1,sticky=S,padx=16)
+        CancelButton.grid(row=8,column=1,sticky=S)
         
         place_center(root.master,__self__.ConfigDiag)
 
@@ -1638,7 +1651,7 @@ def refresh_plots():
         except: pass
         try: 
             root.combined.draw_spec(\
-                mode=['mps','summation'],display_mode=root.plot_display,lines=lines)
+                mode=['summation','mps'],display_mode=root.plot_display,lines=lines)
             root.combined.update_idletasks()
         except: pass
         
@@ -1710,20 +1723,30 @@ class PeriodicTable:
                 messagebox.showerror("Memory Error!","Multiprocessing copies the datacube for each running instance.\nMemory needed: {}\nMemory available: {}\nProcess will follow in a single instance and may take a while.".format(process_memory[0],process_memory[1]))   
 
             # multi-core mode
-            if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 999\
-                    and needed_memory < sys_mem["available"] and\
-                    needed_memory < root.RAM_limit_value and root.MultiCore == True:
-                
-                cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
-                results = cuber.start_workers()
-                cuber.p_bar.update_text("Digesting results...")
-                results = sort_results(results,FIND_ELEMENT_LIST)
-                digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
-                cuber.p_bar.destroybar()
+            if MY_DATACUBE.config["peakmethod"] != "simple_roi":
+                if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 999\
+                        and needed_memory < sys_mem["available"] and\
+                        needed_memory < root.RAM_limit_value and root.MultiCore == True:
+                    
+                    cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
+                    results = cuber.start_workers()
+                    cuber.p_bar.update_text("Digesting results...")
+                    results = sort_results(results,FIND_ELEMENT_LIST)
+                    digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
+                    cuber.p_bar.destroybar()
 
-            # single-core mode
-            else: 
-                MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+                # single-core mode
+                else: 
+                    MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+            
+            else:
+                results = []
+                for element in FIND_ELEMENT_LIST:
+                    lines = select_lines(element,MY_DATACUBE.config["ratio"])
+                    elmap, ROI = (grab_simple_roi_image(MY_DATACUBE,lines))
+                    results.append((elmap, ROI, element))
+                sort_results(results,FIND_ELEMENT_LIST)
+                digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
 
             # reactivate widgets
             wipe_list()
@@ -1968,22 +1991,8 @@ def check_screen_resolution(resolution_tuple):
 
               
 if __name__ == "__main__":
-    import logging, time
-    from multiprocessing import freeze_support
-    freeze_support()
-    logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-            filename = 'logfile.log',level = logging.INFO)
-    try: 
-        with open('logfile.log','w+') as mylog: mylog.truncate(0)
-    except IOError as exception:
-        logging.info("Cannot create logfile! Error {}.".format(exception.__class__.__name__))
-        messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.getcwd()))
-    logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
-    log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-    logging.info(log_start)   
-
-
-    VERSION = "0.0.1α"
+    
+    VERSION = "0.0.2α"
     optimum_resolution = (1920,1080)
 
     # tcl/Tk imports
@@ -1991,14 +2000,32 @@ if __name__ == "__main__":
     from tkinter import ttk
     from tkinter import messagebox
     from tkinter import filedialog
-
+     
     # general utilities
     import numpy as np
     import sys, os, copy, pickle, stat
     import shutil
     from psutil import virtual_memory
     from psutil import cpu_count
-
+    import logging, time
+    from multiprocessing import freeze_support
+    freeze_support()
+    
+    # tries to create logfile on exe folder
+    try: 
+        logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
+            filename = 'logfile.log',level = logging.INFO)
+        with open('logfile.log','w+') as mylog: mylog.truncate(0)
+        logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
+        log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+        logging.info(log_start)   
+    except IOError as exception:
+        p = Tk()
+        p.iconify()
+        logging.info("Cannot create logfile! Error {}.".format(exception.__class__.__name__))
+        messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.getcwd()))
+        sys.exit()
+    
     # matplotlib imports
     import matplotlib
     import matplotlib.pyplot as plt
@@ -2017,7 +2044,7 @@ if __name__ == "__main__":
     from SpecMath import getstackplot, correlate
     from SpecMath import datacube as Cube
     from EnergyLib import plottables_dict
-    from Mapping import getpeakmap
+    from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results
 
     logging.info("Loading GUI...")

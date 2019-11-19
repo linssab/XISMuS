@@ -8,6 +8,7 @@
 import numpy as np
 import os, sys, logging, multiprocessing
 from multiprocessing import freeze_support
+from psutil import cpu_count
 freeze_support()
 #in python 3 Queue is lowercase:
 import queue
@@ -49,59 +50,6 @@ def break_list(element_list):
         chunks.append(slice1)
     return chunks
 
-def grab_simple_roi_image(cube,lines,iterator):
-    
-    '''
-    Prepare the variables to pass into the matrix slicer
-    using SpecMath function setROI it calculates the start and
-    end position of the peaks in lines variable
-    The position is read from the stacksum derived spectrum
-    
-    idea: verify the existence of the peak in MPS AND stacksum
-    '''
-    results = []
-    
-    ROI = np.zeros(cube.energyaxis.shape[0])
-    ka_idx = setROI(lines[0],cube.energyaxis,cube.sum,cube.config)
-    ka_peakdata = cube.sum[ka_idx[0]:ka_idx[1]]
-    ka_map = np.zeros([cube.dimension[0],cube.dimension[1]])
-    kb_map = np.zeros([cube.dimension[0],cube.dimension[1]])
-    if cube.config["ratio"] == True:
-        kb_idx = setROI(lines[1],cube.energyaxis,cube.sum,cube.config)
-        kb_peakdata = cube.sum[kb_idx[0]:kb_idx[1]]
-        if kb_idx[3] == False and ka_idx[3] == False:
-            logging.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
-        elif kb_idx[3] == False: 
-            logging.warning("No beta line {} detected. Continuing with alpha only.".format(lines[1]))
-    else:
-        pass
-    
-    slice_matrix(cube.matrix,cube.background,ka_map,ka_idx,ROI,iterator)
-    if cube.config["ratio"] == True:
-        if kb_idx[3] == True:
-            slice_matrix(cube.matrix,cube.background,kb_map,kb_idx,ROI,iterator)
-    
-    results.append(ka_map)
-    results.append(kb_map)
-    return results, ROI
-
-#@jit
-def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI,iterator):
-    """
-    Slices the matrix
-    """
-    c = 0
-    for x in range(matrix.shape[0]):
-        for y in range(matrix.shape[1]):
-            a = float(matrix[x][y][indexes[0]:indexes[1]].sum())
-            b = float(bg_matrix[x][y][indexes[0]:indexes[1]].sum())
-            if b > a: c == 0
-            else: c = a-b
-            new_image[x,y] = c
-            iterator.value = iterator.value + 1
-            ROI[indexes[0]:indexes[1]]=ROI[indexes[0]:indexes[1]] + matrix[x][y][indexes[0]:indexes[1]]
-    return new_image
-
 def grab_line(cube,lines,iterator,Element):
     """
     Uses SpecMath library to get the net area of the energies passed as
@@ -119,6 +67,7 @@ def grab_line(cube,lines,iterator,Element):
     currenty = scan[1]
     el_dist_map = np.zeros([2,matrix_dimension[0],matrix_dimension[1]]) 
     ROI = np.zeros([energyaxis.shape[0]])
+    FITFAIL = 0
 
     for pos in range(cube.img_size):
                
@@ -131,15 +80,14 @@ def grab_line(cube,lines,iterator,Element):
         #######################################
 
         if cube.config["peakmethod"] == 'PyMcaFit': 
-            try:
-                usedif2 = False
-                specdata = SpecFitter.fit(specdata)
-            except:
-                FITFAIL += 1
-                usedif2 = True
-                logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
-                        .format(pos,cube.img_size))
-        elif cube.config["peakmethod"] == 'simple_roi': specdata = specdata
+            #try:
+            usedif2 = False
+            specdata = fit(specdata,Element)
+            #except:
+            #    FITFAIL += 1
+            #    usedif2 = True
+            #    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
+            #            .format(pos,cube.img_size))
         elif cube.config["peakmethod"] == 'auto_roi': specdata = specdata
         else: 
             raise Exception("peakmethod {0} not recognized.".\
@@ -202,8 +150,6 @@ def grab_line(cube,lines,iterator,Element):
     ################################
     
     timestamp = time.time() - start_time
-    if cube.config["peakmethod"] == 'PyMcaFit': 
-        logging.warning("Fit fail: {0}%".format(100*FITFAIL/cube.dimension))
 
     if cube.config["peakmethod"] == 'auto_roi': 
         el_dist_map = interpolate_zeros(el_dist_map)
@@ -261,12 +207,9 @@ def start_reader(cube,Element,iterator,results):
             line_no = 1
             lines = [kaenergy,0]
 
-        if  cube.config["peakmethod"] == "simple_roi":
-            elmap, ROI = grab_simple_roi_image(cube,lines,iterator)
-        else: 
-            elmap, ROI = grab_line(cube,lines,iterator,Element)
-        
+        elmap, ROI = grab_line(cube,lines,iterator,Element)
         results.put((elmap,ROI,Element))
+        
         return results
    
     call_peakmethod(cube,Element,iterator,results) 
@@ -287,6 +230,7 @@ class Cube_reader():
         __self__.process_names = []
         __self__.run_count = 0 
         __self__.chunks = break_list(__self__.element_list)
+        #from SpecFitter import fit
     
     def start_workers(__self__):
         __self__.p_bar.progress["maximum"] = __self__.cube.img_size*len(__self__.element_list)
