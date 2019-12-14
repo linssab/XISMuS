@@ -181,9 +181,7 @@ class compound:
                 ele_no = EnergyLib.Element_No[element]
                 attenergy_a = EnergyLib.Energies[attenuated_no]
                 attenergy_b = EnergyLib.kbEnergies[attenuated_no]
-                #total_att = linattenuation(element,energy)
                 mu1,mu2 = xlib.CS_Total(ele_no,attenergy_a),xlib.CS_Total(ele_no,attenergy_b)
-                #mu1,mu2 = total_att[0],total_att[1]
                 mu1_w += mu1*__self__.weight[element]
                 mu2_w += mu2*__self__.weight[element]
         __self__.tot_att = (mu1_w,mu2_w) 
@@ -191,26 +189,6 @@ class compound:
     
     def give_name(__self__,a_string):
         __self__.name = a_string
-
-def linattenuation(element,KaKb):
-    if KaKb == 'E0':
-        coefficients = EnergyLib.muE0[element]
-        mu1 = coefficients*EnergyLib.density[element]
-        mu2 = 0
-    elif KaKb == 'Pb': 
-        coefficients = EnergyLib.muPb[element]
-        mu1 = coefficients[0]
-        mu2 = coefficients[1]
-    elif KaKb == 'Cu':
-        coefficients = EnergyLib.muCu[element]
-        mu1 = coefficients[0]
-        mu2 = coefficients[1]
-    else:
-        logging.warning("Impossible to create heightmap for {0}!".format(KaKb))
-        logging.warning("{0} is not a valid element for ratio calculation!\n\t\t\
-                Try again using a different element such as Au, Pb or Zn.".format(KaKb))
-        raise ValueError
-    return mu1,mu2
 
 def split_energies(element):
     energy_a = EnergyLib.Energies[EnergyLib.Element_No[element]]
@@ -266,15 +244,20 @@ if __name__=="__main__":
     print(coblue.origin)
     print(linoil.origin)
     print(mixture.origin)
-    """
-    ############################################
-
-    mycompound = compound()
-    mycompound.set_compound('FibulaGold')
-    mycompound.set_attenuation("Cu")
-
-    for key in mycompound.__dict__:
-        print(key, mycompound.__dict__[key])
     
-    print(mycompound.lin_att)
+    ############################################
+    import os
+    att_file = open(os.getcwd()+"\\output\\att_.txt","w+")
+    for i in range(0,102,2):
+        mycompound = compound()
+        mycompound.set_compound([i/100,(100-i)/100],["Hg","Au"],ctype="custom",mode="by_weight")
+        mycompound.set_attenuation("Cu")
+        for key in mycompound.__dict__:
+            print(key, mycompound.__dict__[key])
+
+        att_file.write("{}\t{}\t{}\t{}\n".format(i,int(mycompound.lin_att[0]),int(mycompound.lin_att[1]),int(mycompound.lin_att[1]-mycompound.lin_att[0])))
+    att_file.close()
+
+    print(EnergyLib.DensityDict["Cu"])
     ListDatabase() 
+    """
