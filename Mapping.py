@@ -71,7 +71,7 @@ def select_lines(element,ratio):
         lines = [kaenergy,0]
     return lines
 
-def grab_simple_roi_image(cube,lines):
+def grab_simple_roi_image(cube,lines,custom_energy=False):
     
     '''
     Prepare the variables to pass into the matrix slicer
@@ -82,29 +82,48 @@ def grab_simple_roi_image(cube,lines):
     idea: verify the existence of the peak in MPS AND stacksum
     '''
     results = []
-    
     ROI = np.zeros(cube.energyaxis.shape[0])
-    ka_idx = SpecMath.setROI(lines[0],cube.energyaxis,cube.sum,cube.config)
-    ka_peakdata = cube.sum[ka_idx[0]:ka_idx[1]]
-    ka_map = np.zeros([cube.dimension[0],cube.dimension[1]])
-    kb_map = np.zeros([cube.dimension[0],cube.dimension[1]])
-    if cube.config["ratio"] == True:
-        kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.sum,cube.config)
-        kb_peakdata = cube.sum[kb_idx[0]:kb_idx[1]]
-        if kb_idx[3] == False and ka_idx[3] == False:
-            logging.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
-        elif kb_idx[3] == False: 
-            logging.warning("No beta line {} detected. Continuing with alpha only.".format(lines[1]))
+    
+    if custom_energy == True:
+        indexes = [0,0]
+        custom_map = np.zeros([cube.dimension[0],cube.dimension[1]])
+        idx = 0
+        while cube.energyaxis[idx] <= lines[0]:
+            idx+=1
+        indexes[0] = idx
+        while cube.energyaxis[idx] <= lines[1]:
+            idx+=1
+        indexes[1] = idx
+        
+        slice_matrix(cube.matrix,cube.background,custom_map,indexes,ROI)
+        results.append(custom_map)
+        results.append(custom_map)
+    
     else:
-        pass
-    
-    slice_matrix(cube.matrix,cube.background,ka_map,ka_idx,ROI)
-    if cube.config["ratio"] == True:
-        if kb_idx[3] == True:
-            slice_matrix(cube.matrix,cube.background,kb_map,kb_idx,ROI)
-    
-    results.append(ka_map)
-    results.append(kb_map)
+        # sets up the indexes to slice
+        ka_map = np.zeros([cube.dimension[0],cube.dimension[1]])
+        kb_map = np.zeros([cube.dimension[0],cube.dimension[1]])
+        
+        ka_idx = SpecMath.setROI(lines[0],cube.energyaxis,cube.sum,cube.config)
+        # verifies beta line for the element
+        if cube.config["ratio"] == True:
+            kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.sum,cube.config)
+            if kb_idx[3] == False and ka_idx[3] == False:
+                logging.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
+            elif kb_idx[3] == False: 
+                logging.warning("No beta line {} detected. Continuing with alpha only.".format(lines[1]))
+        else:
+            pass
+        
+        # follows the execution and slice the data
+        slice_matrix(cube.matrix,cube.background,ka_map,ka_idx,ROI)
+        if cube.config["ratio"] == True:
+            if kb_idx[3] == True:
+                slice_matrix(cube.matrix,cube.background,kb_map,kb_idx,ROI)
+        
+        # append results
+        results.append(ka_map)
+        results.append(kb_map)
     return results, ROI
 
 #@jit
