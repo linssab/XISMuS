@@ -9,12 +9,4 @@ output\
 \output
 .ipynb_checkpoints\
 \.ipynb_checkpoints
-CUDAtest.py
-CheckPeaks.py
-Mapping_NOGUI.py
-PeriodicTable.py
-OpenCamera.py
-Core.py
-setup.py
 config.MC.cfg
-CoreGUI.spec
