@@ -7,7 +7,7 @@
 
 import logging
 logging.debug("Importing module SpecMath.py...")
-import os
+import os, time
 import sys
 import numpy as np
 import pickle
@@ -51,6 +51,7 @@ class Busy:
         __self__.master.body.grid(row=1,column=0)
         __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
         __self__.progress.grid(row=0,column=0)
+        __self__.master.grab_set()
 
     def updatebar(__self__,value):
         __self__.progress["value"] = value
@@ -61,6 +62,7 @@ class Busy:
         __self__.master.update()
 
     def destroybar(__self__):
+        __self__.master.grab_release()
         __self__.master.destroy()
 
 #logging.debug("Importing numba environmental variables...")
@@ -76,7 +78,6 @@ class Busy:
 
 NOISE = 80
 FANO = 0.114
-compilation_progress = 0
 
 class datacube:
     
@@ -119,9 +120,9 @@ class datacube:
         sum_file = open(output_path+'stacksum.mca','w+')
         
         #writes header
-        sum_file.write("<<PMCA SPECTRUM>>\nTAG - live_data_2\nDESCRIPTION -\n")
-        sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - 280\n")
-        sum_file.write("LIVE_TIME - 28.5880\nREAL_TIME - 29.3560\nSTART_TIME - 05/11/2017 22:10:19\n")
+        sum_file.write("<<PMCA SPECTRUM>>\nTAG - sum_derived\nDESCRIPTION -\n")
+        sum_file.write("GAIN - 0\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - 0\n")
+        sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\n{}\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
         sum_file.write("SERIAL_NUMBER - 1912\n<<CALIBRATION>>\nLABEL - Channel\n")
         for pair in __self__.calibration:
             sum_file.write("{0} {1}\n".format(pair[0],pair[1]))
@@ -147,10 +148,13 @@ class datacube:
         if bgstrip == 'None':
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
         elif bgstrip == 'SNIPBG':
+            try: cycles, window,savgol,order= __self__.config["bg_settings"] 
+            except: cycles, window, savgol, order = 24,5,5,3
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
-                    stripped = peakstrip(__self__.matrix[x,y],24,7)
+                    # default cycle and sampling window = 24, 7
+                    stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
                     __self__.background[x,y] = stripped
                     __self__.sum_bg += stripped
                     counter = counter + 1
@@ -245,6 +249,7 @@ class datacube:
                     if __self__.__dict__[element+"_a"].max() > 0:
                         packed.append(element+"_a")
             else: pass
+        if hasattr(__self__,"custom_a"): packed.append("custom_a")
         return packed
 
     def prepack_elements(__self__,element_list):
@@ -255,6 +260,7 @@ class datacube:
             __self__.max_counts[element+"_a"] = 0
             __self__.max_counts[element+"_b"] = 0
             __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
+        __self__.__dict__["custom"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
     
 def shift_center(xarray,yarray):
     ymax = yarray.max()
@@ -479,7 +485,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     if TESTFNC == True:
  
         print(5*"*" + " IS A PEAK? " + 5*"*" + "\n\t{0}\t".format(isapeak))
-        print("RAW peak: {0}\t bg: {1}\nyDATA peak: {2}"\
+        print("RAW peak: {0}\t 3*BG: {1}\nDATA peak: {2}"\
                .format(original_data.sum(),(3*ROIbg.sum()),ydata.sum()))
         chi2 = 0
         for i in range(len(original_data)):
@@ -494,7 +500,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
                 ydata[idx[2]],smooth_dif2[idx[2]]))
         except: pass
         print("idx[2] = {0}".format(idx[2]))
-        print("Lookup: {0} Area: {1}\n".format(lookup,Area))
+        print("Lookup: {0} Area(DATA_PEAK - BG): {1}\n".format(lookup,Area))
     
         plt.plot(xdata,ydata, label='data')
         plt.plot(xdata,original_data, label='RAW data')
@@ -522,8 +528,8 @@ def strip(an_array,cycles,width):
     return an_array
 
 #@guvectorize([(float64[:], int64, int64, float64[:])], '(n),(),()->(n)')       
-def peakstrip(an_array,cycles,width):
-   
+def peakstrip(an_array,cycles,width,*args):
+    
     TEST = False
 
     #initialize snip_bg array
@@ -533,7 +539,15 @@ def peakstrip(an_array,cycles,width):
     sqr_data = an_array**0.5
 
     #apply savgol filter to the square root data
-    smooth_sqr = scipy.signal.savgol_filter(sqr_data,width,3)
+    if len(args) > 0:
+        savgol_window,order = args[0],args[1]
+        try: 
+            #print("sav_gol: {}\torder: {}\tcycles: {}\twindow: {}".format(savgol_window,order,cycles,width))
+            smooth_sqr = scipy.signal.savgol_filter(sqr_data,savgol_window,order)
+        except:
+            raise ValueError
+    else: smooth_sqr = scipy.signal.savgol_filter(sqr_data,width,3)
+    
     for i in range(smooth_sqr.shape[0]): 
         if smooth_sqr[i] < 0: smooth_sqr[i] = 0
     
@@ -542,7 +556,16 @@ def peakstrip(an_array,cycles,width):
 
     #transform back
     snip_bg **= 2
-    snip_bg = scipy.signal.savgol_filter(snip_bg,width,3)
+   
+    #apply savgol filter to final background
+    if len(args) > 0:
+        savgol_window,order = args[0],args[1]
+        try: smooth_sqr = scipy.signal.savgol_filter(snip_bg,savgol_window,order)
+        except:
+            raise ValueError
+    else: 
+        snip_bg, width = 5,5
+        smooth_sqr = scipy.signal.savgol_filter(snip_bg,width,3)
     
     if TEST == True:
         plt.semilogy(snip_bg,label="background")

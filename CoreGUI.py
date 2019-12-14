@@ -7,15 +7,31 @@
 
 global MY_DATACUBE, FIND_ELEMENT_LIST
 MY_DATACUBE, FIND_ELEMENT_LIST = None, None
+authorized = ["00000000-0000-0000-0000-482ae32e7623","00000000-0000-0000-0000-3cf011262a2c"]
+
+VERSION = "0.0.2α"
+
+def read_license():
+    import uuid
+    sysid = str(uuid.UUID(int=uuid.getnode()))
+    with open("sysid.id","wb") as idfile:
+        b_sysid = sysid.encode("utf-8")
+        idfile.write(b_sysid)
+    return sysid
 
 def start_up():
+    license = read_license()
+    if license not in authorized:
+        license_error(VERSION)
     SpecRead.conditional_setup()
     logging.info("Setting up...")
     try: load_cube()
     except: pass
     logging.info("Done.")
     global FIND_ELEMENT_LIST
+    global snip_config
     FIND_ELEMENT_LIST = []
+    snip_config = None
 
 def wipe_list():
     global FIND_ELEMENT_LIST
@@ -61,7 +77,7 @@ def place_center(window1,window2):
     x = window1.winfo_rootx() + (int(win_width/2)) - (int(width2/2))
     y = window1.winfo_rooty() - titlebar_height + (int(height/2)) - (int(height2/2))
     window2.geometry('{}x{}+{}+{}'.format(width2, height2, x, y))
-    #window2.deiconify()
+    window2.deiconify()
 
 def spawn_center(window):
     width = window.winfo_screenwidth()
@@ -111,7 +127,7 @@ def call_help():
     HelpWindow = Toplevel(master=root.master)
     HelpWindow.title("Help")
     HelpWindow.resizable(False,False)
-    HelpText= "I will write something here. I promise."
+    HelpText= "There are some known issues with the program, for example:\nMapping elements in the lower or higher end of the energy spectrum may give unsatisfactory results.\n\nSTARTING UP:\nTo load a sample, click on load sample and double click the name of the sample which appears in the left column. A configuration window will appear.\nYou can set the parameters accordingly, including the background extration parameters manually. If you choose not to do it, default parameters will be applied.\nTo map chemical elements of interest, click on the \"Map Elements\"button. If any derivate spectrum plot window is open, when clicking the elements you will be able to view the \"position\" of each element in the plot window.\nCustom energy ranges can be selected by clicking the \"Custom\" button in the periodic table AFTER typing the desired energy range.\n\nDATA ANALYSIS:\nTo visualize the generated maps, simply click on the \"Image Analyzer\" button. All images are automatically saved (withou any filtering) in the output folder under the program directory."
     HelpLabel = Label(HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
     HelpLabel.grid(sticky=W)
     return np.nan
@@ -151,8 +167,11 @@ def call_compilecube():
 
 def prompt_folder():
     folder = filedialog.askdirectory()
-    SpecRead.samples_folder = folder+"\\"
-    root.refresh_samples()
+    if folder != "":
+        SpecRead.samples_folder = folder+"\\"
+        root.refresh_samples()
+    else:
+        pass
     return 0
 
 def call_heightmap():
@@ -173,6 +192,144 @@ def load_cube():
         pass
     return MY_DATACUBE
 
+
+class PeakClipper:
+    
+    def __init__(__self__,parent):
+        __self__.master = Toplevel(parent)
+        __self__.parent = parent
+        __self__.master.resizable(False,False)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+        __self__.frame1 = Frame(__self__.master,height=320,width=240)
+        __self__.frame2 = Frame(__self__.master)
+        __self__.frame3 = Frame(__self__.master)
+        __self__.frame1.grid(row=0,rowspan=2,column=0)
+        __self__.frame2.grid(row=0,column=1,padx=15)
+        __self__.frame3.grid(row=1,column=1,padx=15,pady=15)
+        #__self__.master.withdraw()
+
+        __self__.savgol = IntVar()
+        __self__.order = IntVar()
+        __self__.window = IntVar()
+        __self__.iter = IntVar()
+        
+        __self__.build_widgets()
+
+    def build_widgets(__self__):
+       
+        # frame 1 (left)
+        __self__.upper = Canvas(__self__.frame1)
+        fig_bg_color = __self__.master.cget("background")
+        rgb = __self__.master.winfo_rgb(fig_bg_color)
+        color = (rgb[0]/65535, rgb[1]/65535, rgb[2]/65535)
+        __self__.upper.pack(side=TOP, expand=True, fill=BOTH, padx=(16,16),pady=(0,16))
+        __self__.figure = Figure(figsize=(5,4), dpi=75)
+        __self__.figure.patch.set_facecolor(color)
+        __self__.plot = __self__.figure.add_subplot(111)
+        __self__.plot.grid(which='both',axis='both')
+        __self__.plot.axis('On')
+        __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
+        __self__.canvas.draw()
+        __self__.mplCanvas = __self__.canvas.get_tk_widget()
+        __self__.mplCanvas.pack()
+        __self__.canvas._tkcanvas.pack()
+
+        # frame 2 (top-right)
+        __self__.randomize = Button(__self__.frame2, text="Pick random spectrum",\
+                command=__self__.random_sample, justify=CENTER)
+        __self__.label_savgol = Label(__self__.frame2, text="Sav-gol window: ")
+        __self__.label_order = Label(__self__.frame2, text="Sav-gol order: ")
+        __self__.label_window = Label(__self__.frame2, text= "Clipping window: ")
+        __self__.label_iter = Label(__self__.frame2, text="Number of iterations: ")
+        __self__.entry_savgol = Entry(__self__.frame2,textvariable=__self__.savgol,width=15)
+        __self__.entry_order = Entry(__self__.frame2,textvariable=__self__.order,width=15)
+        __self__.entry_window = Entry(__self__.frame2,textvariable=__self__.window,width=15)
+        __self__.entry_iter = Entry(__self__.frame2,textvariable=__self__.iter,width=15)
+
+        __self__.randomize.grid(row=0,column=0,columnspan=2,pady=15)
+        __self__.label_savgol.grid(row=1,column=0)
+        __self__.label_order.grid(row=2,column=0)
+        __self__.label_window.grid(row=3,column=0)
+        __self__.label_iter.grid(row=4,column=0)
+        __self__.entry_savgol.grid(row=1,column=1,sticky=E)
+        __self__.entry_order.grid(row=2,column=1,sticky=E)
+        __self__.entry_window.grid(row=3,column=1,sticky=E)
+        __self__.entry_iter.grid(row=4,column=1,sticky=E)
+
+        # frame 3 (lower-right)
+        __self__.button_try = Button(__self__.frame3,text="Try",width=10,\
+                justify=CENTER,command=__self__.refresh_plot)
+        __self__.button_save = Button(__self__.frame3, text="Save",width=10,\
+                justify=CENTER,command=__self__.save)
+        __self__.button_cancel = Button(__self__.frame3, text="Cancel",width=10,\
+                justify=CENTER,command=__self__.kill)
+
+        __self__.button_try.grid(row=0,column=0)
+        __self__.button_save.grid(row=0,column=1)
+        __self__.button_cancel.grid(row=1,column=0,columnspan=2)
+
+        place_center(__self__.parent,__self__.master)
+        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        __self__.master.iconbitmap(icon)
+        __self__.random_sample()
+    
+    def stripbg(__self__):
+        savgol = __self__.savgol.get()
+        order = __self__.order.get()
+        window = __self__.window.get()
+        cycles = __self__.iter.get()
+        background = peakstrip(__self__.spectrum,cycles,window,savgol,order)
+        return background
+
+    def refresh_plot(__self__):
+        __self__.plot.clear()
+        folder = SpecRead.CONFIG.get('directory')
+        if root.PlotMode == "Linear":
+            __self__.plot.set_ylabel("Counts")
+            __self__.plot.set_xlabel("Channels")
+            __self__.plot.plot(__self__.spectrum,\
+                    label=(root.samples[folder] + "_{}.mca".format(__self__.sample)))
+            try: 
+                background = __self__.stripbg()
+                __self__.plot.plot(background, label="Background",color="yellow")
+            except: pass
+            __self__.plot.set_ylim(bottom=0)
+        else:
+            __self__.plot.set_ylabel("Counts")
+            __self__.plot.set_xlabel("Channels")
+            __self__.plot.semilogy(__self__.spectrum,\
+                    label=(root.samples[folder] + "_{}.mca".format(__self__.sample)))
+            try: 
+                background = __self__.stripbg()
+                __self__.plot.plot(background, label="Background",color="yellow")
+            except: pass
+            __self__.plot.set_ylim(bottom=10e-2)
+            __self__.plot.set_ylim(top=1.10*__self__.spectrum.max())
+
+        __self__.plot.legend()
+        __self__.canvas.draw()
+
+    def random_sample(__self__):
+        folder = SpecRead.CONFIG.get('directory')
+        spec_no = SpecRead.getdimension()
+        spec_no = spec_no[0]*spec_no[1]
+        __self__.sample = random.randint(0,spec_no)
+        mca = SpecRead.selected_sample_folder + \
+                root.samples[folder] + "_{}.mca".format(__self__.sample)
+        __self__.spectrum = SpecRead.getdata(mca)
+        __self__.refresh_plot() 
+
+    def save(__self__):
+        global snip_config
+        snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
+        __self__.kill()
+        return 0
+
+    def kill(__self__):
+        __self__.master.grab_release()
+        root.ConfigDiag.grab_set()
+        __self__.master.destroy()
+        return 0
 
 class Annotator:
 
@@ -663,6 +820,8 @@ class PlotWin:
         __self__.toolbar.update()
         __self__.canvas._tkcanvas.pack()
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
+        icon = os.getcwd()+"\\images\\icons\\plot.ico"
+        __self__.master.iconbitmap(icon)
     
     def wipe_plot(__self__):
         __self__.plot.clear()
@@ -704,11 +863,22 @@ class PlotWin:
                 for option in mode:
                     __self__.plotdata = getstackplot(MY_DATACUBE,option)
                     __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                    __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+                    __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,\
+                            label=str(option))
                 if lines==True:
                     for element in FIND_ELEMENT_LIST:
-                        energies = plottables_dict[element]
-                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--')
+                        if element == "custom":
+                            energies = plottables_dict[element]
+                            __self__.plot.plot((energies[0],energies[0]),\
+                                    (0,__self__.plotdata.max()),'k--',color="blue",\
+                                    label="Custom Low")
+                            __self__.plot.plot((energies[1],energies[1]),\
+                                    (0,__self__.plotdata.max()),'k--',color="red",\
+                                    label="Custom High")
+                        else:
+                            energies = plottables_dict[element]
+                            __self__.plot.plot((energies,energies),\
+                                    (0,__self__.plotdata.max()),'k--')
 
                 __self__.plot.set_xlabel("Energy (KeV)")
                 __self__.plot.legend()
@@ -719,9 +889,18 @@ class PlotWin:
                     __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
                 if lines==True:
                     for element in FIND_ELEMENT_LIST:
-                        energies = plottables_dict[element]
-                        __self__.plot.plot((energies,energies),(0,__self__.plotdata.max()),'k--')
-
+                        if element == "custom":
+                            energies = plottables_dict[element]
+                            __self__.plot.plot((energies[0],energies[0]),\
+                                    (0,__self__.plotdata.max()),'k--',color="blue",\
+                                    label="Custom Low")
+                            __self__.plot.plot((energies[1],energies[1]),\
+                                    (0,__self__.plotdata.max()),'k--',color="red",\
+                                    label="Custom High")
+                        else:
+                            energies = plottables_dict[element]
+                            __self__.plot.plot((energies,energies),\
+                                    (0,__self__.plotdata.max()),'k--')
                 __self__.plot.set_xlabel("Energy (KeV)")
                 __self__.plot.legend()
             __self__.canvas.draw()
@@ -736,8 +915,8 @@ class PlotWin:
             else: net = (MY_DATACUBE.max_counts[element+"_a"],"Alpha")
             roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
             __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=roi_label)
-        __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum,label="Sum spectrum")
-        __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum_bg,label="Background")
+        __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum,label="Sum spectrum",color="blue")
+        #__self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum_bg,label="Background")
         __self__.plot.legend()
         place_topleft(__self__.master.master,__self__.master)
 
@@ -748,6 +927,7 @@ class PlotWin:
         __self__.plot.set_ylabel(labels[1])
         __self__.plot.scatter(corr[0],corr[1])
         place_topleft(__self__.master.master,__self__.master)
+
 
 class Samples:
 
@@ -840,6 +1020,7 @@ class Samples:
         except IOError as exception:
             messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
         
+
 class Settings:        
         
     def __init__(__self__,parent):
@@ -859,6 +1040,7 @@ class Settings:
         __self__.Settings.iconbitmap(icon)  
         __self__.Settings.protocol("WM_DELETE_WINDOW",__self__.kill_window)
         place_center(root.master,__self__.Settings)
+        __self__.Settings.grab_set()
 
     def build_widgets(__self__):
         __self__.PlotMode = StringVar()
@@ -870,7 +1052,7 @@ class Settings:
         __self__.PlotMode.set(root.PlotMode)
         __self__.CoreMode.set(root.MultiCore)
         __self__.RAMMode.set(root.RAM_limit)
-        __self__.RAMEntry.set('%.2f'%(float(convert_bytes(root.RAM_limit_value).split(" ")[0])*0.75))
+        __self__.RAMEntry.set('%.2f'%(float(convert_bytes(root.RAM_limit_value).split(" ")[0])))
         __self__.RAMUnit.set(convert_bytes(root.RAM_limit_value).split(" ")[1])
         
         PlotLabel = Label(__self__.TextFrame,text="Plot mode: ")
@@ -926,6 +1108,7 @@ class Settings:
     def kill_window(__self__):
         try: 
             del root.SettingsWin 
+            __self__.Settings.grab_release()
             __self__.Settings.destroy()
         except: pass
 
@@ -938,6 +1121,8 @@ class Settings:
         if root.PlotMode == "Linear": root.plot_display = None
 
         refresh_plots()
+        try: root.clipper.refresh_plot() 
+        except: pass
         __self__.write_to_ini()
 
 
@@ -1060,6 +1245,7 @@ class MainGUI:
     def call_listsamples(__self__):
         __self__.SamplesWindow = Toplevel(master=__self__.master)
         __self__.SamplesWindow.title("Sample List")
+        icon = os.getcwd()+"\\images\\icons\\icon.ico"
         __self__.SamplesWindow.resizable(False,False) 
         __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="FOLDER")
         __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="MCA PREFIX")
@@ -1076,6 +1262,7 @@ class MainGUI:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(__self__.samples[key]))
         place_topleft(__self__.master,__self__.SamplesWindow)
+        __self__.SamplesWindow.iconbitmap(icon)
 
     def list_samples(__self__):
         try:
@@ -1104,7 +1291,9 @@ class MainGUI:
         __self__.draw_map()
         __self__.toggle_(toggle='off')
         __self__.SampleVar.set("Sample on memory: None")
-        __self__.ConfigDiag.destroy()
+        try: __self__.ConfigDiag.destroy()
+        except: logging.warning("Tried to destroy ConfigDiag before calling it for the \
+                first time")
 
     def refresh_ImageCanvas(__self__,i):
         try: 
@@ -1383,8 +1572,11 @@ class MainGUI:
             load_cube()
             __self__.write_stat()
             __self__.toggle_(toggle='off')
-            __self__.call_configure()
-            __self__.ResetWindow.wait_window(__self__.ConfigDiag)
+            __self__.ResetWindow.grab_release()
+            #__self__.call_configure()
+            #__self__.ResetWindow.wait_window(__self__.ConfigDiag)
+            __self__.wipe()
+            __self__.list_samples()
             __self__.draw_map()
             __self__.ResetWindow.destroy()
 
@@ -1407,6 +1599,9 @@ class MainGUI:
                     command=__self__.ResetWindow.destroy, width=10, bd=3).pack(side=TOP, pady=5)
             
             place_center(__self__.master,__self__.ResetWindow)
+            icon = os.getcwd()+"\\images\\icons\\icon.ico"
+            __self__.ResetWindow.iconbitmap(icon)
+            __self__.ResetWindow.grab_set()
 
         else:
             ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
@@ -1480,11 +1675,18 @@ class MainGUI:
             if CalibVar.get() == 'manual':
                 manual_calib()
             else: save_config()
+        
+        def call_PeakClipper(__self__):
+            __self__.ConfigDiag.grab_release()
+            __self__.clipper = PeakClipper(root.master)
+            __self__.clipper.master.grab_set()
 
         def save_config():
+            global snip_config
             configdict = {'directory':DirectoryVar.get(),'bgstrip':BgstripVar.get(),\
-                    'ratio':RatioVar.get(),'thickratio':ThickVar.get(),'calibration':CalibVar.get(),\
-                    'enhance':EnhanceVar.get(),'peakmethod':MethodVar.get()}
+                    'ratio':RatioVar.get(),'thickratio':ThickVar.get(),\
+                    'calibration':CalibVar.get(),'enhance':EnhanceVar.get(),\
+                    'peakmethod':MethodVar.get(),'bg_settings':snip_config}
             
             if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
                 cfgpath = os.getcwd() + '\config.cfg'
@@ -1510,6 +1712,7 @@ class MainGUI:
                 cfgfile.close()
                 
                 SpecRead.setup()
+                __self__.ConfigDiag.grab_release()
                 __self__.ConfigDiag.destroy()
                 try: 
                     __self__.ResetWindow.destroy()
@@ -1542,6 +1745,7 @@ class MainGUI:
                 cfgfile.close()
                 
                 SpecRead.setup()
+                __self__.ConfigDiag.grab_release()
                 __self__.ConfigDiag.destroy()
                 try: 
                     __self__.ResetWindow.destroy()
@@ -1551,6 +1755,7 @@ class MainGUI:
                 __self__.draw_map()
        
         __self__.ConfigDiag = Toplevel()
+        __self__.ConfigDiag.grab_set()
         __self__.ConfigDiag.resizable(False,False)
         __self__.ConfigDiag.title("Configuration")
         __self__.ConfigDiagFrame = Frame(__self__.ConfigDiag,padx=15,pady=15)
@@ -1560,28 +1765,29 @@ class MainGUI:
 
         #Label1 = Label(__self__.ConfigDiagLabels, text="Sample directory:")
         Label2 = Label(__self__.ConfigDiagLabels, text="Background strip mode:")
-        Label3 = Label(__self__.ConfigDiagLabels, text="Calculate ratios?")
-        #Label4 = Label(__self__.ConfigDiagLabels, text="Thick ratio:")
-        Label5 = Label(__self__.ConfigDiagLabels, text="Calibration:")
-        Label6 = Label(__self__.ConfigDiagLabels, text="Enhance image?")
+        Label3 = Label(__self__.ConfigDiagLabels, text="Configure BG strip:")
+        Label4 = Label(__self__.ConfigDiagLabels, text="Calibration:")
+        #Label5 = Label(__self__.ConfigDiagLabels, text="Thick ratio:")
+        #Label6 = Label(__self__.ConfigDiagLabels, text="Enhance image?")
         Label7 = Label(__self__.ConfigDiagLabels, text="Netpeak area method:")
+        Label8 = Label(__self__.ConfigDiagLabels, text="Calculate ratios?")
         
         #Label1.grid(row=0,column=0,sticky=W,pady=2)
         Label2.grid(row=1,column=0,sticky=W,pady=2)
         Label3.grid(row=2,column=0,sticky=W,pady=2)
-        #Label4.grid(row=3,column=0,sticky=W,pady=2)
-        Label5.grid(row=4,column=0,sticky=W,pady=2)
-        Label6.grid(row=5,column=0,sticky=W,pady=2)
+        Label4.grid(row=3,column=0,sticky=W,pady=2)
+        #Label5.grid(row=4,column=0,sticky=W,pady=2)
+        #Label6.grid(row=5,column=0,sticky=W,pady=2)
         Label7.grid(row=6,column=0,sticky=W,pady=2)
+        Label8.grid(row=7,column=0,sticky=W,pady=2)
         
         ConfigDiagRatioYes = Label(__self__.ConfigDiagFrame, text="Yes")
-        ConfigDiagRatioYes.grid(row=2,column=1,sticky=E,pady=2)
+        ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
         ConfigDiagEnhanceYes = Label(__self__.ConfigDiagFrame, text="Yes")
-        ConfigDiagEnhanceYes.grid(row=5,column=1,sticky=E,pady=2)
+        ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
         
         BgstripVar = StringVar()
-        __self__.ConfigDiagBgstrip = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=BgstripVar, values=("None","SNIPBG"),\
-                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
+        __self__.ConfigDiagBgstrip = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=BgstripVar, values=("None","SNIPBG"),state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
         
         DirectoryVar = StringVar()
         #__self__.ConfigDiagDirectory = Entry(__self__.ConfigDiagFrame,textvariable=DirectoryVar,width=__self__.ConfigDiagBgstrip.winfo_width())
@@ -1591,13 +1797,15 @@ class MainGUI:
         
         ThickVar = DoubleVar()
         #__self__.ConfigDiagThick = Entry(__self__.ConfigDiagFrame, textvariable=ThickVar,width=13)
+        __self__.ConfigDiagSetBG = Button(__self__.ConfigDiagFrame, text="Set BG",\
+               width=13+ConfigDiagRatioYes.winfo_width(),command=lambda: call_PeakClipper(__self__))
         
         CalibVar = StringVar()
         __self__.ConfigDiagCalib = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=CalibVar, values=("from_source","manual"),\
                 state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
 
         EnhanceVar = BooleanVar()
-        __self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiagFrame, variable=EnhanceVar)
+        #__self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiagFrame, variable=EnhanceVar)
         
         MethodVar = StringVar()
         __self__.ConfigDiagMethod = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=MethodVar, values=("simple_roi","auto_roi","PyMcaFit"),\
@@ -1613,11 +1821,12 @@ class MainGUI:
 
         #__self__.ConfigDiagDirectory.grid(row=0,column=1,sticky=E)
         __self__.ConfigDiagBgstrip.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagRatio.grid(row=2,column=0,sticky=E,pady=2)
-        #__self__.ConfigDiagThick.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagCalib.grid(row=4,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagEnhance.grid(row=5,column=0,sticky=E,pady=2)
+        __self__.ConfigDiagSetBG.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagCalib.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
+        #__self__.ConfigDiagThick.grid(row=4,column=0,columnspan=2,sticky=E,pady=2)
+        #__self__.ConfigDiagEnhance.grid(row=5,column=0,sticky=E,pady=2)
         __self__.ConfigDiagMethod.grid(row=6,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
         
         ButtonsFrame = Frame(__self__.ConfigDiag)
         ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
@@ -1629,6 +1838,8 @@ class MainGUI:
         CancelButton.grid(row=8,column=1,sticky=S)
         
         place_center(root.master,__self__.ConfigDiag)
+        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        __self__.ConfigDiag.iconbitmap(icon)
 
         return 0
 
@@ -1674,10 +1885,14 @@ class PeriodicTable:
         __self__.master.body.grid(row=1,column=0, rowspan=9, columnspan=18,padx=(3,3),pady=(3,0))
         __self__.master.footer = Frame(__self__.master)
         __self__.master.footer.grid(row=10,column=0, columnspan=18)
+        __self__.cvar1 = DoubleVar()
+        __self__.cvar2 = DoubleVar()
+        __self__.cvar1.set(0.0)
+        __self__.cvar2.set(0.5)
         __self__.draw_buttons() 
         icon = os.getcwd()+"\\images\\icons\\rubik.ico"
-        __self__.master.iconbitmap(icon)
         place_center(parent.master,__self__.master)
+        __self__.master.iconbitmap(icon)
 
     
     def add_element(__self__,toggle_btn):
@@ -1693,6 +1908,24 @@ class PeriodicTable:
             toggle_btn.config(bg="yellow")
             FIND_ELEMENT_LIST.append(toggle_btn.cget("text"))
             refresh_plots()
+    
+    def add_custom_element(__self__,toggle_btn):
+        global DEFAULTBTN_COLOR
+        global FIND_ELEMENT_LIST
+        if toggle_btn.config('relief')[-1] == 'sunken':
+            toggle_btn.config(relief="raised")
+            toggle_btn.config(bg=DEFAULTBTN_COLOR)
+            FIND_ELEMENT_LIST.remove("custom")
+            plottables_dict["custom"] = []
+            refresh_plots()
+        else:
+            # setting casual number
+            toggle_btn.config(relief="sunken")
+            toggle_btn.config(bg="yellow")
+            FIND_ELEMENT_LIST.append("custom")
+            plottables_dict["custom"] = [__self__.cvar1.get(),__self__.cvar2.get()]
+            refresh_plots()
+     
        
     def save_and_run(__self__):
         
@@ -1724,6 +1957,15 @@ class PeriodicTable:
 
             # multi-core mode
             if MY_DATACUBE.config["peakmethod"] != "simple_roi":
+                if "custom" in FIND_ELEMENT_LIST: 
+                    results = []
+                    FIND_ELEMENT_LIST.remove("custom") 
+                    lines = [__self__.cvar1.get(),__self__.cvar2.get()]
+                    elmap, ROI = (grab_simple_roi_image(MY_DATACUBE,lines,\
+                            custom_energy=True))
+                    results.append((elmap, ROI, "custom"))
+                    digest_results(MY_DATACUBE,results,["custom"])
+
                 if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 999\
                         and needed_memory < sys_mem["available"] and\
                         needed_memory < root.RAM_limit_value and root.MultiCore == True:
@@ -1737,14 +1979,22 @@ class PeriodicTable:
 
                 # single-core mode
                 else: 
-                    MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+                    if len(FIND_ELEMENT_LIST) > 0:
+                        MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+                    else: pass
             
             else:
                 results = []
                 for element in FIND_ELEMENT_LIST:
-                    lines = select_lines(element,MY_DATACUBE.config["ratio"])
-                    elmap, ROI = (grab_simple_roi_image(MY_DATACUBE,lines))
-                    results.append((elmap, ROI, element))
+                    if element == "custom":
+                        lines = [__self__.cvar1.get(),__self__.cvar2.get()]
+                        elmap, ROI = (grab_simple_roi_image(MY_DATACUBE,lines,\
+                                custom_energy=True))
+                        results.append((elmap, ROI, "custom"))
+                    else:
+                        lines = select_lines(element,MY_DATACUBE.config["ratio"])
+                        elmap, ROI = (grab_simple_roi_image(MY_DATACUBE,lines))
+                        results.append((elmap, ROI, element))
                 sort_results(results,FIND_ELEMENT_LIST)
                 digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
 
@@ -1973,6 +2223,15 @@ class PeriodicTable:
         __self__.No.grid(row=8,column=16)
         __self__.Lr = Button(__self__.master.body, text="Lr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Lr))
         __self__.Lr.grid(row=8,column=17)
+        __self__.Custom = Button(__self__.master.body, text="Custom",width=2*btnsize_w,height=btnsize_h,relief='raised', fg="blue", command= lambda: __self__.add_custom_element(__self__.Custom))
+        __self__.Custom.grid(row=8,column=0,columnspan=2)
+
+        __self__.low = Entry(__self__.master.body, textvariable=__self__.cvar1, width=btnsize_w+1,fg="blue")
+        __self__.low.grid(row=9,column=0)
+        __self__.high = Entry(__self__.master.body, textvariable=__self__.cvar2, width=btnsize_w+1, fg="red")
+        __self__.high.grid(row=9,column=1)
+        __self__.clabel = Label(__self__.master.body, text="KeV", width=btnsize_w)
+        __self__.clabel.grid(row=9,column=2)
 
         __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
@@ -1989,10 +2248,16 @@ def check_screen_resolution(resolution_tuple):
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too small or if any problems are experienced with buttons and icons, please try lowering your screen resolution and setting the Windows scaling option to 100%.".format(w,h))
     pop.destroy()
 
+def license_error(version):
+    pop = Tk()
+    pop.withdraw()
+    messagebox.showerror("License error!","Even though this is an open source software, this is a beta UNRELEASED version made by the author. To run this specific version of the software your machine has to be authorized beforehand. This is done to avoid an unexperienced user of producing biased or wrong information with this current unreleased version {0}, which contains known bugs. Further information can be provided upon contacting the author: sergio.lins@roma3.infn.it".format(version))
+    pop.destroy()
+    raise PermissionError("Machine unauthorized")
+
               
 if __name__ == "__main__":
     
-    VERSION = "0.0.2α"
     optimum_resolution = (1920,1080)
 
     # tcl/Tk imports
@@ -2003,7 +2268,7 @@ if __name__ == "__main__":
      
     # general utilities
     import numpy as np
-    import sys, os, copy, pickle, stat
+    import sys, os, copy, pickle, stat, random
     import shutil
     from psutil import virtual_memory
     from psutil import cpu_count
@@ -2041,7 +2306,7 @@ if __name__ == "__main__":
     import SpecRead
     from ImgMath import LEVELS
     from ImgMath import threshold, low_pass, iteractive_median
-    from SpecMath import getstackplot, correlate
+    from SpecMath import getstackplot, correlate, peakstrip
     from SpecMath import datacube as Cube
     from EnergyLib import plottables_dict
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 

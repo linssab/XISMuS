@@ -49,7 +49,6 @@ def median_filter(a_2D_array,x,y):
             # ignore lower row
             try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] + a_2D_array[x+1,y] +\
                     a_2D_array[x,y+1] + a_2D_array[x-1,y+1] + a_2D_array[x+1,y+1])/7
-        
             except:
                 # ignore left column
                 try: average = (2*a_2D_array[x,y] + a_2D_array[x+1,y] +\
@@ -75,12 +74,15 @@ def median_filter(a_2D_array,x,y):
                                     except: logging.warning("Something went wrong with the median filter!")
     return average
 
-def iteractive_median(a_2D_array,iterations=1):
+def iteractive_median(img,iterations=1):
+    current_img = img.copy()
+    new_image = img.copy()
     for i in range(iterations):
-        for x in range(a_2D_array.shape[0]):
-            for y in range(a_2D_array.shape[1]):
-                a_2D_array[x,y] = median_filter(a_2D_array,x,y)
-    return a_2D_array 
+        for x in range(current_img.shape[0]):
+            for y in range(current_img.shape[1]):
+                new_image[x,y] = median_filter(current_img,x,y)
+        current_img = new_image.copy()
+    return new_image 
 
 def threshold(a_2D_array,t):
     for x in range(a_2D_array.shape[0]):
@@ -117,8 +119,7 @@ def mask(a_datacube,a_compound,mask_threshold):
             id_element_matrix = SpecRead.RatioMatrixReadFile(id_element_ratio)
         except: raise FileNotFoundError("{0} ratio file not found!".format(id_element))
     
-    # TO DO:
-    # check histogram to understand contrast and define threshold
+    #mask_threshold = id_element_matrix.max()/3
     id_element_matrix = threshold(id_element_matrix,mask_threshold)
 
     return id_element_matrix

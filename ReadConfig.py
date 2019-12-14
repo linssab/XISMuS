@@ -43,7 +43,6 @@ def getconfig():
                 line=line.replace('\t',' ')
                 aux = line.split()
                 modesdict['directory'] = str(aux[2])
-                line = configfile.readline()
             if 'bgstrip' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
@@ -51,7 +50,6 @@ def getconfig():
                 aux = line.split()
                 modesdict['bgstrip'] = str(aux[2])
                 logging.info("Bgstrip mode? {0}".format(modesdict.get('bgstrip')))
-                line = configfile.readline()
             if 'ratio' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
@@ -60,21 +58,18 @@ def getconfig():
                 if aux[2] == 'True': modesdict['ratio'] = True
                 elif aux[2] == 'False': modesdict['ratio'] = False
                 logging.info("Create ratio matrix? {0}".format(modesdict.get('ratio')))
-                line = configfile.readline()
             if 'thickratio' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
                 line=line.replace('\t',' ')
                 aux = line.split()
                 modesdict['thickratio'] = float(aux[2])
-                line = configfile.readline()
             if 'calibration' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
                 line=line.replace('\t',' ')
                 aux = line.split()
                 modesdict['calibration'] = str(aux[2])
-                line = configfile.readline()
             if 'enhance' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
@@ -83,14 +78,26 @@ def getconfig():
                 if aux[2] == 'True': modesdict['enhance'] = True
                 elif aux[2] == 'False': modesdict['enhance'] = False
                 logging.info("Enhance image? {0}".format(modesdict.get('enhance')))
-                line = configfile.readline()
             if 'peakmethod' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
                 line=line.replace('\t',' ')
                 aux = line.split()
                 modesdict['peakmethod'] = str(aux[2])
-                line = configfile.readline()
+            if 'bg_settings' in line:
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t','')
+                line=line.replace(',','')
+                line=line.replace('(','')
+                line=line.replace(')','')
+                aux = line.split(" ")
+                bs_list = []
+                for i in aux:
+                    if i.isdigit(): bs_list.append(int(i))
+                modesdict['bg_settings'] = bs_list
+                del bs_list
+            line = configfile.readline()
         line = configfile.readline()
         while "<<END>>" not in line:
             line=line.replace('\r','')
