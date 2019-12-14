@@ -258,7 +258,7 @@ def set_densities_from_xlib():
         loc_element = ElementsInfo[i][0]
         try: 
             if ElementList.index(loc_element)+1 < 95: 
-                DensityDict["{0}".format(loc_element)] = xlib.ElementDensity(ElementList.index(loc_element)+1)
+                DensityDict["{0}".format(loc_element)] = xlib.ElementDensity(ElementList.index(loc_element))
             else:
                 DensityDict["{0}".format(loc_element)] = 0.0 
         except: DensityDict["{0}".format(loc_element)] = np.nan
@@ -274,13 +274,7 @@ DensityDict = set_densities_from_xlib()
 Energies, kbEnergies, plottables_dict = set_energies_from_xlib()
 
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
-Element_No = {"{0}".format(index[0]):ElementList.index(index[0])+1 for index in ElementsInfo}
-
-# These will become deprected
-muPb = {"{0}".format(index[0]):(index[6],index[7]) for index in ElementsInfo}
-muE0 = {"{0}".format(index[0]):(index[5]) for index in ElementsInfo} 
-muCu = {"{0}".format(index[0]):(index[8],index[9]) for index in ElementsInfo}
-
+Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
 
 if __name__ == "__main__":
     """
