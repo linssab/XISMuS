@@ -10,6 +10,7 @@ from ReadConfig import unpack_cfg as CONFIGURE
 logging.debug("Importing module SpecRead.py...")
 import sys
 import os
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from PyMca5.PyMcaMath.fitting import RateLaw
@@ -193,6 +194,7 @@ def getdata(mca):
     name = name.replace('_',' ')
     name = name.replace('\\',' ')
     name = name.split()
+    # custom MC generated files
     if 'test' in name or 'obj' in name or 'newtest' in name:
         Data = []
         datafile = open(mca)
@@ -203,16 +205,24 @@ def getdata(mca):
             counts = counts * 10e3
             Data.append(counts)
         Data = np.asarray(Data)
+
+    # this works for the mca files
     else:
         ObjectData=[]
         datafile = open(mca)
         line = datafile.readline()
         while "<<DATA>>" not in line:
             line = datafile.readline()
+            if line == "": break
         line = datafile.readline()
         while "<<END>>" not in line:
-            ObjectData.append(int(line))
+            try: ObjectData.append(int(line))
+            except: 
+                logging.warning("Mca file {} could not be read.".format(mca))
+                datafile.close()
+                return mca
             line = datafile.readline()
+            if line == "": break
         Data = np.asarray(ObjectData)
     datafile.close()
     return Data
@@ -306,7 +316,6 @@ def getdimension():
         aux = line.split()
         y = int(aux[1])
     line = file.readline()
-#    print("Read.getdimension:\nImage size is: %d Line(s) and %d Row(s)" % (x,y))
     return x,y
 
 def dump_ratios(maps_list,element_list):

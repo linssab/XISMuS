@@ -31,6 +31,10 @@ logging.info("Finished SpecMath imports.")
 from tkinter import *
 from tkinter import ttk
 
+NOISE = 80
+FANO = 0.114
+
+
 class Busy:
     
     def __init__(__self__,max_,min_):
@@ -65,19 +69,15 @@ class Busy:
         __self__.master.grab_release()
         __self__.master.destroy()
 
-#logging.debug("Importing numba environmental variables...")
-#os.environ['NUMBAPRO_NVVM']      =\
-#        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\bin\nvvm64_33_0.dll'
-#
-#os.environ['NUMBAPRO_LIBDEVICE'] =\
-#        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\libdevice'
-#
-#os.environ['NUMBAPRO_CUDA_DRIVER']      =\
-#        r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvcc'
+    def interrupt(__self__,mca,timeout):
+        __self__.progress["maximum"] = timeout
+        __self__.updatebar(timeout)
+        __self__.update_text("Failed to read mca!")
+        for i in range(timeout):
+            __self__.updatebar(timeout-i)
+            time.sleep(1)
+        __self__.destroybar()
 
-
-NOISE = 80
-FANO = 0.114
 
 class datacube:
     
@@ -186,6 +186,10 @@ class datacube:
         for iteration in range(__self__.img_size):
             spec = currentspectra
             specdata = getdata(spec)
+            if isinstance(specdata,np.ndarray) == False: 
+                __self__.progressbar.interrupt(specdata,5)
+                return 1,specdata
+                break
             for i in range(len(specdata)):
                 __self__.matrix[x][y][i] = specdata[i]
             scan = updateposition(scan[0],scan[1])
@@ -213,6 +217,7 @@ class datacube:
         del __self__.progressbar 
         datacube.save_cube(__self__)
         logging.debug("Finished packing.")
+        return 0,None
         
     def pack_element(__self__,image,element,line):
         from SpecRead import output_path, cube_path

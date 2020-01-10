@@ -20,9 +20,13 @@ def read_license():
     return sysid
 
 def start_up():
+    # reads machine ID and verify if the machine is allowed to run
+    # this software
     license = read_license()
     if license not in authorized:
         license_error(VERSION)
+    # ------------------------------------------------------------
+
     SpecRead.conditional_setup()
     logging.info("Setting up...")
     try: load_cube()
@@ -161,9 +165,11 @@ def call_compilecube():
         except: pass
         logging.warning("Starting cube {} compilation!".format(SpecRead.CONFIG["directory"]))
         specbatch = Cube(['xrf'],SpecRead.CONFIG)
-        specbatch.compile_cube()
+        fail = specbatch.compile_cube()
         root.ButtonLoad.config(state=NORMAL)
         root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+        if fail[0] == True:
+            messagebox.showerror("EOF Error!","Could not read {} file!".format(fail[1]))
 
 def prompt_folder():
     folder = filedialog.askdirectory()
@@ -317,7 +323,11 @@ class PeakClipper:
         mca = SpecRead.selected_sample_folder + \
                 root.samples[folder] + "_{}.mca".format(__self__.sample)
         __self__.spectrum = SpecRead.getdata(mca)
-        __self__.refresh_plot() 
+        if isinstance(__self__.spectrum,np.ndarray):
+            __self__.refresh_plot() 
+        else:
+            messagebox.showerror("EOF Error!","Could not read {} file!".\
+                    format(__self__.spectrum))
 
     def save(__self__):
         global snip_config
@@ -468,9 +478,9 @@ class ImageAnalyzer:
         __self__.RightCanvas = Canvas(__self__.SampleFrame)
         __self__.RightCanvas.pack(side=RIGHT)
         __self__.sliders = Frame(__self__.master)
-        __self__.sliders.pack(side=BOTTOM)
-        __self__.buttons = Frame(__self__.sliders,padx=30)
-        __self__.buttons.grid(row=0,column=0,rowspan=4)
+        __self__.sliders.pack(side=BOTTOM,fill=X)
+        __self__.buttons = Frame(__self__.sliders)
+        __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W)
         
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
@@ -586,13 +596,17 @@ class ImageAnalyzer:
         __self__.roibox2.grid(row=1,column=0,columnspan=2)
         __self__.ratebox = Label(__self__.buttons,text="Ratio: None") 
         __self__.ratebox.grid(row=2,column=0,columnspan=2)
-        __self__.correlate = Button(__self__.buttons,text="Correlate maps",\
-                command=__self__.get_correlation,width=15)
-        __self__.correlate.grid(row=3,column=0)
+        
         __self__.annotate = Button(__self__.buttons,text="Set ROI",\
-                command=__self__.toggle_annotator,relief="raised",width=15)
-        __self__.annotate.grid(row=4,column=0)
-
+                command=__self__.toggle_annotator,relief="raised",width=14)
+        __self__.annotate.grid(row=4,column=0,columnspan=2)
+        __self__.correlate = Button(__self__.buttons,text="Correlate",\
+                command=__self__.get_correlation,width=round(__self__.annotate.winfo_width()/2))
+        __self__.correlate.grid(row=3,column=0)
+        __self__.export = Button(__self__.buttons,text="Export",\
+                command=__self__.export_maps,width=round(__self__.annotate.winfo_width()/2))
+        __self__.export.grid(row=3,column=1)
+        
         # Disable sliders
         __self__.T1Slider.config(state=DISABLED)
         __self__.T2Slider.config(state=DISABLED)
@@ -789,6 +803,13 @@ class ImageAnalyzer:
         except:
             pass
 
+    def export_maps(__self__):
+        f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+        if f is None: 
+            return
+        write_image(__self__.newimage1,1024,f.name)
+        return 0
+
 
 class PlotWin:
 
@@ -857,23 +878,26 @@ class PlotWin:
             global FIND_ELEMENT_LIST
             __self__.plot.clear()
             plot_font = {'fontname':'Times New Roman','fontsize':10}
+            colors = ["blue","red","green"]
             if display_mode == '-semilog':
                 __self__.plot.set_title('{0}'.format(SpecRead.DIRECTORY),**plot_font)
                 __self__.plot.set_ylabel("Counts")
+                i = 0
                 for option in mode:
                     __self__.plotdata = getstackplot(MY_DATACUBE,option)
                     __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
                     __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,\
-                            label=str(option))
+                            label=str(option),color=colors[i])
+                    i+=1
                 if lines==True:
                     for element in FIND_ELEMENT_LIST:
                         if element == "custom":
                             energies = plottables_dict[element]
                             __self__.plot.plot((energies[0],energies[0]),\
-                                    (0,__self__.plotdata.max()),'k--',color="blue",\
+                                    (0,__self__.plotdata.max()),'k--',color="cornflowerblue",\
                                     label="Custom Low")
                             __self__.plot.plot((energies[1],energies[1]),\
-                                    (0,__self__.plotdata.max()),'k--',color="red",\
+                                    (0,__self__.plotdata.max()),'k--',color="tomato",\
                                     label="Custom High")
                         else:
                             energies = plottables_dict[element]
@@ -883,19 +907,22 @@ class PlotWin:
                 __self__.plot.set_xlabel("Energy (KeV)")
                 __self__.plot.legend()
             else:
+                i = 0
                 for option in mode:
                     __self__.plotdata = getstackplot(MY_DATACUBE,option)
                     __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                    __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,label=str(option))
+                    __self__.plot.plot(MY_DATACUBE.energyaxis,__self__.plotdata,\
+                            label=str(option),color=colors[i])
+                    i+=1
                 if lines==True:
                     for element in FIND_ELEMENT_LIST:
                         if element == "custom":
                             energies = plottables_dict[element]
                             __self__.plot.plot((energies[0],energies[0]),\
-                                    (0,__self__.plotdata.max()),'k--',color="blue",\
+                                    (0,__self__.plotdata.max()),'k--',color="cornflowerblue",\
                                     label="Custom Low")
                             __self__.plot.plot((energies[1],energies[1]),\
-                                    (0,__self__.plotdata.max()),'k--',color="red",\
+                                    (0,__self__.plotdata.max()),'k--',color="tomato",\
                                     label="Custom High")
                         else:
                             energies = plottables_dict[element]
@@ -1263,6 +1290,7 @@ class MainGUI:
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(__self__.samples[key]))
         place_topleft(__self__.master,__self__.SamplesWindow)
         __self__.SamplesWindow.iconbitmap(icon)
+        __self__.SamplesWindow_TableRight.config(state=DISABLED)
 
     def list_samples(__self__):
         try:
@@ -1568,13 +1596,10 @@ class MainGUI:
         def repack(__self__):
             logging.warning("Cube {} and its output contents were erased!".format(MY_DATACUBE.config["directory"]))
             shutil.rmtree(SpecRead.output_path)
-            #os.remove(SpecRead.cube_path)
             load_cube()
             __self__.write_stat()
             __self__.toggle_(toggle='off')
             __self__.ResetWindow.grab_release()
-            #__self__.call_configure()
-            #__self__.ResetWindow.wait_window(__self__.ConfigDiag)
             __self__.wipe()
             __self__.list_samples()
             __self__.draw_map()
@@ -2305,7 +2330,7 @@ if __name__ == "__main__":
     # internal imports
     import SpecRead
     from ImgMath import LEVELS
-    from ImgMath import threshold, low_pass, iteractive_median
+    from ImgMath import threshold, low_pass, iteractive_median, write_image
     from SpecMath import getstackplot, correlate, peakstrip
     from SpecMath import datacube as Cube
     from EnergyLib import plottables_dict
