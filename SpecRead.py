@@ -76,6 +76,7 @@ def setup_from_datacube(datacube,sample_database):
     # setup the configuration according to what is built into the datacube
 
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    
     CONFIG,CALIB = datacube.config, datacube.calibration
     DIRECTORY = CONFIG.get('directory')
     selected_sample_folder = samples_folder + DIRECTORY + '\\'
@@ -84,7 +85,6 @@ def setup_from_datacube(datacube,sample_database):
     output_path = workpath+'\output\\'+DIRECTORY+'\\'
     dimension_file = selected_sample_folder + '\colonneXrighe.txt'
     
-    #try: FIRSTFILE_ABSPATH = findprefix()
     try: FIRSTFILE_ABSPATH = sample_database[DIRECTORY]
     except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
     
@@ -92,14 +92,16 @@ def setup_from_datacube(datacube,sample_database):
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file,
             FIRSTFILE_ABSPATH]
+    
     return np.nan 
 
 def conditional_setup(name='None'):
-    
+    logging.debug("Running conditional setup for {}".format(name)) 
     # reads the config file but changes the directory to the sample_name variable
     # before setting up the PATHS
     
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    
     CONFIG,CALIB = CONFIGURE()
     CONFIG['directory'] = name
     DIRECTORY = CONFIG.get('directory')
@@ -108,9 +110,11 @@ def conditional_setup(name='None'):
     cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
     output_path = workpath+'\output\\'+DIRECTORY+'\\'
     dimension_file = selected_sample_folder + '\colonneXrighe.txt'
+    
     global_list =  [CONFIG, CALIB, DIRECTORY,
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file]
+    
     return np.nan
 
 def RatioMatrixReadFile(ratiofile):
@@ -169,16 +173,20 @@ def getcalibration():
         param = []
         mca_file = open(getfirstfile(),'r')
         line = mca_file.readline()
-        while "<<CALIBRATION>>" not in line:
+        while line != "":
+            while "<<CALIBRATION>>" not in line:
+                line = mca_file.readline()
+                if line == "": break
+            while "<<DATA>>" not in line:
+                line = mca_file.readline()
+                if line == "": break
+                line=line.replace('\r','')
+                line=line.replace('\n','')
+                line=line.replace('\t',' ')
+                aux = line.split()
+                try: param.append([int(aux[0]),float(aux[1])])
+                except: pass 
             line = mca_file.readline()
-        while "<<DATA>>" not in line:
-            line = mca_file.readline()
-            line=line.replace('\r','')
-            line=line.replace('\n','')
-            line=line.replace('\t',' ')
-            aux = line.split()
-            try: param.append([int(aux[0]),float(aux[1])])
-            except: pass 
         mca_file.close()
         for parameter in param:
             if len(param) <= 1: raise IOError("Need at least two calibration points!")
@@ -299,24 +307,28 @@ def updatespectra(specfile,size):
 def getdimension():
     if not os.path.exists(dimension_file):
         raise IOError("Dimension file not found!") 
-
-    file = open(dimension_file, 'r')
-    line = file.readline()
+    user_input = False
+    dm_file = open(dimension_file, 'r')
+    line = dm_file.readline()
     if 'righe' in line:
         line=line.replace('\r','')
         line=line.replace('\n','')
         line=line.replace('\t',' ')
         aux = line.split()
         x = int(aux[1])
-        line = file.readline() 
+        line = dm_file.readline() 
     if 'colonne' in line:
         line=line.replace('\r','')
         line=line.replace('\n','')
         line=line.replace('\t',' ')
         aux = line.split()
         y = int(aux[1])
-    line = file.readline()
-    return x,y
+        line = dm_file.readline() 
+    while line != "":
+        if line.startswith("*"): user_input = True
+        line = dm_file.readline()
+    dm_file.close()
+    return x,y,user_input
 
 def dump_ratios(maps_list,element_list):
     # this is to work with multiprocessing Mapping mode

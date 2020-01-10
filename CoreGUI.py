@@ -82,6 +82,7 @@ def place_center(window1,window2):
     y = window1.winfo_rooty() - titlebar_height + (int(height/2)) - (int(height2/2))
     window2.geometry('{}x{}+{}+{}'.format(width2, height2, x, y))
     window2.deiconify()
+    window2.focus_force()
 
 def spawn_center(window):
     width = window.winfo_screenwidth()
@@ -92,6 +93,7 @@ def spawn_center(window):
 
     window.geometry("{}x{}+{}+{}".format(w_width,w_height,\
             int((width/2)-(w_width/2)),int((height/2)-(w_height/2))))
+    window.focus_force() 
 
 def convert_bytes(num):
     """
@@ -199,6 +201,80 @@ def load_cube():
     return MY_DATACUBE
 
 
+class dimension_diag():
+
+    def __init__(__self__,folder):
+        __self__.win = Toplevel(root.master)
+        __self__.win.resizable(False,False)
+        __self__.win.overrideredirect(True)
+        __self__.win.bind("<Escape>",__self__.kill)
+        __self__.exit_code = None
+        __self__.win.grab_set()
+        __self__.folder = folder
+        diag = Frame(__self__.win,relief=RIDGE,bd=3)
+        diag.grid()
+        label0 = Label(diag,text="Image size")
+        label0.grid(row=0,column=0,columnspan=2)
+        label1 = Label(diag,text="Columns: ")
+        label1.grid(row=1,column=0)
+        label2 = Label(diag,text="Rows: ")
+        label2.grid(row=2,column=0)
+        __self__.x = StringVar()
+        __self__.y = StringVar()
+        
+        x_ = Entry(diag,textvariable=__self__.x,validate="focusout")
+        __self__.x.trace("w",__self__.callback_x)
+        x_.grid(row=1,column=1)
+        y_ = Entry(diag,textvariable=__self__.y,validate="focusout")
+        __self__.y.trace("w",__self__.callback_y)
+        y_.grid(row=2,column=1)
+        
+        accept = Button(diag,text="Ok", width=13, command=lambda:\
+                __self__.send(__self__.x,__self__.y))
+        accept.grid(row=3,column=0,columnspan=2)
+        __self__.win.update()
+        place_center(root.master,__self__.win)
+
+    def check_values(__self__,x,y):
+        x,y = x.get(),y.get()
+        if x.isdigit(): 
+            x=int(x)
+            if x > root.mcacount[__self__.folder]: x = root.mcacount[__self__.folder]
+            elif x == 0: x = 1
+        else: x=1
+        if y.isdigit(): 
+            y=int(y)
+            if y > root.mcacount[__self__.folder]: y = root.mcacount[__self__.folder]
+            elif y == 0: y = 1
+        else: y=1
+        return x,y
+    
+    def send(__self__,x,y):
+        root.config_xy = __self__.check_values(x,y)
+        __self__.win.grab_release()
+        __self__.win.destroy()
+        __self__.exit_code = "save"
+        return __self__.x.get(),__self__.y.get()
+
+    def callback_x(__self__,name="",index="",mode=""):
+        try: 
+            value = int(root.mcacount[__self__.folder]/int(__self__.x.get()))
+            __self__.y.set(value)
+        except: 
+            pass
+    
+    def callback_y(__self__,name="",index="",mode=""):
+        try: 
+            value = int(root.mcacount[__self__.folder]/int(__self__.y.get()))
+            __self__.x.set(value)
+        except:
+            pass
+    
+    def kill(__self__,e):
+        __self__.exit_code = "cancel"
+        __self__.win.destroy()
+
+
 class PeakClipper:
     
     def __init__(__self__,parent):
@@ -293,7 +369,7 @@ class PeakClipper:
         if root.PlotMode == "Linear":
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
-            __self__.plot.plot(__self__.spectrum,\
+            __self__.plot.plot(__self__.spectrum,color="blue",\
                     label=(root.samples[folder] + "_{}.mca".format(__self__.sample)))
             try: 
                 background = __self__.stripbg()
@@ -303,7 +379,7 @@ class PeakClipper:
         else:
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
-            __self__.plot.semilogy(__self__.spectrum,\
+            __self__.plot.semilogy(__self__.spectrum,color="blue",\
                     label=(root.samples[folder] + "_{}.mca".format(__self__.sample)))
             try: 
                 background = __self__.stripbg()
@@ -317,9 +393,8 @@ class PeakClipper:
 
     def random_sample(__self__):
         folder = SpecRead.CONFIG.get('directory')
-        spec_no = SpecRead.getdimension()
-        spec_no = spec_no[0]*spec_no[1]
-        __self__.sample = random.randint(0,spec_no)
+        spec_no = root.mcacount[folder]
+        __self__.sample = random.randint(1,spec_no)
         mca = SpecRead.selected_sample_folder + \
                 root.samples[folder] + "_{}.mca".format(__self__.sample)
         __self__.spectrum = SpecRead.getdata(mca)
@@ -340,6 +415,7 @@ class PeakClipper:
         root.ConfigDiag.grab_set()
         __self__.master.destroy()
         return 0
+
 
 class Annotator:
 
@@ -960,6 +1036,7 @@ class Samples:
 
     def __init__(__self__):
         __self__.samples_database = {}
+        __self__.mcacount = {}
 
     def splash_screen(__self__,parent):
         __self__.splash = Toplevel(parent.master)
@@ -1016,6 +1093,7 @@ class Samples:
                             mca_prefix = counts
                             mca_prefix_count = counter[counts]
                     __self__.samples_database[folder] = mca_prefix
+                    __self__.mcacount[folder] = len(files)
         except IOError as exception:
             __self__.splash_kill()
             logging.info("Cannot load samples. Error {}.".format(exception.__class__.__name__))
@@ -1193,6 +1271,7 @@ class MainGUI:
         __self__.SampleLoader.splash_screen(__self__)
         __self__.master.after(100,__self__.SampleLoader.list_all())
         __self__.samples = __self__.SampleLoader.samples_database
+        __self__.mcacount = __self__.SampleLoader.mcacount
         __self__.find_elements_diag = None
         
         __self__.master.title("Piratininga SM {}".format(VERSION))
@@ -1311,7 +1390,12 @@ class MainGUI:
             __self__.sample_plot.imshow(blank, cmap='jet')
             __self__.plot_canvas.draw()
 
-    def wipe(__self__):
+    def wipe(__self__,e=""):
+        try: 
+            __self__.ConfigDiag.grab_release()
+            __self__.ConfigDiag.destroy()
+        except: logging.warning("Tried to destroy ConfigDiag before calling it for the \
+                first time")
         global MY_DATACUBE
         MY_DATACUBE = None
         load_cube()
@@ -1319,10 +1403,7 @@ class MainGUI:
         __self__.draw_map()
         __self__.toggle_(toggle='off')
         __self__.SampleVar.set("Sample on memory: None")
-        try: __self__.ConfigDiag.destroy()
-        except: logging.warning("Tried to destroy ConfigDiag before calling it for the \
-                first time")
-
+        
     def refresh_ImageCanvas(__self__,i):
         try: 
             __self__.sample_plot.imshow(__self__.densitymap,cmap='jet',label='Counts Map')
@@ -1360,7 +1441,6 @@ class MainGUI:
         else: 
             SpecRead.conditional_setup(name=value)
             __self__.call_configure()
-            __self__.master.wait_window(__self__.ConfigDiag)
     
     def plot_ROI(__self__):
         master = __self__.master
@@ -1531,11 +1611,6 @@ class MainGUI:
         __self__.TableRight.config(state=NORMAL)
         __self__.TableMiddle.config(state=NORMAL)
         __self__.TableLeft.config(state=NORMAL)
-        # must update the cube stored in memory!
-        # everytime wrtie_stat is called, it means the cube has been changed or a different sample
-        # has been called. Updates the StatsBar variable 
-        
-        load_cube()
         __self__.SampleVar.set("Sample on memory: "+SpecRead.DIRECTORY)
         
         # wipe all text
@@ -1594,8 +1669,15 @@ class MainGUI:
     def reset_sample(__self__):
         
         def repack(__self__):
-            logging.warning("Cube {} and its output contents were erased!".format(MY_DATACUBE.config["directory"]))
+            logging.warning("Cube {} and its output contents were erased!".\
+                    format(MY_DATACUBE.config["directory"]))
             shutil.rmtree(SpecRead.output_path)
+            x,y,tag_dimension_file = SpecRead.getdimension()
+            if tag_dimension_file == True:
+                try: 
+                    os.remove(SpecRead.dimension_file)
+                    logging.warning("Custom image dimension was deleted.")
+                except: raise PermissionError("Can't delete custom dimension file!")
             load_cube()
             __self__.write_stat()
             __self__.toggle_(toggle='off')
@@ -1632,7 +1714,14 @@ class MainGUI:
             ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
 
     def call_configure(__self__):
-        
+        if not os.path.exists(SpecRead.dimension_file):
+            dimension = dimension_diag(SpecRead.DIRECTORY)
+            __self__.master.wait_window(dimension.win) 
+            if dimension.exit_code == "cancel":
+                return 0
+        else:
+            __self__.config_xy = SpecRead.getdimension()
+
         ManualParam = []
 
         def manual_calib():
@@ -1713,6 +1802,13 @@ class MainGUI:
                     'calibration':CalibVar.get(),'enhance':EnhanceVar.get(),\
                     'peakmethod':MethodVar.get(),'bg_settings':snip_config}
             
+            if not os.path.exists(SpecRead.dimension_file):
+                dm_file = open(SpecRead.dimension_file,"w+")
+                dm_file.write("righe\t{}\n".format(__self__.config_xy[0]))
+                dm_file.write("colonne\t{}\n".format(__self__.config_xy[1]))
+                dm_file.write(5*"*"+" user input data "+5*"*")
+                dm_file.close()
+
             if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
                 cfgpath = os.getcwd() + '\config.cfg'
                 cfgfile = open(cfgpath,'w+')
@@ -1745,12 +1841,12 @@ class MainGUI:
                 except: pass
                  
                 call_compilecube()
+                load_cube()
                 __self__.write_stat()
                 __self__.draw_map()
                 __self__.toggle_(toggle='on')
 
             else:
-                ErrorMessage("Directory {} not found!\nConfig.cfg saved!".format(configdict['directory']))
                 
                 cfgpath = os.getcwd() + '\config.cfg'
                 cfgfile = open(cfgpath,'w+')
@@ -1768,6 +1864,8 @@ class MainGUI:
                     cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
                 cfgfile.write("<<END>>\r")
                 cfgfile.close()
+                ErrorMessage("Directory {} not found!\nConfig.cfg saved!".\
+                        format(configdict['directory']))
                 
                 SpecRead.setup()
                 __self__.ConfigDiag.grab_release()
@@ -1783,6 +1881,8 @@ class MainGUI:
         __self__.ConfigDiag.grab_set()
         __self__.ConfigDiag.resizable(False,False)
         __self__.ConfigDiag.title("Configuration")
+        __self__.ConfigDiag.bind("<Escape>",__self__.wipe)
+        __self__.ConfigDiag.protocol("WM_DELETE_WINDOW",__self__.wipe)
         __self__.ConfigDiagFrame = Frame(__self__.ConfigDiag,padx=15,pady=15)
         __self__.ConfigDiagLabels = Frame(__self__.ConfigDiag,padx=15,pady=15)
         __self__.ConfigDiagFrame.grid(row=0, column=1)
@@ -1833,7 +1933,7 @@ class MainGUI:
         #__self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiagFrame, variable=EnhanceVar)
         
         MethodVar = StringVar()
-        __self__.ConfigDiagMethod = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=MethodVar, values=("simple_roi","auto_roi","PyMcaFit"),\
+        __self__.ConfigDiagMethod = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=MethodVar, values=("simple_roi","auto_roi"),\
                 state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
         
         DirectoryVar.set(SpecRead.CONFIG.get('directory'))
@@ -1853,6 +1953,11 @@ class MainGUI:
         __self__.ConfigDiagMethod.grid(row=6,column=0,columnspan=2,sticky=E,pady=2)
         __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
         
+        dimension_text = "Image size = {0} x {1} pixels"\
+                .format(__self__.config_xy[0],__self__.config_xy[1])
+        img_dimension_display = Label(__self__.ConfigDiag,text=dimension_text)
+        img_dimension_display.grid(row=1,column=0,sticky=W,padx=17,pady=2)
+
         ButtonsFrame = Frame(__self__.ConfigDiag)
         ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
         SaveButton = Button(ButtonsFrame, text="Save", justify=CENTER, width=10,\
@@ -1865,35 +1970,36 @@ class MainGUI:
         place_center(root.master,__self__.ConfigDiag)
         icon = os.getcwd()+"\\images\\icons\\settings.ico"
         __self__.ConfigDiag.iconbitmap(icon)
+        __self__.master.wait_window(__self__.ConfigDiag)
 
         return 0
 
 def refresh_plots():
-        global FIND_ELEMENT_LIST
-        if len(FIND_ELEMENT_LIST) > 0: 
-            lines = True
-        else: 
-            lines = False
-        
-        try:
-            root.MPS.draw_spec(\
-                mode=['mps'],display_mode=root.plot_display,lines=lines)
-            root.MPS.update_idletasks()
-        except: pass
-        try: 
-            root.summation.draw_spec(\
-                mode=['summation'],display_mode=root.plot_display,lines=lines)
-            root.summation.update_idletasks()
-        except: pass
-        try: 
-            root.combined.draw_spec(\
-                mode=['summation','mps'],display_mode=root.plot_display,lines=lines)
-            root.combined.update_idletasks()
-        except: pass
-        
-        try: root.find_elements_diag.master.focus_force()
-        except: pass
-        return np.nan
+    global FIND_ELEMENT_LIST
+    if len(FIND_ELEMENT_LIST) > 0: 
+        lines = True
+    else: 
+        lines = False
+    
+    try:
+        root.MPS.draw_spec(\
+            mode=['mps'],display_mode=root.plot_display,lines=lines)
+        root.MPS.update_idletasks()
+    except: pass
+    try: 
+        root.summation.draw_spec(\
+            mode=['summation'],display_mode=root.plot_display,lines=lines)
+        root.summation.update_idletasks()
+    except: pass
+    try: 
+        root.combined.draw_spec(\
+            mode=['summation','mps'],display_mode=root.plot_display,lines=lines)
+        root.combined.update_idletasks()
+    except: pass
+    
+    try: root.find_elements_diag.master.focus_force()
+    except: pass
+    return np.nan
 
 
 class PeriodicTable:
@@ -2301,6 +2407,16 @@ if __name__ == "__main__":
     from multiprocessing import freeze_support
     freeze_support()
     
+    # matplotlib imports
+    import matplotlib
+    import matplotlib.pyplot as plt
+    matplotlib.use("TkAgg")
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.figure import Figure
+    from matplotlib.patches import Rectangle
+    from matplotlib import style
+    style.use('ggplot')
+
     # tries to create logfile on exe folder
     try: 
         logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
@@ -2315,16 +2431,6 @@ if __name__ == "__main__":
         logging.info("Cannot create logfile! Error {}.".format(exception.__class__.__name__))
         messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.getcwd()))
         sys.exit()
-    
-    # matplotlib imports
-    import matplotlib
-    import matplotlib.pyplot as plt
-    matplotlib.use("TkAgg")
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-    from matplotlib.figure import Figure
-    from matplotlib.patches import Rectangle
-    from matplotlib import style
-    style.use('ggplot')
     
     check_screen_resolution(optimum_resolution)
     # internal imports

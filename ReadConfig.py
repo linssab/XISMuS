@@ -49,7 +49,6 @@ def getconfig():
                 line=line.replace('\t',' ')
                 aux = line.split()
                 modesdict['bgstrip'] = str(aux[2])
-                logging.info("Bgstrip mode? {0}".format(modesdict.get('bgstrip')))
             if 'ratio' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
@@ -57,7 +56,6 @@ def getconfig():
                 aux = line.split()
                 if aux[2] == 'True': modesdict['ratio'] = True
                 elif aux[2] == 'False': modesdict['ratio'] = False
-                logging.info("Create ratio matrix? {0}".format(modesdict.get('ratio')))
             if 'thickratio' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
@@ -77,7 +75,6 @@ def getconfig():
                 aux = line.split()
                 if aux[2] == 'True': modesdict['enhance'] = True
                 elif aux[2] == 'False': modesdict['enhance'] = False
-                logging.info("Enhance image? {0}".format(modesdict.get('enhance')))
             if 'peakmethod' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
