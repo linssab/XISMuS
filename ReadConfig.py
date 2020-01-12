@@ -8,6 +8,11 @@
 import logging
 import os
 
+def pop_error(title,message):
+    from tkinter import messagebox
+    messagebox.showerror(title,message)
+    return 0
+
 workpath = os.getcwd()
 cfgfile = workpath + '\config.cfg'
 logging.debug("Importing module ReadConfig.py...")
@@ -15,17 +20,19 @@ logging.debug("Importing module ReadConfig.py...")
 def check_config():
     lines, tags = [],[]
     try: c_file = open(cfgfile, 'r')
-    except: raise FileNotFoundError("No calibration file {0} found!".format(cfgfile))
+    except: 
+        pop_error("Configuration Error","No calibration file {0} found!".format(cfgfile))
+        raise FileNotFoundError("No calibration file {0} found!".format(cfgfile))
     for line in c_file:
         line = line.replace('\n','')
         lines.append(line)
     for sentence in lines:
-        if "<<CALIBRATION>>" in sentence: tags.append(sentence)
-        elif "<<CONFIG_START>>" in sentence: tags.append(sentence)
+        if "<<CONFIG_START>>" in sentence: tags.append(sentence)
+        elif "<<CALIBRATION>>" in sentence: tags.append(sentence)
         elif "<<END>>" in sentence: tags.append(sentence)
+    if "<<CONFIG_START>>" not in tags: raise IOError("Cant find <<CONFIG_START>>")
     if "<<CALIBRATION>>" not in tags: raise IOError("No <<CALIBRATION>>!")
     if "<<END>>" not in tags: raise IOError("No <<END>> of configuration!")
-    if "<<CONFIG_START>>" not in tags: raise IOError("Cant find <<CONFIG_START>>")
     return tags
 
 def getconfig():
@@ -111,6 +118,46 @@ def getconfig():
             raise IOError("Cant receive negative channel or energy!")
         else: pass
     return modesdict,CalParam
+
+def checkout_config():
+    cfgfile = os.getcwd() + '\config.cfg'
+    lines, tags = [],[]
+    c_file = open(cfgfile, 'r')
+    for line in c_file:
+        line = line.replace('\n','')
+        lines.append(line)
+    for sentence in lines:
+        if "<<CONFIG_START>>" in sentence: tags.append(sentence)
+        elif "<<CALIBRATION>>" in sentence: tags.append(sentence)
+        elif "<<END>>" in sentence: tags.append(sentence)
+    c_file.close()
+    if "<<CONFIG_START>>" not in tags: 
+        c_file = open(cfgfile, "a+")
+        c_file.write("<<CONFIG_START>>\r")
+        c_file.write("directory = None\r")
+        c_file.write("bgstrip = None\r")
+        c_file.write("ratio = False\r")
+        c_file.write("thickratio = 0\r")
+        c_file.write("calibration = manual\r")
+        c_file.write("enhance = False\r")
+        c_file.write("peakmethod = simple_roi\r")
+        c_file.write("bgsettings = None\r")
+        c_file.write("<<CALIBRATION>>\r")
+        c_file.write("<<END>>\r")
+        c_file.close()
+        pop_error("Configuration issue",\
+                "Config.cfg file corrupted, re-setting default configuration.")
+        
+    elif "<<CALIBRATION>>" not in tags: 
+        c_file = open(cfgfile, "a")
+        c_file.write("<<CALIBRATION>>\r")
+        c_file.write("<<END>>\r")
+        c_file.close()
+    elif "<<END>>" not in tags: 
+        c_file = open(cfgfile, "a")
+        c_file.write("<<END>>\r")
+        c_file.close()
+    return 0
 
 def unpack_cfg():
     all_parameters = getconfig()

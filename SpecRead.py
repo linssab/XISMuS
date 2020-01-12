@@ -7,6 +7,7 @@
 
 import logging
 from ReadConfig import unpack_cfg as CONFIGURE
+from ReadConfig import pop_error
 logging.debug("Importing module SpecRead.py...")
 import sys
 import os
@@ -188,10 +189,19 @@ def getcalibration():
                 except: pass 
             line = mca_file.readline()
         mca_file.close()
+        if param == []: 
+            pop_error("Calibration Error","Could not fetch calibration from source! Retry with manual calibration")
+            raise ValueError("Couldn't fetch calibration from source!")
         for parameter in param:
-            if len(param) <= 1: raise IOError("Need at least two calibration points!")
-            if parameter[0] < 0 or parameter[1] < 0: 
-                raise IOError("Cant receive negative channel or energy!")
+            if len(param) <= 1: 
+                pop_error("Calibration Error","Need at least two calibration points!")
+                raise ValueError("Need at least two calibration points!")
+            elif parameter[0] < 0 or parameter[1] < 0: 
+                pop_error("Calibration Error","Can't receive negative values!")
+                raise ValueError("Cant receive negative values!")
+            elif parameter[0] == 0 or parameter[1] == 0:
+                pop_error("Calibration Error","Can't receive zero as parameter!")
+                raise ValueError("Cant receive zero as parameter!")
         else: pass
     else: 
         raise ValueError("Calibration mode {0} unknown! Check config.cfg")

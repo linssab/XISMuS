@@ -370,7 +370,7 @@ class PeakClipper:
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
             __self__.plot.plot(__self__.spectrum,color="blue",\
-                    label=(root.samples[folder] + "_{}.mca".format(__self__.sample)))
+                    label=(root.samples[folder] + "_{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
             try: 
                 background = __self__.stripbg()
                 __self__.plot.plot(background, label="Background",color="yellow")
@@ -380,7 +380,7 @@ class PeakClipper:
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
             __self__.plot.semilogy(__self__.spectrum,color="blue",\
-                    label=(root.samples[folder] + "_{}.mca".format(__self__.sample)))
+                    label=(root.samples[folder] + "_{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
             try: 
                 background = __self__.stripbg()
                 __self__.plot.plot(background, label="Background",color="yellow")
@@ -396,7 +396,7 @@ class PeakClipper:
         spec_no = root.mcacount[folder]
         __self__.sample = random.randint(1,spec_no)
         mca = SpecRead.selected_sample_folder + \
-                root.samples[folder] + "_{}.mca".format(__self__.sample)
+                root.samples[folder] + "_{0}.{1}".format(__self__.sample,root.mca_extension[folder])
         __self__.spectrum = SpecRead.getdata(mca)
         if isinstance(__self__.spectrum,np.ndarray):
             __self__.refresh_plot() 
@@ -1037,6 +1037,7 @@ class Samples:
     def __init__(__self__):
         __self__.samples_database = {}
         __self__.mcacount = {}
+        __self__.mca_extension = {}
 
     def splash_screen(__self__,parent):
         __self__.splash = Toplevel(parent.master)
@@ -1076,24 +1077,39 @@ class Samples:
                     if os.path.isdir(SpecRead.samples_folder+name)]
             for folder in samples:
                 files = [name for name in os.listdir(SpecRead.samples_folder+folder) \
-                        if name.lower().endswith('.mca')]
+                        if name.lower().endswith('.mca') or name.lower().endswith(".txt")]
+                extension = files[:]
                 if files == []: pass
                 else:
                     for item in range(len(files)): 
+                        # displays file being read on splash screen
                         __self__.filequeue.set("{}".format(files[item]))
                         __self__.label2.update()
                         __self__.splash.update_idletasks()
                         try:
-                            files[item] = files[item].split("_",1)[0]
+                            files[item], extension[item] = \
+                                    files[item].split("_",1)[0], files[item].split(".",1)[1]
                         except: pass
                     counter = dict((x,files.count(x)) for x in files)
+                    counter_ext = dict((x,extension.count(x)) for x in extension)
+                    
                     mca_prefix_count = 0
+                    mca_extension_count = 0
+                    # counts mca files and stores the prefix string and no. of files
                     for counts in counter:
                         if counter[counts] > mca_prefix_count:
                             mca_prefix = counts
                             mca_prefix_count = counter[counts]
+                    # counts how many times the same file extension appears and store the extension string
+                    for ext in counter_ext:
+                        if counter_ext[ext] > mca_extension_count:
+                            mca_extension = ext
+                            mca_extension_count = counter_ext[ext]
+
                     __self__.samples_database[folder] = mca_prefix
                     __self__.mcacount[folder] = len(files)
+                    __self__.mca_extension[folder] = mca_extension
+
         except IOError as exception:
             __self__.splash_kill()
             logging.info("Cannot load samples. Error {}.".format(exception.__class__.__name__))
@@ -1272,6 +1288,7 @@ class MainGUI:
         __self__.master.after(100,__self__.SampleLoader.list_all())
         __self__.samples = __self__.SampleLoader.samples_database
         __self__.mcacount = __self__.SampleLoader.mcacount
+        __self__.mca_extension = __self__.SampleLoader.mca_extension
         __self__.find_elements_diag = None
         
         __self__.master.title("Piratininga SM {}".format(VERSION))
@@ -1298,6 +1315,7 @@ class MainGUI:
         for widget in __self__.master.winfo_children():
             if isinstance(widget, Toplevel):
                 widget.destroy()
+        checkout_config()
         __self__.master.destroy()
         sys.exit()
     
@@ -1738,9 +1756,11 @@ class MainGUI:
                 save_config()
                 return ManualParam
 
-            CalibDiag = Toplevel(master=__self__.ConfigDiag)
+            CalibDiag = Toplevel(master = __self__.ConfigDiag)
             CalibDiag.title("Manual configuration")
             CalibDiag.resizable(False,False)
+            icon = os.getcwd()+"\\images\\icons\\settings.ico"
+            CalibDiag.iconbitmap(icon)
             ParamFrame = Frame(CalibDiag)
             ParamFrame.pack()
             ButtonFrame = Frame(CalibDiag)
@@ -1757,6 +1777,8 @@ class MainGUI:
             en4 = DoubleVar()
             
             try: 
+                # gets calibration parameters read while performing last 
+                # setup or conditional setup and fills entries
                 SpecRead.CONFIG['calibration'] = 'manual'
                 calibparam = SpecRead.getcalibration()
                 ch1.set(calibparam[0][0])
@@ -1810,6 +1832,25 @@ class MainGUI:
                 dm_file.close()
 
             if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
+                
+                # reads configuration integrity prior opening config.cfg for writing
+                if configdict['calibration'] == 'manual': 
+                    calibparam = ManualParam
+                    # save_config only passes positive integers forward
+                    # in the case other data is received as user input, this will be filtered
+                    # absence of acceptable parameters returns an empty list
+                    if calibparam == []: 
+                        messagebox.showerror("Calibration Error",\
+                                "No acceptable parameters passed!")
+                        raise ValueError("No acceptable parameters passed!")
+                    elif len(calibparam) <= 1: 
+                        messagebox.showerror("Calibration Error",\
+                                "Need at least two anchors!")
+                        raise ValueError("Calibration need at least two anchors!")
+                else: 
+                    SpecRead.CONFIG['calibration'] = 'from_source'
+                    calibparam = SpecRead.getcalibration()
+
                 cfgpath = os.getcwd() + '\config.cfg'
                 cfgfile = open(cfgpath,'w+')
                 cfgfile.write("<<CONFIG_START>>\r")
@@ -1818,15 +1859,10 @@ class MainGUI:
                 cfgfile.write("<<CALIBRATION>>\r")
                 
                 SpecRead.DIRECTORY = configdict['directory'] + '\\'
-                SpecRead.selected_sample_folder = SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
+                SpecRead.selected_sample_folder = \
+                        SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
                 SpecRead.FIRSTFILE_ABSPATH = SpecRead.findprefix()
                 
-                if configdict['calibration'] == 'manual': 
-                    calibparam = ManualParam
-                else: 
-                    SpecRead.CONFIG['calibration'] = 'from_source'
-                    calibparam = SpecRead.getcalibration()
-
                 for pair in calibparam:
                     cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
                 cfgfile.write("<<END>>\r")
@@ -1877,7 +1913,7 @@ class MainGUI:
                 __self__.write_stat()
                 __self__.draw_map()
        
-        __self__.ConfigDiag = Toplevel()
+        __self__.ConfigDiag = Toplevel(master = __self__.master)
         __self__.ConfigDiag.grab_set()
         __self__.ConfigDiag.resizable(False,False)
         __self__.ConfigDiag.title("Configuration")
@@ -2435,6 +2471,7 @@ if __name__ == "__main__":
     check_screen_resolution(optimum_resolution)
     # internal imports
     import SpecRead
+    from ReadConfig import checkout_config
     from ImgMath import LEVELS
     from ImgMath import threshold, low_pass, iteractive_median, write_image
     from SpecMath import getstackplot, correlate, peakstrip
