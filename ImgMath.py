@@ -143,7 +143,8 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     mu2 = coefficients[1]
     logging.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
     
-    ANGLE = 73  # IN DEGREES #
+    #ANGLE = 73  # IN DEGREES #
+    ANGLE = 27  # IN DEGREES #
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0.001:
@@ -433,6 +434,28 @@ def split_and_save(datacube,map_array,element_list):
     logging.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
     logging.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
+    return 0
+
+def write_image(image,size,path):
+    """
+    Image must be a np.array
+    size is the desired maximum dimension in pixels (int)
+    """
+    imagsize = image.shape
+    imagex = image.shape[0]
+    imagey = image.shape[1]
+    factor = size/max(imagsize)
+    newX,newY = int(factor*imagex),int(factor*imagey)
+    
+    if imagex > size or imagey > size: 
+        large_image = image/image.max()*255
+    else: 
+        if image.max() > 0: 
+            large_image = image/image.max()*255
+        else:
+            large_image = image
+        large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
+    cv2.imwrite(path,large_image)
     return 0
 
 def stackimages(*args):
