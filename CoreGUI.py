@@ -231,7 +231,7 @@ class dimension_diag():
         
         accept = Button(diag,text="Ok", width=13, command=lambda:\
                 __self__.send(__self__.x,__self__.y))
-        accept.grid(row=3,column=0,columnspan=2)
+        accept.grid(row=3,column=0,columnspan=2,pady=5)
         __self__.win.update()
         place_center(root.master,__self__.win)
 
@@ -1297,7 +1297,7 @@ class MainGUI:
         __self__.sample_plot =__self__.sample_figure.add_subplot(111)
         __self__.sample_plot.grid(b=None)
         __self__.sample_plot.axis('off')
-        mapfont = {'fontname':'Times New Roman','fontsize':10}
+        mapfont = {'fontname':'Arial','fontsize':10}
         __self__.sample_plot.set_title('Sample Counts Map',**mapfont)
 
         sys_mem = dict(virtual_memory()._asdict())
@@ -1367,6 +1367,9 @@ class MainGUI:
                     lambda: wipe_list())
         
     def call_listsamples(__self__):
+
+        """ Draws the sample list window """
+
         __self__.SamplesWindow = Toplevel(master=__self__.master)
         __self__.SamplesWindow.title("Sample List")
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
@@ -1375,6 +1378,7 @@ class MainGUI:
         __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="MCA PREFIX")
         __self__.SamplesWindow_TableLeft = Listbox(__self__.SamplesWindow, height=40)
         __self__.SamplesWindow_TableLeft.bind('<Double-Button-1>', __self__.sample_select)
+        __self__.SamplesWindow_TableLeft.bind('<Button-3>', __self__.sample_popup)
         __self__.SamplesWindow_TableRight = Listbox(__self__.SamplesWindow, height=40)
         
         __self__.SamplesWindow_LabelLeft.grid(row=0,column=0)
@@ -1382,6 +1386,11 @@ class MainGUI:
         __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0)
         __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1)
        
+        __self__.SamplesWindow.popup = Menu(__self__.SamplesWindow, tearoff=0)
+        __self__.SamplesWindow.popup.add_command(label="Load",command=__self__.sample_select)
+        __self__.SamplesWindow.popup.add_command(label="Save density map",command=__self__.export_density_map)
+        __self__.SamplesWindow.popup.add_command(label="Open files location",command=doNothing)
+
         for key in __self__.samples:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(__self__.samples[key]))
@@ -1390,6 +1399,11 @@ class MainGUI:
         __self__.SamplesWindow_TableRight.config(state=DISABLED)
 
     def list_samples(__self__):
+
+        """ Function invoked by the UI widget. It verifies the exitence
+        of any running instance of samples window and call the function which
+        draws it accordingly """
+
         try:
             if __self__.SamplesWindow.state() == 'normal': 
                 __self__.SamplesWindow.focus_force()
@@ -1397,6 +1411,50 @@ class MainGUI:
                 pass
             else: __self__.call_listsamples()
         except: __self__.call_listsamples()
+    
+    def sample_select(__self__,event=""):
+    
+        """ Loads the sample selected from the sample list menu. If the cube is 
+        compiled, loads it to memory. If not, the configuration dialog is called """
+
+        __self__.toggle_('off')
+        
+        # destroy any open configuration window
+        try: __self__.ConfigDiag.destroy()
+        except: pass
+
+        #index = int(event.widget.curselection()[0])
+        #value = event.widget.get(index)
+        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        
+        # to avoid unecessarily changing the global variable cube_path, a local version
+        # is created to check the existance of a cube file for the selected sample. If it exists,
+        # then the global variable is changed, the cube is loaded to memory and the aplication load
+        # the configuration embedded in the cube file. Config.cfg remains unchanged.
+        # If the cube does not exists, the user is promped to config the sample and click ok to compile it.
+        # Let the user cancel the cofiguration dialogue, the global variable cube_path is unchanged.
+        
+        local_cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
+        if os.path.exists(local_cube_path): 
+            global MY_DATACUBE
+            SpecRead.cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
+            load_cube()
+            SpecRead.setup_from_datacube(MY_DATACUBE,__self__.samples)
+            __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
+            __self__.toggle_(toggle='on')    
+            __self__.write_stat()   
+            __self__.draw_map()
+        else: 
+            SpecRead.conditional_setup(name=value)
+            __self__.call_configure()
+
+    def sample_popup(__self__,event):
+        __self__.SamplesWindow_TableLeft.select_clear(0,END)
+        idx = __self__.SamplesWindow_TableLeft.nearest(event.y)
+        __self__.SamplesWindow_TableLeft.select_set(idx)
+        __self__.SamplesWindow_TableLeft.activate(idx)
+        try: __self__.SamplesWindow.popup.tk_popup(event.x_root, event.y_root, entry="")
+        finally: __self__.SamplesWindow.popup.grab_release()
     
     def draw_map(__self__):
         global MY_DATACUBE
@@ -1407,6 +1465,15 @@ class MainGUI:
             blank = np.zeros([20,20])
             __self__.sample_plot.imshow(blank, cmap='jet')
             __self__.plot_canvas.draw()
+    
+    def export_density_map(__self__,event=""):
+        global MY_DATACUBE
+        f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+        if f is None: 
+            return
+        __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
+        #write_image(MY_DATACUBE.densitymap,1024,f.name)
+        return 0
 
     def wipe(__self__,e=""):
         try: 
@@ -1428,38 +1495,7 @@ class MainGUI:
         except: 
             __self__.sample_plot.imshow(np.zeros([20,20]))
     
-    def sample_select(__self__,event):
         
-        __self__.toggle_('off')
-        # destroy any open configuration window
-        try: __self__.ConfigDiag.destroy()
-        except: pass
-
-        index = int(event.widget.curselection()[0])
-        value = event.widget.get(index)
-        
-        # to avoid unecessarily changing the global variable cube_path, a local version
-        # is created to check the existance of a cube file for the selected sample. If it exists,
-        # then the global variable is changed, the cube is loaded to memory and the aplication load
-        # the configuration embedded in the cube file. Config.cfg remains unchanged.
-        # If the cube does not exists, the user is promped to config the sample and click ok to compile it.
-        # Let the user cancel the cofiguration dialogue, the global variable cube_path is unchanged.
-        
-        local_cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
-        if os.path.exists(local_cube_path): 
-            global MY_DATACUBE
-            SpecRead.cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
-            load_cube()
-            SpecRead.setup_from_datacube(MY_DATACUBE,__self__.samples)
-            __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
-            __self__.toggle_(toggle='on')    
-            __self__.write_stat()   
-            __self__.draw_map()
-
-        else: 
-            SpecRead.conditional_setup(name=value)
-            __self__.call_configure()
-    
     def plot_ROI(__self__):
         master = __self__.master
         ROI_plot = PlotWin(master)
@@ -1711,8 +1747,9 @@ class MainGUI:
             __self__.ResetWindow = Toplevel(master=__self__.master)
             __self__.ResetWindow.title("Attention!")
             __self__.ResetWindow.resizable(False,False)
-            LocalLabel = Label(__self__.ResetWindow, text="Resetting the sample will erase all files in the OUTPUT folder of sample {}! Are you sure you want to proceed?".format(SpecRead.DIRECTORY),\
-                    padx=10, pady=4, wraplength=250)
+            LocalLabel = Label(__self__.ResetWindow, text=\
+                    "Resetting the sample will erase all files in the OUTPUT folder of sample {}! Are you sure you want to proceed?".\
+                    format(SpecRead.DIRECTORY),padx=10, pady=4, wraplength=250)
             LocalLabel.pack()
             Erase_ico = PhotoImage(file = os.getcwd()+'\images\icons\erase.png')
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
@@ -1740,7 +1777,7 @@ class MainGUI:
         else:
             __self__.config_xy = SpecRead.getdimension()
 
-        ManualParam = []
+        __self__.ManualParam = []
 
         def manual_calib():
             
@@ -1751,10 +1788,14 @@ class MainGUI:
                         [ch3.get(),en3.get()],\
                         [ch4.get(),en4.get()]]
                 for index in range(len(EntryParam)):
-                    if EntryParam[index][0] or EntryParam[index][1] > 0:
-                        ManualParam.append(EntryParam[index])
+                    if EntryParam[index][0] > 0 and EntryParam[index][1] > 0:
+                        __self__.ManualParam.append(EntryParam[index])
+                    elif EntryParam[index][0] < 0 or EntryParam[index][1] < 0:
+                        messagebox.showerror("Calibration Error",\
+                                "Can't receive negative values!")
+                        __self__.ManualParam = []
+                        raise ValueError("Manual calibration can't receive negative values!")
                 save_config()
-                return ManualParam
 
             CalibDiag = Toplevel(master = __self__.ConfigDiag)
             CalibDiag.title("Manual configuration")
@@ -1803,7 +1844,8 @@ class MainGUI:
             EnergyBox3 = Entry(ParamFrame,textvariable=en3).grid(row=3,column=1)
             EnergyBox4 = Entry(ParamFrame,textvariable=en4).grid(row=4,column=1)
             
-            OkButton = Button(ButtonFrame,text="SAVE",command=save_param).grid(row=5,columnspan=2)
+            OkButton = Button(ButtonFrame,text="SAVE",command=save_param).\
+                    grid(row=5,columnspan=2)
             
             place_center(__self__.ConfigDiag,CalibDiag)
         
@@ -1835,17 +1877,20 @@ class MainGUI:
                 
                 # reads configuration integrity prior opening config.cfg for writing
                 if configdict['calibration'] == 'manual': 
-                    calibparam = ManualParam
+                    calibparam = __self__.ManualParam
+                    print(calibparam)
                     # save_config only passes positive integers forward
                     # in the case other data is received as user input, this will be filtered
                     # absence of acceptable parameters returns an empty list
                     if calibparam == []: 
                         messagebox.showerror("Calibration Error",\
                                 "No acceptable parameters passed!")
+                        __self__.ManualParam = []
                         raise ValueError("No acceptable parameters passed!")
                     elif len(calibparam) <= 1: 
                         messagebox.showerror("Calibration Error",\
                                 "Need at least two anchors!")
+                        __self__.ManualParam = []
                         raise ValueError("Calibration need at least two anchors!")
                 else: 
                     SpecRead.CONFIG['calibration'] = 'from_source'
