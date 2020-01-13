@@ -140,6 +140,7 @@ def call_help():
 
 def call_author():
     AuthorWin = Toplevel(master=root.master)
+    Authorwin.tagged = True
     AuthorWin.title("Author")
     AuthorWin.resizable(False,False)
     infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
@@ -279,6 +280,7 @@ class PeakClipper:
     
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent)
+        __self__.master.tagged = True
         __self__.parent = parent
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
@@ -542,8 +544,9 @@ class ImageAnalyzer:
         
         __self__.packed_elements = MY_DATACUBE.check_packed_elements()
         __self__.master = Toplevel(master=parent)
+        __self__.master.tagged = False
         #__self__.master.bind("<Configure>", __self__.resize)
-        __self__.master.title("Image Analyzer v1.01a")
+        __self__.master.title("Image Analyzer v1.0.0")
         __self__.master.resizable(False,False)
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP,anchor=CENTER)
@@ -895,6 +898,7 @@ class PlotWin:
         plot_font = {'fontname':'Times New Roman','fontsize':10}
         __self__.master = Toplevel(master=master)
         __self__.master.title("Plot")
+        __self__.master.tagged = None
         __self__.master.minsize(width=600,height=480)
         __self__.master.configure(bg='white')
         __self__.master.resizable(True,True) 
@@ -936,7 +940,8 @@ class PlotWin:
         #__self__.canvas.draw()
 
     def draw_calibration(__self__):
-        plot_font = {'fontname':'Times New Roman','fontsize':10}
+        __self__.master.tagged = True
+        plot_font = {'fontname':'Arial','fontsize':10}
         __self__.plotdata = MY_DATACUBE.energyaxis
         channels = np.arange(1,__self__.plotdata.shape[0]+1)
         anchors = MY_DATACUBE.calibration
@@ -950,10 +955,11 @@ class PlotWin:
         place_topleft(__self__.master.master,__self__.master)
 
     def draw_spec(__self__,mode,display_mode=None,lines=False):
+        __self__.master.tagged = False
         if __self__.master.winfo_exists() == True:
             global FIND_ELEMENT_LIST
             __self__.plot.clear()
-            plot_font = {'fontname':'Times New Roman','fontsize':10}
+            plot_font = {'fontname':'Arial','fontsize':10}
             colors = ["blue","red","green"]
             if display_mode == '-semilog':
                 __self__.plot.set_title('{0}'.format(SpecRead.DIRECTORY),**plot_font)
@@ -966,6 +972,7 @@ class PlotWin:
                             label=str(option),color=colors[i])
                     i+=1
                 if lines==True:
+                    __self__.master.tagged = True
                     for element in FIND_ELEMENT_LIST:
                         if element == "custom":
                             energies = plottables_dict[element]
@@ -991,6 +998,7 @@ class PlotWin:
                             label=str(option),color=colors[i])
                     i+=1
                 if lines==True:
+                    __self__.master.tagged = True
                     for element in FIND_ELEMENT_LIST:
                         if element == "custom":
                             energies = plottables_dict[element]
@@ -1009,6 +1017,7 @@ class PlotWin:
             __self__.canvas.draw()
     
     def draw_ROI(__self__):
+        __self__.master.tagged = True
         global MY_DATACUBE
         for element in MY_DATACUBE.ROI:
             __self__.plotdata = MY_DATACUBE.ROI[element]
@@ -1370,26 +1379,31 @@ class MainGUI:
 
         """ Draws the sample list window """
 
-        __self__.SamplesWindow = Toplevel(master=__self__.master)
+        __self__.SamplesWindow = Toplevel(master=__self__.master, name="samples list")
+        __self__.SamplesWindow.tagged = False
         __self__.SamplesWindow.title("Sample List")
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
-        __self__.SamplesWindow.resizable(False,False) 
+        __self__.SamplesWindow.resizable(False,True) 
+        __self__.SamplesWindow.minsize(0,320)
         __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="FOLDER")
         __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="MCA PREFIX")
-        __self__.SamplesWindow_TableLeft = Listbox(__self__.SamplesWindow, height=40)
+        __self__.SamplesWindow_TableLeft = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
+        __self__.SamplesWindow_TableRight = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
         __self__.SamplesWindow_TableLeft.bind('<Double-Button-1>', __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind('<Button-3>', __self__.sample_popup)
-        __self__.SamplesWindow_TableRight = Listbox(__self__.SamplesWindow, height=40)
         
         __self__.SamplesWindow_LabelLeft.grid(row=0,column=0)
         __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
-        __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0)
-        __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1)
-       
+        __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0,sticky=N+S)
+        __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1,sticky=N+S)
+
+        Grid.rowconfigure(__self__.SamplesWindow, 1, weight=1)
+   
         __self__.SamplesWindow.popup = Menu(__self__.SamplesWindow, tearoff=0)
         __self__.SamplesWindow.popup.add_command(label="Load",command=__self__.sample_select)
         __self__.SamplesWindow.popup.add_command(label="Save density map",command=__self__.export_density_map)
         __self__.SamplesWindow.popup.add_command(label="Open files location",command=doNothing)
+        __self__.SamplesWindow.popup.add_command(label="Open output folder",command=doNothing)
 
         for key in __self__.samples:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
@@ -1417,6 +1431,14 @@ class MainGUI:
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
 
+        __self__.master.deiconify()
+        __self__.master.focus_force()
+        for widget in __self__.master.winfo_children():
+            if isinstance(widget, Toplevel): 
+                try: 
+                    if widget.tagged == True: widget.destroy()
+                except:
+                    pass
         __self__.toggle_('off')
         
         # destroy any open configuration window
@@ -1468,11 +1490,14 @@ class MainGUI:
     
     def export_density_map(__self__,event=""):
         global MY_DATACUBE
-        f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+        __self__.sample_select(event)
+        if os.path.exists(SpecRead.cube_path): 
+            f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+        else: 
+            return
         if f is None: 
             return
         __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
-        #write_image(MY_DATACUBE.densitymap,1024,f.name)
         return 0
 
     def wipe(__self__,e=""):
@@ -2089,6 +2114,7 @@ class PeriodicTable:
 
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent.master)
+        __self__.master.tagged = True
         __self__.master.title("Periodic Table of Elements")
         __self__.master.resizable(False,False)
         __self__.master.header = Label(__self__.master, text="Periodic Table of Elements.")
