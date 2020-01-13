@@ -140,7 +140,6 @@ def call_help():
 
 def call_author():
     AuthorWin = Toplevel(master=root.master)
-    Authorwin.tagged = True
     AuthorWin.title("Author")
     AuthorWin.resizable(False,False)
     infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
@@ -206,6 +205,7 @@ class dimension_diag():
 
     def __init__(__self__,folder):
         __self__.win = Toplevel(root.master)
+        __self__.win.withdraw()
         __self__.win.resizable(False,False)
         __self__.win.overrideredirect(True)
         __self__.win.bind("<Escape>",__self__.kill)
@@ -221,20 +221,24 @@ class dimension_diag():
         label2 = Label(diag,text="Rows: ")
         label2.grid(row=2,column=0)
         __self__.x = StringVar()
-        __self__.y = StringVar()
-        
-        x_ = Entry(diag,textvariable=__self__.x,validate="focusout")
         __self__.x.trace("w",__self__.callback_x)
-        x_.grid(row=1,column=1)
-        y_ = Entry(diag,textvariable=__self__.y,validate="focusout")
+        __self__.y = StringVar()
         __self__.y.trace("w",__self__.callback_y)
-        y_.grid(row=2,column=1)
         
-        accept = Button(diag,text="Ok", width=13, command=lambda:\
-                __self__.send(__self__.x,__self__.y))
+        __self__.x_ = Entry(diag,textvariable=__self__.x,validate="focusout")
+        __self__.x_.grid(row=1,column=1)
+        __self__.y_ = Entry(diag,textvariable=__self__.y,validate="focusout")
+        __self__.y_.grid(row=2,column=1)
+        
+        __self__.win.bind("<Return>",__self__.send)
+        
+        accept = Button(diag,text="Ok", width=13, command=__self__.send)
         accept.grid(row=3,column=0,columnspan=2,pady=5)
+        
         __self__.win.update()
         place_center(root.master,__self__.win)
+        __self__.win.deiconify()
+        __self__.x_.focus_set()
 
     def check_values(__self__,x,y):
         x,y = x.get(),y.get()
@@ -248,10 +252,13 @@ class dimension_diag():
             if y > root.mcacount[__self__.folder]: y = root.mcacount[__self__.folder]
             elif y == 0: y = 1
         else: y=1
+        while x*y > root.mcacount[__self__.folder]:
+            if x > y: x-=1
+            elif y > x: y-=1
         return x,y
     
-    def send(__self__,x,y):
-        root.config_xy = __self__.check_values(x,y)
+    def send(__self__,event=""):
+        root.config_xy = __self__.check_values(__self__.x,__self__.y)
         __self__.win.grab_release()
         __self__.win.destroy()
         __self__.exit_code = "save"
@@ -280,17 +287,20 @@ class PeakClipper:
     
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent)
+        #__self__.master.withdraw()
         __self__.master.tagged = True
+        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        __self__.master.iconbitmap(icon)
         __self__.parent = parent
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+        __self__.master.bind("<Escape>",__self__.kill)
         __self__.frame1 = Frame(__self__.master,height=320,width=240)
         __self__.frame2 = Frame(__self__.master)
         __self__.frame3 = Frame(__self__.master)
         __self__.frame1.grid(row=0,rowspan=2,column=0)
         __self__.frame2.grid(row=0,column=1,padx=15)
         __self__.frame3.grid(row=1,column=1,padx=15,pady=15)
-        #__self__.master.withdraw()
 
         __self__.savgol = IntVar()
         __self__.order = IntVar()
@@ -351,11 +361,11 @@ class PeakClipper:
         __self__.button_try.grid(row=0,column=0)
         __self__.button_save.grid(row=0,column=1)
         __self__.button_cancel.grid(row=1,column=0,columnspan=2)
-
+        
         place_center(__self__.parent,__self__.master)
-        icon = os.getcwd()+"\\images\\icons\\settings.ico"
-        __self__.master.iconbitmap(icon)
         __self__.random_sample()
+        #__self__.master.deiconify()
+        __self__.master.focus_set()
     
     def stripbg(__self__):
         savgol = __self__.savgol.get()
@@ -412,7 +422,7 @@ class PeakClipper:
         __self__.kill()
         return 0
 
-    def kill(__self__):
+    def kill(__self__, event=""):
         __self__.master.grab_release()
         root.ConfigDiag.grab_set()
         __self__.master.destroy()
@@ -1389,8 +1399,9 @@ class MainGUI:
         __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="MCA PREFIX")
         __self__.SamplesWindow_TableLeft = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
         __self__.SamplesWindow_TableRight = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
-        __self__.SamplesWindow_TableLeft.bind('<Double-Button-1>', __self__.sample_select)
-        __self__.SamplesWindow_TableLeft.bind('<Button-3>', __self__.sample_popup)
+        __self__.SamplesWindow_TableLeft.bind("<Double-Button-1>", __self__.sample_select)
+        __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
+        __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
         
         __self__.SamplesWindow_LabelLeft.grid(row=0,column=0)
         __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
@@ -1408,9 +1419,11 @@ class MainGUI:
         for key in __self__.samples:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(__self__.samples[key]))
+
         place_topleft(__self__.master,__self__.SamplesWindow)
         __self__.SamplesWindow.iconbitmap(icon)
         __self__.SamplesWindow_TableRight.config(state=DISABLED)
+        __self__.SamplesWindow_TableLeft.focus_set()
 
     def list_samples(__self__):
 
@@ -1421,6 +1434,7 @@ class MainGUI:
         try:
             if __self__.SamplesWindow.state() == 'normal': 
                 __self__.SamplesWindow.focus_force()
+                __self__.SamplesWindow_TableLeft.set_focus()
                 place_topleft(__self__.master,__self__.SamplesWindow)
                 pass
             else: __self__.call_listsamples()
@@ -1432,7 +1446,7 @@ class MainGUI:
         compiled, loads it to memory. If not, the configuration dialog is called """
 
         __self__.master.deiconify()
-        __self__.master.focus_force()
+        __self__.master.focus_set()
         for widget in __self__.master.winfo_children():
             if isinstance(widget, Toplevel): 
                 try: 
@@ -1513,6 +1527,11 @@ class MainGUI:
         __self__.draw_map()
         __self__.toggle_(toggle='off')
         __self__.SampleVar.set("Sample on memory: None")
+        try: 
+            if __self__.SamplesWindow.state() == "normal": 
+                __self__.SamplesWindow.deiconify()
+                __self__.SamplesWindow_TableLeft.focus_set()
+        except: pass
         
     def refresh_ImageCanvas(__self__,i):
         try: 
@@ -1900,10 +1919,14 @@ class MainGUI:
 
             if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
                 
+                SpecRead.DIRECTORY = configdict["directory"] + '\\'
+                SpecRead.selected_sample_folder = \
+                        SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
+                SpecRead.FIRSTFILE_ABSPATH = SpecRead.findprefix()
+
                 # reads configuration integrity prior opening config.cfg for writing
                 if configdict['calibration'] == 'manual': 
                     calibparam = __self__.ManualParam
-                    print(calibparam)
                     # save_config only passes positive integers forward
                     # in the case other data is received as user input, this will be filtered
                     # absence of acceptable parameters returns an empty list
@@ -1918,21 +1941,15 @@ class MainGUI:
                         __self__.ManualParam = []
                         raise ValueError("Calibration need at least two anchors!")
                 else: 
-                    SpecRead.CONFIG['calibration'] = 'from_source'
+                    SpecRead.CONFIG["calibration"] = "from_source"
                     calibparam = SpecRead.getcalibration()
 
-                cfgpath = os.getcwd() + '\config.cfg'
-                cfgfile = open(cfgpath,'w+')
+                cfgpath = os.getcwd() + "\config.cfg"
+                cfgfile = open(cfgpath,"w+")
                 cfgfile.write("<<CONFIG_START>>\r")
                 for key in configdict:
                     cfgfile.write("{} = {}\r".format(key,configdict[key]))
                 cfgfile.write("<<CALIBRATION>>\r")
-                
-                SpecRead.DIRECTORY = configdict['directory'] + '\\'
-                SpecRead.selected_sample_folder = \
-                        SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
-                SpecRead.FIRSTFILE_ABSPATH = SpecRead.findprefix()
-                
                 for pair in calibparam:
                     cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
                 cfgfile.write("<<END>>\r")
