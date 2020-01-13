@@ -14,7 +14,6 @@ import os
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from PyMca5.PyMcaMath.fitting import RateLaw
 logging.debug("Finished SpecRead imports.")
 
 def get_samples_folder(inifile):
@@ -29,10 +28,6 @@ logging.info("Samples path: {0}".format(samples_folder))
 def findprefix():
     mca_prefix = 'None'
     files = [name for name in os.listdir(selected_sample_folder)]
-   
-    #print("\nfolder being looked up from findprefix")
-    #print(selected_sample_folder+"\n")
-    
     for item in range(len(files)): 
         try:
             files[item] = files[item].split("_",1)[0]
@@ -93,7 +88,6 @@ def setup_from_datacube(datacube,sample_database):
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file,
             FIRSTFILE_ABSPATH]
-    
     return np.nan 
 
 def conditional_setup(name='None'):
@@ -102,6 +96,7 @@ def conditional_setup(name='None'):
     # before setting up the PATHS
     
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    
     
     CONFIG,CALIB = CONFIGURE()
     CONFIG['directory'] = name
@@ -112,6 +107,8 @@ def conditional_setup(name='None'):
     output_path = workpath+'\output\\'+DIRECTORY+'\\'
     dimension_file = selected_sample_folder + '\colonneXrighe.txt'
     
+    FIRSTFILE_ABSPATH = selected_sample_folder + "\\" + name
+
     global_list =  [CONFIG, CALIB, DIRECTORY,
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file]
@@ -262,7 +259,7 @@ def calibrate():
             y.append(param[i][1])
     x=np.asarray([x])
     y=np.asarray([y])
-    coefficients=list(RateLaw.linregress(x,y))
+    coefficients=list(linregress(x,y))
     GAIN=coefficients[0]
     B=coefficients[1]
     R=coefficients[2]
@@ -369,6 +366,93 @@ def dump_ratios(maps_list,element_list):
                     logging.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
         r_file.close()
     return 0
+
+def linregress(x, y, sigmay=None, full_output=False):
+
+    # DISCLAIMER #
+    # function extracted from PyMca5.PyMcaMath.fitting.RateLaw script
+
+    """
+    Linear fit to a straight line following P.R. Bevington:
+    
+    "Data Reduction and Error Analysis for the Physical Sciences"
+
+    Parameters
+    ----------
+    x, y : array_like
+        two sets of measurements.  Both arrays should have the same length.
+
+    sigmay : The uncertainty on the y values
+        
+    Returns
+    -------
+    slope : float
+        slope of the regression line
+    intercept : float
+        intercept of the regression line
+    r_value : float
+        correlation coefficient
+
+    if full_output is true, an additional dictionary is returned with the keys
+
+    sigma_slope: uncertainty on the slope
+
+    sigma_intercept: uncertainty on the intercept
+
+    stderr: float
+        square root of the variance
+    
+    """
+
+    x = np.asarray(x, dtype=np.float).flatten()
+    y = np.asarray(y, dtype=np.float).flatten()
+    N = y.size
+    if sigmay is None:
+        sigmay = np.ones((N,), dtype=y.dtype)
+    else:
+        sigmay = np.asarray(sigmay, dtype=np.float).flatten()
+    w = 1.0 / (sigmay * sigmay + (sigmay == 0))
+
+    n = S = w.sum()
+    Sx = (w * x).sum()
+    Sy = (w * y).sum()    
+    Sxx = (w * x * x).sum()
+    Sxy = ((w * x * y)).sum()
+    Syy = ((w * y * y)).sum()
+    # SSxx is identical to delta in Bevington book
+    delta = SSxx = (S * Sxx - Sx * Sx)
+
+    tmpValue = Sxx * Sy - Sx * Sxy
+    intercept = tmpValue / delta
+    SSxy = (S * Sxy - Sx * Sy)
+    slope = SSxy / delta
+    sigma_slope = np.sqrt(S /delta)
+    sigma_intercept = np.sqrt(Sxx / delta)
+
+    SSyy = (n * Syy - Sy * Sy)
+    r_value = SSxy / np.sqrt(SSxx * SSyy)
+    if r_value > 1.0:
+        r_value = 1.0
+    if r_value < -1.0:
+        r_value = -1.0
+
+    if not full_output:
+        return slope, intercept, r_value
+
+    ddict = {}
+    # calculate the variance
+    if N < 3:
+        variance = 0.0
+    else:
+        variance = ((y - intercept - slope * x) ** 2).sum() / (N - 2)
+    ddict["variance"] = variance
+    ddict["stderr"] = np.sqrt(variance)
+    ddict["slope"] = slope
+    ddict["intercept"] = intercept
+    ddict["r_value"] = r_value
+    ddict["sigma_intercept"] = np.sqrt(Sxx / SSxx)
+    ddict["sigma_slope"] = np.sqrt(S / SSxx)
+    return slope, intercept, r_value, ddict
 
 if __name__ == "__main__":
     logging.info("This is SpecRead")
