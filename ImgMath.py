@@ -234,11 +234,7 @@ def plot3D(depth_matrix):
     return 0
 
 def colorize(elementmap,color=None):
-    imagesize = SpecRead.getdimension()
-    try: imagesize = len(elementmap),len(elementmap[0])
-    except: 
-        imagesize = len(elementmap),1
-        elementmap = np.expand_dims(elementmap, axis = 1)
+    imagesize = elementmap.shape
     imagex = imagesize[0]
     imagey = imagesize[1]
     imagedimension = imagex*imagey
@@ -369,7 +365,6 @@ def split_and_save(datacube,map_array,element_list):
     imagey = imagsize[1]
     image = np.zeros([imagex,imagey])
 
-    #color_image = ImgMath.colorize(image,'copper')
     cmap = createcmap([255,215,51])
     
     target_size = 1024
@@ -459,13 +454,15 @@ def write_image(image,size,path):
     return 0
 
 def stackimages(*args):
+    imagex, imagey = args[0].shape[0], args[0].shape[1]
     imagelist = args
-    colorlist = ['red','green','blue']
+    colorlist = ["green","blue","red"]
     color = 0
-    stackedimage = ImgMath.colorize(np.zeros([imagex,imagey]),'none')
+    blank = np.zeros([imagex, imagey])
+    stackedimage = colorize(blank,'none')
     for image in imagelist:
         color += 1
-        image = ImgMath.colorize(image,colorlist[color])
+        image = colorize(image,colorlist[color])
         stackedimage = cv2.addWeighted(stackedimage,1,image,1,0)
     return stackedimage
 
@@ -504,7 +501,6 @@ def large_pixel_smoother(image,iterations):
                     x+=x
                 else: pass
             except: pass
-
     return image
 
 if __name__ == "__main__":

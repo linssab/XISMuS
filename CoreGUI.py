@@ -7,7 +7,7 @@
 
 global MY_DATACUBE, FIND_ELEMENT_LIST
 MY_DATACUBE, FIND_ELEMENT_LIST = None, None
-authorized = ["00000000-0000-0000-0000-482ae32e7623","00000000-0000-0000-0000-3cf011262a2c"]
+authorized = ["00000000-0000-0000-0000-482ae32e7623","00000000-0000-0000-0000-3cf011262a2c","00000000-0000-0000-0000-00e04c6803f6"]
 
 VERSION = "0.0.2α"
 
@@ -201,6 +201,75 @@ def load_cube():
     return MY_DATACUBE
 
 
+class export_diag():
+
+    def __init__(__self__,parent):
+        __self__.master = Toplevel(parent.master)
+        __self__.master.grab_set()
+        __self__.master.title("Export dialog")
+        __self__.parent = parent
+        __self__.master.withdraw()
+        __self__.master.resizable(False,False)
+        __self__.master.bind("<Escape>",__self__.kill)
+
+        __self__.build_widgets()
+
+    def build_widgets(__self__):
+        __self__.Frame = Frame(__self__.master, height=64, width=288)
+        __self__.Frame.grid(pady=32)
+        icon1 = PhotoImage(file=os.getcwd()+"\\images\\icons\\export_1.png")
+        icon2 = PhotoImage(file=os.getcwd()+"\\images\\icons\\export_2.png")
+        icon3 = PhotoImage(file=os.getcwd()+"\\images\\icons\\export_merge.png")
+        __self__.icon1 = icon1.subsample(1,1)
+        __self__.icon2 = icon2.subsample(1,1)
+        __self__.icon3 = icon3.subsample(1,1)
+        size_x, size_y = 64,64
+        __self__.Button1 = Button(__self__.Frame, image=__self__.icon1, bd=3, command=lambda:__self__.export(tag=1), width=size_x, height=size_y)
+        __self__.Button2 = Button(__self__.Frame, image=__self__.icon2, bd=3, command=lambda:__self__.export(tag=2), width=size_x, height=size_y)
+        __self__.Button3 = Button(__self__.Frame, image=__self__.icon3, bd=3, command=__self__.merge, width=size_x, height=size_y)
+
+        __self__.Button1.grid(row=0,column=0,padx=32)
+        __self__.Button2.grid(row=0,column=1,padx=32)
+        __self__.Button3.grid(row=0,column=2,padx=32)
+        
+        __self__.master.update()
+
+        place_center(__self__.parent.master,__self__.master)
+        __self__.master.deiconify()
+        __self__.master.focus_set()
+        icon = os.getcwd()+"\\images\\icons\\img_anal.ico"
+        __self__.master.iconbitmap(icon)
+
+
+    def export(__self__,tag=0):
+        try:
+            if tag == 1: 
+                f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+                if f is None: 
+                    return
+                write_image(__self__.parent.newimage1,1024,f.name)
+            elif tag == 2: 
+                f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+                if f is None: 
+                    return
+                write_image(__self__.parent.newimage2,1024,f.name)
+            else: pass
+        except PermissionError as exception: 
+            messagebox.showerror("Error!",exception.__class__.__name__)
+            return
+
+    def merge(__self__):
+        stack = stackimages(__self__.parent.newimage1,__self__.parent.newimage2)
+        f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+        if f is None: 
+            return
+        write_image(stack,1024,f.name)
+
+    def kill(__self__):
+        __self__.master.grab_release()
+        __self__.master.destroy()
+
+
 class dimension_diag():
 
     def __init__(__self__,folder):
@@ -287,11 +356,9 @@ class PeakClipper:
     
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent)
-        #__self__.master.withdraw()
         __self__.master.tagged = True
-        icon = os.getcwd()+"\\images\\icons\\settings.ico"
-        __self__.master.iconbitmap(icon)
         __self__.parent = parent
+        #__self__.master.withdraw()
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Escape>",__self__.kill)
@@ -362,10 +429,14 @@ class PeakClipper:
         __self__.button_save.grid(row=0,column=1)
         __self__.button_cancel.grid(row=1,column=0,columnspan=2)
         
+        __self__.master.update()
         place_center(__self__.parent,__self__.master)
-        __self__.random_sample()
         #__self__.master.deiconify()
         __self__.master.focus_set()
+        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        __self__.master.iconbitmap(icon)
+        __self__.random_sample()
+
     
     def stripbg(__self__):
         savgol = __self__.savgol.get()
@@ -893,10 +964,7 @@ class ImageAnalyzer:
             pass
 
     def export_maps(__self__):
-        f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
-        if f is None: 
-            return
-        write_image(__self__.newimage1,1024,f.name)
+        export = export_diag(__self__)
         return 0
 
 
@@ -1064,6 +1132,7 @@ class Samples:
         __self__.splash.configure(bg="#DCDCDC")
         __self__.splash.geometry("640x480")
         __self__.splash.overrideredirect(True)
+        __self__.splash.withdraw()
         __self__.splash.grid_rowconfigure(0,weight=10)
         __self__.splash.grid_rowconfigure(1,weight=1)
         __self__.splash.grid_columnconfigure(0,weight=1)
@@ -1085,6 +1154,7 @@ class Samples:
         __self__.splash.wm_attributes("-disabled",True)
         #__self__.splash.wm_attributes("-transparentcolor","white")
         spawn_center(__self__.splash)
+        __self__.splash.deiconify()
 
     def splash_kill(__self__):
         __self__.splash.destroy()
@@ -2561,7 +2631,7 @@ if __name__ == "__main__":
     import SpecRead
     from ReadConfig import checkout_config
     from ImgMath import LEVELS
-    from ImgMath import threshold, low_pass, iteractive_median, write_image
+    from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from SpecMath import getstackplot, correlate, peakstrip
     from SpecMath import datacube as Cube
     from EnergyLib import plottables_dict
