@@ -20,11 +20,9 @@ def read_license():
     return sysid
 
 def start_up():
-    # reads machine ID and verify if the machine is allowed to run
-    # this software
-    license = read_license()
-    if license not in authorized:
-        license_error(VERSION)
+    #license = read_license()
+    #if license not in authorized:
+    #    license_error(VERSION)
     # ------------------------------------------------------------
 
     SpecRead.conditional_setup()
@@ -34,6 +32,8 @@ def start_up():
     logging.info("Done.")
     global FIND_ELEMENT_LIST
     global snip_config
+    # snip BG parameters are written as global variables and this is horrible
+    # changes to be made in the future
     FIND_ELEMENT_LIST = []
     snip_config = None
 
@@ -176,6 +176,10 @@ def call_compilecube():
 def prompt_folder():
     folder = filedialog.askdirectory()
     if folder != "":
+        ini_file = open(os.getcwd() + "\\folder.ini","w")
+        folder = folder.replace("/","\\")
+        ini_file.write(folder+"\\")
+        ini_file.close()
         SpecRead.samples_folder = folder+"\\"
         root.refresh_samples()
     else:
@@ -285,9 +289,9 @@ class dimension_diag():
         diag.grid()
         label0 = Label(diag,text="Image size")
         label0.grid(row=0,column=0,columnspan=2)
-        label1 = Label(diag,text="Columns: ")
+        label1 = Label(diag,text="Height: ")
         label1.grid(row=1,column=0)
-        label2 = Label(diag,text="Rows: ")
+        label2 = Label(diag,text="Width: ")
         label2.grid(row=2,column=0)
         __self__.x = StringVar()
         __self__.x.trace("w",__self__.callback_x)
@@ -1157,11 +1161,35 @@ class Samples:
         __self__.splash.deiconify()
 
     def splash_kill(__self__):
-        __self__.splash.destroy()
+        try: 
+            __self__.splash.destroy()
+            __self__.popup.destroy()
+        except:
+            pass
+
+    def pop_loader(__self__):
+        __self__.popup = Toplevel(master=root.master)
+        __self__.popup.resizable(False,False)
+        __self__.popup.overrideredirect(True)
+        x = __self__.popup.winfo_screenwidth()
+        y = __self__.popup.winfo_screenheight()
+        __self__.popup.geometry('{}x{}+{}+{}'.format(166, 51,\
+                int((x/2)-80), int((y/2)-23)))
+        __self__.outerframe = Frame(__self__.popup, bd=3, relief=RIDGE,\
+                width=166, height=52)
+        __self__.outerframe.grid(row=0,column=0,sticky=E+W)
+        __self__.outerframe.grid_propagate(0)
+        __self__.popup.label1 = Label(__self__.outerframe, text="Reading samples...")
+        __self__.popup.label1.grid(row=0,column=0,sticky=W)       
+        __self__.label2 = Label(__self__.outerframe, textvariable = __self__.filequeue)
+        __self__.label2.grid(row=1,column=0,sticky=W)
 
     def list_all(__self__):
         logging.info("Loading sample list...")
         try:
+            mca_prefix = None
+            __self__.samples_database = {}
+
             samples = [name for name in os.listdir(SpecRead.samples_folder) \
                     if os.path.isdir(SpecRead.samples_folder+name)]
             for folder in samples:
@@ -1174,7 +1202,9 @@ class Samples:
                         # displays file being read on splash screen
                         __self__.filequeue.set("{}".format(files[item]))
                         __self__.label2.update()
-                        __self__.splash.update_idletasks()
+                        try: __self__.splash.update_idletasks()
+                        except: __self__.popup.update_idletasks()
+                        finally: pass
                         try:
                             files[item], extension[item] = \
                                     files[item].split("_",1)[0], files[item].split(".",1)[1]
@@ -1189,47 +1219,35 @@ class Samples:
                         if counter[counts] > mca_prefix_count:
                             mca_prefix = counts
                             mca_prefix_count = counter[counts]
-                    # counts how many times the same file extension appears and store the extension string
                     for ext in counter_ext:
                         if counter_ext[ext] > mca_extension_count:
                             mca_extension = ext
                             mca_extension_count = counter_ext[ext]
-
-                    __self__.samples_database[folder] = mca_prefix
-                    __self__.mcacount[folder] = len(files)
-                    __self__.mca_extension[folder] = mca_extension
+                    
+                    # creates a dict key only if the numer of mca's is larger than 20.
+                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                        __self__.samples_database[folder] = mca_prefix
+                        __self__.mcacount[folder] = len(files)
+                        __self__.mca_extension[folder] = mca_extension
+            
+            output_folder = os.getcwd()+"\output\\"
+            outputs = [folder for folder in os.listdir(output_folder) \
+                    if os.path.isdir(output_folder + folder)]
+            for folder in outputs:
+                cubes = [cube for cube in os.listdir(output_folder + folder) \
+                        if cube.lower().endswith('.cube')]
+                if folder not in __self__.samples_database: 
+                    if cubes != []: 
+                        __self__.samples_database[folder] = cubes[0].split(".")[1]
+                        __self__.mcacount[folder] = 0
+                        __self__.mca_extension[folder] = "---"
 
         except IOError as exception:
             __self__.splash_kill()
             logging.info("Cannot load samples. Error {}.".format(exception.__class__.__name__))
             messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
         __self__.splash_kill()
-
-    def refresh_samples(__self__):
-        try:
-            mca_prefix = None
-            __self__.samples_database = {}
-            samples = [name for name in os.listdir(SpecRead.samples_folder) \
-                    if os.path.isdir(SpecRead.samples_folder+name)]
-            for folder in samples:
-                files = [name for name in os.listdir(SpecRead.samples_folder+folder)\
-                        if name.lower().endswith('.mca')]
-                if files == []: pass
-                else:
-                    for item in range(len(files)): 
-                        try:
-                            files[item] = files[item].split("_",1)[0]
-                        except: pass
-                    counter = dict((x,files.count(x)) for x in files)
-                    mca_prefix_count = 0
-                    for counts in counter:
-                        if counter[counts] > mca_prefix_count:
-                            mca_prefix = counts
-                            mca_prefix_count = counter[counts]
-                    __self__.samples_database[folder] = mca_prefix
-        except IOError as exception:
-            messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
-        
+       
 
 class Settings:        
         
@@ -1433,7 +1451,8 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Height-mapping",state=DISABLED)
 
     def refresh_samples(__self__):
-        __self__.SampleLoader.refresh_samples()
+        __self__.SampleLoader.pop_loader()
+        __self__.SampleLoader.list_all()
         __self__.samples = __self__.SampleLoader.samples_database
         try: 
             __self__.SamplesWindow.destroy()
@@ -1504,6 +1523,11 @@ class MainGUI:
         try:
             if __self__.SamplesWindow.state() == 'normal': 
                 __self__.SamplesWindow.focus_force()
+                __self__.SamplesWindow.delete(0,END)
+                for key in __self__.samples:
+                    __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
+                    __self__.SamplesWindow_TableRight.insert(END,"{}".format(\
+                            __self__.samples[key]))
                 __self__.SamplesWindow_TableLeft.set_focus()
                 place_topleft(__self__.master,__self__.SamplesWindow)
                 pass
@@ -1789,10 +1813,14 @@ class MainGUI:
 
         if os.path.exists(SpecRead.selected_sample_folder):
             __self__.StatusBox.insert(\
-                    END, "\nSample files location: {0}\n".format(SpecRead.selected_sample_folder))
+                    END, "\nLooking for spectra files at: {0}\n".format(SpecRead.selected_sample_folder))
+            __self__.StatusBox.insert(END, "\n{} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
             __self__.no_sample = False
         else: 
-            __self__.StatusBox.insert(END, "\nSample {} not found!\n".format(SpecRead.DIRECTORY))
+            __self__.StatusBox.insert(\
+                    END, "\nLooking for spectra files at: {0}\n".format(SpecRead.selected_sample_folder))
+            __self__.StatusBox.insert(END, "\nSpetra for sample {} not found!\n".format(SpecRead.DIRECTORY))
+            __self__.StatusBox.insert(END, "\nUsing compiled cube data.\n")
             __self__.no_sample = True
 
         if os.path.exists(SpecRead.cube_path):
@@ -1836,11 +1864,13 @@ class MainGUI:
        
     def reset_sample(__self__):
         
-        def repack(__self__):
+        def repack(__self__, sample):
             logging.warning("Cube {} and its output contents were erased!".\
-                    format(MY_DATACUBE.config["directory"]))
+                    format(sample))
             shutil.rmtree(SpecRead.output_path)
-            x,y,tag_dimension_file = SpecRead.getdimension()
+            try: x,y,tag_dimension_file = SpecRead.getdimension()
+            except OSError as exception:
+                tag_dimension_file = False
             if tag_dimension_file == True:
                 try: 
                     os.remove(SpecRead.dimension_file)
@@ -1851,12 +1881,12 @@ class MainGUI:
             __self__.toggle_(toggle='off')
             __self__.ResetWindow.grab_release()
             __self__.wipe()
+            __self__.samples.pop(sample,None)
             __self__.list_samples()
             __self__.draw_map()
             __self__.ResetWindow.destroy()
 
         if os.path.exists(SpecRead.cube_path):
-            
             # creates dialogue to warn cube exists and promp to repack data
             __self__.ResetWindow = Toplevel(master=__self__.master)
             __self__.ResetWindow.title("Attention!")
@@ -1870,7 +1900,8 @@ class MainGUI:
             EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
                     pack(side=LEFT, pady=8, padx=16)
             YesButton = Button(__self__.ResetWindow, text="Yes", justify=CENTER,\
-                    command=lambda: repack(__self__), width=10, bd=3).pack(side=TOP,pady=5)
+                    command=lambda: repack(__self__,MY_DATACUBE.config["directory"]), \
+                    width=10, bd=3).pack(side=TOP,pady=5)
             NoButton = Button(__self__.ResetWindow, text="No", justify=CENTER,\
                     command=__self__.ResetWindow.destroy, width=10, bd=3).pack(side=TOP, pady=5)
             
@@ -1981,7 +2012,8 @@ class MainGUI:
                     'peakmethod':MethodVar.get(),'bg_settings':snip_config}
             
             if not os.path.exists(SpecRead.dimension_file):
-                dm_file = open(SpecRead.dimension_file,"w+")
+                os.mkdir(SpecRead.output_path)
+                dm_file = open(SpecRead.output_path + "colonneXrighe.txt","w")
                 dm_file.write("righe\t{}\n".format(__self__.config_xy[0]))
                 dm_file.write("colonne\t{}\n".format(__self__.config_xy[1]))
                 dm_file.write(5*"*"+" user input data "+5*"*")
