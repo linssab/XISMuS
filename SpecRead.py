@@ -298,7 +298,6 @@ def getplot(mca):
 def updatespectra(specfile,size):
     name=str(specfile)
     name=name.replace('_',' ')
-    name=name.replace('-',' ')
     name=name.replace('.',' ')
     name=name.split()
     for i in range(len(name)):
@@ -313,9 +312,12 @@ def updatespectra(specfile,size):
 
 def getdimension():
     if not os.path.exists(dimension_file):
-        raise IOError("Dimension file not found!") 
+        try: local_file = output_path + "colonneXrighe.txt"
+        except:
+            raise IOError("Dimension file not found!") 
+    else: local_file = dimension_file
     user_input = False
-    dm_file = open(dimension_file, 'r')
+    dm_file = open(local_file, 'r')
     line = dm_file.readline()
     if 'righe' in line:
         line=line.replace('\r','')
