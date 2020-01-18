@@ -116,14 +116,13 @@ class datacube:
         from SpecRead import output_path, cube_path
         try: os.mkdir(output_path)
         except: pass
-        output_path = output_path
         sum_file = open(output_path+'stacksum.mca','w+')
         
         #writes header
-        sum_file.write("<<PMCA SPECTRUM>>\nTAG - sum_derived\nDESCRIPTION -\n")
-        sum_file.write("GAIN - 0\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - 0\n")
-        sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\n{}\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
-        sum_file.write("SERIAL_NUMBER - 1912\n<<CALIBRATION>>\nLABEL - Channel\n")
+        sum_file.write("<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - Piratininga SM Sum Spectrum\n")
+        sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - OFF\n")
+        sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+        sum_file.write("SERIAL_NUMBER - 00001\n<<CALIBRATION>>\nLABEL - Channel\n")
         for pair in __self__.calibration:
             sum_file.write("{0} {1}\n".format(pair[0],pair[1]))
         sum_file.write("<<DATA>>\n")
