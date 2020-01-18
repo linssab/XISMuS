@@ -1238,7 +1238,8 @@ class Samples:
                         if cube.lower().endswith('.cube')]
                 if folder not in __self__.samples_database: 
                     if cubes != []: 
-                        __self__.samples_database[folder] = cubes[0].split(".")[1]
+                        # sampes_database keys hold the mca prefixes
+                        __self__.samples_database[folder] = "---"
                         __self__.mcacount[folder] = 0
                         __self__.mca_extension[folder] = "---"
 
@@ -1881,7 +1882,7 @@ class MainGUI:
             __self__.toggle_(toggle='off')
             __self__.ResetWindow.grab_release()
             __self__.wipe()
-            __self__.samples.pop(sample,None)
+            if __self__.mca_extension[sample] == "---": __self__.samples.pop(sample,None)
             __self__.list_samples()
             __self__.draw_map()
             __self__.ResetWindow.destroy()
@@ -1918,6 +1919,7 @@ class MainGUI:
             dimension = dimension_diag(SpecRead.DIRECTORY)
             __self__.master.wait_window(dimension.win) 
             if dimension.exit_code == "cancel":
+                __self__.wipe()
                 return 0
         else:
             __self__.config_xy = SpecRead.getdimension()
