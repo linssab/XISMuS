@@ -129,25 +129,56 @@ def doNothing():
     messagebox.showinfo("Information","Will be implemented soon.")   
 
 def call_help():
-    HelpWindow = Toplevel(master=root.master)
-    HelpWindow.title("Help")
-    HelpWindow.resizable(False,False)
-    HelpText = "There is going to be something here soon."
-    HelpLabel = Label(HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
-    HelpLabel.grid(sticky=W)
-    spawn_center(root.master, HelpWindow)
-    return np.nan
+    try:
+        if root.HelpWindow.state() == "normal":
+            root.HelpWindow.focus_force()
+        else:
+            root.HelpWindow = Toplevel(master=root.master)
+            root.HelpWindow.title("Help")
+            root.HelpWindow.resizable(False,False)
+            HelpText = "There is going to be something here soon."
+            HelpLabel = Label(root.HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
+            HelpLabel.grid(sticky=W)
+            place_center(root.master, root.HelpWindow)
+    except: 
+            root.HelpWindow = Toplevel(master=root.master)
+            root.HelpWindow.title("Help")
+            root.HelpWindow.resizable(False,False)
+            HelpText = "There is going to be something here soon."
+            HelpLabel = Label(root.HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
+            HelpLabel.grid(sticky=W)
+            place_center(root.master, root.HelpWindow)
+
 
 def call_author():
-    AuthorWin = Toplevel(master=root.master)
-    AuthorWin.title("Author")
-    AuthorWin.resizable(False,False)
-    infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
-    winFrame = Frame(AuthorWin)
-    winFrame.pack(padx=(16,16),pady=(16,16))
-    Info = Label(winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
-    Info.pack()
-    place_center(root.master,AuthorWin)
+    try:
+        if root.AuthorWin.state() == "normal":
+            root.AuthorWin.focus_force()
+        else:
+            root.AuthorWin = Toplevel(master=root.master)
+            root.AuthorWin.title("Author")
+            root.AuthorWin.resizable(False,False)
+            icon = os.getcwd()+"\\images\\icons\\icon.ico"
+            root.AuthorWin.iconbitmap(icon)  
+            infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
+            winFrame = Frame(root.AuthorWin)
+            winFrame.pack(padx=(16,16),pady=(16,16))
+            Info = Label(winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
+            Info.pack()
+            place_center(root.master,root.AuthorWin)
+    except:
+            root.AuthorWin = Toplevel(master=root.master)
+            root.AuthorWin.title("Author")
+            root.AuthorWin.resizable(False,False)
+            icon = os.getcwd()+"\\images\\icons\\icon.ico"
+            root.AuthorWin.iconbitmap(icon)  
+            infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
+            winFrame = Frame(root.AuthorWin)
+            winFrame.pack(padx=(16,16),pady=(16,16))
+            Info = Label(winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
+            Info.pack()
+            place_center(root.master,root.AuthorWin)
+
 
 def open_analyzer():
     ImgAnalyzer = ImageAnalyzer(root.master)
@@ -211,7 +242,9 @@ class Welcome:
         """parent is a Tk window"""
         __self__.h, __self__.w = 400, 240
         __self__.master = Toplevel(master=parent)
-        #__self__.master.geometry("{}x{}".format(__self__.h,__self__.w))
+        icon = os.getcwd()+"\\images\\icons\\icon.ico"
+        __self__.master.iconbitmap(icon)  
+
         __self__.master.resizable(False,False)
         __self__.master.title("Welcome!")
         __self__.page = StringVar()
@@ -599,14 +632,21 @@ class PeakClipper:
     def save(__self__):
         global snip_config
         snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
-        __self__.kill()
-        return 0
+        proceed = __self__.verify_values(snip_config)
+        if proceed == True: __self__.kill()
+        else: messagebox.showerror("Value Error", "Parameters not valid. No negative or zero values are valid. Sav-gol window must be odd and greater than Sav-gol order.")
 
     def kill(__self__, event=""):
         __self__.master.grab_release()
         root.ConfigDiag.grab_set()
         __self__.master.destroy()
         return 0
+    
+    def verify_values(__self__,snip):
+        if snip[0] <= 0 or snip[1] <= 0: return False
+        if int(snip[2]%2) == 0: return False
+        if snip[3] > snip[2]: return False
+        else: return True
 
 
 class Annotator:
@@ -1737,10 +1777,18 @@ class MainGUI:
             __self__.plot_canvas.draw()
     
     def open_files_location(__self__, event=""):
-        global MY_DATACUBE
-        __self__.sample_select(event)
-        path = MY_DATACUBE.root
-        if os.path.exists(path):
+        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        path = SpecRead.samples_folder + value + "\\"
+        local_cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
+        if os.path.exists(local_cube_path):
+            global MY_DATACUBE
+            __self__.sample_select(event)
+            path = MY_DATACUBE.root
+            path = os.path.realpath(path)
+            os.startfile(path)
+        elif os.path.exists(path):
+            """if datacube is not compiled, check if mca files are under 
+            the selected sample folder chosen by the user"""
             path = os.path.realpath(path)
             os.startfile(path)
         else:
