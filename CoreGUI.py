@@ -7,7 +7,6 @@
 
 global MY_DATACUBE, FIND_ELEMENT_LIST
 MY_DATACUBE, FIND_ELEMENT_LIST = None, None
-authorized = ["00000000-0000-0000-0000-482ae32e7623","00000000-0000-0000-0000-3cf011262a2c","00000000-0000-0000-0000-00e04c6803f6"]
 
 VERSION = "0.0.2α"
 
@@ -133,9 +132,10 @@ def call_help():
     HelpWindow = Toplevel(master=root.master)
     HelpWindow.title("Help")
     HelpWindow.resizable(False,False)
-    HelpText= "There are some known issues with the program, for example:\nMapping elements in the lower or higher end of the energy spectrum may give unsatisfactory results.\n\nSTARTING UP:\nTo load a sample, click on load sample and double click the name of the sample which appears in the left column. A configuration window will appear.\nYou can set the parameters accordingly, including the background extration parameters manually. If you choose not to do it, default parameters will be applied.\nTo map chemical elements of interest, click on the \"Map Elements\"button. If any derivate spectrum plot window is open, when clicking the elements you will be able to view the \"position\" of each element in the plot window.\nCustom energy ranges can be selected by clicking the \"Custom\" button in the periodic table AFTER typing the desired energy range.\n\nDATA ANALYSIS:\nTo visualize the generated maps, simply click on the \"Image Analyzer\" button. All images are automatically saved (withou any filtering) in the output folder under the program directory."
+    HelpText = "There is going to be something here soon."
     HelpLabel = Label(HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
     HelpLabel.grid(sticky=W)
+    spawn_center(root.master, HelpWindow)
     return np.nan
 
 def call_author():
@@ -147,12 +147,12 @@ def call_author():
     winFrame.pack(padx=(16,16),pady=(16,16))
     Info = Label(winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
     Info.pack()
+    place_center(root.master,AuthorWin)
 
 def open_analyzer():
     ImgAnalyzer = ImageAnalyzer(root.master)
 
 def call_compilecube():
-    
     try: os.mkdir(SpecRead.output_path)
     except IOError as exception:
         logging.warning("Error {}.".format(exception.__class__.__name__))
@@ -205,7 +205,105 @@ def load_cube():
     return MY_DATACUBE
 
 
+class Welcome:
+
+    def __init__(__self__,parent):
+        """parent is a Tk window"""
+        __self__.h, __self__.w = 400, 240
+        __self__.master = Toplevel(master=parent)
+        #__self__.master.geometry("{}x{}".format(__self__.h,__self__.w))
+        __self__.master.resizable(False,False)
+        __self__.master.title("Welcome!")
+        __self__.page = StringVar()
+        __self__.tag = BooleanVar()
+        __self__.infotext = StringVar()
+        __self__.messages = ["Welcome to Piratininga Sample Manager v.0.0.2.\n\nClick the left or right arrows to navigate.",\
+                "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, Piratininga SM looks for mca files under C:\\Samples\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nPiratininga SM also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
+        __self__.current_page = 1
+        __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
+        __self__.tag.set(False)
+        __self__.infotext.set(__self__.messages[0])
+
+        __self__.build_widgets()
+
+    def build_widgets(__self__):
+        __self__.page_counter = Label(__self__.master, textvariable=__self__.page)
+        __self__.page_counter.grid(row=0, column=0, sticky=W+E, columnspan=2, pady=3)
+        
+        __self__.text_frame = Frame(__self__.master, width=320, height=150)
+        __self__.text_frame.grid(row=1, column=0, sticky=W+E, columnspan=2)
+        __self__.info = Label(__self__.text_frame,
+                textvariable=__self__.infotext,
+                anchor=CENTER,
+                justify=CENTER,
+                wraplength=400,
+                width=70,
+                height=7,
+                padx=5)
+        __self__.info.grid(row=0, column=1, sticky=W+E)
+        icon_fw = PhotoImage(file=os.getcwd()+"\\images\\icons\\next.png")
+        __self__.icon_fw = icon_fw.subsample(1,1)
+        icon_bw= PhotoImage(file=os.getcwd()+"\\images\\icons\\previous.png")
+        __self__.icon_bw = icon_bw.subsample(1,1)
+        __self__.fw = Button(__self__.text_frame, image=__self__.icon_fw, command=__self__.next_page, width=32,height=32)
+        __self__.fw.grid(row=0, column=2)
+        __self__.bw = Button(__self__.text_frame, image=__self__.icon_bw, command=__self__.previous_page, width=32, height=32)
+        __self__.bw.grid(row=0, column=0)
+
+        __self__.button_frame = Frame(__self__.master)
+        __self__.button_frame.grid(row=3,column=0,columnspan=2)
+        
+        __self__.tag_button = Checkbutton(__self__.master, variable=__self__.tag) 
+        __self__.tag_button.grid(row=2, column=0, padx=10)
+        
+        __self__.tag_label = Label(__self__.master, text="Don't show me again on startup.")
+        __self__.tag_label.grid(row=2, column=1, sticky=W)
+
+        __self__.accept = Button(__self__.button_frame, text="Ok", width=13, command=__self__.checkout)
+        __self__.accept.grid(pady=10)
+        
+        for i in range(5):
+            __self__.master.columnconfigure(i, weight=0)
+            __self__.master.rowconfigure(i, weight=0)
+        __self__.master.columnconfigure(1, weight=1)
+        
+    def next_page(__self__):
+        if __self__.current_page+1 <= len(__self__.messages):
+            __self__.current_page +=1
+            text = __self__.current_page-1
+            __self__.infotext.set(__self__.messages[text])
+            __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
+            __self__.info.update()
+        else: pass
+        
+    def previous_page(__self__):
+        if __self__.current_page-1 >= 1:
+            __self__.current_page -=1
+            text = __self__.current_page-1
+            __self__.infotext.set(__self__.messages[text])
+            __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
+            __self__.info.update()
+        else: pass
+
+    def checkout(__self__):
+        checker = True
+        if __self__.tag.get() == True:
+            root.checker = False
+            checker = False
+        inipath = os.getcwd() + "\settings.tag"
+        ini = open(inipath,'w+')
+        ini.write("{}\n".format(SpecRead.samples_folder))
+        ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
+        ini.write("<PlotMode>\t{}\n".format(root.PlotMode))
+        ini.write("<RAMLimit>\t{}\n".format(root.RAM_limit))
+        ini.write("<welcome>\t{}".format(checker))
+        ini.close()
+        __self__.master.destroy()
+
+
 class export_diag():
+
+    """Creates a dialog to export ImageAnalyzer class images"""
 
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent.master)
@@ -275,6 +373,11 @@ class export_diag():
 
 
 class dimension_diag():
+
+    """Creates a pop-up dialog to prompt the datacube dimension
+    if no colonneXrighe.txt file is found for the data selected.
+    It writes a custom colonneXrighe.txt file to the sample output
+    folder, which is deleted if the sample is RESET"""
 
     def __init__(__self__,folder):
         __self__.win = Toplevel(root.master)
@@ -357,6 +460,8 @@ class dimension_diag():
 
 
 class PeakClipper:
+
+    """Creates a dialog to set-up SNIPBG parameters"""
     
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent)
@@ -505,6 +610,8 @@ class PeakClipper:
 
 
 class Annotator:
+
+    """Creates an annotator to select areas on matplotlib canvases"""
 
     def __init__(__self__,datacube,application):
         __self__.datacube = datacube
@@ -1277,12 +1384,14 @@ class Settings:
         __self__.RAMMode = BooleanVar()
         __self__.RAMEntry = DoubleVar()
         __self__.RAMUnit = StringVar()
+        __self__.WlcmMode = BooleanVar()
         
         __self__.PlotMode.set(root.PlotMode)
         __self__.CoreMode.set(root.MultiCore)
         __self__.RAMMode.set(root.RAM_limit)
         __self__.RAMEntry.set('%.2f'%(float(convert_bytes(root.RAM_limit_value).split(" ")[0])))
         __self__.RAMUnit.set(convert_bytes(root.RAM_limit_value).split(" ")[1])
+        __self__.WlcmMode.set(root.checker)
         
         PlotLabel = Label(__self__.TextFrame,text="Plot mode: ")
         PlotLabel.grid(row=0,column=0,sticky=W)
@@ -1311,6 +1420,14 @@ class Settings:
         RAMCountLabel = Label(__self__.TextFrame,text="Available RAM: "+str(__self__.RAM_free))
         RAMCountLabel.grid(row=4,column=0,sticky=W)
 
+
+        WlcmLabel = Label(__self__.TextFrame,text="Display welcome message at startup? ")
+        WlcmLabel.grid(row=5,column=0,sticky=W)
+        WlcmOption = Checkbutton(__self__.ScreenFrame, variable=__self__.WlcmMode)
+        WlcmOption.grid(row=5,column=0,columnspan=2,sticky=E)
+        WlcmOptionText = Label(__self__.ScreenFrame, text="Yes")
+        WlcmOptionText.grid(row=5,column=2,sticky=E)
+        
         __self__.ScreenFrame.grid_columnconfigure(1,pad=8)
         
         ButtonsFrame = Frame(__self__.Settings, padx=10, pady=10)
@@ -1327,7 +1444,8 @@ class Settings:
             ini.write("{}\n".format(SpecRead.samples_folder))
             ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
             ini.write("<PlotMode>\t{}\n".format(root.PlotMode))
-            ini.write("<RAMLimit>\t{}".format(root.RAM_limit))
+            ini.write("<RAMLimit>\t{}\n".format(root.RAM_limit))
+            ini.write("<welcome>\t{}".format(root.checker))
             ini.close()
             __self__.kill_window()
         except: 
@@ -1346,6 +1464,7 @@ class Settings:
         root.RAM_limit_value = restore_bytes(float(__self__.RAMEntry.get()),__self__.RAMUnit.get())
         root.MultiCore = __self__.CoreMode.get()
         root.PlotMode = __self__.PlotMode.get()
+        root.checker = __self__.WlcmMode.get()
         if root.PlotMode == "Logarithmic": root.plot_display = "-semilog"
         if root.PlotMode == "Linear": root.plot_display = None
 
@@ -1364,6 +1483,7 @@ def grab_GUI_config(inifile):
         if line.split("\t")[0] == "<MultiCore>": CoreMode = bool(line.split("\t")[1])
         if line.split("\t")[0] == "<PlotMode>": PlotMode = str(line.split("\t")[1])
         if line.split("\t")[0] == "<RAMLimit>": RAMMode = bool(line.split("\t")[1])
+        if line.split("\t")[0] == "<welcome>": WlcmMode = bool(line.split("\t")[1])
     ini.close() 
     return CoreMode, PlotMode, RAMMode
 
@@ -1388,9 +1508,14 @@ class MainGUI:
 
     def __init__(__self__):
         logging.info("Initializing program...")
+        f = open(os.getcwd()+"\\settings.tag","r")
+        for line in f:
+            if line.startswith("<welcome>"):
+                if line.split("\t")[1] == "True": __self__.checker = True
+                else: __self__.checker = False
+        f.close()
         __self__.master = Tk()
         __self__.master.withdraw() 
-        
         __self__.SampleLoader = Samples()
         __self__.SampleLoader.splash_screen(__self__)
         __self__.master.after(100,__self__.SampleLoader.list_all())
@@ -1418,6 +1543,7 @@ class MainGUI:
         __self__.build_widgets()
         __self__.toggle_(toggle='off')
         __self__.master.deiconify()
+        __self__.pop_welcome()
        
     def root_quit(__self__):
         for widget in __self__.master.winfo_children():
@@ -1503,8 +1629,8 @@ class MainGUI:
         __self__.SamplesWindow.popup = Menu(__self__.SamplesWindow, tearoff=0)
         __self__.SamplesWindow.popup.add_command(label="Load",command=__self__.sample_select)
         __self__.SamplesWindow.popup.add_command(label="Save density map",command=__self__.export_density_map)
-        __self__.SamplesWindow.popup.add_command(label="Open files location",command=doNothing)
-        __self__.SamplesWindow.popup.add_command(label="Open output folder",command=doNothing)
+        __self__.SamplesWindow.popup.add_command(label="Open files location",command=__self__.open_files_location)
+        __self__.SamplesWindow.popup.add_command(label="Open output folder",command=__self__.open_output_folder)
 
         for key in __self__.samples:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
@@ -1579,7 +1705,20 @@ class MainGUI:
             SpecRead.conditional_setup(name=value)
             __self__.call_configure()
 
+    def pop_welcome(__self__):
+        
+        """Displays a pop-up window with information on the software"""
+        if __self__.checker == True:
+            __self__.welcome_window = Welcome(__self__.master)
+            __self__.welcome_window.master.grab_set()
+            place_center(__self__.master, __self__.welcome_window.master)
+        else: pass
+
     def sample_popup(__self__,event):
+
+        """Call SamplesWindow method to pop a loading screen
+        while it reads the mca files in the newly selected folder"""
+
         __self__.SamplesWindow_TableLeft.select_clear(0,END)
         idx = __self__.SamplesWindow_TableLeft.nearest(event.y)
         __self__.SamplesWindow_TableLeft.select_set(idx)
@@ -1597,6 +1736,25 @@ class MainGUI:
             __self__.sample_plot.imshow(blank, cmap='jet')
             __self__.plot_canvas.draw()
     
+    def open_files_location(__self__, event=""):
+        global MY_DATACUBE
+        __self__.sample_select(event)
+        path = MY_DATACUBE.root
+        if os.path.exists(path):
+            path = os.path.realpath(path)
+            os.startfile(path)
+        else:
+            messagebox.showinfo("Directory not found.","Sample files not found! Path {} couldn't be located.".format(path))
+
+    def open_output_folder(__self__, event=""):
+        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        path = os.getcwd()+"\\output\\"+value
+        if os.path.exists(path):
+            path = os.path.realpath(path)
+            os.startfile(path)
+        else:
+            messagebox.showinfo("Directory not found.","Sample may be uncompiled. Output directory for sample {} not found.".format(value))
+
     def export_density_map(__self__,event=""):
         global MY_DATACUBE
         __self__.sample_select(event)
@@ -2614,8 +2772,7 @@ def license_error(version):
     pop.destroy()
     raise PermissionError("Machine unauthorized")
 
-              
-if __name__ == "__main__":
+if __name__.endswith('__main__'):         
     
     optimum_resolution = (1920,1080)
 
@@ -2656,9 +2813,8 @@ if __name__ == "__main__":
     except IOError as exception:
         p = Tk()
         p.iconify()
-        logging.info("Cannot create logfile! Error {}.".format(exception.__class__.__name__))
         messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.getcwd()))
-        sys.exit()
+        #sys.exit()
     
     check_screen_resolution(optimum_resolution)
     # internal imports

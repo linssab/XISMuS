@@ -85,6 +85,7 @@ class datacube:
     
     def __init__(__self__,dtypes,configuration):
         logging.debug("Initializing cube file")
+        
         try: specsize = getdata(getfirstfile()) 
         except: specsize = 0
         __self__.dimension = getdimension()
@@ -163,7 +164,8 @@ class datacube:
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
-        from SpecRead import output_path, cube_path
+        from SpecRead import output_path, cube_path, samples_folder
+        __self__.root = samples_folder
         try: 
             if not os.path.exists(output_path):
                 logging.info("Creating outputh path {0}".forma(output_path))
