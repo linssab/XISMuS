@@ -84,6 +84,7 @@ class datacube:
     ndim = 0
     
     def __init__(__self__,dtypes,configuration):
+        __self__.name = configuration["directory"]
         logging.debug("Initializing cube file")
         
         try: specsize = getdata(getfirstfile()) 
@@ -334,16 +335,10 @@ def getstackplot(datacube,mode=None):
     energy = datacube.energyaxis
     if mode == 'summation':
         output = stack
-       # plt.semilogy(energy,stack,label="Summation")
-       # plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
-       # plt.semilogy(energy,bg,label="Background estimation")
-    elif mode == 'combined': 
-        stack = stack/stack.max()
-        mps = mps/mps.max()
-        output = np.asarray([stack, mps])
-       # plt.semilogy(energy,stack,label="Summation")
-       # plt.semilogy(energy,mps,label="Maximum Pixel Spectrum")
-       # plt.ylabel("Normalized counts")
+    #elif mode == 'combined': 
+    #    stack = stack/stack.max()
+    #    mps = mps/mps.max()
+    #    output = np.asarray([stack, mps])
     elif mode == 'mps':
         output = mps
     else:

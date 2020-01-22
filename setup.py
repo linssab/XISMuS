@@ -17,6 +17,9 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                 (".\\images\\icons\\rubik.ico",".\\images\\icons\\rubik.ico"),\
                 (".\\images\\icons\\settings.png",".\\images\\icons\\settings.png"),\
                 (".\\images\\icons\\settings.ico",".\\images\\icons\\settings.ico"),\
+                (".\\images\\icons\\export_1.png",".\\images\\icons\\export_1.png"),\
+                (".\\images\\icons\\export_2.png",".\\images\\icons\\export_2.png"),\
+                (".\\images\\icons\\export_merge.png",".\\images\\icons\\export_merge.png"),\
                 (".\\images\\icons\\icon.ico",".\\images\\icons\\icon.ico"),\
                 (".\\images\\splash.png",".\\images\\splash.png"),\
                 (".\\images\\no_data.png",".\\images\\no_data.png"),\
@@ -28,11 +31,11 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
 
 scipy_path = os.path.dirname(scipy.__file__)
 numba_path = os.path.dirname(numba.__file__)
-ll_path = os.path.dirname(llvmlite.__file__)
 includefiles_list.append(scipy_path)
 includefiles_list.append(numba_path)
-includefiles_list.append(r'C:\\Users\\sergi\\Miniconda3\\lib\\site-packages\\numba')
-includefiles_list.append(ll_path)
+#includefiles_list.append(r'C:\\Users\\sergi\\Miniconda3\\lib\\site-packages\\numba')
+includefiles_list.append(r"C:\Users\sergi\Miniconda3\Lib\site-packages\mpl_toolkits")
+
 for item in includefiles_list:
     print(item)
 
@@ -45,16 +48,17 @@ def load_sqlite3(finder, module):
         dll_path = os.path.join(sys.base_prefix, "DLLs", dll_name)
         finder.IncludeFiles(dll_path, dll_name)
 
-executables = [cx_Freeze.Executable("CoreGUI.py", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
-#executables = [cx_Freeze.Executable("CoreGUI.py")]
+#executables = [cx_Freeze.Executable("CoreGUI.py", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
+executables = [cx_Freeze.Executable("CoreGUI.py",icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
 
 cx_Freeze.setup(
         name = "Piratininga SM",
         options = {"build_exe":{\
-                "packages":["llvmlite","tkinter","cv2","math","pickle","logging",\
-                "xraylib","matplotlib","mpl_toolkits"],\
+                "packages":["llvmlite","Tkinter","cv2","math","pickle","logging",\
+                "xraylib","matplotlib"],\
+                #"mpl_toolkits"],\
                 
-                "includes":["numpy"],
+                "includes":["numpy","Tkinter"],
                  
                 "include_files":includefiles_list}},
                 version = "0.0.1",
