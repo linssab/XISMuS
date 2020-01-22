@@ -789,7 +789,7 @@ class ImageAnalyzer:
         __self__.master = Toplevel(master=parent)
         __self__.master.tagged = False
         #__self__.master.bind("<Configure>", __self__.resize)
-        __self__.master.title("Image Analyzer v1.0.0")
+        __self__.master.title("Image Analyzer v1.1.0")
         __self__.master.resizable(False,False)
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP,anchor=CENTER)
