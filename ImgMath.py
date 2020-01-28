@@ -173,7 +173,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     heightfile.write("Average: {0}um, sampled points: {1}".format(median,average[1]))
     return heightmap,median, deviation
 
-def set_axes_equal(ax):
+def set_axes_equal(ax,z_lim):
     
     #####################################################
     #   set_axes_equal(ax) FUNCTION OBTAINED FROM:      #
@@ -209,10 +209,12 @@ def set_axes_equal(ax):
 
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
-    #ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
-    ax.set_zlim3d([0, plot_radius])
+    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+    #ax.set_zlim3d([z_middle - 1, z_middle + 1])
+    if z_lim == None: ax.set_zlim3d([0, plot_radius])
+    else: ax.set_zlim3d([0, z_lim])
 
-def plot3D(depth_matrix):
+def plot3D(depth_matrix,z_lim=None):
     fig = plt.figure()
     ax = fig.gca(projection = '3d')
     imagesize = SpecRead.getdimension()
@@ -228,7 +230,7 @@ def plot3D(depth_matrix):
     depth_matrix = depth_matrix.transpose()
     MAP = ax.plot_surface(X,Y,depth_matrix,\
             cmap='BuGn',linewidth=0,antialiased=True)
-    set_axes_equal(ax)
+    set_axes_equal(ax,z_lim)
     fig.savefig(os.getcwd()+'\\myimage.svg', format='svg', dpi=1200)
     plt.show()
     return 0
