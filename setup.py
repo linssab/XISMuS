@@ -19,6 +19,8 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                 (".\\images\\icons\\settings.ico",".\\images\\icons\\settings.ico"),\
                 (".\\images\\icons\\export_1.png",".\\images\\icons\\export_1.png"),\
                 (".\\images\\icons\\export_2.png",".\\images\\icons\\export_2.png"),\
+                (".\\images\\icons\\next.png",".\\images\\icons\\next.png"),\
+                (".\\images\\icons\\previous.png",".\\images\\icons\\previous.png"),\
                 (".\\images\\icons\\export_merge.png",".\\images\\icons\\export_merge.png"),\
                 (".\\images\\icons\\icon.ico",".\\images\\icons\\icon.ico"),\
                 (".\\images\\splash.png",".\\images\\splash.png"),\
