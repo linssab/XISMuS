@@ -246,6 +246,8 @@ class Welcome:
         __self__.master = Toplevel(master=parent)
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
         __self__.master.iconbitmap(icon)  
+        __self__.master.bind("<Return>",__self__.checkout)
+        __self__.master.bind("<Escape>",__self__.checkout)
 
         __self__.master.resizable(False,False)
         __self__.master.title("Welcome!")
@@ -320,7 +322,7 @@ class Welcome:
             __self__.info.update()
         else: pass
 
-    def checkout(__self__):
+    def checkout(__self__,e=""):
         checker = True
         if __self__.tag.get() == True:
             root.checker = False
@@ -1425,9 +1427,10 @@ class Samples:
                             files[item], extension[item] = \
                                     files[item].split("_",1)[0], files[item].split(".",1)[1]
                         except: pass
-                    counter = dict((x,files.count(x)) for x in files)
-                    counter_ext = dict((x,extension.count(x)) for x in extension)
-                    
+                    files_set = set(files)
+                    extension_set = set(extension)
+                    counter = dict((x,files.count(x)) for x in files_set)
+                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
                     mca_prefix_count = 0
                     mca_extension_count = 0
                     # counts mca files and stores the prefix string and no. of files
@@ -1794,8 +1797,6 @@ class MainGUI:
         try: __self__.ConfigDiag.destroy()
         except: pass
 
-        #index = int(event.widget.curselection()[0])
-        #value = event.widget.get(index)
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
         
         # to avoid unecessarily changing the global variable cube_path, a local version
@@ -2307,7 +2308,10 @@ class MainGUI:
                 SpecRead.DIRECTORY = configdict["directory"] + '\\'
                 SpecRead.selected_sample_folder = \
                         SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
-                SpecRead.FIRSTFILE_ABSPATH = SpecRead.findprefix()
+                SpecRead.FIRSTFILE_ABSPATH = SpecRead.selected_sample_folder \
+                        + root.samples[configdict["directory"]] \
+                        + "_1." \
+                        + root.mca_extension[configdict["directory"]]
 
                 # reads configuration integrity prior opening config.cfg for writing
                 if configdict['calibration'] == 'manual': 
@@ -2340,7 +2344,8 @@ class MainGUI:
                 cfgfile.write("<<END>>\r")
                 cfgfile.close()
                 
-                SpecRead.setup()
+                SpecRead.setup(root.samples[configdict["directory"]],
+                        root.mca_extension[configdict["directory"]])
                 __self__.ConfigDiag.grab_release()
                 __self__.ConfigDiag.destroy()
                 try: 
@@ -2375,7 +2380,8 @@ class MainGUI:
                 ErrorMessage("Directory {} not found!\nConfig.cfg saved!".\
                         format(configdict['directory']))
                 
-                SpecRead.setup()
+                SpecRead.setup(root.samples[configdict["directory"]],
+                        root.mca_extension[configdict["directory"]])
                 __self__.ConfigDiag.grab_release()
                 __self__.ConfigDiag.destroy()
                 try: 

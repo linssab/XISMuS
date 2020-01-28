@@ -49,7 +49,7 @@ def findprefix():
 def getfirstfile():
     return FIRSTFILE_ABSPATH
 
-def setup():
+def setup(prefix, extension):
     
     # reads config.cfg file and sets up the configuration according to what is
     # contained there
@@ -62,7 +62,7 @@ def setup():
     cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
     output_path = workpath+'\output\\'+DIRECTORY+'\\'
     dimension_file = selected_sample_folder + '\colonneXrighe.txt'
-    try: FIRSTFILE_ABSPATH = findprefix()
+    try: FIRSTFILE_ABSPATH = selected_sample_folder + prefix + "_1." + extension
     except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
     global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH]
     return np.nan
@@ -312,7 +312,9 @@ def updatespectra(specfile,size):
 
 def getdimension():
     if not os.path.exists(dimension_file):
-        try: local_file = output_path + "colonneXrighe.txt"
+        try: 
+            raise Warning("File {} not found, looking into output folder...".format(dimension_file))
+            local_file = output_path + "colonneXrighe.txt"
         except:
             raise IOError("Dimension file not found!") 
     else: local_file = dimension_file
