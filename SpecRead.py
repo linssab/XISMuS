@@ -311,9 +311,10 @@ def updatespectra(specfile,size):
     return newfile
 
 def getdimension():
+    global dimension_file
     if not os.path.exists(dimension_file):
         try: 
-            raise Warning("File {} not found, looking into output folder...".format(dimension_file))
+            logging.info("File {} not found, looking into output folder...".format(dimension_file))
             local_file = output_path + "colonneXrighe.txt"
         except:
             raise IOError("Dimension file not found!") 
