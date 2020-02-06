@@ -8,7 +8,7 @@
 global MY_DATACUBE, FIND_ELEMENT_LIST
 MY_DATACUBE, FIND_ELEMENT_LIST = None, None
 
-VERSION = "0.0.2α"
+VERSION = "1.0.1"
 
 def read_license():
     import uuid
@@ -791,7 +791,7 @@ class ImageAnalyzer:
         __self__.master = Toplevel(master=parent)
         __self__.master.tagged = False
         #__self__.master.bind("<Configure>", __self__.resize)
-        __self__.master.title("Image Analyzer v1.1.0")
+        __self__.master.title("Image Analyzer v1.0.1")
         __self__.master.resizable(False,False)
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP,anchor=CENTER)
@@ -1645,7 +1645,7 @@ class MainGUI:
         __self__.master.withdraw() 
         __self__.SampleLoader = Samples()
         __self__.SampleLoader.splash_screen(__self__)
-        __self__.master.after(200,__self__.SampleLoader.list_all())
+        __self__.master.after(300,__self__.SampleLoader.list_all())
         __self__.samples = __self__.SampleLoader.samples_database
         __self__.mcacount = __self__.SampleLoader.mcacount
         __self__.mca_extension = __self__.SampleLoader.mca_extension
@@ -1738,11 +1738,14 @@ class MainGUI:
         __self__.SamplesWindow.title("Sample List")
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
         __self__.SamplesWindow.resizable(False,True) 
-        __self__.SamplesWindow.minsize(0,320)
+        __self__.SamplesWindow.minsize(0,340)
         __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="FOLDER")
         __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="MCA PREFIX")
         __self__.SamplesWindow_TableLeft = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
         __self__.SamplesWindow_TableRight = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
+        __self__.SamplesWindow_TableLeft.bind("<MouseWheel>", __self__.scroll_y)
+        __self__.SamplesWindow_TableLeft.bind("<Up>", __self__.scroll_y)
+        __self__.SamplesWindow_TableLeft.bind("<Down>", __self__.scroll_y)
         __self__.SamplesWindow_TableLeft.bind("<Double-Button-1>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
@@ -1751,6 +1754,11 @@ class MainGUI:
         __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
         __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0,sticky=N+S)
         __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1,sticky=N+S)
+        __self__.SamplesWindow_multi = Button(__self__.SamplesWindow, text = "Select multiple", bd=3, command=__self__.select_multiple)
+        __self__.SamplesWindow_ok = Button(__self__.SamplesWindow, text = "Validate", bd=3, command=__self__.digestmaps)
+        __self__.SamplesWindow_multi.grid(row=2,column=0,sticky=W+E)
+        __self__.SamplesWindow_ok.grid(row=2,column=1,sticky=W+E)
+        __self__.SamplesWindow_ok.config(state=DISABLED)
 
         Grid.rowconfigure(__self__.SamplesWindow, 1, weight=1)
    
@@ -1768,6 +1776,57 @@ class MainGUI:
         __self__.SamplesWindow.iconbitmap(icon)
         __self__.SamplesWindow_TableRight.config(state=DISABLED)
         __self__.SamplesWindow_TableLeft.focus_set()
+
+    def select_multiple(__self__):
+        if __self__.SamplesWindow_multi.config("relief")[-1] == "raised":
+            __self__.SamplesWindow_TableLeft.selection_clear(0, END)
+            __self__.SamplesWindow_TableLeft.config(selectmode=MULTIPLE)
+            __self__.SamplesWindow_multi.config(relief="sunken",fg="red")
+            __self__.SamplesWindow_ok.config(state=NORMAL)
+        else: 
+            __self__.SamplesWindow_TableLeft.selection_clear(0, END)
+            __self__.SamplesWindow_TableLeft.config(selectmode=SINGLE)
+            __self__.SamplesWindow_multi.config(relief="raised",fg="black")
+            __self__.SamplesWindow_ok.config(state=DISABLED)
+
+    def digestmaps(__self__):
+        cubes = []
+        for item in __self__.SamplesWindow_TableLeft.curselection():
+            cubes.append(__self__.SamplesWindow_TableLeft.get(item))
+        _path = os.getcwd()+"\\output\\"
+        cube_dict, maps = {}, {}
+        """ list all packed cubes """
+        cube_folders = [name for name in os.listdir(_path) \
+                    if os.path.isdir(_path+name)]
+        for folder in cube_folders:
+            for name in os.listdir(_path+folder):
+                if name.lower().endswith(".cube")\
+                        and name.split(".cube")[0] in cubes:\
+                        cube_dict[folder] = name
+        for cube in cube_dict: 
+            cube_file = open(_path+cube+"\\"+cube_dict[cube],'rb')
+            datacube = pickle.load(cube_file)
+            cube_file.close()
+            maps[cube] = datacube.densitymap
+        
+        """ get the absolute maximum from all cubes
+        this is applicable to SETS OF DATA that have a 
+        relation between themselves, for example, when
+        working with a larger sample that is composed of several
+        datacubes """
+        upper_limit = 0
+        for image in maps:
+            if upper_limit < maps[image].max():
+                upper_limit = maps[image].max()
+        _path = filedialog.askdirectory()
+        if _path != "":
+            try: os.mkdir(_path+"\\")
+            except: pass
+            for image in maps:
+                norm_map = maps[image]/upper_limit*255
+                cv2.imwrite(_path+"\\{}.png".format(image),norm_map)
+            __self__.select_multiple()
+        else: return
 
     def list_samples(__self__):
 
@@ -1788,6 +1847,11 @@ class MainGUI:
                 pass
             else: __self__.call_listsamples()
         except: __self__.call_listsamples()
+
+    def scroll_y(__self__,event):
+        if __self__.SamplesWindow_TableRight.yview() != __self__.SamplesWindow_TableLeft.yview():
+            __self__.SamplesWindow_TableRight.yview_moveto(__self__.SamplesWindow_TableLeft.curselection())
+        return 
     
     def sample_select(__self__,event=""):
     
@@ -1802,12 +1866,15 @@ class MainGUI:
                     if widget.tagged == True: widget.destroy()
                 except:
                     pass
-        __self__.toggle_('off')
+        __self__.toggle_("off")
         
         # destroy any open configuration window
         try: __self__.ConfigDiag.destroy()
         except: pass
 
+        if len(__self__.SamplesWindow_TableLeft.curselection()) > 1:
+           __self__.select_multiple()
+           return
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
         
         # to avoid unecessarily changing the global variable cube_path, a local version
@@ -1817,14 +1884,14 @@ class MainGUI:
         # If the cube does not exists, the user is promped to config the sample and click ok to compile it.
         # Let the user cancel the cofiguration dialogue, the global variable cube_path is unchanged.
         
-        local_cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
+        local_cube_path = SpecRead.workpath+"\output\\"+value+"\\"+value+".cube"
         if os.path.exists(local_cube_path): 
             global MY_DATACUBE
-            SpecRead.cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
+            SpecRead.cube_path = SpecRead.workpath+"\output\\"+value+"\\"+value+".cube"
             load_cube()
             SpecRead.setup_from_datacube(MY_DATACUBE,__self__.samples)
             __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
-            __self__.toggle_(toggle='on')    
+            __self__.toggle_(toggle="on")    
             __self__.write_stat()   
             __self__.draw_map()
         else: 
@@ -2000,19 +2067,20 @@ class MainGUI:
         __self__.TableLabel1 = Label(\
                 __self__.ConfigFrame,text="Configuration embedded:",justify=CENTER)
         __self__.TableLabel2 = Label(__self__.ConfigFrame,text="KEY")
-        __self__.TableLabel3 = Label(__self__.ConfigFrame,text="PACKED IN CUBE")
-        __self__.TableLabel4 = Label(__self__.ConfigFrame,text="IN CONFIG.CFG")
+        __self__.TableLabel3 = Label(__self__.ConfigFrame,text="PACKED")
+        #__self__.TableLabel4 = Label(__self__.ConfigFrame,text="IN CONFIG.CFG")
         __self__.TableLabel1.grid(row=3, column=2, columnspan=3, sticky=W+E)
         __self__.TableLabel2.grid(row=4, column=2)
-        __self__.TableLabel3.grid(row=4, column=3)
-        __self__.TableLabel4.grid(row=4, column=4)
+        __self__.TableLabel3.grid(row=4, column=3, columnspan=2)
+        #__self__.TableLabel4.grid(row=4, column=4)
 
         __self__.TableLeft = Listbox(__self__.ConfigFrame)
-        __self__.TableMiddle = Listbox(__self__.ConfigFrame)
-        __self__.TableRight = Listbox(__self__.ConfigFrame)
+        __self__.TableLeft.update()
+        __self__.TableMiddle = Listbox(__self__.ConfigFrame, width=int(__self__.TableLeft.winfo_reqwidth()/4))
+        #__self__.TableRight = Listbox(__self__.ConfigFrame)
         __self__.TableLeft.grid(row=5, column=2, sticky=N+S)
-        __self__.TableMiddle.grid(row=5, column=3, sticky=N+S)
-        __self__.TableRight.grid(row=5, column=4, sticky=N+S)
+        __self__.TableMiddle.grid(row=5, column=3, columnspan=2, sticky=N+S)
+        #__self__.TableRight.grid(row=5, column=4, sticky=N+S)
         
         #####
         # define the menu bar
@@ -2093,14 +2161,14 @@ class MainGUI:
             
     def write_stat(__self__):
         
-        __self__.TableRight.config(state=NORMAL)
+        #__self__.TableRight.config(state=NORMAL)
         __self__.TableMiddle.config(state=NORMAL)
         __self__.TableLeft.config(state=NORMAL)
         __self__.SampleVar.set("Sample on memory: "+SpecRead.DIRECTORY)
         
         # wipe all text
         __self__.StatusBox.delete(0,END)
-        __self__.TableRight.delete(0,END)
+        #__self__.TableRight.delete(0,END)
         __self__.TableMiddle.delete(0,END)
         __self__.TableLeft.delete(0,END)
 
@@ -2136,24 +2204,24 @@ class MainGUI:
             for item in range(len(values_cube)):
                 __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
                 __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
-                __self__.TableRight.insert(END, "{}".format(values_cfg[item]))
+                #__self__.TableRight.insert(END, "{}".format(values_cfg[item]))
         
         elif __self__.no_sample == True:
             __self__.StatusBox.insert(END, "No sample configured!") 
             for key in SpecRead.CONFIG:
                 __self__.TableLeft.insert(END,key)
-                __self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
+                #__self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
 
         else: 
             __self__.StatusBox.insert(END, "Datacube not compiled.") 
             __self__.StatusBox.insert(END, "Please compile the cube first.")
             for key in SpecRead.CONFIG:
                 __self__.TableLeft.insert(END,key)
-                __self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
+                #__self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
 
         __self__.TableLeft.config(state=DISABLED)
         __self__.TableMiddle.config(state=DISABLED)
-        __self__.TableRight.config(state=DISABLED)
+        #__self__.TableRight.config(state=DISABLED)
         
        
     def reset_sample(__self__):
@@ -2941,6 +3009,8 @@ def check_screen_resolution(resolution_tuple):
     w, h = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
     if w > limit_w or h > limit_h:
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too small or if any problems are experienced with buttons and icons, please try lowering your screen resolution and setting the Windows scaling option to 100%.".format(w,h))
+    elif w < limit_w and h < limit_h:
+        messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too large, off-scale or if any problems are experienced with buttons and icons, please try increasing your screen resolution. Shall problems persist, verify your Windows scaling option.".format(w,h))
     pop.destroy()
 
 def license_error(version):
@@ -2962,6 +3032,7 @@ if __name__.endswith('__main__'):
      
     # general utilities
     import numpy as np
+    import cv2
     import sys, os, copy, pickle, stat, random
     import shutil
     from psutil import virtual_memory
