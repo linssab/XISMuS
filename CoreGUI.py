@@ -1404,6 +1404,7 @@ class Samples:
 
     def list_all(__self__):
         logging.info("Loading sample list...")
+        skip_list = []
         try:
             mca_prefix = None
             __self__.samples_database = {}
@@ -1411,44 +1412,54 @@ class Samples:
             samples = [name for name in os.listdir(SpecRead.samples_folder) \
                     if os.path.isdir(SpecRead.samples_folder+name)]
             for folder in samples:
+                if os.path.exists(os.getcwd()+"\\output\\{}\\".format(folder)):
+                    for name in os.listdir(os.getcwd()+"\\output\\{}".format(folder)):
+                        if name.lower().endswith(".cube"):
+                            __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
+                            __self__.label2.update()
+                            try: __self__.splash.update_idletasks()
+                            except: __self__.popup.update_idletasks()
+                            finally: pass
+                            skip_list.append(name.split(".cube")[0])
                 files = [name for name in os.listdir(SpecRead.samples_folder+folder) \
-                        if name.lower().endswith('.mca') or name.lower().endswith(".txt")]
+                        if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                 extension = files[:]
                 if files == []: pass
                 else:
-                    for item in range(len(files)): 
-                        # displays file being read on splash screen
-                        __self__.filequeue.set("{}".format(files[item]))
-                        __self__.label2.update()
-                        try: __self__.splash.update_idletasks()
-                        except: __self__.popup.update_idletasks()
-                        finally: pass
-                        try:
-                            files[item], extension[item] = \
-                                    files[item].split("_",1)[0], files[item].split(".",1)[1]
-                        except: pass
-                    files_set = set(files)
-                    extension_set = set(extension)
-                    counter = dict((x,files.count(x)) for x in files_set)
-                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
-                    mca_prefix_count = 0
-                    mca_extension_count = 0
-                    # counts mca files and stores the prefix string and no. of files
-                    for counts in counter:
-                        if counter[counts] > mca_prefix_count:
-                            mca_prefix = counts
-                            mca_prefix_count = counter[counts]
-                    for ext in counter_ext:
-                        if counter_ext[ext] > mca_extension_count:
-                            mca_extension = ext
-                            mca_extension_count = counter_ext[ext]
-                    
-                    # creates a dict key only if the numer of mca's is larger than 20.
-                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
-                        __self__.samples_database[folder] = mca_prefix
-                        __self__.mcacount[folder] = len(files)
-                        __self__.mca_extension[folder] = mca_extension
-            
+                    if folder not in skip_list:
+                        for item in range(len(files)): 
+                            # displays file being read on splash screen
+                            __self__.filequeue.set("{}".format(files[item]))
+                            __self__.label2.update()
+                            try: __self__.splash.update_idletasks()
+                            except: __self__.popup.update_idletasks()
+                            finally: pass
+                            try:
+                                files[item], extension[item] = \
+                                        files[item].split("_",1)[0], files[item].split(".",1)[1]
+                            except: pass
+                        files_set = set(files)
+                        extension_set = set(extension)
+                        counter = dict((x,files.count(x)) for x in files_set)
+                        counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                        mca_prefix_count = 0
+                        mca_extension_count = 0
+                        # counts mca files and stores the prefix string and no. of files
+                        for counts in counter:
+                            if counter[counts] > mca_prefix_count:
+                                mca_prefix = counts
+                                mca_prefix_count = counter[counts]
+                        for ext in counter_ext:
+                            if counter_ext[ext] > mca_extension_count:
+                                mca_extension = ext
+                                mca_extension_count = counter_ext[ext]
+                        
+                        # creates a dict key only if the numer of mca's is larger than 20.
+                        if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                            __self__.samples_database[folder] = mca_prefix
+                            __self__.mcacount[folder] = len(files)
+                            __self__.mca_extension[folder] = mca_extension
+                
             output_folder = os.getcwd()+"\output\\"
             outputs = [folder for folder in os.listdir(output_folder) \
                     if os.path.isdir(output_folder + folder)]
