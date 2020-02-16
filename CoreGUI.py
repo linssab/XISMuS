@@ -10,19 +10,7 @@ MY_DATACUBE, FIND_ELEMENT_LIST = None, None
 
 VERSION = "1.0.1"
 
-def read_license():
-    import uuid
-    sysid = str(uuid.UUID(int=uuid.getnode()))
-    with open("sysid.id","wb") as idfile:
-        b_sysid = sysid.encode("utf-8")
-        idfile.write(b_sysid)
-    return sysid
-
 def start_up():
-    #license = read_license()
-    #if license not in authorized:
-    #    license_error(VERSION)
-    # ------------------------------------------------------------
 
     SpecRead.conditional_setup()
     logging.info("Setting up...")
@@ -198,6 +186,10 @@ def call_compilecube():
         root.MenuBar.entryconfig("Toolbox", state=DISABLED)
         try: root.SamplesWindow.destroy()
         except: pass
+        root.StatusBox.delete(0,END)
+        root.StatusBox.insert(END, "\nStarting cube compilation.\n")
+        root.StatusBox.insert(END, "\nImage size: {} x {}.\n".format(root.config_xy[0], root.config_xy[1]))
+        root.StatusBox.insert(END, "\nSpectra count: {}.\n".format(root.mcacount[SpecRead.CONFIG["directory"]]))
         logging.warning("Starting cube {} compilation!".format(SpecRead.CONFIG["directory"]))
         specbatch = Cube(['xrf'],SpecRead.CONFIG)
         fail = specbatch.compile_cube()
@@ -254,7 +246,7 @@ class Welcome:
         __self__.page = StringVar()
         __self__.tag = BooleanVar()
         __self__.infotext = StringVar()
-        __self__.messages = ["Welcome to Piratininga Sample Manager v.0.0.2.\n\nClick the left or right arrows to navigate.",\
+        __self__.messages = ["Welcome to Piratininga Sample Manager {}\n\nClick the left or right arrows to navigate.".format(VERSION),\
                 "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, Piratininga SM looks for mca files under C:\\Samples\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nPiratininga SM also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
         __self__.current_page = 1
         __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
@@ -645,9 +637,8 @@ class PeakClipper:
 
     def kill(__self__, event=""):
         __self__.master.grab_release()
-        root.ConfigDiag.grab_set()
+        root.ConfigDiag.master.grab_set()
         __self__.master.destroy()
-        return 0
     
     def verify_values(__self__,snip):
         if snip[0] <= 0 or snip[1] <= 0: return False
@@ -1651,6 +1642,7 @@ class MainGUI:
         __self__.mca_extension = __self__.SampleLoader.mca_extension
         __self__.find_elements_diag = None
         __self__.ImageAnalyzers = []
+        __self__.ConfigDiag = None
         
         __self__.master.title("Piratininga SM {}".format(VERSION))
         __self__.master.resizable(False,False)
@@ -1743,9 +1735,10 @@ class MainGUI:
         __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="MCA PREFIX")
         __self__.SamplesWindow_TableLeft = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
         __self__.SamplesWindow_TableRight = Listbox(__self__.SamplesWindow, height=__self__.SamplesWindow.winfo_height())
-        __self__.SamplesWindow_TableLeft.bind("<MouseWheel>", __self__.scroll_y)
-        __self__.SamplesWindow_TableLeft.bind("<Up>", __self__.scroll_y)
-        __self__.SamplesWindow_TableLeft.bind("<Down>", __self__.scroll_y)
+        __self__.SamplesWindow_TableLeft.bind("<MouseWheel>", __self__.scroll_y_L)
+        __self__.SamplesWindow_TableRight.bind("<MouseWheel>", __self__.scroll_y_R)
+        __self__.SamplesWindow_TableLeft.bind("<Up>", __self__.scroll_up)
+        __self__.SamplesWindow_TableLeft.bind("<Down>", __self__.scroll_down)
         __self__.SamplesWindow_TableLeft.bind("<Double-Button-1>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
@@ -1754,7 +1747,7 @@ class MainGUI:
         __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
         __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0,sticky=N+S)
         __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1,sticky=N+S)
-        __self__.SamplesWindow_multi = Button(__self__.SamplesWindow, text = "Select multiple", bd=3, command=__self__.select_multiple)
+        __self__.SamplesWindow_multi = Button(__self__.SamplesWindow, text = "Export multiple maps", bd=3, command=__self__.select_multiple)
         __self__.SamplesWindow_ok = Button(__self__.SamplesWindow, text = "Validate", bd=3, command=__self__.digestmaps)
         __self__.SamplesWindow_multi.grid(row=2,column=0,sticky=W+E)
         __self__.SamplesWindow_ok.grid(row=2,column=1,sticky=W+E)
@@ -1778,6 +1771,9 @@ class MainGUI:
         __self__.SamplesWindow_TableLeft.focus_set()
 
     def select_multiple(__self__):
+
+        """ Toggles the multiple selection mode """
+
         if __self__.SamplesWindow_multi.config("relief")[-1] == "raised":
             __self__.SamplesWindow_TableLeft.selection_clear(0, END)
             __self__.SamplesWindow_TableLeft.config(selectmode=MULTIPLE)
@@ -1790,11 +1786,16 @@ class MainGUI:
             __self__.SamplesWindow_ok.config(state=DISABLED)
 
     def digestmaps(__self__):
-        cubes = []
+
+        """ Lists all cubes in output folder, matches to the selected 
+        samples in Samples List and normalizes all density maps to maximum detected
+        value in detected (and compiled) cube maps. Files are saved to the promted 
+        folder """
+
+        cube_dict, maps, maxima, packed_maps, cubes = {}, {}, {}, [], []
         for item in __self__.SamplesWindow_TableLeft.curselection():
             cubes.append(__self__.SamplesWindow_TableLeft.get(item))
         _path = os.getcwd()+"\\output\\"
-        cube_dict, maps = {}, {}
         """ list all packed cubes """
         cube_folders = [name for name in os.listdir(_path) \
                     if os.path.isdir(_path+name)]
@@ -1804,29 +1805,68 @@ class MainGUI:
                         and name.split(".cube")[0] in cubes:\
                         cube_dict[folder] = name
         for cube in cube_dict: 
+            maps[cube] = {}
             cube_file = open(_path+cube+"\\"+cube_dict[cube],'rb')
             datacube = pickle.load(cube_file)
             cube_file.close()
-            maps[cube] = datacube.densitymap
+            maps[cube]["densemap"] = datacube.densitymap
+            maxima["densemap"] = 0
+            for element in datacube.check_packed_elements():
+                maps[cube][element] = datacube.unpack_element(element.split("_")[0],element.split("_")[1])
+                maxima[element] = 0
+        for cube in maps:
+            packed_maps.append(maps[cube])
+        #print(set.intersection(*map(set,packed_maps)))
+        element_maps = set.intersection(*map(set,packed_maps))
         
         """ get the absolute maximum from all cubes
         this is applicable to SETS OF DATA that have a 
         relation between themselves, for example, when
         working with a larger sample that is composed of several
-        datacubes """
-        upper_limit = 0
-        for image in maps:
-            if upper_limit < maps[image].max():
-                upper_limit = maps[image].max()
+        datacubes """ 
+        
+        if element_maps != "":
+            __self__.maps_window = Toplevel()
+            __self__.maps_window.withdraw()
+            icon = os.getcwd()+"\\images\\icons\\icon.ico"
+            __self__.maps_window.title("Available maps")
+            __self__.maps_window.iconbitmap(icon)
+            __self__.maps_window.resizable(False, False)
+            __self__.maps_window.geometry("240x180")
+            __self__.maps_list = Listbox(__self__.maps_window)
+            __self__.maps_list.pack(side=TOP, fill=X)
+            __self__.maps_list.config(selectmode=MULTIPLE)
+            for item in element_maps:
+                __self__.maps_list.insert(END,"{}".format(item))
+            __self__.ok_btn = Button(__self__.maps_window, text="Export!", bd=3, width=13, \
+                    command = lambda: __self__.export_maps(cube, maps, maxima))
+            __self__.ok_btn.pack(side=BOTTOM, pady=3)
+            place_center(root.SamplesWindow.master, __self__.maps_window)
+            __self__.maps_window.deiconify()
+            __self__.maps_window.focus_force()
+            __self__.maps_window.grab_set()
+        else: pass
+        
+    def export_maps(__self__, cube, maps, maxima):
+        selection = []
+        for item in __self__.maps_list.curselection():
+            selection.append(__self__.maps_list.get(item))
         _path = filedialog.askdirectory()
         if _path != "":
             try: os.mkdir(_path+"\\")
             except: pass
-            for image in maps:
-                norm_map = maps[image]/upper_limit*255
-                cv2.imwrite(_path+"\\{}.png".format(image),norm_map)
+            for cube in maps:
+                for image in selection:
+                    if maxima[image] < maps[cube][image].max():
+                        maxima[image] = maps[cube][image].max()
+            for cube in maps:
+                for image in selection:
+                    norm_map = maps[cube][image]/maxima[image]*255
+                    cv2.imwrite(_path+"\\{}_{}.png".format(cube,image),norm_map)
             __self__.select_multiple()
-        else: return
+        else: __self__.select_multiple()
+        __self__.maps_window.grab_release()
+        __self__.maps_window.destroy()
 
     def list_samples(__self__):
 
@@ -1848,15 +1888,35 @@ class MainGUI:
             else: __self__.call_listsamples()
         except: __self__.call_listsamples()
 
-    def scroll_y(__self__,event):
-        if __self__.SamplesWindow_TableRight.yview() != __self__.SamplesWindow_TableLeft.yview():
-            __self__.SamplesWindow_TableRight.yview_moveto(__self__.SamplesWindow_TableLeft.curselection())
+    def scroll_y_R(__self__,event):
+        """ Right table triggers. Scrolls Left """
+        if event.delta == 120: lines = -5
+        else: lines = 5
+        __self__.SamplesWindow_TableLeft.yview_scroll(lines,"units") 
         return 
     
+    def scroll_y_L(__self__,event):
+        """ Left table triggers. Scrolls Right """
+        if event.delta == 120: lines = -5
+        else: lines = 5
+        __self__.SamplesWindow_TableRight.yview_scroll(lines,"units") 
+        return 
+
+    def scroll_up(__self__,event):
+        if __self__.SamplesWindow_TableRight.yview() != __self__.SamplesWindow_TableLeft.yview():
+            __self__.SamplesWindow_TableRight.yview_scroll(-1,"units") 
+
+    def scroll_down(__self__,event):
+        if __self__.SamplesWindow_TableRight.yview() != __self__.SamplesWindow_TableLeft.yview():
+            __self__.SamplesWindow_TableRight.yview_scroll(1,"units") 
+
     def sample_select(__self__,event=""):
     
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
+        
+        # name of selected sample
+        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
 
         __self__.master.deiconify()
         __self__.master.focus_set()
@@ -1868,14 +1928,21 @@ class MainGUI:
                     pass
         __self__.toggle_("off")
         
-        # destroy any open configuration window
-        try: __self__.ConfigDiag.destroy()
-        except: pass
+        if __self__.SampleVar.get().split(":")[1].replace(" ","") != value:
+            # destroy any open configuration window
+            # and all open plot windows
+            try: __self__.ConfigDiag.master.destroy()
+            except: pass
+            try: __self__.summation.master.destroy()
+            except: pass
+            try: __self__.MPS.master.destroy()
+            except: pass
+            try: __self__.combined.master.destroy()
+            except: pass
 
-        if len(__self__.SamplesWindow_TableLeft.curselection()) > 1:
-           __self__.select_multiple()
-           return
-        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+            if __self__.SamplesWindow_multi["relief"] == "sunken":
+               __self__.select_multiple()
+               return
         
         # to avoid unecessarily changing the global variable cube_path, a local version
         # is created to check the existance of a cube file for the selected sample. If it exists,
@@ -1970,8 +2037,8 @@ class MainGUI:
 
     def wipe(__self__,e=""):
         try: 
-            __self__.ConfigDiag.grab_release()
-            __self__.ConfigDiag.destroy()
+            __self__.ConfigDiag.master.grab_release()
+            __self__.ConfigDiag.master.destroy()
         except: logging.warning("Tried to destroy ConfigDiag before calling it for the \
                 first time")
         global MY_DATACUBE
@@ -2068,19 +2135,20 @@ class MainGUI:
                 __self__.ConfigFrame,text="Configuration embedded:",justify=CENTER)
         __self__.TableLabel2 = Label(__self__.ConfigFrame,text="KEY")
         __self__.TableLabel3 = Label(__self__.ConfigFrame,text="PACKED")
-        #__self__.TableLabel4 = Label(__self__.ConfigFrame,text="IN CONFIG.CFG")
         __self__.TableLabel1.grid(row=3, column=2, columnspan=3, sticky=W+E)
         __self__.TableLabel2.grid(row=4, column=2)
         __self__.TableLabel3.grid(row=4, column=3, columnspan=2)
-        #__self__.TableLabel4.grid(row=4, column=4)
 
         __self__.TableLeft = Listbox(__self__.ConfigFrame)
         __self__.TableLeft.update()
-        __self__.TableMiddle = Listbox(__self__.ConfigFrame, width=int(__self__.TableLeft.winfo_reqwidth()/4))
-        #__self__.TableRight = Listbox(__self__.ConfigFrame)
+        __self__.TableMiddle = Listbox(__self__.ConfigFrame, width=int(__self__.TableLeft.winfo_reqwidth()/3))
         __self__.TableLeft.grid(row=5, column=2, sticky=N+S)
         __self__.TableMiddle.grid(row=5, column=3, columnspan=2, sticky=N+S)
-        #__self__.TableRight.grid(row=5, column=4, sticky=N+S)
+        
+        re_configure_icon = PhotoImage(file=os.getcwd()+"\\images\\icons\\refresh.png")
+        __self__.re_configure_icon = re_configure_icon.subsample(1,1)
+        __self__.re_configure = Button(__self__.ConfigFrame, image=__self__.re_configure_icon, width=32, height=32)
+        __self__.re_configure.grid(row=5, column=5, sticky=S)
         
         #####
         # define the menu bar
@@ -2160,23 +2228,32 @@ class MainGUI:
         __self__.master.protocol("WM_DELETE_WINDOW", __self__.root_quit)
             
     def write_stat(__self__):
+
+        global MY_DATACUBE
         
-        #__self__.TableRight.config(state=NORMAL)
         __self__.TableMiddle.config(state=NORMAL)
         __self__.TableLeft.config(state=NORMAL)
         __self__.SampleVar.set("Sample on memory: "+SpecRead.DIRECTORY)
         
         # wipe all text
         __self__.StatusBox.delete(0,END)
-        #__self__.TableRight.delete(0,END)
         __self__.TableMiddle.delete(0,END)
         __self__.TableLeft.delete(0,END)
 
         if os.path.exists(SpecRead.selected_sample_folder):
-            __self__.StatusBox.insert(\
-                    END, "\nLooking for spectra files at: {0}\n".format(SpecRead.selected_sample_folder))
-            __self__.StatusBox.insert(END, "\n{} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
-            __self__.no_sample = False
+            if MY_DATACUBE != None: 
+                root.mcacount[SpecRead.DIRECTORY] = MY_DATACUBE.img_size
+                __self__.StatusBox.insert(\
+                        END, "\nSpectra files folder: {0}\n".format(SpecRead.selected_sample_folder))
+                __self__.StatusBox.insert(END, "\nDatacube loaded.\n")
+                __self__.StatusBox.insert(END, "\n{} spectra packed!\n".format(root.mcacount[SpecRead.DIRECTORY]))
+                __self__.no_sample = False
+            else: 
+                __self__.StatusBox.insert(\
+                        END, "\nLooking for spectra files at: {0}\n".format(SpecRead.selected_sample_folder))
+                __self__.StatusBox.insert(END, "\n{} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
+                __self__.no_sample = False
+
         else: 
             __self__.StatusBox.insert(\
                     END, "\nLooking for spectra files at: {0}\n".format(SpecRead.selected_sample_folder))
@@ -2204,24 +2281,20 @@ class MainGUI:
             for item in range(len(values_cube)):
                 __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
                 __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
-                #__self__.TableRight.insert(END, "{}".format(values_cfg[item]))
         
         elif __self__.no_sample == True:
             __self__.StatusBox.insert(END, "No sample configured!") 
             for key in SpecRead.CONFIG:
                 __self__.TableLeft.insert(END,key)
-                #__self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
 
         else: 
             __self__.StatusBox.insert(END, "Datacube not compiled.") 
             __self__.StatusBox.insert(END, "Please compile the cube first.")
             for key in SpecRead.CONFIG:
                 __self__.TableLeft.insert(END,key)
-                #__self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
 
         __self__.TableLeft.config(state=DISABLED)
         __self__.TableMiddle.config(state=DISABLED)
-        #__self__.TableRight.config(state=DISABLED)
         
        
     def reset_sample(__self__):
@@ -2238,6 +2311,15 @@ class MainGUI:
                     os.remove(SpecRead.dimension_file)
                     logging.warning("Custom image dimension was deleted.")
                 except: raise PermissionError("Can't delete custom dimension file!")
+
+            # clears all open plot windows
+            try: __self__.summation.master.destroy()
+            except: pass
+            try: __self__.MPS.master.destroy()
+            except: pass
+            try: __self__.combined.master.destroy()
+            except: pass
+
             load_cube()
             __self__.write_stat()
             __self__.toggle_(toggle='off')
@@ -2249,6 +2331,7 @@ class MainGUI:
             __self__.ResetWindow.destroy()
 
         if os.path.exists(SpecRead.cube_path):
+
             # creates dialogue to warn cube exists and promp to repack data
             __self__.ResetWindow = Toplevel(master=__self__.master)
             __self__.ResetWindow.title("Attention!")
@@ -2276,6 +2359,9 @@ class MainGUI:
             ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
 
     def call_configure(__self__):
+        
+        """ invokes the configuration dialog """
+
         if not os.path.exists(SpecRead.dimension_file):
             dimension = dimension_diag(SpecRead.DIRECTORY)
             __self__.master.wait_window(dimension.win) 
@@ -2286,287 +2372,12 @@ class MainGUI:
             __self__.config_xy = SpecRead.getdimension()
 
         __self__.ManualParam = []
-
-        def manual_calib():
+        try: __self__.ConfigDiag.master.destroy()
+        except: pass
+        __self__.ConfigDiag = ConfigDiag(__self__.master)
+        __self__.ConfigDiag.build_widgets()
             
-            def save_param():
-                EntryParam = [\
-                        [ch1.get(),en1.get()],\
-                        [ch2.get(),en2.get()],\
-                        [ch3.get(),en3.get()],\
-                        [ch4.get(),en4.get()]]
-                for index in range(len(EntryParam)):
-                    if EntryParam[index][0] > 0 and EntryParam[index][1] > 0:
-                        __self__.ManualParam.append(EntryParam[index])
-                    elif EntryParam[index][0] < 0 or EntryParam[index][1] < 0:
-                        messagebox.showerror("Calibration Error",\
-                                "Can't receive negative values!")
-                        __self__.ManualParam = []
-                        raise ValueError("Manual calibration can't receive negative values!")
-                save_config()
-
-            CalibDiag = Toplevel(master = __self__.ConfigDiag)
-            CalibDiag.title("Manual configuration")
-            CalibDiag.resizable(False,False)
-            icon = os.getcwd()+"\\images\\icons\\settings.ico"
-            CalibDiag.iconbitmap(icon)
-            ParamFrame = Frame(CalibDiag)
-            ParamFrame.pack()
-            ButtonFrame = Frame(CalibDiag)
-            ButtonFrame.pack()
-            
-            ch1 = IntVar()
-            ch2 = IntVar()
-            ch3 = IntVar()
-            ch4 = IntVar()
-            
-            en1 = DoubleVar()
-            en2 = DoubleVar()
-            en3 = DoubleVar()
-            en4 = DoubleVar()
-            
-            try: 
-                # gets calibration parameters read while performing last 
-                # setup or conditional setup and fills entries
-                SpecRead.CONFIG['calibration'] = 'manual'
-                calibparam = SpecRead.getcalibration()
-                ch1.set(calibparam[0][0])
-                en1.set(calibparam[0][1])
-                ch2.set(calibparam[1][0])
-                en2.set(calibparam[1][1])
-                ch3.set(calibparam[2][0])
-                en3.set(calibparam[2][1])
-                ch4.set(calibparam[3][0])
-                en4.set(calibparam[3][1])
-            except: 
-                pass
-            
-            __self__.ConfigDiag_header = Label(ParamFrame, text="Channel\tEnergy").grid(\
-                    row=0,columnspan=2,sticky=W+E)
-            Channel1 = Entry(ParamFrame,textvariable=ch1).grid(row=1,column=0)
-            Channel2 = Entry(ParamFrame,textvariable=ch2).grid(row=2,column=0)
-            Channel3 = Entry(ParamFrame,textvariable=ch3).grid(row=3,column=0)
-            Channel4 = Entry(ParamFrame,textvariable=ch4).grid(row=4,column=0)
-            EnergyBox1 = Entry(ParamFrame,textvariable=en1).grid(row=1,column=1)
-            EnergyBox2 = Entry(ParamFrame,textvariable=en2).grid(row=2,column=1)
-            EnergyBox3 = Entry(ParamFrame,textvariable=en3).grid(row=3,column=1)
-            EnergyBox4 = Entry(ParamFrame,textvariable=en4).grid(row=4,column=1)
-            
-            OkButton = Button(ButtonFrame,text="SAVE",command=save_param).\
-                    grid(row=5,columnspan=2)
-            
-            place_center(__self__.ConfigDiag,CalibDiag)
         
-        def check_method_and_save():
-            if CalibVar.get() == 'manual':
-                manual_calib()
-            else: save_config()
-        
-        def call_PeakClipper(__self__):
-            __self__.ConfigDiag.grab_release()
-            __self__.clipper = PeakClipper(root.master)
-            __self__.clipper.master.grab_set()
-
-        def save_config():
-            global snip_config
-            configdict = {'directory':DirectoryVar.get(),'bgstrip':BgstripVar.get(),\
-                    'ratio':RatioVar.get(),'thickratio':ThickVar.get(),\
-                    'calibration':CalibVar.get(),'enhance':EnhanceVar.get(),\
-                    'peakmethod':MethodVar.get(),'bg_settings':snip_config}
-            
-            if not os.path.exists(SpecRead.dimension_file):
-                os.mkdir(SpecRead.output_path)
-                dm_file = open(SpecRead.output_path + "colonneXrighe.txt","w")
-                dm_file.write("righe\t{}\n".format(__self__.config_xy[0]))
-                dm_file.write("colonne\t{}\n".format(__self__.config_xy[1]))
-                dm_file.write(5*"*"+" user input data "+5*"*")
-                dm_file.close()
-
-            if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
-                
-                SpecRead.DIRECTORY = configdict["directory"] + '\\'
-                SpecRead.selected_sample_folder = \
-                        SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
-                SpecRead.FIRSTFILE_ABSPATH = SpecRead.selected_sample_folder \
-                        + root.samples[configdict["directory"]] \
-                        + "_1." \
-                        + root.mca_extension[configdict["directory"]]
-
-                # reads configuration integrity prior opening config.cfg for writing
-                if configdict['calibration'] == 'manual': 
-                    calibparam = __self__.ManualParam
-                    # save_config only passes positive integers forward
-                    # in the case other data is received as user input, this will be filtered
-                    # absence of acceptable parameters returns an empty list
-                    if calibparam == []: 
-                        messagebox.showerror("Calibration Error",\
-                                "No acceptable parameters passed!")
-                        __self__.ManualParam = []
-                        raise ValueError("No acceptable parameters passed!")
-                    elif len(calibparam) <= 1: 
-                        messagebox.showerror("Calibration Error",\
-                                "Need at least two anchors!")
-                        __self__.ManualParam = []
-                        raise ValueError("Calibration need at least two anchors!")
-                else: 
-                    SpecRead.CONFIG["calibration"] = "from_source"
-                    calibparam = SpecRead.getcalibration()
-
-                cfgpath = os.getcwd() + "\config.cfg"
-                cfgfile = open(cfgpath,"w+")
-                cfgfile.write("<<CONFIG_START>>\r")
-                for key in configdict:
-                    cfgfile.write("{} = {}\r".format(key,configdict[key]))
-                cfgfile.write("<<CALIBRATION>>\r")
-                for pair in calibparam:
-                    cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
-                cfgfile.write("<<END>>\r")
-                cfgfile.close()
-                
-                SpecRead.setup(root.samples[configdict["directory"]],
-                        root.mca_extension[configdict["directory"]])
-                __self__.ConfigDiag.grab_release()
-                __self__.ConfigDiag.destroy()
-                try: 
-                    __self__.ResetWindow.destroy()
-                    CalibDiag.destroy()
-                except: pass
-                 
-                call_compilecube()
-                load_cube()
-                __self__.write_stat()
-                __self__.draw_map()
-                __self__.toggle_(toggle='on')
-
-            else:
-                
-                cfgpath = os.getcwd() + '\config.cfg'
-                cfgfile = open(cfgpath,'w+')
-                cfgfile.write("<<CONFIG_START>>\r")
-                for key in configdict:
-                    cfgfile.write("{} = {}\r".format(key,configdict[key]))
-                cfgfile.write("<<CALIBRATION>>\r")
-                
-                if configdict['calibration'] == 'manual': 
-                    calibparam = ManualParam
-                else: 
-                    calibparam = [[0,0],[0,0],[0,0]]
-
-                for pair in calibparam:
-                    cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
-                cfgfile.write("<<END>>\r")
-                cfgfile.close()
-                ErrorMessage("Directory {} not found!\nConfig.cfg saved!".\
-                        format(configdict['directory']))
-                
-                SpecRead.setup(root.samples[configdict["directory"]],
-                        root.mca_extension[configdict["directory"]])
-                __self__.ConfigDiag.grab_release()
-                __self__.ConfigDiag.destroy()
-                try: 
-                    __self__.ResetWindow.destroy()
-                    CalibDiag.destroy()
-                except: pass
-                __self__.write_stat()
-                __self__.draw_map()
-       
-        __self__.ConfigDiag = Toplevel(master = __self__.master)
-        __self__.ConfigDiag.grab_set()
-        __self__.ConfigDiag.resizable(False,False)
-        __self__.ConfigDiag.title("Configuration")
-        __self__.ConfigDiag.bind("<Escape>",__self__.wipe)
-        __self__.ConfigDiag.protocol("WM_DELETE_WINDOW",__self__.wipe)
-        __self__.ConfigDiagFrame = Frame(__self__.ConfigDiag,padx=15,pady=15)
-        __self__.ConfigDiagLabels = Frame(__self__.ConfigDiag,padx=15,pady=15)
-        __self__.ConfigDiagFrame.grid(row=0, column=1)
-        __self__.ConfigDiagLabels.grid(row=0, column=0)
-
-        #Label1 = Label(__self__.ConfigDiagLabels, text="Sample directory:")
-        Label2 = Label(__self__.ConfigDiagLabels, text="Background strip mode:")
-        Label3 = Label(__self__.ConfigDiagLabels, text="Configure BG strip:")
-        Label4 = Label(__self__.ConfigDiagLabels, text="Calibration:")
-        #Label5 = Label(__self__.ConfigDiagLabels, text="Thick ratio:")
-        #Label6 = Label(__self__.ConfigDiagLabels, text="Enhance image?")
-        Label7 = Label(__self__.ConfigDiagLabels, text="Netpeak area method:")
-        Label8 = Label(__self__.ConfigDiagLabels, text="Calculate ratios?")
-        
-        #Label1.grid(row=0,column=0,sticky=W,pady=2)
-        Label2.grid(row=1,column=0,sticky=W,pady=2)
-        Label3.grid(row=2,column=0,sticky=W,pady=2)
-        Label4.grid(row=3,column=0,sticky=W,pady=2)
-        #Label5.grid(row=4,column=0,sticky=W,pady=2)
-        #Label6.grid(row=5,column=0,sticky=W,pady=2)
-        Label7.grid(row=6,column=0,sticky=W,pady=2)
-        Label8.grid(row=7,column=0,sticky=W,pady=2)
-        
-        ConfigDiagRatioYes = Label(__self__.ConfigDiagFrame, text="Yes")
-        ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
-        ConfigDiagEnhanceYes = Label(__self__.ConfigDiagFrame, text="Yes")
-        ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
-        
-        BgstripVar = StringVar()
-        __self__.ConfigDiagBgstrip = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=BgstripVar, values=("None","SNIPBG"),state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
-        
-        DirectoryVar = StringVar()
-        #__self__.ConfigDiagDirectory = Entry(__self__.ConfigDiagFrame,textvariable=DirectoryVar,width=__self__.ConfigDiagBgstrip.winfo_width())
-        
-        RatioVar = BooleanVar()
-        __self__.ConfigDiagRatio = Checkbutton(__self__.ConfigDiagFrame, variable=RatioVar)
-        
-        ThickVar = DoubleVar()
-        #__self__.ConfigDiagThick = Entry(__self__.ConfigDiagFrame, textvariable=ThickVar,width=13)
-        __self__.ConfigDiagSetBG = Button(__self__.ConfigDiagFrame, text="Set BG",\
-               width=13+ConfigDiagRatioYes.winfo_width(),command=lambda: call_PeakClipper(__self__))
-        
-        CalibVar = StringVar()
-        __self__.ConfigDiagCalib = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=CalibVar, values=("from_source","manual"),\
-                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
-
-        EnhanceVar = BooleanVar()
-        #__self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiagFrame, variable=EnhanceVar)
-        
-        MethodVar = StringVar()
-        __self__.ConfigDiagMethod = ttk.Combobox(__self__.ConfigDiagFrame, textvariable=MethodVar, values=("simple_roi","auto_roi"),\
-                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
-        
-        DirectoryVar.set(SpecRead.CONFIG.get('directory'))
-        BgstripVar.set(SpecRead.CONFIG.get('bgstrip'))
-        RatioVar.set(SpecRead.CONFIG.get('ratio'))
-        ThickVar.set(SpecRead.CONFIG.get('thickratio'))
-        CalibVar.set(SpecRead.CONFIG.get('calibration'))
-        MethodVar.set(SpecRead.CONFIG.get('peakmethod'))
-        EnhanceVar.set(SpecRead.CONFIG.get('enhance'))
-
-        #__self__.ConfigDiagDirectory.grid(row=0,column=1,sticky=E)
-        __self__.ConfigDiagBgstrip.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagSetBG.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagCalib.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
-        #__self__.ConfigDiagThick.grid(row=4,column=0,columnspan=2,sticky=E,pady=2)
-        #__self__.ConfigDiagEnhance.grid(row=5,column=0,sticky=E,pady=2)
-        __self__.ConfigDiagMethod.grid(row=6,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
-        
-        dimension_text = "Image size = {0} x {1} pixels"\
-                .format(__self__.config_xy[0],__self__.config_xy[1])
-        img_dimension_display = Label(__self__.ConfigDiag,text=dimension_text)
-        img_dimension_display.grid(row=1,column=0,sticky=W,padx=17,pady=2)
-
-        ButtonsFrame = Frame(__self__.ConfigDiag)
-        ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
-        SaveButton = Button(ButtonsFrame, text="Save", justify=CENTER, width=10,\
-                command=check_method_and_save)
-        SaveButton.grid(row=8,column=0,sticky=S)
-        CancelButton = Button(ButtonsFrame, text="Cancel", justify=CENTER, width=10,\
-                command=__self__.wipe)
-        CancelButton.grid(row=8,column=1,sticky=S)
-        
-        place_center(root.master,__self__.ConfigDiag)
-        icon = os.getcwd()+"\\images\\icons\\settings.ico"
-        __self__.ConfigDiag.iconbitmap(icon)
-        __self__.master.wait_window(__self__.ConfigDiag)
-
-        return 0
-
 def refresh_plots(exclusive=""):
 
     """refresh one plot window exclusively or all open windows"""
@@ -2631,6 +2442,312 @@ def refresh_plots(exclusive=""):
 
     try: root.find_elements_diag.master.focus_force()
     except: pass
+
+class ConfigDiag:
+
+    def __init__(__self__, master):
+        __self__.master = Toplevel(master = master)
+        __self__.master.grab_set()
+        __self__.master.resizable(False,False)
+        __self__.master.title("Configuration")
+        __self__.master.bind("<Escape>",__self__.wipe)
+        __self__.master.bind("<Return>",__self__.save_config)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe)
+        __self__.Frame = Frame(__self__.master,padx=15,pady=15)
+        __self__.Labels = Frame(__self__.master,padx=15,pady=15)
+        __self__.Frame.grid(row=0, column=1)
+        __self__.Labels.grid(row=0, column=0)
+
+    def check_method_and_save(__self__):
+        if __self__.CalibVar.get() == 'manual':
+            __self__.manual_calib()
+        else: __self__.save_config()
+
+    def save_param(__self__):
+        EntryParam = [\
+                [__self__.ch1.get(),__self__.en1.get()],\
+                [__self__.ch2.get(),__self__.en2.get()],\
+                [__self__.ch3.get(),__self__.en3.get()],\
+                [__self__.ch4.get(),__self__.en4.get()]]
+        for index in range(len(EntryParam)):
+            if EntryParam[index][0] > 0 and EntryParam[index][1] > 0:
+                root.ManualParam.append(EntryParam[index])
+            elif EntryParam[index][0] < 0 or EntryParam[index][1] < 0:
+                messagebox.showerror("Calibration Error",\
+                        "Can't receive negative values!")
+                root.ManualParam = []
+                raise ValueError("Manual calibration can't receive negative values!")
+        __self__.CalibDiag.grab_release()
+        __self__.save_config()
+    
+    def wipe(__self__,e=""):
+
+        try: 
+            __self__.master.grab_release()
+            __self__.master.destroy()
+        except: logging.warning("Tried to destroy ConfigDiag before calling it for the \
+                first time")
+        global MY_DATACUBE
+        MY_DATACUBE = None
+        load_cube()
+        root.write_stat()
+        root.draw_map()
+        root.toggle_(toggle='off')
+        root.SampleVar.set("Sample on memory: None")
+        try: 
+            if root.SamplesWindow.state() == "normal": 
+                root.SamplesWindow.deiconify()
+                root.SamplesWindow_TableLeft.focus_set()
+        except: pass
+
+    def manual_calib(__self__):
+        
+        __self__.CalibDiag = Toplevel(master = __self__.master)
+        __self__.CalibDiag.title("Manual configuration")
+        __self__.CalibDiag.resizable(False,False)
+        __self__.CalibDiag.grab_set()
+        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        __self__.CalibDiag.iconbitmap(icon)
+        ParamFrame = Frame(__self__.CalibDiag)
+        ParamFrame.pack()
+        ButtonFrame = Frame(__self__.CalibDiag)
+        ButtonFrame.pack()
+        
+        __self__.ch1 = IntVar()
+        __self__.ch2 = IntVar()
+        __self__.ch3 = IntVar()
+        __self__.ch4 = IntVar()
+        
+        __self__.en1 = DoubleVar()
+        __self__.en2 = DoubleVar()
+        __self__.en3 = DoubleVar()
+        __self__.en4 = DoubleVar()
+        
+        try: 
+            # gets calibration parameters read while performing last 
+            # setup or conditional setup and fills entries
+            SpecRead.CONFIG['calibration'] = 'manual'
+            calibparam = SpecRead.getcalibration()
+            __self__.ch1.set(calibparam[0][0])
+            __self__.en1.set(calibparam[0][1])
+            __self__.ch2.set(calibparam[1][0])
+            __self__.en2.set(calibparam[1][1])
+            __self__.ch3.set(calibparam[2][0])
+            __self__.en3.set(calibparam[2][1])
+            __self__.ch4.set(calibparam[3][0])
+            __self__.en4.set(calibparam[3][1])
+        except: 
+            pass
+        
+        __self__.ConfigDiag_header = Label(ParamFrame, text="Channel\tEnergy").grid(\
+                row=0,columnspan=2,sticky=W+E)
+        Channel1 = Entry(ParamFrame,textvariable=__self__.ch1).grid(row=1,column=0)
+        Channel2 = Entry(ParamFrame,textvariable=__self__.ch2).grid(row=2,column=0)
+        Channel3 = Entry(ParamFrame,textvariable=__self__.ch3).grid(row=3,column=0)
+        Channel4 = Entry(ParamFrame,textvariable=__self__.ch4).grid(row=4,column=0)
+        EnergyBox1 = Entry(ParamFrame,textvariable=__self__.en1).grid(row=1,column=1)
+        EnergyBox2 = Entry(ParamFrame,textvariable=__self__.en2).grid(row=2,column=1)
+        EnergyBox3 = Entry(ParamFrame,textvariable=__self__.en3).grid(row=3,column=1)
+        EnergyBox4 = Entry(ParamFrame,textvariable=__self__.en4).grid(row=4,column=1)
+        
+        OkButton = Button(ButtonFrame,text="SAVE",command=__self__.save_param).\
+                grid(row=5,columnspan=2)
+        
+        place_center(__self__.master,__self__.CalibDiag)
+    
+        
+    def call_PeakClipper(__self__):
+        __self__.master.grab_release()
+        __self__.clipper = PeakClipper(root.master)
+        __self__.clipper.master.grab_set()
+
+    def save_config(__self__,e=""):
+        global snip_config
+        configdict = {'directory':__self__.DirectoryVar.get(),'bgstrip':__self__.BgstripVar.get(),\
+                'ratio':__self__.RatioVar.get(),'thickratio':__self__.ThickVar.get(),\
+                'calibration':__self__.CalibVar.get(),'enhance':__self__.EnhanceVar.get(),\
+                'peakmethod':__self__.MethodVar.get(),'bg_settings':snip_config}
+        
+        if not os.path.exists(SpecRead.dimension_file):
+            os.mkdir(SpecRead.output_path)
+            dm_file = open(SpecRead.output_path + "colonneXrighe.txt","w")
+            dm_file.write("righe\t{}\n".format(root.config_xy[0]))
+            dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
+            dm_file.write(5*"*"+" user input data "+5*"*")
+            dm_file.close()
+
+        if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
+            
+            SpecRead.DIRECTORY = configdict["directory"] + '\\'
+            SpecRead.selected_sample_folder = \
+                    SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
+            SpecRead.FIRSTFILE_ABSPATH = SpecRead.selected_sample_folder \
+                    + root.samples[configdict["directory"]] \
+                    + "_1." \
+                    + root.mca_extension[configdict["directory"]]
+
+            # reads configuration integrity prior opening config.cfg for writing
+            if configdict['calibration'] == 'manual': 
+                calibparam = root.ManualParam
+                # save_config only passes positive integers forward
+                # in the case other data is received as user input, this will be filtered
+                # absence of acceptable parameters returns an empty list
+                if calibparam == []: 
+                    messagebox.showerror("Calibration Error",\
+                            "No acceptable parameters passed!")
+                    root.ManualParam = []
+                    raise ValueError("No acceptable parameters passed!")
+                elif len(calibparam) <= 1: 
+                    messagebox.showerror("Calibration Error",\
+                            "Need at least two anchors!")
+                    root.ManualParam = []
+                    raise ValueError("Calibration need at least two anchors!")
+            else: 
+                SpecRead.CONFIG["calibration"] = "from_source"
+                calibparam = SpecRead.getcalibration()
+
+            cfgpath = os.getcwd() + "\config.cfg"
+            cfgfile = open(cfgpath,"w+")
+            cfgfile.write("<<CONFIG_START>>\r")
+            for key in configdict:
+                cfgfile.write("{} = {}\r".format(key,configdict[key]))
+            cfgfile.write("<<CALIBRATION>>\r")
+            for pair in calibparam:
+                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
+            cfgfile.write("<<END>>\r")
+            cfgfile.close()
+            
+            SpecRead.setup(root.samples[configdict["directory"]],
+                    root.mca_extension[configdict["directory"]])
+            __self__.master.grab_release()
+            __self__.master.destroy()
+            try: __self__.CalibDiag.destroy()
+            except: pass
+            try: root.ResetWindow.destroy()
+            except: pass
+             
+            call_compilecube()
+            load_cube()
+            root.write_stat()
+            root.draw_map()
+            root.toggle_(toggle='on')
+
+        else:
+            cfgpath = os.getcwd() + '\config.cfg'
+            cfgfile = open(cfgpath,'w+')
+            cfgfile.write("<<CONFIG_START>>\r")
+            for key in configdict:
+                cfgfile.write("{} = {}\r".format(key,configdict[key]))
+            cfgfile.write("<<CALIBRATION>>\r")
+            
+            if configdict['calibration'] == 'manual': 
+                calibparam = root.ManualParam
+            else: 
+                calibparam = [[0,0],[0,0],[0,0]]
+
+            for pair in calibparam:
+                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
+            cfgfile.write("<<END>>\r")
+            cfgfile.close()
+            ErrorMessage("Directory {} not found!\nConfig.cfg saved!".\
+                    format(configdict['directory']))
+            
+            SpecRead.setup(root.samples[configdict["directory"]],
+                    root.mca_extension[configdict["directory"]])
+            __self__.master.grab_release()
+            __self__.master.destroy()
+            try: root.ResetWindow.destroy()
+            except: pass
+            try: __self__.CalibDiag.destroy()
+            except: pass
+            root.write_stat()
+            root.draw_map()
+   
+    def build_widgets(__self__):
+
+        #Label1 = Label(__self__.ConfigDiagLabels, text="Sample directory:")
+        Label2 = Label(__self__.Labels, text="Background strip mode:")
+        Label3 = Label(__self__.Labels, text="Configure BG strip:")
+        Label4 = Label(__self__.Labels, text="Calibration:")
+        #Label5 = Label(__self__.ConfigDiagLabels, text="Thick ratio:")
+        #Label6 = Label(__self__.ConfigDiagLabels, text="Enhance image?")
+        Label7 = Label(__self__.Labels, text="Netpeak area method:")
+        Label8 = Label(__self__.Labels, text="Calculate ratios?")
+        
+        #Label1.grid(row=0,column=0,sticky=W,pady=2)
+        Label2.grid(row=1,column=0,sticky=W,pady=2)
+        Label3.grid(row=2,column=0,sticky=W,pady=2)
+        Label4.grid(row=3,column=0,sticky=W,pady=2)
+        #Label5.grid(row=4,column=0,sticky=W,pady=2)
+        #Label6.grid(row=5,column=0,sticky=W,pady=2)
+        Label7.grid(row=6,column=0,sticky=W,pady=2)
+        Label8.grid(row=7,column=0,sticky=W,pady=2)
+        
+        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
+        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
+        
+        __self__.BgstripVar = StringVar()
+        __self__.ConfigDiagBgstrip = ttk.Combobox(__self__.Frame, textvariable=__self__.BgstripVar, values=("None","SNIPBG"),state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
+        
+        __self__.DirectoryVar = StringVar()
+        #__self__.ConfigDiagDirectory = Entry(__self__.ConfigDiagFrame,textvariable=DirectoryVar,width=__self__.ConfigDiagBgstrip.winfo_width())
+        
+        __self__.RatioVar = BooleanVar()
+        __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
+        
+        __self__.ThickVar = DoubleVar()
+        #__self__.ConfigDiagThick = Entry(__self__.ConfigDiagFrame, textvariable=ThickVar,width=13)
+        __self__.ConfigDiagSetBG = Button(__self__.Frame, text="Set BG",\
+               width=13+ConfigDiagRatioYes.winfo_width(),command=__self__.call_PeakClipper)
+        
+        __self__.CalibVar = StringVar()
+        __self__.ConfigDiagCalib = ttk.Combobox(__self__.Frame, textvariable=__self__.CalibVar, values=("from_source","manual"),\
+                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
+
+        __self__.EnhanceVar = BooleanVar()
+        #__self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiagFrame, variable=EnhanceVar)
+        
+        __self__.MethodVar = StringVar()
+        __self__.ConfigDiagMethod = ttk.Combobox(__self__.Frame, textvariable=__self__.MethodVar, values=("simple_roi","auto_roi"),\
+                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
+        
+        __self__.DirectoryVar.set(SpecRead.CONFIG.get('directory'))
+        __self__.BgstripVar.set(SpecRead.CONFIG.get('bgstrip'))
+        __self__.RatioVar.set(SpecRead.CONFIG.get('ratio'))
+        __self__.ThickVar.set(SpecRead.CONFIG.get('thickratio'))
+        __self__.CalibVar.set(SpecRead.CONFIG.get('calibration'))
+        __self__.MethodVar.set(SpecRead.CONFIG.get('peakmethod'))
+        __self__.EnhanceVar.set(SpecRead.CONFIG.get('enhance'))
+
+        #__self__.ConfigDiagDirectory.grid(row=0,column=1,sticky=E)
+        __self__.ConfigDiagBgstrip.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagSetBG.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagCalib.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
+        #__self__.ConfigDiagThick.grid(row=4,column=0,columnspan=2,sticky=E,pady=2)
+        #__self__.ConfigDiagEnhance.grid(row=5,column=0,sticky=E,pady=2)
+        __self__.ConfigDiagMethod.grid(row=6,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
+        
+        dimension_text = "Image size = {0} x {1} pixels"\
+                .format(root.config_xy[0],root.config_xy[1])
+        img_dimension_display = Label(__self__.master,text=dimension_text)
+        img_dimension_display.grid(row=1,column=0,sticky=W,padx=17,pady=2)
+
+        ButtonsFrame = Frame(__self__.master)
+        ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
+        SaveButton = Button(ButtonsFrame, text="Save", justify=CENTER, width=10,\
+                command=__self__.check_method_and_save)
+        SaveButton.grid(row=8,column=0,sticky=S)
+        CancelButton = Button(ButtonsFrame, text="Cancel", justify=CENTER, width=10,\
+                command=__self__.wipe)
+        CancelButton.grid(row=8,column=1,sticky=S)
+        
+        place_center(root.master,__self__.master)
+        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        __self__.master.iconbitmap(icon)
+        root.master.wait_window(__self__.master)
 
 
 class PeriodicTable:
@@ -3013,12 +3130,14 @@ def check_screen_resolution(resolution_tuple):
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too large, off-scale or if any problems are experienced with buttons and icons, please try increasing your screen resolution. Shall problems persist, verify your Windows scaling option.".format(w,h))
     pop.destroy()
 
+"""
 def license_error(version):
     pop = Tk()
     pop.withdraw()
     messagebox.showerror("License error!","Even though this is an open source software, this is a beta UNRELEASED version made by the author. To run this specific version of the software your machine has to be authorized beforehand. This is done to avoid an unexperienced user of producing biased or wrong information with this current unreleased version {0}, which contains known bugs. Further information can be provided upon contacting the author: sergio.lins@roma3.infn.it".format(version))
     pop.destroy()
     raise PermissionError("Machine unauthorized")
+"""
 
 if __name__.endswith('__main__'):         
     
