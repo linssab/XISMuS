@@ -1,23 +1,28 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 0.0.2α                        #
+#                        version: 1.0.1                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
+TESTFNC = False
 
+# import utilities
 import logging
 logging.debug("Importing module SpecMath.py...")
 import os, time
 import sys
 import numpy as np
 import pickle
+
+# import internal modules (only needed functions)
 from SpecRead import getdata, getdimension, getcalibration, getfirstfile, calibrate, updatespectra
 from EnergyLib import ElementList
 from ImgMath import LEVELS
 from Mapping import getdensitymap
+
+# import other modules
+# scipy.signal will be removed in future versions
 import matplotlib.pyplot as plt
-#from numba import guvectorize, float64, int64
-#from numba import cuda
 logging.debug("Importing numba jit...")
 try: from numba import jit
 except: logging.warning("Could not import numba package.")
@@ -36,6 +41,10 @@ FANO = 0.114
 
 
 class Busy:
+    
+    """
+    Progress bar class.
+    """
     
     def __init__(__self__,max_,min_):
         __self__.master = Toplevel()
@@ -58,10 +67,13 @@ class Busy:
         __self__.master.grab_set()
 
     def updatebar(__self__,value):
+        """ update bar progress. Value is the progress literal value. The maximum value is 
+        defined according to the amount of spectra to be read. """
         __self__.progress["value"] = value
         __self__.progress.update()
 
     def update_text(__self__,text):
+        """ update text displayed on bar """
         __self__.master.label["text"] = text
         __self__.master.update()
 
@@ -70,6 +82,7 @@ class Busy:
         __self__.master.destroy()
 
     def interrupt(__self__,mca,timeout):
+        """ In case of read failure, progress is interrupted """
         __self__.progress["maximum"] = timeout
         __self__.updatebar(timeout)
         __self__.update_text("Failed to read mca!")
@@ -80,7 +93,19 @@ class Busy:
 
 
 class datacube:
+
+    """ Datacube class. Comprises all data read from spectra, elemental maps created,
+    background extracted (as a separate xy matrix), derived spectra, image size, image
+    dimension, datacube configuration, calibrated energy axis """
     
+    """
+    Methods:
+    compile_cube()
+    pack_element(image, element_name, line)
+    unpack_element(element_name, line)
+    check_packed_elements()
+    """
+
     ndim = 0
     
     def __init__(__self__,dtypes,configuration):
@@ -102,6 +127,11 @@ class datacube:
         __self__.max_counts = {}
 
     def MPS(__self__):
+
+        """ Read all data in datacube.matrix and returns a spectrum where each index
+        is the maximum value found in the matrix for that same index.
+        MPS stands for Maximum Pixel Spectrum """
+
         __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for c in range(__self__.matrix.shape[2]):
             for x in range(__self__.matrix.shape[0]):
@@ -109,12 +139,21 @@ class datacube:
                     if __self__.mps[c] < __self__.matrix[x,y,c]: __self__.mps[c] = __self__.matrix[x,y,c]
 
     def stacksum(__self__):
+
+        """ Reall all data in datacube.matrix and return the summation derived spectrum """
+
         __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype='float64')
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
     
     def write_sum(__self__):
+
+        """ Saves the summation derived spectrum as an mca file to disk """
+
+        # import internal variables.
+        # they must be imported here in order to be the most recent ones (they are constantly
+        # updated by the GUI).
         from SpecRead import output_path, cube_path
         try: os.mkdir(output_path)
         except: pass
@@ -142,6 +181,11 @@ class datacube:
         ANSII_file.close()
 
     def strip_background(__self__,bgstrip=None):
+
+        """ Calculates the background contribution to each invidual spectrum.
+        The calculated data is saved into the datacube object.
+        bgstrip; a string """
+
         bgstrip = __self__.config['bgstrip']
         counter = 0
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
@@ -165,6 +209,10 @@ class datacube:
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
+
+        """ Writes (pickle) the datacube object to memory, if the cube already exists, it is
+        replaced (updated) """ 
+
         from SpecRead import output_path, cube_path, samples_folder
         __self__.root = samples_folder
         try: 
@@ -180,6 +228,11 @@ class datacube:
         p_output.close()
 
     def compile_cube(__self__):
+
+        """ Iterate over the spectra dataset, reading each spectrum file saving it to the 
+        proper xy matrix indexes and calculating the background contribution as well. 
+        This method saves all derived spectra, writes summation mca to disk and calculates
+        the density map. """
         logging.debug("Started mca compilation")
         __self__.progressbar = Busy(__self__.img_size,0)
         currentspectra = getfirstfile()
@@ -192,13 +245,12 @@ class datacube:
                 __self__.progressbar.interrupt(specdata,5)
                 return 1,specdata
                 break
-            for i in range(len(specdata)):
-                __self__.matrix[x][y][i] = specdata[i]
-            scan = updateposition(scan[0],scan[1])
+            __self__.matrix[x][y] = specdata
+            scan = refresh_position(scan[0],scan[1],__self__.dimension)
             x,y = scan[0],scan[1]
             currentspectra = updatespectra(spec,__self__.img_size)
             __self__.progressbar.updatebar(iteration)
-        
+
         logging.debug("Calculating MPS...")
         __self__.progressbar.update_text("Calculating MPS...")
         datacube.MPS(__self__)
@@ -222,11 +274,21 @@ class datacube:
         return 0,None
         
     def pack_element(__self__,image,element,line):
+
+        """ Saves elemental distribution image to datacibe object 
+        image; a 2d-array
+        element; a string
+        line; a string """
+
         from SpecRead import output_path, cube_path
         __self__.__dict__[element+"_"+line] = image
         logging.info("Packed {0} map to datacube {1}".format(element,cube_path))
     
     def pack_hist(__self__,hist,bins,element):
+        
+        """ Saves the histogram of the last calculated elemental distribution map. 
+        This method is called by ImgMath.py while saving the maps """
+
         from SpecRead import output_path, cube_path
         histfile = open(output_path+"\\"+element+"_hist.txt",'w')
         histfile.write("<<START>>\n")
@@ -238,12 +300,21 @@ class datacube:
         __self__.hist[element] = [hist,bins]
      
     def unpack_element(__self__,element,line):
+
+        """ Retrieves a 2d-array elemental distribution map from the datacube.
+        element; a string
+        line; a string """
+
         from SpecRead import output_path, cube_path
         unpacked = __self__.__dict__[element+"_"+line]
         logging.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
         return unpacked
 
     def check_packed_elements(__self__):
+        
+        """ Returns a list with all elemental distribution maps packed into the
+        datacube object """
+
         packed = []
         for element in ElementList:
             if hasattr(__self__,element+"_a"):
@@ -260,6 +331,9 @@ class datacube:
         return packed
 
     def prepack_elements(__self__,element_list):
+
+        """ Allocates keys in the datacube object to store the elemental distribution maps """
+
         for element in element_list:
             __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
             __self__.__dict__[element+"_b"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
@@ -270,28 +344,19 @@ class datacube:
         __self__.__dict__["custom"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
     
 def shift_center(xarray,yarray):
+    
+    """ Returns the highest value and its index in yarray and its corresponding value
+    in xarray """
+
     ymax = yarray.max()
     y_list = yarray.tolist()
     idx = y_list.index(ymax)
     return xarray[idx],ymax,idx
 
-def updateposition(a,b):
-    imagesize = getdimension()
-    imagex = imagesize[0]
-    imagey = imagesize[1]
-    imagedimension = imagex*imagey
-    currentx = a
-    currenty = b 
-    if currenty == imagey-1:
-        currenty=0
-        currentx+=1
-    else:
-        currenty+=1
-    actual=([currentx,currenty])
-    return actual
-
-# implemented for multiprocessing for now
 def refresh_position(a,b,length):
+    
+    """ Returns the next pixel position """
+
     imagex = length[0]
     imagey = length[1]
     imagedimension = imagex*imagey
@@ -307,14 +372,23 @@ def refresh_position(a,b,length):
 
 
 def function(ydata,x):
+    
+    """ Returns x index value of ydata array """
+    
     return ydata[x]
 
 def dif2(ydata,x,gain):
+    
+    """ Complementary function to getdif2 """
+    
     value = (function(ydata, x + 2*gain) - 2*function(ydata, x + gain)\
             + function(ydata, x)) / (gain * gain)
     return value
 
 def getdif2(ydata,xdata,gain):
+    
+    """ Returns the second differential of ydata """
+    
     xinterval = np.pad(xdata,2,'edge')
     yinterval = np.pad(ydata,2,'edge')
     dif2curve = np.zeros([len(yinterval)])
@@ -325,20 +399,22 @@ def getdif2(ydata,xdata,gain):
     return dif2curve
 
 def energyaxis():
+    
+    """ Returns the energyaxis array according to input calibration parameters (anchors) """
+    
     calibration = calibrate()
     return calibration[0]
 
 def getstackplot(datacube,mode=None):
+    
+    """ Returns the requested derived spectrum from datacube object """
+    
     stack = datacube.sum
     mps = datacube.mps
     bg = datacube.sum_bg
     energy = datacube.energyaxis
     if mode == 'summation':
         output = stack
-    #elif mode == 'combined': 
-    #    stack = stack/stack.max()
-    #    mps = mps/mps.max()
-    #    output = np.asarray([stack, mps])
     elif mode == 'mps':
         output = mps
     else:
@@ -367,12 +443,20 @@ def creategaussian(channels,energy):
 
 def setROI(lookup,xarray,yarray,localconfig):
     
-    ####################################################################
-    # setROI(lookup,xarray,yarray,localconfig)                         #
-    # INPUT: eV energy, energy array (x axis) and data array           #
-    # OUTPUT: indexes corresponding to 2*FWHM of a gaussian centered   #
-    # at eV energy position (int, int, int, bool)                      #
-    ####################################################################
+    """
+    INPUT: 
+        lookup; eV energy (int)
+        xarray; np.array
+        yarray; np.array
+        localconfig; dict
+    OUTPUT: 
+        low_idx; int
+        high_idx; int
+        peak_center; int
+        isapeak; bool
+        - indexes corresponding to 2*FWHM of a gaussian centered
+        at eV energy position (int, int, int, bool) 
+    """
     
     lookup = int(lookup)
     peak_corr = 0
@@ -429,6 +513,23 @@ def setROI(lookup,xarray,yarray,localconfig):
     return lowx_idx,highx_idx,peak_center,isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
+
+    """
+    Calculates the netpeak area of a given lookup energy.
+    INPUT:
+        lookup; int (theoretical peak center eV energy)
+        data; np.array (counts)
+        energyaxis; np.array (calibrated energy axis KeV)
+        continuum; np.array (background counts)
+        localconfig; dict (condiguration)
+        RAW; np.array (counts, same as data)
+        usedif2; bool
+        dif2; np.array (second differential of counts)
+    OUTPUT:
+        area; float
+        idx; list (containing setROI function outputs)
+    """
+
     Area = 0
    
     idx = setROI(lookup,energyaxis,data,localconfig)
@@ -480,7 +581,6 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
                
     ##############
     # TEST BLOCK #          
-    TESTFNC = False
     ##############    
     
     if TESTFNC == True:
@@ -515,6 +615,18 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
 
 @jit
 def strip(an_array,cycles,width):
+
+    """
+    Strips the peaks contained in the input array following an
+    iteractive peak clipping method (van Espen, Chapter 4 in Van Grieken, 2002)
+    INPUT:
+        an_array; np.array
+        cycles; int
+        width; int
+    OUTPUT:
+        an_array; np.array
+    """
+
     ##################################################################
     # W IS THE WIDTH OF THE FILTER. THE WINDOW WILL BE (1*W)+1       #
     # W VALUE MUST BE LARGER THAN 2 AND ODD, SINCE 3 IS THE MINIMUM  #
@@ -528,9 +640,21 @@ def strip(an_array,cycles,width):
             if an_array[l] > m and an_array[l] !=0: an_array[l] = m
     return an_array
 
-#@guvectorize([(float64[:], int64, int64, float64[:])], '(n),(),()->(n)')       
 def peakstrip(an_array,cycles,width,*args):
     
+    """
+    Calculates the continuum/background contribution of the input spectrum following
+    the SNIPBG method described in van Espen, Chapter 4 in Van Grieken, 2002.
+    INPUT:
+        an_array; np.array
+        cycles; int
+        width; int
+        args; list (cycles, width, sav_gol order and sav_gol window can be fully    
+        given as a list instead)
+    OUTPUT:
+        snip_bg; np.array
+    """
+
     TEST = False
 
     #initialize snip_bg array
@@ -543,7 +667,6 @@ def peakstrip(an_array,cycles,width,*args):
     if len(args) > 0:
         savgol_window,order = args[0],args[1]
         try: 
-            #print("sav_gol: {}\torder: {}\tcycles: {}\twindow: {}".format(savgol_window,order,cycles,width))
             smooth_sqr = scipy.signal.savgol_filter(sqr_data,savgol_window,order)
         except:
             raise ValueError
@@ -577,6 +700,10 @@ def peakstrip(an_array,cycles,width,*args):
     return snip_bg
 
 def correlate(map1,map2):
+
+    """ Correlates the pixels of two bi-dimensional arrays
+    - This function is deprecated and will be replaced in future releases """
+
     correlation_matrix = np.zeros([map1.shape[0],map1.shape[1],2])
     for x in range(map1.shape[0]):
         for y in range(map2.shape[1]):
