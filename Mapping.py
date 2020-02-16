@@ -461,7 +461,7 @@ def getpeakmap(element_list,datacube):
             #   UPDATE ELMAP POSITION AND SPECTRA   #
             #########################################        
 
-            scan = SpecMath.updateposition(scan[0],scan[1])
+            scan = SpecMath.refresh_position(scan[0],scan[1],datacube.dimension)
             currentx = scan[0]
             currenty = scan[1]
             if debug == True: currentspectra = SpecRead.updatespectra(spec,dimension)
