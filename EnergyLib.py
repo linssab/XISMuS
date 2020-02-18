@@ -1,15 +1,20 @@
 #################################################################
 #                                                               #
 #          DATABASE FOR ELEMENTS (XRAYLIB BASED)                #
-#                        version: 1.0 - Nov - 2019              #
+#                        version: 2.0 - Nov - 2019              #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import numpy as np
 import logging
 logging.debug("Importing module EnergyLib.py...")
-try: import xraylib as xlib
-except: logging.warning("xraylib module not found!")
+try: 
+    import xraylib as xlib
+    USEXLIB = True
+except: 
+    logging.warning("xraylib module not found!")
+    print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.")
+    USEXLIB = False
 xlib.SetErrorMessages(0)
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
@@ -264,24 +269,22 @@ def set_densities_from_xlib():
         except: DensityDict["{0}".format(loc_element)] = np.nan
     return DensityDict
 
-DensityDict = set_densities_from_xlib()
+if USEXLIB == True: DensityDict = set_densities_from_xlib()
 
 # Lists below uses the definition written manually in this file
-#Energies = [index[3] for index in ElementsInfo]
-#kbEnergies = [index[4] for index in ElementsInfo]
+if USEXLIB == False:
+    DensityDict = {index[0]:index[1] for index in ElementsInfo}
+    Energies = [index[3] for index in ElementsInfo]
+    kbEnergies = [index[4] for index in ElementsInfo]
 
 # Energy lists where updated to use xraylib values:
-Energies, kbEnergies, plottables_dict = set_energies_from_xlib()
+if USEXLIB == True: Energies, kbEnergies, plottables_dict = set_energies_from_xlib()
 
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
 
 if __name__ == "__main__":
     """
-    try: 
-        Energies, kbEnergies = set_energies_from_xlib()
-        DensityDict = set_densities_from_xlib()
-        print("pass!")
-    except: print("oops, xraylib is not working for some reason.")
-    
+    print(DensityDict)
+    print(DensityDict["Au"])
     """

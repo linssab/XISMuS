@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: 0.0.2α                        #
+#                        version: 1.0.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 logging.debug("Finished SpecRead imports.")
 
 def get_samples_folder(inifile):
+
+    """ Returns the last set samples folder input by the user in the GUI """
+
     ini = open(inifile,"r")
     folder = ini.readline()
     ini.close() 
@@ -24,8 +27,13 @@ def get_samples_folder(inifile):
 
 samples_folder = get_samples_folder(os.getcwd()+"\\folder.ini")
 logging.info("Samples path: {0}".format(samples_folder))
+FIRSTFILE_ABSPATH = None
 
 def findprefix():
+    
+    """ Read all files in the selected_sample_folder variable set by the user through GUI
+    and returns the path to the dataset first spectrum file """
+
     mca_prefix = 'None'
     files = [name for name in os.listdir(selected_sample_folder)]
     for item in range(len(files)): 
@@ -38,48 +46,65 @@ def findprefix():
         if counter[counts] > mca_prefix_count:
             mca_prefix = counts
             mca_prefix_count = counter[counts]
-    if os.path.exists(selected_sample_folder+mca_prefix+'_1.mca'): 
-        firstfile_path = selected_sample_folder+mca_prefix+'_1.mca'
-    elif os.path.exists(selected_sample_folder+mca_prefix+'_1.txt'): 
-        firstfile_path = selected_sample_folder+mca_prefix+'_1.txt'
+    if os.path.exists(selected_sample_folder+mca_prefix+"_1.mca"): 
+        firstfile_path = selected_sample_folder+mca_prefix+"_1.mca"
+    elif os.path.exists(selected_sample_folder+mca_prefix+"_1.txt"): 
+        firstfile_path = selected_sample_folder+mca_prefix+"_1.txt"
     else: raise IOError("No mca or txt file with prefix {1} found in directory {0}".\
             format(selected_sample_folder,mca_prefix))
     return firstfile_path
 
 def getfirstfile():
+    
+    """ Returns global variable.
+    This function is called to get the last updated value of
+    FIRSTFILE_ABSPATH, without importing the whole module """
+    
     return FIRSTFILE_ABSPATH
 
 def setup(prefix, extension):
     
-    # reads config.cfg file and sets up the configuration according to what is
-    # contained there
+    """ Reads config.cfg file and sets up the configuration according to what is
+    contained there """
 
+    logging.debug("Running setup from Config.cfg") 
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+
     CONFIG,CALIB = CONFIGURE()
-    DIRECTORY = CONFIG.get('directory')
-    selected_sample_folder = samples_folder + DIRECTORY + '\\'
+    DIRECTORY = CONFIG.get("directory")
+    
+    # build paths
+    selected_sample_folder = samples_folder+DIRECTORY+"\\"
     workpath = os.getcwd()
-    cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
-    output_path = workpath+'\output\\'+DIRECTORY+'\\'
-    dimension_file = selected_sample_folder + '\colonneXrighe.txt'
-    try: FIRSTFILE_ABSPATH = selected_sample_folder + prefix + "_1." + extension
-    except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
-    global_list =  [CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH]
+    cube_path = workpath+"\output\\"+DIRECTORY+"\\"+DIRECTORY+".cube"
+    output_path = workpath+"\output\\"+DIRECTORY+"\\"
+    dimension_file = selected_sample_folder + "\colonneXrighe.txt"
+    
+    # builds path to first spectrum file
+    FIRSTFILE_ABSPATH = selected_sample_folder+prefix+"_1."+extension
+    global_list =  [CONFIG, CALIB, DIRECTORY, 
+            samples_folder, selected_sample_folder, workpath, 
+            cube_path, output_path, dimension_file, 
+            FIRSTFILE_ABSPATH]
     return np.nan
 
 def setup_from_datacube(datacube,sample_database):
     
-    # setup the configuration according to what is built into the datacube
+    """ Read Cube class object configuration and sets up the application
+    configuration parameters accordingly """
 
+    logging.debug("Running setup from datacube {}".format(datacube.name)) 
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
     
     CONFIG,CALIB = datacube.config, datacube.calibration
-    DIRECTORY = CONFIG.get('directory')
-    selected_sample_folder = samples_folder + DIRECTORY + '\\'
+    DIRECTORY = CONFIG.get("directory")
+    
+    # build sample paths
+    selected_sample_folder = samples_folder+DIRECTORY+"\\"
     workpath = os.getcwd()
-    cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
-    output_path = workpath+'\output\\'+DIRECTORY+'\\'
-    dimension_file = selected_sample_folder + '\colonneXrighe.txt'
+    cube_path = workpath+"\output\\"+DIRECTORY+"\\"+DIRECTORY+".cube"
+    output_path = workpath+"\output\\"+DIRECTORY+"\\"
+    dimension_file = selected_sample_folder + "\colonneXrighe.txt"
     
     try: FIRSTFILE_ABSPATH = sample_database[DIRECTORY]
     except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
@@ -88,34 +113,46 @@ def setup_from_datacube(datacube,sample_database):
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file,
             FIRSTFILE_ABSPATH]
+
     return np.nan 
 
 def conditional_setup(name='None'):
+
+    """ Reads Config.cfg file configuration parameters and changes DIRECTORY
+    parameter to input value. """
+    
     logging.debug("Running conditional setup for {}".format(name)) 
-    # reads the config file but changes the directory to the sample_name variable
-    # before setting up the PATHS
-    
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
-    
     
     CONFIG,CALIB = CONFIGURE()
     CONFIG['directory'] = name
-    DIRECTORY = CONFIG.get('directory')
-    selected_sample_folder = samples_folder + DIRECTORY + '\\'
-    workpath = os.getcwd()
-    cube_path = workpath+'\output\\'+DIRECTORY+'\\'+DIRECTORY+'.cube'
-    output_path = workpath+'\output\\'+DIRECTORY+'\\'
-    dimension_file = selected_sample_folder + '\colonneXrighe.txt'
     
-    FIRSTFILE_ABSPATH = selected_sample_folder + "\\" + name
+    # build paths
+    DIRECTORY = CONFIG.get("directory")
+    selected_sample_folder = samples_folder+DIRECTORY+"\\"
+    workpath = os.getcwd()
+    cube_path = workpath+"\output\\"+DIRECTORY+"\\"+DIRECTORY+".cube"
+    output_path = workpath+"\output\\"+DIRECTORY+"\\"
+    dimension_file = selected_sample_folder+"\colonneXrighe.txt"
+    
+    FIRSTFILE_ABSPATH = selected_sample_folder+"\\"+name
 
     global_list =  [CONFIG, CALIB, DIRECTORY,
             samples_folder, selected_sample_folder, workpath,
-            cube_path, output_path, dimension_file]
+            cube_path, output_path, dimension_file,
+            FIRSTFILE_ABSPATH]
     
     return np.nan
 
 def RatioMatrixReadFile(ratiofile):
+
+    """ Reads a ratio file created by any mapping module and transforms into
+    a 2D-array.
+    INPUT:
+        ratiofile; path
+    OUTPUT:
+        RatesMatrix; 2D-array """
+
     MatrixArray = []
     with open (ratiofile,'rt') as in_file:
         for line in in_file:
@@ -153,6 +190,13 @@ def RatioMatrixReadFile(ratiofile):
     return RatesMatrix
 
 def getheader(mca):
+
+    """ Gets PMCA spectra file (*.mca) header
+    INPUT:
+        mca; path
+    OUTPUT:
+        ObjectHeader; string """
+
     ObjectHeader=[]
     specile = open(mca)
     line = specfile.readline()
@@ -165,6 +209,11 @@ def getheader(mca):
     return ObjectHeader
 
 def getcalibration():
+
+    """ Extracts the calibration anchors from source 
+    if configuration is set to manual, returns the anchors input by
+    user via GUI. """
+
     if CONFIG['calibration'] == 'manual':
         param = CALIB 
     elif CONFIG['calibration'] == 'from_source':
@@ -205,10 +254,19 @@ def getcalibration():
     return param
 
 def getdata(mca):
+    
+    """ Extract the data contained in spectrum files 
+    INPUT:
+        mca; path
+    OUTPUT:
+        Data; 1D-array """
+
     name = str(mca)
     name = name.replace('_',' ')
     name = name.replace('\\',' ')
+    name = name.replace('/',' ')
     name = name.split()
+    
     # custom MC generated files
     if 'test' in name or 'obj' in name or 'newtest' in name:
         Data = []
@@ -216,40 +274,46 @@ def getdata(mca):
         lines = datafile.readlines()
         for line in lines:
             line = line.split()
-            counts = float(line[1])
+            try: counts = float(line[1])
+            except: counts = float(line[0])
             counts = counts * 10e3
             Data.append(counts)
         Data = np.asarray(Data)
 
-    # this works for the mca files
+    # this works for mca files
     else:
         ObjectData=[]
         datafile = open(mca)
         line = datafile.readline()
-        while "<<DATA>>" not in line:
+        line = line.replace("\r","")
+        line = line.replace("\n","")
+        if "<<PMCA SPECTRUM>>" in line:
+            while "<<DATA>>" not in line:
+                line = datafile.readline()
+                if line == "": break
             line = datafile.readline()
-            if line == "": break
-        line = datafile.readline()
-        while "<<END>>" not in line:
-            try: ObjectData.append(int(line))
-            except: 
-                logging.warning("Mca file {} could not be read.".format(mca))
-                datafile.close()
-                return mca
-            line = datafile.readline()
-            if line == "": break
+            while "<<END>>" not in line:
+                try: ObjectData.append(int(line))
+                except ValueError as exception:
+                    datafile.close()
+                    raise exception.__class__.__name__
+                line = datafile.readline()
+                if line == "": break
+        elif line.isdigit():
+            while "<<END>>" not in line:
+                ObjectData.append(int(line))
+                line = datafile.readline()
+                if line == "": break
         Data = np.asarray(ObjectData)
     datafile.close()
     return Data
 
 def calibrate():
     
-    """
-    Returns the energy axis and gain of the calibrated axis
-    The parameter are taken from config.cfg is calibration is set to manual
-    or from the mca files is calibration is set to from_source
-    
-    """
+    """ Returns the energy axis and gain of the calibrated axis
+    The parameters are taken from config.cfg if calibration is set to manual
+    or from the mca files if calibration is set to from_source """
+
     param = getcalibration()
     x=[]
     y=[]
@@ -272,6 +336,9 @@ def calibrate():
     return curve,GAIN
 
 def getgain():
+
+    """ Calculates the energy axis and returns only the gain """
+
     calibration = calibrate()
     curve = calibration[0]
     n = len(curve)
@@ -279,26 +346,19 @@ def getgain():
     for i in range(n-1):
         GAIN+=curve[i+1]-curve[i]
     return GAIN/n
-
-def getsum(mca):
-    DATA = getdata(mca)
-    SUM = 0
-    for i in range(len(DATA)):
-        SUM+=DATA[i]
-    return SUM
-
-def getplot(mca):
-    calibration = calibrate(mca,'file')
-    energy = calibration[1]
-    data=getdata(mca)
-    plt.plot(energy,data)
-    plt.show()
-    return 0
    
 def updatespectra(specfile,size):
+
+    """ Returns the next spectrum file to be read
+    INPUT:
+        specfile; string
+        size; int
+    OUTPUT:
+        newfile; string """        
+
     name=str(specfile)
-    name=name.replace('_',' ')
-    name=name.replace('.',' ')
+    name=name.replace("_"," ")
+    name=name.replace("."," ")
     name=name.split()
     for i in range(len(name)):
         if name[i].isdigit()==True: index=int(name[i])
@@ -307,32 +367,40 @@ def updatespectra(specfile,size):
         if len(name[i]) > 6: prefix = name[i]
     if index < size: index = str(index+1)
     else: index = str(size)
-    newfile = str(prefix+'_'+index+'.'+extension)
+    newfile = str(prefix+"_"+index+"."+extension)
     return newfile
 
 def getdimension():
+
+    """ Gets the sample image dimension
+    OUTPUT:
+        x; int
+        y; int
+        user_input; bool """
+
     global dimension_file
     if not os.path.exists(dimension_file):
         try: 
-            logging.info("File {} not found, looking into output folder...".format(dimension_file))
-            local_file = output_path + "colonneXrighe.txt"
+            logging.info("File {} not found, looking into output folder...".format(
+                dimension_file))
+            local_file = output_path+"colonneXrighe.txt"
         except:
             raise IOError("Dimension file not found!") 
     else: local_file = dimension_file
     user_input = False
-    dm_file = open(local_file, 'r')
+    dm_file = open(local_file, "r")
     line = dm_file.readline()
-    if 'righe' in line:
-        line=line.replace('\r','')
-        line=line.replace('\n','')
-        line=line.replace('\t',' ')
+    if "righe" in line:
+        line=line.replace("\r","")
+        line=line.replace("\n","")
+        line=line.replace("\t"," ")
         aux = line.split()
         x = int(aux[1])
         line = dm_file.readline() 
-    if 'colonne' in line:
-        line=line.replace('\r','')
-        line=line.replace('\n','')
-        line=line.replace('\t',' ')
+    if "colonne" in line:
+        line=line.replace("\r","")
+        line=line.replace("\n","")
+        line=line.replace("\t"," ")
         aux = line.split()
         y = int(aux[1])
         line = dm_file.readline() 
@@ -343,12 +411,19 @@ def getdimension():
     return x,y,user_input
 
 def dump_ratios(maps_list,element_list):
+
+    """ Writes all ratio files to disk 
+    INPUT:
+        maps_list; nD-array (element(string), line([0] or [0,1]), 2D-array)
+        element_list; 1D string array 
+    OUTPUT: 0 """
+
     # this is to work with multiprocessing Mapping mode
     
-    ratiofiles = ['' for x in range(len(element_list))]
+    ratiofiles = ["" for x in range(len(element_list))]
     for Element in range(len(element_list)): 
         ratiofiles[Element] = str(output_path+\
-                '{1}_ratio_{0}.txt'.format(element_list[Element],DIRECTORY))
+                "{1}_ratio_{0}.txt".format(element_list[Element],DIRECTORY))
         r_file = open(ratiofiles[Element],'w+')
         r_file.readline()
         r_file.truncate()
@@ -358,7 +433,7 @@ def dump_ratios(maps_list,element_list):
         r_file.close() 
 
     for Element in range(len(element_list)):
-        r_file = open(ratiofiles[Element],'a')
+        r_file = open(ratiofiles[Element],"a")
         for x in range(maps_list[Element][0][0].shape[0]):
             for y in range(maps_list[Element][0][0].shape[1]):
                 a = int(maps_list[Element][0][0][x][y])
@@ -379,16 +454,12 @@ def linregress(x, y, sigmay=None, full_output=False):
 
     """
     Linear fit to a straight line following P.R. Bevington:
-    
     "Data Reduction and Error Analysis for the Physical Sciences"
-
     Parameters
     ----------
     x, y : array_like
         two sets of measurements.  Both arrays should have the same length.
-
     sigmay : The uncertainty on the y values
-        
     Returns
     -------
     slope : float
@@ -397,16 +468,11 @@ def linregress(x, y, sigmay=None, full_output=False):
         intercept of the regression line
     r_value : float
         correlation coefficient
-
     if full_output is true, an additional dictionary is returned with the keys
-
     sigma_slope: uncertainty on the slope
-
     sigma_intercept: uncertainty on the intercept
-
     stderr: float
         square root of the variance
-    
     """
 
     x = np.asarray(x, dtype=np.float).flatten()

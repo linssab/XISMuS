@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: 0.0.2α                        #
+#                        version: 0.0.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -191,7 +191,7 @@ def getpeakmap(element_list,datacube):
         logging.info("Started acquisition of {0} map(s)".format(element_list))
         
         ####### this is for debug mode #######
-        currentspectra = SpecRead.getfirstfile()
+        currentspectra = SpecRead.FIRSTFILE_ABSPATH
         debug = False 
         ####### to register the NAME of the file #######
 

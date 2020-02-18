@@ -5,14 +5,17 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import numpy as np
 import logging
 logging.debug("Importing module Compounds.py...")
+import numpy as np
+logging.debug("Importing module EnergyLib.py...")
 import EnergyLib
 try: 
     import xraylib as xlib
     logging.info("Sucessfully imported xraylib module!")
-except: logging.warning("Failed to load xraylib module!")
+except: 
+    logging.warning("Failed to load xraylib module!")
+    raise ImportError("Module xraylib not fould. Cannot proceed.")
 
 CompoundList = {
         
@@ -46,13 +49,26 @@ WeightList = {
         }
 
 def ListDatabase():
+    
+    """ Prints all compounds on database """
+
     ListDatabase = dict(CompoundList,**WeightList)
     for key in ListDatabase:
         print(key,ListDatabase[key])
     return 0
 
+
 class compound:
     
+    """ Compound class object. """
+    """ 
+    Methods:
+    set_compound(*args, ctype=None, mode="by_atom", name="new_compound")
+    set_attenuation(energy)
+    mix(proportion, compounds)
+    Attributes: name, mass, chem, density, weight, origin, tot_att, lin_att
+    """
+
     def __init__(__self__):
         __self__.chem = {}
         __self__.mass = 0
@@ -62,6 +78,15 @@ class compound:
         __self__.identity = np.nan
     
     def set_compound(__self__,*args,ctype=None,mode='by_atom',name='new_compound'):
+
+        """ Creates the compound according to input. The compound can be created
+        manually or from the database; from a weights fraction list or atom count list.
+        INPUT:
+            *args; compound setup, string or 2 same-sized lists
+            ctype; string (optional)
+            mode; string (optional)
+            name; string (optional) """
+
         if ctype == 'custom' and mode == 'by_atom':
             for atom in range(len(args[0])):
                 if args[0][atom] < 1: raise ValueError("Can't compute fraction of atom!")
@@ -80,13 +105,26 @@ class compound:
         __self__.give_name(name)
 
     def create_compound(__self__,atoms,elements):
-        __self__.chem = {"{0}".format(elements[i]):(EnergyLib.AtomWeight[elements[i]]*atoms[i])\
+        
+        """ Sets the compound attributes with a 2 list input, mode='by_atom'.
+        INPUT:
+            atoms; 1D int list
+            elements; 1D string list """
+
+        __self__.chem = {\
+                "{0}".format(elements[i]):(EnergyLib.AtomWeight[elements[i]]*atoms[i])\
                 for i in range(len(atoms))}
         mass = __self__.total_mass()
         __self__.weightpercent()
         __self__.give_density()
     
     def create_compound_by_weight(__self__,ratios,elements):
+        
+        """ Sets the compound attributes with a 2 list input, mode='by_weight'.
+        INPUT:
+            atoms; 1D float list
+            elements; 1D string list """
+
         if len(ratios) == len(elements):
             __self__.weight = {"{0}".format(elements[i]):ratios[i] for i in range(len(ratios))}
             for key in __self__.weight:
@@ -100,9 +138,13 @@ class compound:
         else: raise ValueError('{0} and {1} have different lenghts'.format(ratios,elements))
 
     def set_from_database(__self__,name_of_compound):
+
+        """ Sets the compound attributes from database """
+
         elements = [element for element in CompoundList[name_of_compound]]
         atoms = [CompoundList[name_of_compound][atom] for atom in elements]
-        __self__.chem = {"{0}".format(elements[i]):(EnergyLib.AtomWeight[elements[i]]*atoms[i])\
+        __self__.chem = {"{0}".format(\
+                elements[i]):(EnergyLib.AtomWeight[elements[i]]*atoms[i])\
                 for i in range(len(atoms))}
         mass = __self__.total_mass()
         __self__.weightpercent()
@@ -111,6 +153,9 @@ class compound:
         __self__.name = name_of_compound
     
     def set_from_w_database(__self__,name_of_compound):
+        
+        """ Sets the compound attributes from database """
+        
         elements = [element for element in WeightList[name_of_compound]]
         ratios = []
         for element in WeightList[name_of_compound]:
@@ -123,10 +168,17 @@ class compound:
         __self__.name = name_of_compound
     
     def weightpercent(__self__):
+
+        """ Sets the weight fraction attribute. This is needed in order to calculate
+        the compound density. A compound will always have a weight attribute. """
+
         for element in __self__.chem:
             __self__.weight[element] = __self__.chem[element]/__self__.mass 
          
     def total_mass(__self__):
+
+        """ Calculates the compound total mass """
+
         total_mass = 0
         for element in __self__.chem:
             total_mass += __self__.chem[element]
@@ -134,6 +186,9 @@ class compound:
         return total_mass
     
     def give_density(__self__):
+
+        """ Calculates the compound density according to weight fraction """
+
         try:
             for element in __self__.weight:
                 __self__.density += __self__.weight[element]*EnergyLib.DensityDict[element]
@@ -141,6 +196,15 @@ class compound:
             raise ValueError("{} has no property weight!".format(__self__))
 
     def mix(__self__,proportion,compounds):
+
+        """ Mixes two compound class objects proportionally. This resets the attributes
+        according to the mixing outcomes.
+        INPUT:
+            proportion; 1D float list
+            compounds; 1D compound class objects list 
+        OUTPUT:
+            mixture; compound class object """
+            
         sum_of_ratios = sum(proportion)
         if sum_of_ratios > 1:
             for index in range (len(proportion)): 
@@ -167,10 +231,18 @@ class compound:
         return mixture
 
     def set_attenuation(__self__,energy):
+
+        """ Sets the linear and total attenuation coefficients according to input.
+        Values are taken from xraylib (Brunetti et al., 2004), which is constantly
+        updated.
+        INPUT:
+            energy; int or string """
+
         mu1_w ,mu2_w = 0,0
         if type(energy) == int:
             for element in __self__.weight:
                 ele_no = EnergyLib.Element_No[element]
+                print(ele_no, element)
                 mu1 = xlib.CS_Total(ele_no,energy)
                 mu2 = 0
                 mu1_w += mu1*__self__.weight[element]
@@ -188,40 +260,15 @@ class compound:
         __self__.lin_att = (__self__.density * mu1_w , __self__.density * mu2_w)
     
     def give_name(__self__,a_string):
+
+        """ Attributes a string to compound class object name attribute """
+
         __self__.name = a_string
 
-def split_energies(element):
-    energy_a = EnergyLib.Energies[EnergyLib.Element_No[element]]
-    energy_b = EnergyLib.kbEnergies[EnergyLib.Εlement_No[element]]
-    return(energy_a,energy_b)
 
-def density(compound):
-    compound_density = 0
-    for element in CompoundList[compound]:
-        compound_density += EnergyLib.DensityDict[element]*CompoundList[compound][element]
-    return compound_density
+""" 
+if __name__.endswith('__main__'):         
 
-#############################################
-#   coefficients parameters are: the name   #
-#   of the compound and which energy it is  #
-#   attenuating                             #
-#############################################
-
-def coefficients(a_compound,KaKb):
-    comp_ele_list = [*CompoundList[a_compound]]
-    mu1weighted, mu2weighted = 0, 0
-    for element in comp_ele_list:
-        coeffs = linattenuation(element,KaKb)
-        mu1 = coeffs[0]
-        mu2 = coeffs[1]
-        mu1weighted += mu1*CompoundList[a_compound][element]
-        mu2weighted += mu2*CompoundList[a_compound][element]
-    mu1weighted = mu1weighted*density(a_compound)
-    mu2weighted = mu2weighted*density(a_compound)
-    return mu1weighted, mu2weighted
-
-if __name__=="__main__":
-    
     water = compound()
     water.set_compound([2,1],['H','O'],ctype='custom')
     
@@ -233,7 +280,6 @@ if __name__=="__main__":
     
     mixture = linoil.mix([2,10],[coblue])
     
-    """
     print("Water DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(water.weight,water.mass,water.chem,water.density))
 
     print("Cobalt Blue DATA:\nWeight percentage of atoms: {0}\nTotal mass: {1}\nElements mass: {2}\nDensity: {3}\n".format(coblue.weight,coblue.mass,coblue.chem,coblue.density))

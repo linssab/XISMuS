@@ -1,6 +1,7 @@
 import cx_Freeze
 import sys
 import os
+from CoreGUI import VERSION
 
 import scipy
 import numba
@@ -63,6 +64,6 @@ cx_Freeze.setup(
                 "includes":["numpy","Tkinter"],
                  
                 "include_files":includefiles_list}},
-                version = "0.0.1",
+                version = VERSION,
                 executables = executables
         )

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.0.1                         #
+#                        version: 1.0.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -15,7 +15,13 @@ import numpy as np
 import pickle
 
 # import internal modules (only needed functions)
-from SpecRead import getdata, getdimension, getcalibration, getfirstfile, calibrate, updatespectra
+from SpecRead import (getdata, 
+getdimension, 
+getcalibration, 
+getfirstfile, 
+calibrate, 
+updatespectra)
+
 from EnergyLib import ElementList
 from ImgMath import LEVELS
 from Mapping import getdensitymap
@@ -42,9 +48,7 @@ FANO = 0.114
 
 class Busy:
     
-    """
-    Progress bar class.
-    """
+    """ Progress bar class. """
     
     def __init__(__self__,max_,min_):
         __self__.master = Toplevel()
@@ -54,7 +58,7 @@ class Busy:
         y = __self__.master.winfo_screenheight()
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(166, 51,\
+        __self__.master.geometry('{}x{}+{}+{}'.format(166, 49,\
                 int((x/2)-80), int((y/2)-23)))
         __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
         __self__.outerframe.grid(row=0,column=0)
@@ -67,22 +71,31 @@ class Busy:
         __self__.master.grab_set()
 
     def updatebar(__self__,value):
+
         """ update bar progress. Value is the progress literal value. The maximum value is 
         defined according to the amount of spectra to be read. """
+
         __self__.progress["value"] = value
         __self__.progress.update()
 
     def update_text(__self__,text):
+
         """ update text displayed on bar """
+
         __self__.master.label["text"] = text
         __self__.master.update()
 
     def destroybar(__self__):
+
+        """ Destroys the bar window """
+
         __self__.master.grab_release()
         __self__.master.destroy()
 
     def interrupt(__self__,mca,timeout):
+
         """ In case of read failure, progress is interrupted """
+
         __self__.progress["maximum"] = timeout
         __self__.updatebar(timeout)
         __self__.update_text("Failed to read mca!")
@@ -94,7 +107,7 @@ class Busy:
 
 class datacube:
 
-    """ Datacube class. Comprises all data read from spectra, elemental maps created,
+    """ Cube class. Comprises all data read from spectra, elemental maps created,
     background extracted (as a separate xy matrix), derived spectra, image size, image
     dimension, datacube configuration, calibrated energy axis """
     
@@ -162,7 +175,9 @@ class datacube:
         #writes header
         sum_file.write("<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - Piratininga SM Sum Spectrum\n")
         sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - OFF\n")
-        sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+        sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(
+            time.strftime("%Y-%m-%d %H:%M:%S", 
+                time.gmtime())))
         sum_file.write("SERIAL_NUMBER - 00001\n<<CALIBRATION>>\nLABEL - Channel\n")
         for pair in __self__.calibration:
             sum_file.write("{0} {1}\n".format(pair[0],pair[1]))
@@ -177,7 +192,9 @@ class datacube:
         ANSII_file = open(output_path+'ANSII_SUM.txt','w+')
         ANSII_file.write("counts\tenergy (KeV)\n")
         for index in range(__self__.sum.shape[0]):
-            ANSII_file.write("{0}\t{1}\n".format(int(__self__.sum[index]),__self__.energyaxis[index]))
+            ANSII_file.write("{0}\t{1}\n".format(
+                int(__self__.sum[index]),
+                __self__.energyaxis[index]))
         ANSII_file.close()
 
     def strip_background(__self__,bgstrip=None):
@@ -206,6 +223,9 @@ class datacube:
                     __self__.progressbar.updatebar(counter)
 
     def create_densemap(__self__):
+
+        """ Calls getdensitymap and attributes the 2D-array output to the object """
+
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
@@ -233,6 +253,7 @@ class datacube:
         proper xy matrix indexes and calculating the background contribution as well. 
         This method saves all derived spectra, writes summation mca to disk and calculates
         the density map. """
+
         logging.debug("Started mca compilation")
         __self__.progressbar = Busy(__self__.img_size,0)
         currentspectra = getfirstfile()
@@ -422,24 +443,47 @@ def getstackplot(datacube,mode=None):
     return output
 
 def sigma(energy):
+
+    """ Calculates sigma value based on energy input (Sole et al., 2007) 
+    INPUT:
+        energy; electronvolts - eV (int)
+    OUTPUT:
+        float """
+
     return math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))
 
 def gaussianbuilder(channel,energy):
+
+    """ Calculates point in gaussian (Sole et al., 2007) 
+    INPUT:
+        channel; int
+        energy electronvolts - eV (int) 
+    OUTPUT:
+        float """
+
     sigma = sigma(energy)
     chEnergy = (channel*GAIN + B)*1000
     A = GAIN/(sigma)*math.sqrt(2*math.pi)
     return A*(math.exp(-(((energy-chEnergy)**2)/(2*(sigma**2)))))
 
 def creategaussian(channels,energy):
-    Gaussian = np.zeros([channels])
+
+    """ Creates a gaussian distribution according to input channel list.
+    INPUT:
+        channels; 1D-list or int
+        energy; electronvolts - eV (int)
+    OUTPUT:
+        Gaussian; 1D-list """
+
+    gaussian = np.zeros([channels])
     if isinstance(energy,int):
         for i in range(channels):
-            Gaussian[i]+=gaussianbuilder(i,energy)
+            gaussian[i]+=gaussianbuilder(i,energy)
     elif isinstance(energy,list): 
         for i in range(channels):
             for k in range(len(energy)):
-                    Gaussian[i]+=gaussianbuilder(i,energy[k])
-    return Gaussian
+                    gaussian[i]+=gaussianbuilder(i,energy[k])
+    return gaussian
 
 def setROI(lookup,xarray,yarray,localconfig):
     

@@ -1,14 +1,14 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 0.0.2α                        #
+#                        version: 1.0.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 global MY_DATACUBE, FIND_ELEMENT_LIST
 MY_DATACUBE, FIND_ELEMENT_LIST = None, None
 
-VERSION = "1.0.1"
+VERSION = "1.0.0"
 
 def start_up():
 
@@ -327,6 +327,8 @@ class Welcome:
         ini.write("<RAMLimit>\t{}\n".format(root.RAM_limit))
         ini.write("<welcome>\t{}".format(checker))
         ini.close()
+        root.master.focus_set()
+        root.master.focus_force()
         __self__.master.destroy()
 
 

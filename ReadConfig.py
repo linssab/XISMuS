@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          CONFIGURATION PARSER                                 #
-#                        version: 0.0.2α                        #
+#                        version: 1.0.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -9,15 +9,24 @@ import logging
 import os
 
 def pop_error(title,message):
+
+    """ Displays TK error message """
+
     from tkinter import messagebox
     messagebox.showerror(title,message)
     return 0
+
+""" Get working path and config.cfg path """
 
 workpath = os.getcwd()
 cfgfile = workpath + '\config.cfg'
 logging.debug("Importing module ReadConfig.py...")
 
 def check_config():
+    
+    """ Tries to read Config.cfg and verifies it contain all needed entries.
+    Returns tags found in file. """
+
     lines, tags = [],[]
     try: c_file = open(cfgfile, 'r')
     except: 
@@ -36,6 +45,12 @@ def check_config():
     return tags
 
 def getconfig():
+    
+    """ Extracts all configuration information in Config.cfg
+    OUTPUT:
+        modesdict; dict
+        CalParam; 2D-list """
+
     tags = check_config()
     modesdict = {}
     CalParam = []
@@ -120,6 +135,9 @@ def getconfig():
     return modesdict,CalParam
 
 def checkout_config():
+    
+    """ Re-sets Config.cfg file with default values if any tag is missing. """
+    
     cfgfile = os.getcwd() + '\config.cfg'
     lines, tags = [],[]
     c_file = open(cfgfile, 'r')
@@ -160,6 +178,9 @@ def checkout_config():
     return 0
 
 def unpack_cfg():
+
+    """ Calls getconfig to get configuration parameters """
+
     all_parameters = getconfig()
     CONFIG = all_parameters[0]
     CALIB = all_parameters[1]
