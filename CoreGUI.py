@@ -964,16 +964,17 @@ class ImageAnalyzer:
         hi_t = __self__.RightCanvas.winfo_height()
 
     def toggle_annotator(__self__):
-        """
-        passes the current datacube, so if the user changes it, for the current ImgAnal api open when
+        
+        """ passes the current datacube, so if the user changes it, for the current ImgAnal api open when
         using the annotation function, the cube is still the one loaded when ImgAnal was opened
-        the api is passed as argument so the annotator knows where to draw
-        """
+        the api is passed as argument so the annotator knows where to draw """
+
         if __self__.annotate.config("relief")[-1] == "raised":
             __self__.annotate.config(relief="sunken")
             __self__.annotate.config(bg="yellow")
             __self__.annotator = Annotator(__self__) 
             __self__.plot = PlotWin(__self__.master)
+            place_topleft(__self__.master, __self__.plot.master)
             __self__.plot.draw_selective_sum(__self__.DATACUBE,
                     __self__.DATACUBE.sum,
                     root.plot_display)
@@ -1530,14 +1531,19 @@ class Settings:
         RAMLabel = Label(__self__.TextFrame,text="Limit RAM usage for multi-core? ")
         RAMLabel.grid(row=3,column=0,sticky=W)
         RAMUnit = Label(__self__.ScreenFrame, text=__self__.RAMUnit.get())
-        RAMUnit.grid(row=4,column=2,sticky=W)
+        RAMUnit.grid(row=4,column=2,sticky=E)
         RAMOption = Checkbutton(__self__.ScreenFrame, variable=__self__.RAMMode)
         RAMOption.grid(row=3,column=0,columnspan=2,sticky=E)
         RAMOptionText = Label(__self__.ScreenFrame, text="Yes")
         RAMOptionText.grid(row=3,column=2,sticky=E)
-        __self__.RAMEntryBox = Entry(__self__.ScreenFrame, textvariable=__self__.RAMEntry,width=13-RAMUnit.winfo_width())
-        __self__.RAMEntryBox.grid(row=4,column=0,columnspan=2,sticky=W)
-        RAMCountLabel = Label(__self__.TextFrame,text="Available RAM: "+str(__self__.RAM_free))
+        __self__.RAMEntryBox = Entry(
+                __self__.ScreenFrame, 
+                textvariable=__self__.RAMEntry,
+                width=13-RAMUnit.winfo_width())
+        __self__.RAMEntryBox.grid(row=4,column=0,columnspan=2,sticky=E)
+        RAMCountLabel = Label(
+                __self__.TextFrame,
+                text="Available RAM: "+str(__self__.RAM_free))
         RAMCountLabel.grid(row=4,column=0,sticky=W)
 
 
@@ -1687,6 +1693,7 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=NORMAL)
             __self__.Toolbox.entryconfig("Map elements",state=NORMAL)
             __self__.Toolbox.entryconfig("Height-mapping",state=NORMAL)
+            __self__.re_configure.config(state=NORMAL)
         if toggle == 'off':
             __self__.Toolbox.entryconfig("Derived spectra", state=DISABLED)
             __self__.Toolbox.entryconfig("Image Analyzer . . .", state=DISABLED)
@@ -1698,6 +1705,7 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=DISABLED)
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.Toolbox.entryconfig("Height-mapping",state=DISABLED)
+            __self__.re_configure.config(state=DISABLED)
 
     def refresh_samples(__self__):
         __self__.SampleLoader.pop_loader()
@@ -2101,6 +2109,10 @@ class MainGUI:
                 pass
         except:
             __self__.SettingsWin = Settings(__self__)
+
+    def reconfigure(__self__):
+        __self__.ReConfigDiag = ReConfigDiag(__self__.master)
+        return 0
         
     def build_widgets(__self__):
         
@@ -2149,7 +2161,7 @@ class MainGUI:
         
         re_configure_icon = PhotoImage(file=os.getcwd()+"\\images\\icons\\refresh.png")
         __self__.re_configure_icon = re_configure_icon.subsample(1,1)
-        __self__.re_configure = Button(__self__.ConfigFrame, image=__self__.re_configure_icon, width=32, height=32)
+        __self__.re_configure = Button(__self__.ConfigFrame, image=__self__.re_configure_icon, width=32, height=32, command=__self__.reconfigure)
         __self__.re_configure.grid(row=5, column=5, sticky=S)
         
         #####
@@ -2445,6 +2457,109 @@ def refresh_plots(exclusive=""):
     try: root.find_elements_diag.master.focus_force()
     except: pass
 
+
+class ReConfigDiag:
+
+    global MY_DATACUBE
+    
+    def __init__(__self__, master):
+        __self__.master = Toplevel(master = master)
+        __self__.master.grab_set()
+        __self__.master.resizable(False,False)
+        __self__.master.title("Cube Configuration")
+        __self__.master.bind("<Escape>",__self__.kill)
+        __self__.master.bind("<Return>",__self__.kill)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+        __self__.Frame = Frame(__self__.master,padx=15,pady=15)
+        __self__.Labels = Frame(__self__.master,padx=15,pady=15)
+        __self__.Frame.grid(row=0, column=1)
+        __self__.Labels.grid(row=0, column=0)
+        __self__.build_widgets()
+    
+    def build_widgets(__self__):
+
+        Label5 = Label(__self__.Labels, text="Thick ratio:")
+        Label6 = Label(__self__.Labels, text="Netpeak area method:")
+        Label7 = Label(__self__.Labels, text="Enhance image?")
+        Label8 = Label(__self__.Labels, text="Calculate ratios?")
+        
+        Label5.grid(row=4,column=0,sticky=W,pady=2)
+        Label6.grid(row=5,column=0,sticky=W,pady=2)
+        Label7.grid(row=6,column=0,sticky=W,pady=2)
+        Label8.grid(row=7,column=0,sticky=W,pady=2)
+        
+        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
+        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
+
+        __self__.BgstripVar = StringVar()
+        __self__.DirectoryVar = StringVar()
+        __self__.RatioVar = BooleanVar()
+        __self__.ThickVar = DoubleVar()
+        __self__.EnhanceVar = BooleanVar()
+        __self__.MethodVar = StringVar()
+        __self__.DirectoryVar.set(MY_DATACUBE.config.get('directory'))
+        __self__.BgstripVar.set(MY_DATACUBE.config.get('bgstrip'))
+        __self__.RatioVar.set(MY_DATACUBE.config.get('ratio'))
+        __self__.ThickVar.set(MY_DATACUBE.config.get('thickratio'))
+        __self__.MethodVar.set(MY_DATACUBE.config.get('peakmethod'))
+        __self__.EnhanceVar.set(MY_DATACUBE.config.get('enhance'))
+        
+        __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
+        
+        __self__.ConfigDiagThick = Entry(
+                __self__.Frame, 
+                textvariable=__self__.ThickVar,
+                width=15)
+        
+        __self__.ConfigDiagEnhance = Checkbutton(__self__.Frame, variable=__self__.EnhanceVar)
+        
+        __self__.ConfigDiagMethod = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.MethodVar, 
+                values=("simple_roi","auto_roi"),
+                state="readonly",
+                width=13)
+        
+        
+        __self__.ConfigDiagThick.grid(row=4,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagMethod.grid(row=5,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagEnhance.grid(row=6,column=0,sticky=E,pady=2)
+        __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
+        
+        dimension_text = "Image size = {0} x {1} pixels"\
+                .format(MY_DATACUBE.dimension[0],MY_DATACUBE.dimension[1])
+        img_dimension_display = Label(__self__.master,text=dimension_text)
+        img_dimension_display.grid(row=1,column=0,sticky=W,padx=17,pady=2)
+
+        ButtonsFrame = Frame(__self__.master)
+        ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
+        SaveButton = Button(ButtonsFrame, text="Save", justify=CENTER, width=10,\
+                command=__self__.save)
+        SaveButton.grid(row=8,column=0,sticky=S)
+        CancelButton = Button(ButtonsFrame, text="Cancel", justify=CENTER, width=10,\
+                command=__self__.kill)
+        CancelButton.grid(row=8,column=1,sticky=S)
+        
+        place_center(root.master,__self__.master)
+        icon = os.getcwd()+"\\images\\icons\\refresh.ico"
+        __self__.master.iconbitmap(icon)
+        root.master.wait_window(__self__.master)
+
+    def save(__self__):
+        MY_DATACUBE.config["thickratio"] = __self__.ThickVar.get()
+        MY_DATACUBE.config["enhance"] = __self__.EnhanceVar.get()
+        MY_DATACUBE.config["peakmethod"] = __self__.MethodVar.get()
+        MY_DATACUBE.config["ratio"] = __self__.RatioVar.get()
+        MY_DATACUBE.save_cube()
+        root.write_stat()
+        __self__.kill()
+
+    def kill(__self__):
+        __self__.master.destroy()
+
+
 class ConfigDiag:
 
     def __init__(__self__, master):
@@ -2494,7 +2609,7 @@ class ConfigDiag:
         load_cube()
         root.write_stat()
         root.draw_map()
-        root.toggle_(toggle='off')
+        root.toggle_(toggle="off")
         root.SampleVar.set("Sample on memory: None")
         try: 
             if root.SamplesWindow.state() == "normal": 
@@ -2685,9 +2800,9 @@ class ConfigDiag:
         Label7.grid(row=6,column=0,sticky=W,pady=2)
         Label8.grid(row=7,column=0,sticky=W,pady=2)
         
-        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes/No")
         ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
-        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes/No")
         ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
         
         __self__.BgstripVar = StringVar()
