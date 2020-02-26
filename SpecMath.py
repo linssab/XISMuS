@@ -121,20 +121,25 @@ class datacube:
 
     ndim = 0
     
-    def __init__(__self__,dtypes,configuration):
-        __self__.name = configuration["directory"]
+    def __init__(__self__,dtypes,configuration,mode="",name=""):
+        if mode == "merge": 
+            __self__.name = name
+        else:
+            __self__.name = configuration["directory"]
         logging.debug("Initializing cube file")
         
         try: specsize = getdata(getfirstfile()) 
         except: specsize = 0
-        __self__.dimension = getdimension()
-        __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
-        __self__.datatypes = np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
-        __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
+        __self__.datatypes = \
+                np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
+        if mode != "merge":
+            __self__.dimension = getdimension()
+            __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+            __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
                 specsize.shape[0]],dtype='float64',order='C')
-        __self__.config = configuration
-        __self__.calibration = getcalibration()
-        __self__.energyaxis = energyaxis()
+            __self__.config = configuration
+            __self__.calibration = getcalibration()
+            __self__.energyaxis = energyaxis()
         __self__.ROI = {}
         __self__.hist = {}
         __self__.max_counts = {}
@@ -247,6 +252,13 @@ class datacube:
         pickle.dump(__self__,p_output)
         p_output.close()
 
+    def digest_merge(__self__):
+        datacube.MPS(__self__)
+        datacube.stacksum(__self__)
+        datacube.write_sum(__self__)
+        datacube.create_densemap(__self__)
+        datacube.save_cube(__self__)
+
     def compile_cube(__self__):
 
         """ Iterate over the spectra dataset, reading each spectrum file saving it to the 
@@ -261,11 +273,14 @@ class datacube:
         x,y,scan = 0,0,(0,0)
         for iteration in range(__self__.img_size):
             spec = currentspectra
-            specdata = getdata(spec)
+            try: specdata = getdata(spec)
+            except: 
+                __self__.progressbar.destroybar()
+                return 1, spec
             if isinstance(specdata,np.ndarray) == False: 
                 __self__.progressbar.interrupt(specdata,5)
+                __self__.progressbar.destroybar()
                 return 1,specdata
-                break
             __self__.matrix[x][y] = specdata
             scan = refresh_position(scan[0],scan[1],__self__.dimension)
             x,y = scan[0],scan[1]

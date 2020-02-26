@@ -262,10 +262,8 @@ def getdata(mca):
         Data; 1D-array """
 
     name = str(mca)
+    name = name.split("\\")[0]
     name = name.replace('_',' ')
-    name = name.replace('\\',' ')
-    name = name.replace('/',' ')
-    name = name.split()
     
     # custom MC generated files
     if 'test' in name or 'obj' in name or 'newtest' in name:
