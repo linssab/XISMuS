@@ -220,7 +220,7 @@ class datacube:
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
-                    # default cycle and sampling window = 24, 7
+                    # default cycle and sampling window = 24,5
                     stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
                     __self__.background[x,y] = stripped
                     __self__.sum_bg += stripped
@@ -694,7 +694,10 @@ def strip(an_array,cycles,width):
     
     for k in range(cycles):
         l = width
-        for l in range(an_array.shape[0]-width):
+        if k >= cycles-8: 
+            width = int(width/np.sqrt(2))
+            l = width
+        for l in range(width, an_array.shape[0]-width):
             m = (an_array[l-width] + an_array[l+width])/2
             if an_array[l] > m and an_array[l] !=0: an_array[l] = m
     return an_array
@@ -741,14 +744,14 @@ def peakstrip(an_array,cycles,width,*args):
     snip_bg **= 2
    
     #apply savgol filter to final background
-    if len(args) > 0:
-        savgol_window,order = args[0],args[1]
-        try: smooth_sqr = scipy.signal.savgol_filter(snip_bg,savgol_window,order)
-        except:
-            raise ValueError
-    else: 
-        snip_bg, width = 5,5
-        smooth_sqr = scipy.signal.savgol_filter(snip_bg,width,3)
+    #if len(args) > 0:
+    #    savgol_window,order = args[0],args[1]
+    #    try: smooth_sqr = scipy.signal.savgol_filter(snip_bg,savgol_window,order)
+    #    except:
+    #        raise ValueError
+    #else: 
+    #    snip_bg, width = 5,5
+    #    smooth_sqr = scipy.signal.savgol_filter(snip_bg,width,3)
     
     if TEST == True:
         plt.semilogy(snip_bg,label="background")
