@@ -4,13 +4,20 @@
 #                        version: 1.0.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
+VERSION = "1.0.0"
+
+""" Global variables: 
+    MY_DATACUBE is the last loaded cube into memory. It is used for almost
+    every operation, since configuration parameters and data are extracted from it.
+    FIND_ELEMENT_LIST: list of elements to be mapped from the datacube. It is
+    passed to Mapping or Mapping_parallel module. """
 
 global MY_DATACUBE, FIND_ELEMENT_LIST
 MY_DATACUBE, FIND_ELEMENT_LIST = None, None
 
-VERSION = "1.0.0"
-
 def start_up():
+    
+    """ Initializes SpecRead global variables and paths """
 
     SpecRead.conditional_setup()
     logging.info("Setting up...")
@@ -18,20 +25,21 @@ def start_up():
     except: pass
     logging.info("Done.")
     global FIND_ELEMENT_LIST
-    global snip_config
-    # snip BG parameters are written as global variables and this is horrible
-    # changes to be made in the future
     FIND_ELEMENT_LIST = []
-    snip_config = None
 
 def wipe_list():
+    
+    """ Self-explanatory. Clears the global variable and
+    destroys the Periodic Table Tk.Toplevel window """
+
     global FIND_ELEMENT_LIST
     FIND_ELEMENT_LIST = []
     root.find_elements_diag.master.destroy()
 
-def place_topleft(window1,window2):
+def place_topright(window1,window2):
     
     # adapted from: https://stackoverflow.com/questions/3352918/
+    """ Places window2 next to window1 top-right end """ 
     
     window1.update_idletasks()
     window2.update_idletasks()
@@ -52,6 +60,9 @@ def place_topleft(window1,window2):
     window2.deiconify()
 
 def place_center(window1,window2):
+    
+    """ Places window2 on center of window1 """
+
     window1.update_idletasks()
     window2.update_idletasks()
     
@@ -72,6 +83,10 @@ def place_center(window1,window2):
     window2.focus_force()
 
 def spawn_center(window):
+
+    """ Spawns the window on center of screen. There are known issues
+    with multiple monitors, specially of different dpi """
+
     width = window.winfo_screenwidth()
     height = window.winfo_screenheight()
     
@@ -83,21 +98,27 @@ def spawn_center(window):
     window.focus_force() 
 
 def convert_bytes(num):
-    """
-    Obtained from https://stackoverflow.com/questions/210408
-    """
+
+    """ Obtained from https://stackoverflow.com/questions/210408 """
+
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
         
 def restore_bytes(num,unit):
+    
+    """ Reverse operation of convert_bytes function """
+
     units = ['KB', 'MB', 'GB', 'TB']
     for x in units:
         if unit == x:
             return num * (1024**(units.index(x)+1))
 
 def ErrorMessage(message):
+
+    """ Spawn an error message with a message. Different
+    from the Tk.messagebox function """
     
     ErrorWindow = Toplevel()
     ErrorWindow.title("Error")
@@ -114,9 +135,15 @@ def ErrorMessage(message):
     place_center(root.master,ErrorWindow)
 
 def doNothing():
+    
+    """ Support function for under-development features """
+
     messagebox.showinfo("Information","Will be implemented soon.")   
 
 def call_help():
+
+    """ Spawns help dialogue """
+
     try:
         if root.HelpWindow.state() == "normal":
             root.HelpWindow.focus_force()
@@ -139,6 +166,9 @@ def call_help():
 
 
 def call_author():
+
+    """ Spawns author information """
+
     try:
         if root.AuthorWin.state() == "normal":
             root.AuthorWin.focus_force()
@@ -167,17 +197,31 @@ def call_author():
             Info.pack()
             place_center(root.master,root.AuthorWin)
 
-
 def open_analyzer():
+
+    """ Spawns a new instance of ImageAnalyzer API for the last loaded MY_DATACUBE """
+
     global MY_DATACUBE
     API = ImageAnalyzer(root.master,MY_DATACUBE)
     root.ImageAnalyzers.append(API) 
 
 def call_compilecube():
+    
+    """ Tries to create output folder (name is SpecRead.CONFIG['directory']) 
+    and calls SpecMath to compile the data. Spectra to compile are looked under the directory
+    set by the user (default is C:/samples/) and inside a directory named 
+    SpecRead.CONFIG['directory'].
+    
+    If a certain file cannot be read, an error is raised. SpecMath returns the name 
+    of the file. """
+
     try: os.mkdir(SpecRead.output_path)
     except IOError as exception:
         logging.warning("Error {}.".format(exception.__class__.__name__))
         logging.warning("Can't create output folder {}".format(SpecRead.output_path))
+        if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
+        else: exists = None
+        messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
     
     if os.path.exists(SpecRead.cube_path): 
         pass
@@ -196,9 +240,13 @@ def call_compilecube():
         root.ButtonLoad.config(state=NORMAL)
         root.MenuBar.entryconfig("Toolbox", state=NORMAL)
         if fail[0] == True:
-            messagebox.showerror("EOF Error!","Could not read {} file!".format(fail[1]))
+            messagebox.showerror("Error!","Could not read {} file! Aborting compilation".format(fail[1]))
+            shutil.rmtree(SpecRead.output_path) 
 
 def prompt_folder():
+
+    """ Opens dialogue to change the samples folder """
+
     folder = filedialog.askdirectory()
     if folder != "":
         ini_file = open(os.getcwd() + "\\folder.ini","w")
@@ -211,10 +259,12 @@ def prompt_folder():
         pass
     return 0
 
-def call_heightmap():
-    return 0
-
 def load_cube():
+
+    """ Loads cube to memory (unpickle). Cube name is passed according to
+    latest SpecRead parameters. See setup conditions inside SpecRead module.
+    Returns the datacube object """
+
     logging.debug("Trying to load cube file.")
     logging.debug(SpecRead.cube_path)
     if os.path.exists(SpecRead.cube_path):
@@ -232,8 +282,13 @@ def load_cube():
 
 class Welcome:
 
+    """ Welcome window class. Spawns a window with given texts at the center
+    of MainGUI window """
+
     def __init__(__self__,parent):
+
         """parent is a Tk window"""
+
         __self__.h, __self__.w = 400, 240
         __self__.master = Toplevel(master=parent)
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
@@ -252,13 +307,11 @@ class Welcome:
         __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
         __self__.tag.set(False)
         __self__.infotext.set(__self__.messages[0])
-
         __self__.build_widgets()
 
     def build_widgets(__self__):
         __self__.page_counter = Label(__self__.master, textvariable=__self__.page)
         __self__.page_counter.grid(row=0, column=0, sticky=W+E, columnspan=2, pady=3)
-        
         __self__.text_frame = Frame(__self__.master, width=320, height=150)
         __self__.text_frame.grid(row=1, column=0, sticky=W+E, columnspan=2)
         __self__.info = Label(__self__.text_frame,
@@ -315,6 +368,9 @@ class Welcome:
         else: pass
 
     def checkout(__self__,e=""):
+
+        """ Writes the welcome setting (spawn or not at startup) to settings.tag file """
+
         checker = True
         if __self__.tag.get() == True:
             root.checker = False
@@ -334,7 +390,10 @@ class Welcome:
 
 class export_diag():
 
-    """Creates a dialog to export ImageAnalyzer class images"""
+    """ Creates a dialog to export ImageAnalyzer API images.
+    Target is the desired output image size. """
+
+    TARGET = 1024
 
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent.master)
@@ -375,17 +434,18 @@ class export_diag():
 
 
     def export(__self__,tag=0):
+        enhance = __self__.parent.DATACUBE.config["enhance"]
         try:
             if tag == 1: 
                 f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
                 if f is None: 
                     return
-                write_image(__self__.parent.newimage1,1024,f.name)
+                write_image(__self__.parent.newimage1,__self__.TARGET,f.name,enhance=enhance)
             elif tag == 2: 
                 f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
                 if f is None: 
                     return
-                write_image(__self__.parent.newimage2,1024,f.name)
+                write_image(__self__.parent.newimage2,__self__.TARGET,f.name,enhance=enhance)
             else: pass
         except PermissionError as exception: 
             messagebox.showerror("Error!",exception.__class__.__name__)
@@ -393,11 +453,12 @@ class export_diag():
         __self__.kill()
 
     def merge(__self__):
+        enhance = __self__.parent.DATACUBE.config["enhance"]
         stack = stackimages(__self__.parent.newimage1,__self__.parent.newimage2)
         f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
         if f is None: 
             return
-        write_image(stack,1024,f.name)
+        write_image(stack,__self__.TARGET,f.name,enhance=enhance)
         __self__.kill()
 
     def kill(__self__,e=""):
@@ -631,9 +692,8 @@ class PeakClipper:
                     format(__self__.spectrum))
 
     def save(__self__):
-        global snip_config
-        snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
-        proceed = __self__.verify_values(snip_config)
+        root.snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
+        proceed = __self__.verify_values(root.snip_config)
         if proceed == True: __self__.kill()
         else: messagebox.showerror("Value Error", "Parameters not valid. No negative or zero values are valid. Sav-gol window must be odd and greater than Sav-gol order.")
 
@@ -974,7 +1034,7 @@ class ImageAnalyzer:
             __self__.annotate.config(bg="yellow")
             __self__.annotator = Annotator(__self__) 
             __self__.plot = PlotWin(__self__.master)
-            place_topleft(__self__.master, __self__.plot.master)
+            place_topright(__self__.master, __self__.plot.master)
             __self__.plot.draw_selective_sum(__self__.DATACUBE,
                     __self__.DATACUBE.sum,
                     root.plot_display)
@@ -1192,7 +1252,7 @@ class PlotWin:
         __self__.plot.set_ylabel("Energy (KeV)")
         __self__.plot.set_xlabel("Channel")
         __self__.plot.legend()
-        place_topleft(__self__.master.master,__self__.master)
+        place_topright(__self__.master.master,__self__.master)
 
     def draw_spec(__self__,mode,display_mode=None,lines=False):
         __self__.master.tagged = False
@@ -1272,7 +1332,7 @@ class PlotWin:
             __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=roi_label)
         __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum,label="Sum spectrum",color="blue")
         __self__.plot.legend()
-        place_topleft(__self__.master.master,__self__.master)
+        place_topright(__self__.master.master,__self__.master)
 
     def draw_correlation(__self__,corr,labels):
         plot_font = {'fontname':'Times New Roman','fontsize':10}
@@ -1280,7 +1340,7 @@ class PlotWin:
         __self__.plot.set_xlabel(labels[0])
         __self__.plot.set_ylabel(labels[1])
         __self__.plot.scatter(corr[0],corr[1])
-        place_topleft(__self__.master.master,__self__.master)
+        place_topright(__self__.master.master,__self__.master)
 
     def draw_selective_sum(__self__,DATACUBE,y_data,display_mode=None,lines=False):
         global FIND_ELEMENT_LIST
@@ -1648,8 +1708,9 @@ class MainGUI:
         __self__.samples = __self__.SampleLoader.samples_database
         __self__.mcacount = __self__.SampleLoader.mcacount
         __self__.mca_extension = __self__.SampleLoader.mca_extension
+        __self__.snip_config = []
         __self__.find_elements_diag = None
-        __self__.ImageAnalyzers = []
+        __self__.ImageAnalyzers = [] #everytime ImgAnalyzer API is opened, instance is appended
         __self__.ConfigDiag = None
         
         __self__.master.title("Piratininga SM {}".format(VERSION))
@@ -1757,8 +1818,16 @@ class MainGUI:
         __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
         __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0,sticky=N+S)
         __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1,sticky=N+S)
-        __self__.SamplesWindow_multi = Button(__self__.SamplesWindow, text = "Export multiple maps", bd=3, command=__self__.select_multiple)
-        __self__.SamplesWindow_ok = Button(__self__.SamplesWindow, text = "Validate", bd=3, command=__self__.digestmaps)
+        __self__.SamplesWindow_multi = Button(
+                __self__.SamplesWindow, 
+                text = "Export multiple maps", 
+                bd=3, 
+                command=__self__.select_multiple)
+        __self__.SamplesWindow_ok = Button(
+                __self__.SamplesWindow, 
+                text = "Validate", 
+                bd=3, 
+                command=__self__.digestmaps)
         __self__.SamplesWindow_multi.grid(row=2,column=0,sticky=W+E)
         __self__.SamplesWindow_ok.grid(row=2,column=1,sticky=W+E)
         __self__.SamplesWindow_ok.config(state=DISABLED)
@@ -1775,7 +1844,7 @@ class MainGUI:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(__self__.samples[key]))
 
-        place_topleft(__self__.master,__self__.SamplesWindow)
+        place_topright(__self__.master,__self__.SamplesWindow)
         __self__.SamplesWindow.iconbitmap(icon)
         __self__.SamplesWindow_TableRight.config(state=DISABLED)
         __self__.SamplesWindow_TableLeft.focus_set()
@@ -1807,8 +1876,7 @@ class MainGUI:
             cubes.append(__self__.SamplesWindow_TableLeft.get(item))
         _path = os.getcwd()+"\\output\\"
         """ list all packed cubes """
-        cube_folders = [name for name in os.listdir(_path) \
-                    if os.path.isdir(_path+name)]
+        cube_folders = [name for name in os.listdir(_path) if os.path.isdir(_path+name)]
         for folder in cube_folders:
             for name in os.listdir(_path+folder):
                 if name.lower().endswith(".cube")\
@@ -1893,7 +1961,7 @@ class MainGUI:
                     __self__.SamplesWindow_TableRight.insert(END,"{}".format(\
                             __self__.samples[key]))
                 __self__.SamplesWindow_TableLeft.set_focus()
-                place_topleft(__self__.master,__self__.SamplesWindow)
+                place_topright(__self__.master,__self__.SamplesWindow)
                 pass
             else: __self__.call_listsamples()
         except: __self__.call_listsamples()
@@ -2085,19 +2153,19 @@ class MainGUI:
         master = __self__.master
         __self__.summation = PlotWin(master)
         __self__.summation.draw_spec(mode=['summation'],display_mode=root.plot_display,lines=False)
-        place_topleft(__self__.master,__self__.summation.master)
+        place_topright(__self__.master,__self__.summation.master)
     
     def call_mps(__self__):
         master = __self__.master
         __self__.MPS = PlotWin(master)
         __self__.MPS.draw_spec(mode=['mps'],display_mode=root.plot_display,lines=False)
-        place_topleft(__self__.master,__self__.MPS.master)
+        place_topright(__self__.master,__self__.MPS.master)
     
     def call_combined(__self__):
         master = __self__.master
         __self__.combined = PlotWin(master)
         __self__.combined.draw_spec(mode=['summation','mps'],display_mode=root.plot_display,lines=False)
-        place_topleft(__self__.master,__self__.combined.master)
+        place_topright(__self__.master,__self__.combined.master)
 
     def call_settings(__self__):
         try:
@@ -2679,11 +2747,10 @@ class ConfigDiag:
         __self__.clipper.master.grab_set()
 
     def save_config(__self__,e=""):
-        global snip_config
         configdict = {'directory':__self__.DirectoryVar.get(),'bgstrip':__self__.BgstripVar.get(),\
                 'ratio':__self__.RatioVar.get(),'thickratio':__self__.ThickVar.get(),\
                 'calibration':__self__.CalibVar.get(),'enhance':__self__.EnhanceVar.get(),\
-                'peakmethod':__self__.MethodVar.get(),'bg_settings':snip_config}
+                'peakmethod':__self__.MethodVar.get(),'bg_settings':root.snip_config}
         
         if not os.path.exists(SpecRead.dimension_file):
             os.mkdir(SpecRead.output_path)

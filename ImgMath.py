@@ -544,13 +544,14 @@ def split_and_save(datacube,map_array,element_list):
     logging.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0
 
-def write_image(image,size,path):
+def write_image(image,size,path,enhance=False):
 
     """ Writes a 2D-array image to disk. Similar to split_and_save function.
     INPUT:
         image; 2D-array
         size; desired output target (int)
         path; string
+        enhance (optional); bool (default: false)
     OUTPUT: 
         0 """
 
@@ -567,7 +568,10 @@ def write_image(image,size,path):
             large_image = image/image.max()*255
         else:
             large_image = image
-        large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
+        if enhance == False:
+            large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
+        if enhance == True:
+            large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_CUBIC)
     cv2.imwrite(path,large_image)
     return 0
 
