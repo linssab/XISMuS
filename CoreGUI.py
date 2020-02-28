@@ -3404,10 +3404,16 @@ if __name__.endswith('__main__'):
     optimum_resolution = (1920,1080)
 
     # tcl/Tk imports
-    from tkinter import *
-    from tkinter import ttk
-    from tkinter import messagebox
-    from tkinter import filedialog
+    try:
+        from tkinter import *
+        from tkinter import ttk
+        from tkinter import messagebox
+        from tkinter import filedialog
+    except:
+        from Tkinter import *
+        from Tkinter import ttk
+        from Tkinter import messagebox
+        from Tkinter import filedialog
      
     # general utilities
     import numpy as np
