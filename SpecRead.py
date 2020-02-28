@@ -254,6 +254,7 @@ def getcalibration():
     return param
 
 def getdata(mca):
+    print("trying to get data")
     
     """ Extract the data contained in spectrum files 
     INPUT:
@@ -353,19 +354,17 @@ def updatespectra(specfile,size):
         size; int
     OUTPUT:
         newfile; string """        
+    global samples_folder
 
     name=str(specfile)
-    name=name.replace("_"," ")
-    name=name.replace("."," ")
-    name=name.split()
-    for i in range(len(name)):
-        if name[i].isdigit()==True: index=int(name[i])
-        if name[i] == "mca": extension=name[i]
-        elif name[i] == "txt": extension=name[i]
-        if len(name[i]) > 6: prefix = name[i]
-    if index < size: index = str(index+1)
+    specfile_name = name.split("\\")[-1]
+    prefix = specfile_name.split("_")[0]
+    extension = specfile_name.split(".")[-1]
+    index = specfile_name.replace(".","_").split("_")[1]
+    
+    if int(index) < size: index = str(int(index)+1)
     else: index = str(size)
-    newfile = str(prefix+"_"+index+"."+extension)
+    newfile = samples_folder+CONFIG["directory"]+"\\"+str(prefix+"_"+index+"."+extension)
     return newfile
 
 def getdimension():
