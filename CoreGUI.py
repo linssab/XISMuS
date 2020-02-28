@@ -215,13 +215,14 @@ def call_compilecube():
     If a certain file cannot be read, an error is raised. SpecMath returns the name 
     of the file. """
 
-    try: os.mkdir(SpecRead.output_path)
+    try: 
+        os.mkdir(SpecRead.output_path)
     except IOError as exception:
         logging.warning("Error {}.".format(exception.__class__.__name__))
         logging.warning("Can't create output folder {}".format(SpecRead.output_path))
-        if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
-        else: exists = None
-        messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
+        #if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
+        #else: exists = None
+        #messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
     
     if os.path.exists(SpecRead.cube_path): 
         pass
@@ -391,7 +392,8 @@ class Welcome:
 class export_diag():
 
     """ Creates a dialog to export ImageAnalyzer API images.
-    Target is the desired output image size. """
+    Target is the desired output image size. If enhance configuration is True,
+    image is interpolated """
 
     TARGET = 1024
 
@@ -469,10 +471,10 @@ class export_diag():
 
 class dimension_diag():
 
-    """Creates a pop-up dialog to prompt the datacube dimension
+    """ Creates a pop-up dialog to prompt the datacube dimension
     if no colonneXrighe.txt file is found for the data selected.
     It writes a custom colonneXrighe.txt file to the sample output
-    folder, which is deleted if the sample is RESET"""
+    folder, which is deleted if the sample is RESET """
 
     def __init__(__self__,folder):
         __self__.win = Toplevel(root.master)
@@ -513,16 +515,23 @@ class dimension_diag():
 
     def check_values(__self__,x,y):
         x,y = x.get(),y.get()
+        if x == "" or y == "": 
+            messagebox.showerror("Error!","No input! Please add a value.")
+            return
         if x.isdigit(): 
             x=int(x)
             if x > root.mcacount[__self__.folder]: x = root.mcacount[__self__.folder]
             elif x == 0: x = 1
-        else: x=1
+        else: 
+            messagebox.showerror("Error!","{} not a number!".format(x))
+            return
         if y.isdigit(): 
             y=int(y)
             if y > root.mcacount[__self__.folder]: y = root.mcacount[__self__.folder]
             elif y == 0: y = 1
-        else: y=1
+        else:
+            messagebox.showerror("Error!","{} not a number!".format(y))
+            return
         while x*y > root.mcacount[__self__.folder]:
             if x > y: x-=1
             elif y > x: y-=1
@@ -530,6 +539,7 @@ class dimension_diag():
     
     def send(__self__,event=""):
         root.config_xy = __self__.check_values(__self__.x,__self__.y)
+        if root.config_xy == None: return
         __self__.win.grab_release()
         __self__.win.destroy()
         __self__.exit_code = "save"
@@ -1513,6 +1523,64 @@ class Samples:
                             __self__.samples_database[folder] = mca_prefix
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
+
+            """ After trying to look at every folder under the folder selected, priority is given to
+            the actual selected folder """
+
+            if __self__.samples_database == {}:
+                local_path = SpecRead.samples_folder.split("\\")
+                folder = local_path.pop(-2)
+                new_path = ""
+                for name in local_path:
+                    new_path = new_path + name + "\\"
+                SpecRead.samples_folder = new_path
+
+                if os.path.exists(os.getcwd()+"\\output\\{}\\".format(folder)):
+                    for name in os.listdir(os.getcwd()+"\\output\\{}".format(folder)):
+                        if name.lower().endswith(".cube"):
+                            __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
+                            __self__.label2.update()
+                            try: __self__.splash.update_idletasks()
+                            except: __self__.popup.update_idletasks()
+                            finally: pass
+                            skip_list.append(name.split(".cube")[0])
+                files = [name for name in os.listdir(new_path+folder) \
+                        if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                extension = files[:]
+                if files == []: pass
+                else:
+                    if folder not in skip_list:
+                        for item in range(len(files)): 
+                            # displays file being read on splash screen
+                            __self__.filequeue.set("{}".format(files[item]))
+                            __self__.label2.update()
+                            try: __self__.splash.update_idletasks()
+                            except: __self__.popup.update_idletasks()
+                            finally: pass
+                            try:
+                                files[item], extension[item] = \
+                                        files[item].split("_",1)[0], files[item].split(".",1)[1]
+                            except: pass
+                        files_set = set(files)
+                        extension_set = set(extension)
+                        counter = dict((x,files.count(x)) for x in files_set)
+                        counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                        mca_prefix_count = 0
+                        mca_extension_count = 0
+                        # counts mca files and stores the prefix string and no. of files
+                        for counts in counter:
+                            if counter[counts] > mca_prefix_count:
+                                mca_prefix = counts
+                                mca_prefix_count = counter[counts]
+                        for ext in counter_ext:
+                            if counter_ext[ext] > mca_extension_count:
+                                mca_extension = ext
+                                mca_extension_count = counter_ext[ext]
+                        # creates a dict key only if the numer of mca's is larger than 20.
+                        if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                            __self__.samples_database[folder] = mca_prefix
+                            __self__.mcacount[folder] = len(files)
+                            __self__.mca_extension[folder] = mca_extension
                 
             output_folder = os.getcwd()+"\output\\"
             outputs = [folder for folder in os.listdir(output_folder) \
@@ -2444,14 +2512,14 @@ class MainGUI:
         
         """ invokes the configuration dialog """
 
-        if not os.path.exists(SpecRead.dimension_file):
+        try: 
+            __self__.config_xy = SpecRead.getdimension()
+        except:
             dimension = dimension_diag(SpecRead.DIRECTORY)
             __self__.master.wait_window(dimension.win) 
             if dimension.exit_code == "cancel":
                 __self__.wipe()
                 return 0
-        else:
-            __self__.config_xy = SpecRead.getdimension()
 
         __self__.ManualParam = []
         try: __self__.ConfigDiag.master.destroy()
@@ -2753,7 +2821,15 @@ class ConfigDiag:
                 'peakmethod':__self__.MethodVar.get(),'bg_settings':root.snip_config}
         
         if not os.path.exists(SpecRead.dimension_file):
-            os.mkdir(SpecRead.output_path)
+            try:
+                os.mkdir(SpecRead.output_path)
+            except IOError as exception:
+                logging.warning("Error {}.".format(exception.__class__.__name__))
+                logging.warning("Can't create output folder {}".format(SpecRead.output_path))
+                if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
+                else: exists = None
+                messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
+                return
             dm_file = open(SpecRead.output_path + "colonneXrighe.txt","w")
             dm_file.write("righe\t{}\n".format(root.config_xy[0]))
             dm_file.write("colonne\t{}\n".format(root.config_xy[1]))

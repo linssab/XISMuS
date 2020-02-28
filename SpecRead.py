@@ -376,17 +376,15 @@ def getdimension():
         y; int
         user_input; bool """
 
-    global dimension_file
+    global dimension_file, samples_folder
     if not os.path.exists(dimension_file):
-        try: 
-            logging.info("File {} not found, looking into output folder...".format(
-                dimension_file))
-            local_file = output_path+"colonneXrighe.txt"
-        except:
-            raise IOError("Dimension file not found!") 
-    else: local_file = dimension_file
+        dimension_file = samples_folder + "\colonneXrighe.txt"
+        if not os.path.exists(dimension_file):
+            dimension_file = output_path+"colonneXrighe.txt"
+            if not os.path.exists(dimension_file):
+                raise IOError("Dimension file not found!") 
     user_input = False
-    dm_file = open(local_file, "r")
+    dm_file = open(dimension_file, "r")
     line = dm_file.readline()
     if "righe" in line:
         line=line.replace("\r","")
