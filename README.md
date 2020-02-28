@@ -1,14 +1,12 @@
-## USAGE
-At the moment, only the _Elemental Mapping_ function is fully operational.
-This code requires, *Python 3.x*, *numpy*, *matplotlib* and *PyMca* modules installed.
-To install any of them, simply type at your prompt screen:
-`pip install module`, where module is the module name.
+<font size="6">XISMuS</font> <font size="5">X-Ray fluorescence Imaging Software for Multiple Samples</font>
 
-To run the code, firstly place all data files under `C:\misure` folder and enter the configuration parameters onto config.cfg file.
-This step is not yet optimized and still requires a great deal of user interaction. Folder name and config information will be automated in the near future.
-At least, type in your prompt window (cmd on Windows) `python -Mapping.py -help` to get the usage options.
-_*Mapping.py*_ can provide elemental mapping of any single chemical element, density map and stack plot of all spectrum.
-To save any of the produced images, simply click on the save icon, in the lower right corner of the plot window.
-
-<img src="http://latex.codecogs.com/gif.latex?k\alpha" border="0"/> or
-<img src="http://latex.codecogs.com/gif.latex?l\alpha" border="0"/>
+This software is distributed with an MIT license. Furthe details can be found [here](../master/LICENSE)<br>
+XISMuS is a dedicated imaging software for X-Ray Fluorescence data (MA-XRF) for Windows OS. This software had been tested on Windows 7 and Windows 10. <br>
+The most recent distribution can be found [here](https://www.google.com/). To compile it from source, follow the steps below.<br>
+<br>
+## Installation
+No package form distribution is yet available to use with Python; nevertheless, you can clone the repo and compile it from source. To do so, simply use the provided setup script:<br>
+<br>
+`python setup.py build`<br>
+<br>
+Alternatively, the most recent installation executable is available [in this link](https://www.google.com/).<br>
