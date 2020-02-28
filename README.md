@@ -1,14 +1,29 @@
-## USAGE
-At the moment, only the _Elemental Mapping_ function is fully operational.
-This code requires, *Python 3.x*, *numpy*, *matplotlib* and *PyMca* modules installed.
-To install any of them, simply type at your prompt screen:
-`pip install module`, where module is the module name.
+# XISMuS
+#### X-Ray fluorescence Imaging Software for Multiple Samples
 
-To run the code, firstly place all data files under `C:\misure` folder and enter the configuration parameters onto config.cfg file.
-This step is not yet optimized and still requires a great deal of user interaction. Folder name and config information will be automated in the near future.
-At least, type in your prompt window (cmd on Windows) `python -Mapping.py -help` to get the usage options.
-_*Mapping.py*_ can provide elemental mapping of any single chemical element, density map and stack plot of all spectrum.
-To save any of the produced images, simply click on the save icon, in the lower right corner of the plot window.
+This software is distributed with an MIT license. Further details can be found [here](../master/LICENSE)<br>
+XISMuS is a dedicated imaging software for X-Ray Fluorescence data (MA-XRF) for Windows OS. This software had been tested on Windows 7 and Windows 10. <br>
+The most recent distribution can be found [here](https://www.google.com/). To compile it from source, follow the steps below.<br>
+<br>
+## Installation
+No package form distribution is yet available to use with Python; nevertheless, you can clone the repo and compile it from source. To do so, simply use the provided setup script:<br>
+<br>
+`python setup.py build`<br>
+<br>
+Be sure to have all the required Python packages installed!<br>
+Alternatively, the most recent installation executable is available [in this link](https://www.google.com/).<br>
 
-<img src="http://latex.codecogs.com/gif.latex?k\alpha" border="0"/> or
-<img src="http://latex.codecogs.com/gif.latex?l\alpha" border="0"/>
+## Dependencies
+XISMuS requires you to have xraylib version 3.3.0 (or superior) installed. You can download it for free [here][xraylib].<br>
+If xraylib is not installed, the program will still run, but with some limited functionalities and errors are prone to happen.<br>
+<br>
+To run it within a Python interpreter, we recommend you have Python 3.7 installed and the following packages:<br>
+* numpy<br>
+* numba<br>
+* scipy<br>
+* cv2<br>
+* psutil<br>
+* multiprocessing<br>
+* tkinter (for the Graphical User Interface)<br>
+
+[xraylib]: http://lvserver.ugent.be/xraylib/xraylib-3.3.0-win64.exe
