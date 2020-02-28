@@ -14,6 +14,8 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                 (".\\images\\icons\\plot.ico",".\\images\\icons\\plot.ico"),\
                 (".\\images\\icons\\quit.png",".\\images\\icons\\quit.png"),\
                 (".\\images\\icons\\reset.png",".\\images\\icons\\reset.png"),\
+                (".\\images\\icons\\reset.png",".\\images\\icons\\refresh.png"),\
+                (".\\images\\icons\\reset.png",".\\images\\icons\\refresh.ico"),\
                 (".\\images\\icons\\rubik.png",".\\images\\icons\\rubik.png"),\
                 (".\\images\\icons\\rubik.ico",".\\images\\icons\\rubik.ico"),\
                 (".\\images\\icons\\settings.png",".\\images\\icons\\settings.png"),\
