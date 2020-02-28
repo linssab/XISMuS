@@ -53,8 +53,8 @@ def load_sqlite3(finder, module):
         dll_path = os.path.join(sys.base_prefix, "DLLs", dll_name)
         finder.IncludeFiles(dll_path, dll_name)
 
-#executables = [cx_Freeze.Executable("CoreGUI.py", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
-executables = [cx_Freeze.Executable("CoreGUI.py",icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
+executables = [cx_Freeze.Executable("CoreGUI.py", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
+#executables = [cx_Freeze.Executable("CoreGUI.py",icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
 
 cx_Freeze.setup(
         name = "Piratininga SM",
