@@ -1,4 +1,6 @@
 *.pyc
+*.rar
+*.zip
 *.log
 *.png
 *.ipynb
