@@ -230,7 +230,6 @@ class Cube_reader():
         __self__.process_names = []
         __self__.run_count = 0 
         __self__.chunks = break_list(__self__.element_list)
-        #from SpecFitter import fit
     
     def start_workers(__self__):
         __self__.p_bar.progress["maximum"] = __self__.cube.img_size*len(__self__.element_list)

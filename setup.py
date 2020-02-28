@@ -14,8 +14,8 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                 (".\\images\\icons\\plot.ico",".\\images\\icons\\plot.ico"),\
                 (".\\images\\icons\\quit.png",".\\images\\icons\\quit.png"),\
                 (".\\images\\icons\\reset.png",".\\images\\icons\\reset.png"),\
-                (".\\images\\icons\\reset.png",".\\images\\icons\\refresh.png"),\
-                (".\\images\\icons\\reset.png",".\\images\\icons\\refresh.ico"),\
+                (".\\images\\icons\\refresh.png",".\\images\\icons\\refresh.png"),\
+                (".\\images\\icons\\refresh.ico",".\\images\\icons\\refresh.ico"),\
                 (".\\images\\icons\\rubik.png",".\\images\\icons\\rubik.png"),\
                 (".\\images\\icons\\rubik.ico",".\\images\\icons\\rubik.ico"),\
                 (".\\images\\icons\\settings.png",".\\images\\icons\\settings.png"),\
@@ -31,8 +31,38 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                 (".\\output.ini",".\\output\\output.ini"),\
                 (".\\folder.ini",".\\folder.ini"),\
                 ".\\config.cfg",\
+                ".\\logfile.log",\
                 ".\\settings.tag",\
                 ".\\fitconfigGUI.cfg"]
+
+training_data = [item for item in os.listdir("C:\\samples\\misure\\") if \
+        item.lower().endswith(".mca") or item.lower().endswith(".txt")]
+
+for item in training_data:
+    path = "C:\\samples\\misure\\"+item
+    new_path = ".\\training_data\\"+item
+    includefiles_list.append((path,new_path))
+
+with open(".\\folder.ini","w+") as inifile:
+    inifile.write(".\\training_data\\")
+
+with open(".\\config.cfg","w+") as cfgfile:
+    configdict = {'directory': None,'bgstrip':"SNIPBG",\
+                'ratio':True,'thickratio':0,\
+                'calibration':"from_source",'enhance':True,\
+                'peakmethod':"simple_roi",'bg_settings':[]}
+    calibparam = [[1,1],[2,2]] 
+
+    cfgfile.write("<<CONFIG_START>>\r")
+    for key in configdict:
+        cfgfile.write("{} = {}\r".format(key,configdict[key]))
+    cfgfile.write("<<CALIBRATION>>\r")
+    for pair in calibparam:
+        cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
+    cfgfile.write("<<END>>\r")
+
+with open(".\\logfile.log","w+") as logfile:
+    logfile.write(" ")
 
 scipy_path = os.path.dirname(scipy.__file__)
 numba_path = os.path.dirname(numba.__file__)
@@ -53,8 +83,8 @@ def load_sqlite3(finder, module):
         dll_path = os.path.join(sys.base_prefix, "DLLs", dll_name)
         finder.IncludeFiles(dll_path, dll_name)
 
-executables = [cx_Freeze.Executable("CoreGUI.py", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
-#executables = [cx_Freeze.Executable("CoreGUI.py",icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
+executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
+#executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
 
 cx_Freeze.setup(
         name = "Piratininga SM",
@@ -63,7 +93,7 @@ cx_Freeze.setup(
                 "xraylib","matplotlib"],\
                 #"mpl_toolkits"],\
                 
-                "includes":["numpy","Tkinter"],
+                "includes":["numpy","tkinter"],
                  
                 "include_files":includefiles_list}},
                 version = VERSION,

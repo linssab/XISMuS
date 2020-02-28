@@ -1423,8 +1423,8 @@ class Samples:
         __self__.splash.grid_rowconfigure(1,weight=1)
         __self__.splash.grid_columnconfigure(0,weight=1)
         __self__.splash.grid_columnconfigure(1,weight=1)
-        __self__.splash_image = PhotoImage(file=os.getcwd()+"\\images\\splash.png")
-        __self__.canvas = Label(__self__.splash, image = __self__.splash_image,bg="white")
+        __self__.splash_image = PhotoImage(file=".\\images\\splash.png")
+        __self__.canvas = Label(__self__.splash, image = __self__.splash_image, bg="white")
         __self__.canvas.grid(row=0,column=0,columnspan=2)
         __self__.filequeue = StringVar()
         __self__.filequeue.set(" ")
@@ -1476,8 +1476,8 @@ class Samples:
             samples = [name for name in os.listdir(SpecRead.samples_folder) \
                     if os.path.isdir(SpecRead.samples_folder+name)]
             for folder in samples:
-                if os.path.exists(os.getcwd()+"\\output\\{}\\".format(folder)):
-                    for name in os.listdir(os.getcwd()+"\\output\\{}".format(folder)):
+                if os.path.exists(".\\output\\{}\\".format(folder)):
+                    for name in os.listdir(".\\output\\{}".format(folder)):
                         if name.lower().endswith(".cube"):
                             __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
                             __self__.label2.update()
@@ -1535,8 +1535,8 @@ class Samples:
                     new_path = new_path + name + "\\"
                 SpecRead.samples_folder = new_path
 
-                if os.path.exists(os.getcwd()+"\\output\\{}\\".format(folder)):
-                    for name in os.listdir(os.getcwd()+"\\output\\{}".format(folder)):
+                if os.path.exists(".\\output\\{}\\".format(folder)):
+                    for name in os.listdir(".\\output\\{}".format(folder)):
                         if name.lower().endswith(".cube"):
                             __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
                             __self__.label2.update()
@@ -1582,7 +1582,7 @@ class Samples:
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                 
-            output_folder = os.getcwd()+"\output\\"
+            output_folder = ".\\output\\"
             outputs = [folder for folder in os.listdir(output_folder) \
                     if os.path.isdir(output_folder + folder)]
             for folder in outputs:
@@ -1621,7 +1621,7 @@ class Settings:
         __self__.RAM_free = convert_bytes(sys_mem["available"])
         __self__.build_widgets()
         __self__.Settings.title("Settings")
-        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        icon = ".\\images\\icons\\settings.ico"
         __self__.Settings.iconbitmap(icon)  
         __self__.Settings.protocol("WM_DELETE_WINDOW",__self__.kill_window)
         place_center(root.master,__self__.Settings)
@@ -1693,7 +1693,7 @@ class Settings:
     
     def write_to_ini(__self__):
         try: 
-            inipath = os.getcwd() + "\settings.tag"
+            inipath = ".\\settings.tag"
             ini = open(inipath,'w+')
             ini.write("{}\n".format(SpecRead.samples_folder))
             ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
@@ -1762,7 +1762,7 @@ class MainGUI:
 
     def __init__(__self__):
         logging.info("Initializing program...")
-        f = open(os.getcwd()+"\\settings.tag","r")
+        f = open(".\\settings.tag","r")
         for line in f:
             if line.startswith("<welcome>"):
                 if line.split("\t")[1] == "True": __self__.checker = True
@@ -1791,7 +1791,7 @@ class MainGUI:
         __self__.sample_plot.set_title('Sample Counts Map',**mapfont)
 
         sys_mem = dict(virtual_memory()._asdict())
-        inipath = os.getcwd()+"\settings.tag"
+        inipath = ".\\settings.tag"
         __self__.MultiCore, __self__.PlotMode, __self__.RAM_limit = grab_GUI_config(inipath)
         __self__.RAM_limit_value = sys_mem["available"]
         if __self__.PlotMode == "Logarithmic": __self__.plot_display = "-semilog"
@@ -1867,7 +1867,7 @@ class MainGUI:
         __self__.SamplesWindow = Toplevel(master=__self__.master, name="samples list")
         __self__.SamplesWindow.tagged = False
         __self__.SamplesWindow.title("Sample List")
-        icon = os.getcwd()+"\\images\\icons\\icon.ico"
+        icon = ".\\images\\icons\\icon.ico"
         __self__.SamplesWindow.resizable(False,True) 
         __self__.SamplesWindow.minsize(0,340)
         __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="FOLDER")
@@ -1942,7 +1942,7 @@ class MainGUI:
         cube_dict, maps, maxima, packed_maps, cubes = {}, {}, {}, [], []
         for item in __self__.SamplesWindow_TableLeft.curselection():
             cubes.append(__self__.SamplesWindow_TableLeft.get(item))
-        _path = os.getcwd()+"\\output\\"
+        _path = ".\\output\\"
         """ list all packed cubes """
         cube_folders = [name for name in os.listdir(_path) if os.path.isdir(_path+name)]
         for folder in cube_folders:
@@ -1974,7 +1974,7 @@ class MainGUI:
         if element_maps != "":
             __self__.maps_window = Toplevel()
             __self__.maps_window.withdraw()
-            icon = os.getcwd()+"\\images\\icons\\icon.ico"
+            icon = ".\\images\\icons\\icon.ico"
             __self__.maps_window.title("Available maps")
             __self__.maps_window.iconbitmap(icon)
             __self__.maps_window.resizable(False, False)
@@ -2162,7 +2162,7 @@ class MainGUI:
 
     def open_output_folder(__self__, event=""):
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-        path = os.getcwd()+"\\output\\"+value
+        path = ".\\output\\"+value
         if os.path.exists(path):
             path = os.path.realpath(path)
             os.startfile(path)
@@ -2295,7 +2295,7 @@ class MainGUI:
         __self__.TableLeft.grid(row=5, column=2, sticky=N+S)
         __self__.TableMiddle.grid(row=5, column=3, columnspan=2, sticky=N+S)
         
-        re_configure_icon = PhotoImage(file=os.getcwd()+"\\images\\icons\\refresh.png")
+        re_configure_icon = PhotoImage(file=".\\images\\icons\\refresh.png")
         __self__.re_configure_icon = re_configure_icon.subsample(1,1)
         __self__.re_configure = Button(__self__.ConfigFrame, image=__self__.re_configure_icon, width=32, height=32, command=__self__.reconfigure)
         __self__.re_configure.grid(row=5, column=5, sticky=S)
@@ -2335,17 +2335,17 @@ class MainGUI:
         # define the buttons wich go inside the ButtonsFrame (top left corner)
         subx,suby = 1,1
 
-        ButtonLoad_icon = PhotoImage(file = os.getcwd()+'\images\icons\load.png')
+        ButtonLoad_icon = PhotoImage(file = ".\\images\\icons\\load.png")
         __self__.ButtonLoad_icon = ButtonLoad_icon.subsample(subx,suby)
-        ButtonReset_icon = PhotoImage(file = os.getcwd()+'\images\icons\\reset.png')
+        ButtonReset_icon = PhotoImage(file = ".\\images\\icons\\reset.png")
         __self__.ButtonReset_icon = ButtonReset_icon.subsample(subx,suby)
-        ImgAnalButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\img_anal.png')
+        ImgAnalButton_icon = PhotoImage(file = ".\\images\\icons\\img_anal.png")
         __self__.ImgAnalButton_icon = ImgAnalButton_icon.subsample(subx,suby)
-        FindElementButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\\rubik.png')
+        FindElementButton_icon = PhotoImage(file = ".\\images\\icons\\rubik.png")
         __self__.FindElementButton_icon = FindElementButton_icon.subsample(subx,suby)
-        QuitButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\quit.png')
+        QuitButton_icon = PhotoImage(file = ".\\images\\icons\\quit.png")
         __self__.QuitButton_icon = QuitButton_icon.subsample(subx,suby)
-        SettingsButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\settings.png')
+        SettingsButton_icon = PhotoImage(file = ".\\images\\icons\\settings.png")
         __self__.SettingsButton_icon = SettingsButton_icon.subsample(subx,suby)
 
         __self__.ButtonLoad = Button(__self__.ButtonsFrame, text="  Load Sample", anchor=W,\
@@ -2490,7 +2490,7 @@ class MainGUI:
                     "Resetting the sample will erase all files in the OUTPUT folder of sample {}! Are you sure you want to proceed?".\
                     format(SpecRead.DIRECTORY),padx=10, pady=4, wraplength=250)
             LocalLabel.pack()
-            Erase_ico = PhotoImage(file = os.getcwd()+'\images\icons\erase.png')
+            Erase_ico = PhotoImage(file = ".\\images\\icons\\erase.png")
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
             EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
                     pack(side=LEFT, pady=8, padx=16)
@@ -2501,7 +2501,7 @@ class MainGUI:
                     command=__self__.ResetWindow.destroy, width=10, bd=3).pack(side=TOP, pady=5)
             
             place_center(__self__.master,__self__.ResetWindow)
-            icon = os.getcwd()+"\\images\\icons\\icon.ico"
+            icon = ".\\images\\icons\\icon.ico"
             __self__.ResetWindow.iconbitmap(icon)
             __self__.ResetWindow.grab_set()
 
@@ -2679,7 +2679,7 @@ class ReConfigDiag:
         CancelButton.grid(row=8,column=1,sticky=S)
         
         place_center(root.master,__self__.master)
-        icon = os.getcwd()+"\\images\\icons\\refresh.ico"
+        icon = ".\\images\\icons\\refresh.ico"
         __self__.master.iconbitmap(icon)
         root.master.wait_window(__self__.master)
 
@@ -2759,7 +2759,7 @@ class ConfigDiag:
         __self__.CalibDiag.title("Manual configuration")
         __self__.CalibDiag.resizable(False,False)
         __self__.CalibDiag.grab_set()
-        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        icon = ".\\images\\icons\\settings.ico"
         __self__.CalibDiag.iconbitmap(icon)
         ParamFrame = Frame(__self__.CalibDiag)
         ParamFrame.pack()
@@ -2866,7 +2866,7 @@ class ConfigDiag:
                 SpecRead.CONFIG["calibration"] = "from_source"
                 calibparam = SpecRead.getcalibration()
 
-            cfgpath = os.getcwd() + "\config.cfg"
+            cfgpath = ".\\config.cfg"
             cfgfile = open(cfgpath,"w+")
             cfgfile.write("<<CONFIG_START>>\r")
             for key in configdict:
@@ -2893,7 +2893,7 @@ class ConfigDiag:
             root.toggle_(toggle='on')
 
         else:
-            cfgpath = os.getcwd() + '\config.cfg'
+            cfgpath = ".\\config.cfg"
             cfgfile = open(cfgpath,'w+')
             cfgfile.write("<<CONFIG_START>>\r")
             for key in configdict:
@@ -3005,7 +3005,7 @@ class ConfigDiag:
         CancelButton.grid(row=8,column=1,sticky=S)
         
         place_center(root.master,__self__.master)
-        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        icon = ".\\images\\icons\\settings.ico"
         __self__.master.iconbitmap(icon)
         root.master.wait_window(__self__.master)
 
@@ -3030,7 +3030,7 @@ class PeriodicTable:
         __self__.cvar1.set(0.0)
         __self__.cvar2.set(0.5)
         __self__.draw_buttons() 
-        icon = os.getcwd()+"\\images\\icons\\rubik.ico"
+        icon = ".\\images\\icons\\rubik.ico"
         place_center(parent.master,__self__.master)
         __self__.master.iconbitmap(icon)
 

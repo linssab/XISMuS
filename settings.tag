@@ -1,4 +1,4 @@
-C:\samples\
+C:\samples\\
 <MultiCore>	True
 <PlotMode>	Logarithmic
 <RAMLimit>	True

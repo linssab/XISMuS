@@ -254,7 +254,6 @@ def getcalibration():
     return param
 
 def getdata(mca):
-    print("trying to get data")
     
     """ Extract the data contained in spectrum files 
     INPUT:
