@@ -36,6 +36,10 @@ def wipe_list():
     FIND_ELEMENT_LIST = []
     root.find_elements_diag.master.destroy()
 
+def openURL(url):
+    webbrowser.open(url)
+
+
 def place_topright(window1,window2):
     
     # adapted from: https://stackoverflow.com/questions/3352918/
@@ -143,27 +147,12 @@ def doNothing():
 def call_help():
 
     """ Spawns help dialogue """
-
-    try:
-        if root.HelpWindow.state() == "normal":
-            root.HelpWindow.focus_force()
-        else:
-            root.HelpWindow = Toplevel(master=root.master)
-            root.HelpWindow.title("Help")
-            root.HelpWindow.resizable(False,False)
-            HelpText = "There is going to be something here soon."
-            HelpLabel = Label(root.HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
-            HelpLabel.grid(sticky=W)
-            place_center(root.master, root.HelpWindow)
-    except: 
-            root.HelpWindow = Toplevel(master=root.master)
-            root.HelpWindow.title("Help")
-            root.HelpWindow.resizable(False,False)
-            HelpText = "There is going to be something here soon."
-            HelpLabel = Label(root.HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
-            HelpLabel.grid(sticky=W)
-            place_center(root.master, root.HelpWindow)
-
+    proceed = messagebox.askquestion("Attention!","You are about to be redirected to github webpage.\nDo you want to proceed?")
+    if proceed == "yes":
+        webbrowser.open("https://github.com/linssab/xrfscanner/blob/master/HELP.md")
+        return 0
+    else:
+        return 0
 
 def call_author():
 
@@ -195,6 +184,9 @@ def call_author():
             winFrame.pack(padx=(16,16),pady=(16,16))
             Info = Label(winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
             Info.pack()
+            Link = Label(winFrame, text="RG Profile", fg="blue", cursor="hand2")
+            Link.bind("<Button-1>", lambda e: openURL("https://www.researchgate.net/profile/Sergio_Augusto_Lins"))
+            Link.pack(side=LEFT)
             place_center(root.master,root.AuthorWin)
 
 def open_analyzer():
@@ -1942,6 +1934,9 @@ class MainGUI:
         cube_dict, maps, maxima, packed_maps, cubes = {}, {}, {}, [], []
         for item in __self__.SamplesWindow_TableLeft.curselection():
             cubes.append(__self__.SamplesWindow_TableLeft.get(item))
+        if cubes == []: 
+            messagebox.showinfo("No Sample!","No sample selected!")
+            return 
         _path = ".\\output\\"
         """ list all packed cubes """
         cube_folders = [name for name in os.listdir(_path) if os.path.isdir(_path+name)]
@@ -2063,6 +2058,7 @@ class MainGUI:
         
         # name of selected sample
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        if value == "": return
 
         __self__.master.deiconify()
         __self__.master.focus_set()
@@ -2309,6 +2305,7 @@ class MainGUI:
 
         __self__.MenuBar.add_cascade(label="Toolbox", menu=__self__.Toolbox)
         __self__.MenuBar.add_command(label="Help", command=call_help)
+        #__self__.MenuBar.entryconfig("Help",state=DISABLED)
         __self__.MenuBar.add_command(label="Author", command=call_author)
         __self__.derived_spectra.add_command(label="Summation", command=__self__.call_summation)
         __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)", \
@@ -3420,6 +3417,7 @@ if __name__.endswith('__main__'):
     import cv2
     import sys, os, copy, pickle, stat, random
     import shutil
+    import webbrowser
     from psutil import virtual_memory
     from psutil import cpu_count
     import logging, time

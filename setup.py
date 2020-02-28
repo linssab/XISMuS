@@ -87,9 +87,9 @@ executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\
 #executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
 
 cx_Freeze.setup(
-        name = "Piratininga SM",
+        name = "XISMuS",
         options = {"build_exe":{\
-                "packages":["llvmlite","Tkinter","cv2","math","pickle","logging",\
+                "packages":["llvmlite","tkinter","cv2","math","pickle","logging",\
                 "xraylib","matplotlib"],\
                 #"mpl_toolkits"],\
                 
