@@ -692,15 +692,20 @@ def strip(an_array,cycles,width):
     # SATISFACTORY POLYNOMIAL DEGREE TO SMOOTHEN THE DATA            #
     ##################################################################
     
+    size = an_array.shape[0]
     for k in range(cycles):
-        l = width
-        if k >= cycles-8: 
+        if k >= cycles-8:
             width = int(width/np.sqrt(2))
-            l = width
-        for l in range(width, an_array.shape[0]-width):
-            m = (an_array[l-width] + an_array[l+width])/2
-            if an_array[l] > m and an_array[l] !=0: an_array[l] = m
+        for l in range(0, size):
+            if l-width < 0: low = 0
+            else: low = l-width
+            if l+width >= size: high = size-1
+            else: high = l+width
+            m = (an_array[low] + an_array[high])/2
+            if m < 1: m = 1
+            if an_array[l] > m: an_array[l] = m
     return an_array
+
 
 def peakstrip(an_array,cycles,width,*args):
     
