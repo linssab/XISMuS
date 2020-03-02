@@ -160,7 +160,7 @@ def call_help():
     """ Spawns help dialogue """
     proceed = messagebox.askquestion("Attention!","You are about to be redirected to github webpage.\nDo you want to proceed?")
     if proceed == "yes":
-        webbrowser.open("https://github.com/linssab/xrfscanner/blob/master/HELP.md")
+        webbrowser.open("https://github.com/linssab/XISMuS/blob/master/HELP.md")
         return 0
     else:
         return 0
