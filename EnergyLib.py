@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          DATABASE FOR ELEMENTS (XRAYLIB BASED)                #
-#                        version: 2.0 - Nov - 2019              #
+#                        version: 2.0 - Mar - 2020              #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -11,11 +11,11 @@ logging.debug("Importing module EnergyLib.py...")
 try: 
     import xraylib as xlib
     USEXLIB = True
+    xlib.SetErrorMessages(0)
 except: 
     logging.warning("xraylib module not found!")
     print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.")
     USEXLIB = False
-xlib.SetErrorMessages(0)
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
 
@@ -269,16 +269,19 @@ def set_densities_from_xlib():
         except: DensityDict["{0}".format(loc_element)] = np.nan
     return DensityDict
 
-if USEXLIB == True: DensityDict = set_densities_from_xlib()
-
 # Lists below uses the definition written manually in this file
 if USEXLIB == False:
     DensityDict = {index[0]:index[1] for index in ElementsInfo}
     Energies = [index[3] for index in ElementsInfo]
     kbEnergies = [index[4] for index in ElementsInfo]
+    plottables_dict = {}
+    for elt in ElementList:
+        plottables_dict[elt] = [Energies[ElementList.index(elt)], 
+            kbEnergies[ElementList.index(elt)]]
 
 # Energy lists where updated to use xraylib values:
 if USEXLIB == True: Energies, kbEnergies, plottables_dict = set_energies_from_xlib()
+if USEXLIB == True: DensityDict = set_densities_from_xlib()
 
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
