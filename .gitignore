@@ -11,4 +11,8 @@ output\
 \output
 .ipynb_checkpoints\
 \.ipynb_checkpoints
+build\
+\build
+__pycache__\
+\__pycache\
 config.MC.cfg
