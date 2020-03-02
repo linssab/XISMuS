@@ -10,15 +10,6 @@ import llvmlite
 PYTHON_INSTALL_DIR = os.path.dirname(os.path.dirname(os.__file__))
 os.environ['TCL_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
-mkls_path = r"C:\Users\sergi\Miniconda3\Library\bin" 
-lib = []
-lib.append((os.path.join(mkls_path,"libiomp5md.dll"), ".\\MKLs\\libiomp5md.dll"))
-lib.append((os.path.join(mkls_path,"libmmd.dll"), ".\\MKLs\\libmmd.dll"))
-lib.append((os.path.join(mkls_path,"libifcoremd.dll"), ".\\MKLs\\libifcoremd.dll")) 
-lib.append((os.path.join(mkls_path,"libimalloc.dll"), ".\\MKLs\\libimalloc.dll"))
-
-mkls_ = [(os.path.join(mkls_path, mkl),".\\MKLs\\"+mkl) for mkl in os.listdir(mkls_path) if mkl.lower().startswith("mkl")]
-for lib_file in lib: mkls_.append((lib_file))
 
 includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png"),\
                 (".\\images\\icons\\img_anal.png",".\\images\\icons\\img_anal.png"),\
@@ -51,18 +42,41 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                     os.path.join('lib', 'tcl86t.dll')),
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tk86t.dll'), 
                     os.path.join('lib', 'tk86t.dll'))]
+
+
+mkls_path = os.path.join(os.path.dirname(os.path.dirname(os.__file__)),"Library","bin")
+
+lib = []
+lib.append((os.path.join(mkls_path,"libiomp5md.dll"), ".\\MKLs\\libiomp5md.dll"))
+lib.append((os.path.join(mkls_path,"libmmd.dll"), ".\\MKLs\\libmmd.dll"))
+lib.append((os.path.join(mkls_path,"libifcoremd.dll"), ".\\MKLs\\libifcoremd.dll")) 
+lib.append((os.path.join(mkls_path,"libimalloc.dll"), ".\\MKLs\\libimalloc.dll"))
+
+mkls_ = [(os.path.join(mkls_path, mkl),".\\MKLs\\"+mkl) for mkl in os.listdir(mkls_path) if mkl.lower().startswith("mkl")]
+for lib_file in lib: mkls_.append((lib_file))
 for mkl in mkls_: includefiles_list.append(mkl)
 
-training_data = [item for item in os.listdir("C:\\samples\\misure\\") if \
+################################# LOCAL FILES ###############################
+
+training_data1 = [item for item in os.listdir("C:\\samples\\misure\\") if \
+        item.lower().endswith(".mca") or item.lower().endswith(".txt")]
+training_data2 = [item for item in os.listdir("C:\\samples\\campioneperu\\") if \
         item.lower().endswith(".mca") or item.lower().endswith(".txt")]
 
-for item in training_data:
+for item in training_data1:
     path = "C:\\samples\\misure\\"+item
-    new_path = ".\\training_data\\"+item
+    new_path = ".\\training_data1\\"+item
     includefiles_list.append((path,new_path))
 
+for item in training_data2:
+    path = "C:\\samples\\campioneperu\\"+item
+    new_path = ".\\training_data2\\"+item
+    includefiles_list.append((path,new_path))
+
+##################################### END ###################################
+
 with open(".\\folder.ini","w+") as inifile:
-    inifile.write(".\\training_data\\")
+    inifile.write(os.getcwd())
 
 with open(".\\config.cfg","w+") as cfgfile:
     configdict = {'directory': None,'bgstrip':"SNIPBG",\
