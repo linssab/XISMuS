@@ -7,6 +7,19 @@ import scipy
 import numba
 import llvmlite
 
+PYTHON_INSTALL_DIR = os.path.dirname(os.path.dirname(os.__file__))
+os.environ['TCL_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
+os.environ['TK_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
+mkls_path = r"C:\Users\sergi\Miniconda3\Library\bin" 
+lib = []
+lib.append((os.path.join(mkls_path,"libiomp5md.dll"), ".\\MKLs\\libiomp5md.dll"))
+lib.append((os.path.join(mkls_path,"libmmd.dll"), ".\\MKLs\\libmmd.dll"))
+lib.append((os.path.join(mkls_path,"libifcoremd.dll"), ".\\MKLs\\libifcoremd.dll")) 
+lib.append((os.path.join(mkls_path,"libimalloc.dll"), ".\\MKLs\\libimalloc.dll"))
+
+mkls_ = [(os.path.join(mkls_path, mkl),".\\MKLs\\"+mkl) for mkl in os.listdir(mkls_path) if mkl.lower().startswith("mkl")]
+for lib_file in lib: mkls_.append((lib_file))
+
 includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png"),\
                 (".\\images\\icons\\img_anal.png",".\\images\\icons\\img_anal.png"),\
                 (".\\images\\icons\\img_anal.ico",".\\images\\icons\\img_anal.ico"),\
@@ -33,7 +46,12 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                 ".\\config.cfg",\
                 ".\\logfile.log",\
                 ".\\settings.tag",\
-                ".\\fitconfigGUI.cfg"]
+                ".\\fitconfigGUI.cfg",
+                (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'), 
+                    os.path.join('lib', 'tcl86t.dll')),
+                (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tk86t.dll'), 
+                    os.path.join('lib', 'tk86t.dll'))]
+for mkl in mkls_: includefiles_list.append(mkl)
 
 training_data = [item for item in os.listdir("C:\\samples\\misure\\") if \
         item.lower().endswith(".mca") or item.lower().endswith(".txt")]
@@ -68,7 +86,6 @@ scipy_path = os.path.dirname(scipy.__file__)
 numba_path = os.path.dirname(numba.__file__)
 includefiles_list.append(scipy_path)
 includefiles_list.append(numba_path)
-#includefiles_list.append(r'C:\\Users\\sergi\\Miniconda3\\lib\\site-packages\\numba')
 includefiles_list.append(r"C:\Users\sergi\Miniconda3\Lib\site-packages\mpl_toolkits")
 
 for item in includefiles_list:
@@ -83,8 +100,8 @@ def load_sqlite3(finder, module):
         dll_path = os.path.join(sys.base_prefix, "DLLs", dll_name)
         finder.IncludeFiles(dll_path, dll_name)
 
-executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
-#executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
+#executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
+executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
 
 cx_Freeze.setup(
         name = "XISMuS",
