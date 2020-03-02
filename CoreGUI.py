@@ -41,6 +41,7 @@ def openURL(url):
 
 
 def place_topright(window1,window2):
+    global LOW_RES
     
     # adapted from: https://stackoverflow.com/questions/3352918/
     """ Places window2 next to window1 top-right end """ 
@@ -60,8 +61,18 @@ def place_topright(window1,window2):
     
     x = window1.winfo_rootx() + width
     y = window1.winfo_rooty() - titlebar_height
-    window2.geometry('{}x{}+{}+{}'.format(width2, height2, x, y))
-    window2.deiconify()
+
+    if LOW_RES != None:
+        window2.geometry("{}x{}+{}+{}".format(width2, height2, x, y))
+        window2.deiconify()
+    elif LOW_RES == "high":
+        width = window2.winfo_screenwidth()
+        height = window2.winfo_screenheight()
+        w_width = window2.winfo_width()
+        w_height = window2.winfo_height()
+        window2.geometry("{}x{}+{}+{}".format(w_width,w_height,\
+                int((width/2)-(w_width/2)),int((height/2)-(w_height/2))))
+        window2.deiconify()
 
 def place_center(window1,window2):
     
@@ -294,8 +305,8 @@ class Welcome:
         __self__.page = StringVar()
         __self__.tag = BooleanVar()
         __self__.infotext = StringVar()
-        __self__.messages = ["Welcome to Piratininga Sample Manager {}\n\nClick the left or right arrows to navigate.".format(VERSION),\
-                "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, Piratininga SM looks for mca files under C:\\Samples\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nPiratininga SM also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
+        __self__.messages = ["Welcome to XISMuS {}\n\nClick the left or right arrows to navigate.".format(VERSION),\
+                "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, XISMuS looks for mca files under C:\\Samples\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nXISMuS also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
         __self__.current_page = 1
         __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
         __self__.tag.set(False)
@@ -1753,6 +1764,10 @@ class MainGUI:
     # wipe()
 
     def __init__(__self__):
+        global LOW_RES
+        if LOW_RES == "extreme": 
+            quit = messagebox.showinfo("WARNING","Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
+            if quit == "ok": sys.exit()
         logging.info("Initializing program...")
         f = open(".\\settings.tag","r")
         for line in f:
@@ -1773,7 +1788,7 @@ class MainGUI:
         __self__.ImageAnalyzers = [] #everytime ImgAnalyzer API is opened, instance is appended
         __self__.ConfigDiag = None
         
-        __self__.master.title("Piratininga SM {}".format(VERSION))
+        __self__.master.title("XISMuS {}".format(VERSION))
         __self__.master.resizable(False,False)
         __self__.sample_figure = Figure(figsize=(3,2), dpi=100)
         __self__.sample_plot =__self__.sample_figure.add_subplot(111)
@@ -3374,6 +3389,8 @@ class PeriodicTable:
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
 
 def check_screen_resolution(resolution_tuple):
+    global LOW_RES
+    LOW_RES = None
     pop = Tk()
     pop.withdraw()
     limit_w, limit_h = resolution_tuple[0], resolution_tuple[1]
@@ -3384,6 +3401,9 @@ def check_screen_resolution(resolution_tuple):
     if w > limit_w or h > limit_h:
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too small or if any problems are experienced with buttons and icons, please try lowering your screen resolution and setting the Windows scaling option to 100%.".format(w,h))
     elif w < limit_w and h < limit_h:
+        LOW_RES = "moderate"
+        if 800 < w <= 1024 or 600 < h <= 768: LOW_RES = "high"
+        elif w <= 640 or h <= 480: LOW_RES = "extreme"
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too large, off-scale or if any problems are experienced with buttons and icons, please try increasing your screen resolution. Shall problems persist, verify your Windows scaling option.".format(w,h))
     pop.destroy()
 
@@ -3395,10 +3415,31 @@ def license_error(version):
     pop.destroy()
     raise PermissionError("Machine unauthorized")
 """
+def _init_numpy_mkl():
+    import os
+    import ctypes
+    if os.name != 'nt':
+        return
+    # disable Intel Fortran default console event handler
+    env = 'FOR_DISABLE_CONSOLE_CTRL_HANDLER'
+    if env not in os.environ:
+        os.environ[env] = '1'
+    try:
+        _core = ".\\MKLs"
+        print(os.path.join(_core, "mkl_intel_thread"))
+        for _dll in ('mkl_rt', 'libiomp5md', 'mkl_core', 'mkl_intel_thread', 
+                     'libmmd', 'libifcoremd', 'libimalloc'):
+            ctypes.cdll.LoadLibrary(os.path.join(_core,_dll))
+            print("Loaded {}".format(_dll))
+    # preload MKL DLLs from numpy.core
+    except Exception:
+        pass
 
 if __name__.endswith('__main__'):         
     
     optimum_resolution = (1920,1080)
+    _init_numpy_mkl()
+    del _init_numpy_mkl
 
     # tcl/Tk imports
     try:
