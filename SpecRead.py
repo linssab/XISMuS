@@ -25,34 +25,9 @@ def get_samples_folder(inifile):
     ini.close() 
     return folder
 
-samples_folder = get_samples_folder(os.getcwd()+"\\folder.ini")
+samples_folder = get_samples_folder(os.path.join(os.getcwd(),"folder.ini"))
 logging.info("Samples path: {0}".format(samples_folder))
 FIRSTFILE_ABSPATH = None
-
-def findprefix():
-    
-    """ Read all files in the selected_sample_folder variable set by the user through GUI
-    and returns the path to the dataset first spectrum file """
-
-    mca_prefix = 'None'
-    files = [name for name in os.listdir(selected_sample_folder)]
-    for item in range(len(files)): 
-        try:
-            files[item] = files[item].split("_",1)[0]
-        except: pass
-    counter = dict((x,files.count(x)) for x in files)
-    mca_prefix_count = 0
-    for counts in counter:
-        if counter[counts] > mca_prefix_count:
-            mca_prefix = counts
-            mca_prefix_count = counter[counts]
-    if os.path.exists(selected_sample_folder+mca_prefix+"_1.mca"): 
-        firstfile_path = selected_sample_folder+mca_prefix+"_1.mca"
-    elif os.path.exists(selected_sample_folder+mca_prefix+"_1.txt"): 
-        firstfile_path = selected_sample_folder+mca_prefix+"_1.txt"
-    else: raise IOError("No mca or txt file with prefix {1} found in directory {0}".\
-            format(selected_sample_folder,mca_prefix))
-    return firstfile_path
 
 def getfirstfile():
     
@@ -74,14 +49,14 @@ def setup(prefix, extension):
     DIRECTORY = CONFIG.get("directory")
     
     # build paths
-    selected_sample_folder = samples_folder+DIRECTORY+"\\"
+    selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
     workpath = os.getcwd()
-    cube_path = workpath+"\output\\"+DIRECTORY+"\\"+DIRECTORY+".cube"
-    output_path = workpath+"\output\\"+DIRECTORY+"\\"
-    dimension_file = selected_sample_folder + "\colonneXrighe.txt"
+    cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
+    output_path = os.path.join(workpath,"output",DIRECTORY)
+    dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
     
     # builds path to first spectrum file
-    FIRSTFILE_ABSPATH = selected_sample_folder+prefix+"_1."+extension
+    FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder,prefix+"_1."+extension)
     global_list =  [CONFIG, CALIB, DIRECTORY, 
             samples_folder, selected_sample_folder, workpath, 
             cube_path, output_path, dimension_file, 
@@ -100,11 +75,11 @@ def setup_from_datacube(datacube,sample_database):
     DIRECTORY = CONFIG.get("directory")
     
     # build sample paths
-    selected_sample_folder = samples_folder+DIRECTORY+"\\"
+    selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
     workpath = os.getcwd()
-    cube_path = workpath+"\output\\"+DIRECTORY+"\\"+DIRECTORY+".cube"
-    output_path = workpath+"\output\\"+DIRECTORY+"\\"
-    dimension_file = selected_sample_folder + "\colonneXrighe.txt"
+    cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
+    output_path = os.path.join(workpath,"output",DIRECTORY)
+    dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
     
     try: FIRSTFILE_ABSPATH = sample_database[DIRECTORY]
     except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
@@ -129,13 +104,13 @@ def conditional_setup(name='None'):
     
     # build paths
     DIRECTORY = CONFIG.get("directory")
-    selected_sample_folder = samples_folder+DIRECTORY+"\\"
+    selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
     workpath = os.getcwd()
-    cube_path = workpath+"\output\\"+DIRECTORY+"\\"+DIRECTORY+".cube"
-    output_path = workpath+"\output\\"+DIRECTORY+"\\"
-    dimension_file = selected_sample_folder+"\colonneXrighe.txt"
+    cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
+    output_path = os.path.join(workpath,"output",DIRECTORY)
+    dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
     
-    FIRSTFILE_ABSPATH = selected_sample_folder+"\\"+name
+    FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder, name)
 
     global_list =  [CONFIG, CALIB, DIRECTORY,
             samples_folder, selected_sample_folder, workpath,
@@ -363,7 +338,9 @@ def updatespectra(specfile,size):
     
     if int(index) < size: index = str(int(index)+1)
     else: index = str(size)
-    newfile = samples_folder+CONFIG["directory"]+"\\"+str(prefix+"_"+index+"."+extension)
+    newfile = os.path.join(samples_folder,
+            CONFIG["directory"],
+            str(prefix+"_"+index+"."+extension))
     return newfile
 
 def getdimension():

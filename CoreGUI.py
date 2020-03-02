@@ -695,8 +695,8 @@ class PeakClipper:
         folder = SpecRead.CONFIG.get('directory')
         spec_no = root.mcacount[folder]
         __self__.sample = random.randint(1,spec_no)
-        mca = SpecRead.selected_sample_folder + \
-                root.samples[folder] + "_{0}.{1}".format(__self__.sample,root.mca_extension[folder])
+        mca = os.path.join(SpecRead.selected_sample_folder,
+                root.samples[folder]+"_{0}.{1}".format(__self__.sample,root.mca_extension[folder]))
         __self__.spectrum = SpecRead.getdata(mca)
         if isinstance(__self__.spectrum,np.ndarray):
             __self__.refresh_plot() 
@@ -1588,7 +1588,61 @@ class Samples:
                             __self__.samples_database[folder] = mca_prefix
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
-                
+
+            """ If no samples are found, try looking for training_data """
+
+            if __self__.samples_database == {}:
+                folder = "training_data"
+                new_path = ".\\training_data\\"
+                #SpecRead.samples_folder = os.path.join(os.getcwd(),"training_data")
+                SpecRead.samples_folder = os.getcwd()
+                if os.path.exists(".\\output\\{}\\".format(folder)):
+                    for name in os.listdir(".\\output\\{}".format(folder)):
+                        if name.lower().endswith(".cube"):
+                            __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
+                            __self__.label2.update()
+                            try: __self__.splash.update_idletasks()
+                            except: __self__.popup.update_idletasks()
+                            finally: pass
+                            skip_list.append(name.split(".cube")[0])
+
+                if os.path.exists(new_path):
+                    files = [name for name in os.listdir(new_path) if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                    extension = files[:]
+                    for item in range(len(files)): 
+                        # displays file being read on splash screen
+                        __self__.filequeue.set("{}".format(files[item]))
+                        __self__.label2.update()
+                        try: __self__.splash.update_idletasks()
+                        except: __self__.popup.update_idletasks()
+                        finally: pass
+                        try:
+                            files[item], extension[item] = \
+                                    files[item].split("_",1)[0], files[item].split(".",1)[1]
+                        except: pass
+                        files_set = set(files)
+                        extension_set = set(extension)
+                        counter = dict((x,files.count(x)) for x in files_set)
+                        counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                        mca_prefix_count = 0
+                        mca_extension_count = 0
+                        # counts mca files and stores the prefix string and no. of files
+                        for counts in counter:
+                            if counter[counts] > mca_prefix_count:
+                                mca_prefix = counts
+                                mca_prefix_count = counter[counts]
+                        for ext in counter_ext:
+                            if counter_ext[ext] > mca_extension_count:
+                                mca_extension = ext
+                                mca_extension_count = counter_ext[ext]
+                        # creates a dict key only if the numer of mca's is larger than 20.
+                        if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                            __self__.samples_database[folder] = mca_prefix
+                            __self__.mcacount[folder] = len(files)
+                            __self__.mca_extension[folder] = mca_extension
+                            
+            """ Verify packed cubes """
+
             output_folder = ".\\output\\"
             outputs = [folder for folder in os.listdir(output_folder) \
                     if os.path.isdir(output_folder + folder)]
@@ -1976,6 +2030,9 @@ class MainGUI:
                 maxima[element] = 0
         for cube in maps:
             packed_maps.append(maps[cube])
+        if packed_maps == []:
+            no_map = messagebox.showinfo("No Maps!","No compiled maps are present in the set of samples selected!")
+            if no_map == "ok": return
         #print(set.intersection(*map(set,packed_maps)))
         element_maps = set.intersection(*map(set,packed_maps))
         
@@ -2852,15 +2909,13 @@ class ConfigDiag:
             dm_file.write(5*"*"+" user input data "+5*"*")
             dm_file.close()
 
-        if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
-            
+        if os.path.exists(os.path.join(SpecRead.samples_folder, configdict["directory"])):
             SpecRead.DIRECTORY = configdict["directory"] + '\\'
-            SpecRead.selected_sample_folder = \
-                    SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
-            SpecRead.FIRSTFILE_ABSPATH = SpecRead.selected_sample_folder \
-                    + root.samples[configdict["directory"]] \
-                    + "_1." \
-                    + root.mca_extension[configdict["directory"]]
+            SpecRead.selected_sample_folder = os.path.join(SpecRead.samples_folder, 
+                    SpecRead.DIRECTORY)
+            SpecRead.FIRSTFILE_ABSPATH = os.path.join(SpecRead.selected_sample_folder,
+                    root.samples[configdict["directory"]]+\
+                    "_1."+root.mca_extension[configdict["directory"]])
 
             # reads configuration integrity prior opening config.cfg for writing
             if configdict['calibration'] == 'manual': 
