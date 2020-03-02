@@ -62,7 +62,7 @@ def place_topright(window1,window2):
     x = window1.winfo_rootx() + width
     y = window1.winfo_rooty() - titlebar_height
 
-    if LOW_RES != None:
+    if LOW_RES == None:
         window2.geometry("{}x{}+{}+{}".format(width2, height2, x, y))
         window2.deiconify()
     elif LOW_RES == "high":
@@ -1047,7 +1047,13 @@ class ImageAnalyzer:
             __self__.annotate.config(bg="yellow")
             __self__.annotator = Annotator(__self__) 
             __self__.plot = PlotWin(__self__.master)
-            place_topright(__self__.master, __self__.plot.master)
+            global LOW_RES
+            if LOW_RES == None:
+                place_topright(__self__.master, __self__.plot.master)
+            elif LOW_RES == "moderate":
+                spawn_center(__self__.plot.master)
+            elif LOW_RES == "high":
+                place_center(__self__.master, __self__.plot.master)
             __self__.plot.draw_selective_sum(__self__.DATACUBE,
                     __self__.DATACUBE.sum,
                     root.plot_display)
@@ -1265,7 +1271,6 @@ class PlotWin:
         __self__.plot.set_ylabel("Energy (KeV)")
         __self__.plot.set_xlabel("Channel")
         __self__.plot.legend()
-        place_topright(__self__.master.master,__self__.master)
 
     def draw_spec(__self__,mode,display_mode=None,lines=False):
         __self__.master.tagged = False
@@ -1345,7 +1350,6 @@ class PlotWin:
             __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=roi_label)
         __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum,label="Sum spectrum",color="blue")
         __self__.plot.legend()
-        place_topright(__self__.master.master,__self__.master)
 
     def draw_correlation(__self__,corr,labels):
         plot_font = {'fontname':'Times New Roman','fontsize':10}
@@ -2232,19 +2236,19 @@ class MainGUI:
         master = __self__.master
         __self__.summation = PlotWin(master)
         __self__.summation.draw_spec(mode=['summation'],display_mode=root.plot_display,lines=False)
-        place_topright(__self__.master,__self__.summation.master)
+        spawn_center(__self__.summation.master)
     
     def call_mps(__self__):
         master = __self__.master
         __self__.MPS = PlotWin(master)
         __self__.MPS.draw_spec(mode=['mps'],display_mode=root.plot_display,lines=False)
-        place_topright(__self__.master,__self__.MPS.master)
+        spawn_center(__self__.MPS.master)
     
     def call_combined(__self__):
         master = __self__.master
         __self__.combined = PlotWin(master)
         __self__.combined.draw_spec(mode=['summation','mps'],display_mode=root.plot_display,lines=False)
-        place_topright(__self__.master,__self__.combined.master)
+        spawn_center(__self__.combined.master)
 
     def call_settings(__self__):
         try:
