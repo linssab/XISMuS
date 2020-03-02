@@ -1595,7 +1595,7 @@ class Samples:
                 folder = "training_data"
                 new_path = ".\\training_data\\"
                 #SpecRead.samples_folder = os.path.join(os.getcwd(),"training_data")
-                SpecRead.samples_folder = os.getcwd()
+                SpecRead.samples_folder = ".\\"
                 if os.path.exists(".\\output\\{}\\".format(folder)):
                     for name in os.listdir(".\\output\\{}".format(folder)):
                         if name.lower().endswith(".cube"):
