@@ -773,7 +773,7 @@ def peakstrip(an_array,cycles,width,*args):
         if smooth_sqr[i] < 0: smooth_sqr[i] = 0
     
     ######### NUMBA PRESENTS SERIOUS ISSUES DEPENDING ON VERSION ########
-    ######### THIS SNIPPET WORKS WITH NUMBA 0.42.1 !!!
+    ######### THIS SNIPPET WORKS WITH NUMBA 0.42.1 (win10 only) and 0.45.1 (win7 and win10)!!!
     # strip peaks
     # numba functions do not return an output, the output must be passed as an argument.
     # in this case, smooth_sqr is CHANGED.

@@ -1,9 +1,8 @@
 import cx_Freeze
 import sys
-import os
+import os, opcode
 from CoreGUI import VERSION
 
-import scipy
 import numba
 import llvmlite
 
@@ -37,7 +36,6 @@ includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png")
                 ".\\config.cfg",\
                 ".\\logfile.log",\
                 ".\\settings.tag",\
-                ".\\fitconfigGUI.cfg",
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'), 
                     os.path.join('lib', 'tcl86t.dll')),
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tk86t.dll'), 
@@ -56,27 +54,8 @@ mkls_ = [(os.path.join(mkls_path, mkl),".\\MKLs\\"+mkl) for mkl in os.listdir(mk
 for lib_file in lib: mkls_.append((lib_file))
 for mkl in mkls_: includefiles_list.append(mkl)
 
-################################# LOCAL FILES ###############################
-
-training_data1 = [item for item in os.listdir("C:\\samples\\misure\\") if \
-        item.lower().endswith(".mca") or item.lower().endswith(".txt")]
-training_data2 = [item for item in os.listdir("C:\\samples\\campioneperu\\") if \
-        item.lower().endswith(".mca") or item.lower().endswith(".txt")]
-
-for item in training_data1:
-    path = "C:\\samples\\misure\\"+item
-    new_path = ".\\training_data1\\"+item
-    includefiles_list.append((path,new_path))
-
-for item in training_data2:
-    path = "C:\\samples\\campioneperu\\"+item
-    new_path = ".\\training_data2\\"+item
-    includefiles_list.append((path,new_path))
-
-##################################### END ###################################
-
 with open(".\\folder.ini","w+") as inifile:
-    inifile.write(os.getcwd())
+    inifile.write(".\\")
 
 with open(".\\config.cfg","w+") as cfgfile:
     configdict = {'directory': None,'bgstrip':"SNIPBG",\
@@ -96,11 +75,14 @@ with open(".\\config.cfg","w+") as cfgfile:
 with open(".\\logfile.log","w+") as logfile:
     logfile.write(" ")
 
-scipy_path = os.path.dirname(scipy.__file__)
+###########################################################################
+
+""" USE IF NEEDED
 numba_path = os.path.dirname(numba.__file__)
-includefiles_list.append(scipy_path)
+llvmlite_path = os.path.dirname(llvmlite.__file__)
 includefiles_list.append(numba_path)
-includefiles_list.append(r"C:\Users\sergi\Miniconda3\Lib\site-packages\mpl_toolkits")
+includefiles_list.append(llvmlite_path)
+"""
 
 for item in includefiles_list:
     print(item)
@@ -114,17 +96,19 @@ def load_sqlite3(finder, module):
         dll_path = os.path.join(sys.base_prefix, "DLLs", dll_name)
         finder.IncludeFiles(dll_path, dll_name)
 
-#executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
-executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
+""" Creates an executable without prompt """
+executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico", base="Win32GUI")]
+""" Creates an executable that opens the prompt (cmd) """
+#executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]
 
 cx_Freeze.setup(
         name = "XISMuS",
         options = {"build_exe":{\
-                "packages":["llvmlite","tkinter","cv2","math","pickle","logging",\
-                "xraylib","matplotlib"],\
-                #"mpl_toolkits"],\
+                "packages":["tkinter","cv2",\
+                "xraylib","matplotlib","numpy","llvmlite", "numba"],\
                 
-                "includes":["numpy","tkinter"],
+                "includes":[],
+                "excludes":[],
                  
                 "include_files":includefiles_list}},
                 version = VERSION,
