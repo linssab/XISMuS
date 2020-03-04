@@ -144,7 +144,7 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
 
 def getpeakmap(element_list,datacube):
     timer = time.time()
-    imagsize = SpecRead.getdimension()
+    imagsize = datacube.dimension
     imagex = imagsize[0]
     imagey = imagsize[1]
     dimension = imagex*imagey
