@@ -27,16 +27,15 @@ from ImgMath import LEVELS
 from Mapping import getdensitymap
 
 # import other modules
-# scipy.signal will be removed in future versions
 import matplotlib.pyplot as plt
 logging.debug("Importing numba jit...")
-try: from numba import jit
-except: logging.warning("Could not import numba package.")
+try:
+    from numba import jit
+except:
+    print("Failed to load numba")
 logging.debug("Importing module math...")
 import math
-logging.debug("Importing module scipy.signal...")
-try: import scipy.signal
-except: logging.warning("Could not import scipy package.")
+from math import factorial
 logging.info("Finished SpecMath imports.")
 
 from tkinter import *
@@ -433,6 +432,37 @@ def getdif2(ydata,xdata,gain):
     dif2curve = dif2curve[1:-3]
     return dif2curve
 
+def savgol_filter(y, window_size, order, deriv=0, rate=1):
+   
+    """ This function was taken from https://gist.github.com/krvajal 
+    and compared to scipy.signal package, an affidable and renown package
+    for signal analysis. """
+    """ References
+    .. [1] A. Savitzky, M. J. E. Golay, Smoothing and Differentiation of
+       Data by Simplified Least Squares Procedures. Analytical
+       Chemistry, 1964, 36 (8), pp 1627-1639.
+    .. [2] Numerical Recipes 3rd Edition: The Art of Scientific Computing
+       W.H. Press, S.A. Teukolsky, W.T. Vetterling, B.P. Flannery
+       Cambridge University Press ISBN-13: 9780521880688 """
+
+    try:
+        window_size = np.abs(np.int(window_size))
+        order = np.abs(np.int(order))
+    except ValueError as msg:
+        raise ValueError("window_size and order have to be of type int")
+    if window_size % 2 != 1 or window_size < 1:
+        raise TypeError("window_size size must be a positive odd number")
+    if window_size < order + 2:
+        raise TypeError("window_size is too small for the polynomials order")
+    order_range = range(order+1)
+    half_window = (window_size -1) // 2
+    b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
+    m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
+    firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
+    lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
+    y = np.concatenate((firstvals, y, lastvals))
+    return np.convolve( m[::-1], y, mode='valid')
+
 def energyaxis():
     
     """ Returns the energyaxis array according to input calibration parameters (anchors) """
@@ -522,7 +552,7 @@ def setROI(lookup,xarray,yarray,localconfig):
     
     if localconfig.get('bgstrip') == 'SNIPBG' and\
     localconfig.get('peakmethod') != 'PyMcaFit': 
-        yarray  = scipy.signal.savgol_filter(yarray,5,3)
+        yarray  = savgol_filter(yarray,5,3)
     
     logging.debug("-"*15 + " Setting ROI " + "-"*15)
     
@@ -733,30 +763,28 @@ def peakstrip(an_array,cycles,width,*args):
     if len(args) > 0:
         savgol_window,order = args[0],args[1]
         try: 
-            smooth_sqr = scipy.signal.savgol_filter(sqr_data,savgol_window,order)
+            smooth_sqr = savgol_filter(sqr_data,savgol_window,order)
         except:
             raise ValueError
-    else: smooth_sqr = scipy.signal.savgol_filter(sqr_data,width,3)
+    else: 
+        smooth_sqr = savgol_filter(sqr_data,width,3)
     
     for i in range(smooth_sqr.shape[0]): 
         if smooth_sqr[i] < 0: smooth_sqr[i] = 0
     
-    #strip peaks
-    snip_bg = strip(smooth_sqr,cycles,width)
+    # strip peaks
+    # numba functions do not return an output, the output must be passed as an argument.
+    # in this case, smooth_sqr is CHANGED.
+    
+    strip(smooth_sqr,cycles,width)
+    
+    # points snip_bg to the 
+    # transformed smooth_sqr after applying the strip function
+    snip_bg = smooth_sqr[:] 
 
     #transform back
     snip_bg **= 2
-   
-    #apply savgol filter to final background
-    #if len(args) > 0:
-    #    savgol_window,order = args[0],args[1]
-    #    try: smooth_sqr = scipy.signal.savgol_filter(snip_bg,savgol_window,order)
-    #    except:
-    #        raise ValueError
-    #else: 
-    #    snip_bg, width = 5,5
-    #    smooth_sqr = scipy.signal.savgol_filter(snip_bg,width,3)
-    
+       
     if TEST == True:
         plt.semilogy(snip_bg,label="background")
         plt.semilogy(an_array,label="spectrum")
