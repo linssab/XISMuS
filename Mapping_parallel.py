@@ -19,7 +19,6 @@ from matplotlib import pyplot as plt
 from SpecMath import getpeakarea, refresh_position, setROI, getdif2, Busy
 from EnergyLib import ElementList, Energies, kbEnergies
 from ImgMath import interpolate_zeros, split_and_save
-from numba import jit
 
 def convert_bytes(num):
     """
