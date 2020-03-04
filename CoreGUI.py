@@ -3466,14 +3466,6 @@ def check_screen_resolution(resolution_tuple):
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too large, off-scale or if any problems are experienced with buttons and icons, please try increasing your screen resolution. Shall problems persist, verify your Windows scaling option.".format(w,h))
     pop.destroy()
 
-"""
-def license_error(version):
-    pop = Tk()
-    pop.withdraw()
-    messagebox.showerror("License error!","Even though this is an open source software, this is a beta UNRELEASED version made by the author. To run this specific version of the software your machine has to be authorized beforehand. This is done to avoid an unexperienced user of producing biased or wrong information with this current unreleased version {0}, which contains known bugs. Further information can be provided upon contacting the author: sergio.lins@roma3.infn.it".format(version))
-    pop.destroy()
-    raise PermissionError("Machine unauthorized")
-"""
 def _init_numpy_mkl():
     import os
     import ctypes
@@ -3485,12 +3477,10 @@ def _init_numpy_mkl():
         os.environ[env] = '1'
     try:
         _core = ".\\MKLs"
-        print(os.path.join(_core, "mkl_intel_thread"))
         for _dll in ('mkl_rt', 'libiomp5md', 'mkl_core', 'mkl_intel_thread', 
                      'libmmd', 'libifcoremd', 'libimalloc'):
             ctypes.cdll.LoadLibrary(os.path.join(_core,_dll))
             print("Loaded {}".format(_dll))
-    # preload MKL DLLs from numpy.core
     except Exception:
         pass
 
@@ -3511,7 +3501,7 @@ if __name__.endswith('__main__'):
         from Tkinter import ttk
         from Tkinter import messagebox
         from Tkinter import filedialog
-     
+
     # general utilities
     import numpy as np
     import cv2
