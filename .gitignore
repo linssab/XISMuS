@@ -5,7 +5,8 @@
 *.png
 *.ipynb
 *.svg
-local_setup.py
+*.ico
+converter.py
 timestamps.txt
 axis.txt
 output\
