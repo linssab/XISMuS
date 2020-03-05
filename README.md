@@ -19,12 +19,14 @@ If xraylib is not installed, the program will still run, but with some limited f
 Xraylib is used to extract precise x-rays physics data. Its absence will cause XISMuS to use its internal database, which may be outdated.
 <br>
 To run it within a Python interpreter, we recommend you have Python 3.7 installed and the following packages:<br>
-* numpy<br>
-* numba<br>
-* scipy<br>
-* cv2<br>
+The packages whose versions are mentioned are the stable versions working with XISMuS. Numba, for example, has some issues with cx_freeze and may cause JIT funtions to malfunction.<br>
+* numpy _v 1.18.1_<br>
+* numba _v 0.45.1_<br>
+* llvmlite _v 0.31_<br>
+* opencv<br>
 * psutil<br>
 * multiprocessing<br>
-* tkinter (for the Graphical User Interface)<br>
+* matplotlib
+* cx_Freeze _v 6.0_ (for compiling the software)<br>
 
 [xraylib]: http://lvserver.ugent.be/xraylib/xraylib-3.3.0-win64.exe
