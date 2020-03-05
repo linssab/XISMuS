@@ -5,8 +5,8 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import logging
-import os
+import logging, os
+from win32com.shell import shell, shellcon
 
 def pop_error(title,message):
 
@@ -18,9 +18,13 @@ def pop_error(title,message):
 
 """ Get working path and config.cfg path """
 
-workpath = os.getcwd()
-cfgfile = workpath + '\config.cfg'
-logging.debug("Importing module ReadConfig.py...")
+docs = shell.SHGetFolderPath(0, shellcon.CSIDL_PERSONAL, None, 0)
+__PERSONAL__ = os.path.join(docs,"XISMuS")
+__BIN__ = os.path.join(__PERSONAL__,"bin")
+
+cfgfile = os.path.join(__BIN__,"config.cfg")
+logger = logging.getLogger("logfile")
+logger.debug("Importing module ReadConfig.py...")
 
 def check_config():
     
@@ -138,11 +142,11 @@ def checkout_config():
     
     """ Re-sets Config.cfg file with default values if any tag is missing. """
     
-    cfgfile = os.getcwd() + '\config.cfg'
+    cfgfile = os.path.join(__BIN__,"config.cfg")
     lines, tags = [],[]
-    c_file = open(cfgfile, 'r')
+    c_file = open(cfgfile, "r")
     for line in c_file:
-        line = line.replace('\n','')
+        line = line.replace("\n","")
         lines.append(line)
     for sentence in lines:
         if "<<CONFIG_START>>" in sentence: tags.append(sentence)
@@ -187,4 +191,4 @@ def unpack_cfg():
     return CONFIG, CALIB
 
 if __name__ == "__main__":
-    logging.info("This is ReadConfig")
+    logger.info("This is ReadConfig")
