@@ -68,7 +68,15 @@ def getconfig():
                 line=line.replace('\n','')
                 line=line.replace('\t',' ')
                 aux = line.split()
-                modesdict['directory'] = str(aux[2])
+                # removes key and "="
+                aux.pop(0)
+                aux.pop(0)
+                directory = ""
+                # build up the folder name with spaces. can't have space at the end
+                for i in range(len(aux)):
+                    if i < len(aux)-1: directory += aux[i] + " "
+                    else: directory += aux[i]
+                modesdict['directory'] = directory
             if 'bgstrip' in line:
                 line=line.replace('\r','')
                 line=line.replace('\n','')
