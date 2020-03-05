@@ -6,8 +6,9 @@
 #################################################################
 
 import logging
-logging.debug("Importing module Mapping.py...")
-import sys
+logger = logging.getLogger("logfile")
+logger.debug("Importing module Mapping.py...")
+import sys, os
 import numpy as np
 import pickle
 import SpecMath
@@ -17,7 +18,7 @@ import ImgMath
 import matplotlib.pyplot as plt
 import time
 import cv2
-logging.debug("Finished Mapping imports.")
+logger.debug("Finished Mapping imports.")
 
 
 from tkinter import *
@@ -109,9 +110,9 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
         if cube.config["ratio"] == True:
             kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.sum,cube.config)
             if kb_idx[3] == False and ka_idx[3] == False:
-                logging.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
+                logger.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
             elif kb_idx[3] == False: 
-                logging.warning("No beta line {} detected. Continuing with alpha only.".format(lines[1]))
+                logger.warning("No beta line {} detected. Continuing with alpha only.".format(lines[1]))
         else:
             pass
         
@@ -167,12 +168,9 @@ def getpeakmap(element_list,datacube):
     KaElementsEnergy = EnergyLib.Energies
     KbElementsEnergy = EnergyLib.kbEnergies
     
-    logging.info("Started energy axis calibration")
+    logger.info("Started energy axis calibration")
     energyaxis = datacube.energyaxis
-    save_energy_axis = open(SpecRead.workpath + '/' + 'axis.txt','w+')
-    for i in range(energyaxis.shape[0]):
-        save_energy_axis.write("{0}\n".format(energyaxis[i]))
-    logging.info("Finished energy axis calibration")
+    logger.info("Finished energy axis calibration")
     current_peak_factor = 0
     max_peak_factor = 0
     ymax_spec = None
@@ -188,7 +186,7 @@ def getpeakmap(element_list,datacube):
     ######################################################
 
     if element_list[0] in EnergyLib.ElementList:
-        logging.info("Started acquisition of {0} map(s)".format(element_list))
+        logger.info("Started acquisition of {0} map(s)".format(element_list))
         
         ####### this is for debug mode #######
         currentspectra = SpecRead.FIRSTFILE_ABSPATH
@@ -224,13 +222,13 @@ def getpeakmap(element_list,datacube):
             kaindex[Element] = EnergyLib.ElementList.index(element_list[Element])
             kaenergy[Element] = KaElementsEnergy[kaindex[Element]]*1000
         
-            logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
+            logger.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                 .format(kaenergy[Element],element_list[Element]))
         
             if ratio == True:
-                ratiofiles[Element] = str(SpecRead.output_path+\
-                        '{1}_ratio_{0}.txt'.format(element_list[Element],SpecRead.DIRECTORY))
-                r_file = open(ratiofiles[Element],'w+')
+                ratiofiles[Element] = str(os.path.join(SpecRead.output_path,
+                        "{1}_ratio_{0}.txt".format(element_list[Element],SpecRead.DIRECTORY)))
+                r_file = open(ratiofiles[Element],"w+")
                 r_file.readline()
                 r_file.truncate()
                 r_file.write("-"*10 + " Counts of Element {0} "\
@@ -241,7 +239,7 @@ def getpeakmap(element_list,datacube):
                 kbindex[Element] = EnergyLib.ElementList.index(element_list[Element])
                 kbenergy[Element] = EnergyLib.kbEnergies[kbindex[Element]]*1000
                 r_file.close() 
-                logging.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
+                logger.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                         .format(kbenergy[Element],element_list[Element]))
         
         ################################
@@ -258,10 +256,10 @@ def getpeakmap(element_list,datacube):
                     kb_idx[Element] = SpecMath.setROI(kbenergy[Element],energyaxis,stacksum,configdict)
                     kb_peakdata[Element] = stacksum[kb_idx[Element][0]:kb_idx[Element][1]]
                     if kb_idx[Element][3] == False and ka_idx[Element][3] == False:
-                        logging.info("No alpha nor beta lines found for {}. Aborting...".\
+                        logger.info("No alpha nor beta lines found for {}. Aborting...".\
                                 format(element_list[Element]))
                     elif kb_idx[Element][3] == False: 
-                        logging.warning("No beta line detected for {}. Continuing with alpha only.".\
+                        logger.warning("No beta line detected for {}. Continuing with alpha only.".\
                                 format(element_list[Element]))
                         conditional_ratio[Element] = False
                 else:
@@ -271,7 +269,7 @@ def getpeakmap(element_list,datacube):
         #   STARTS ITERATION OVER SPECTRA BATCH     #
         #############################################
             
-        logging.info("Starting iteration over spectra...\n")
+        logger.info("Starting iteration over spectra...\n")
         
         # starts the loading bar
         progressbar = Busy(datacube.img_size,0) 
@@ -296,7 +294,7 @@ def getpeakmap(element_list,datacube):
                     usedif2 = True
                     #print("\tCHANNEL COUNT METHOD USED FOR FILE {0}/{1}!\t"\
                     #        .format(ITERATION,datacube.img_size))
-                    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
+                    logger.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
                             .format(ITERATION,datacube.img_size))
             elif peakmethod == 'simple_roi': specdata = specdata
             elif peakmethod == 'auto_roi': specdata = specdata
@@ -348,8 +346,8 @@ def getpeakmap(element_list,datacube):
             #  ITERATE OVER LIST OF ELEMENTS  #
             ###################################
             
-            logging.debug("current x = {0} / current y = {1}".format(currentx,currenty))
-            if debug == True: logging.info("Specfile being processed is: {0}\n".format(spec))
+            logger.debug("current x = {0} / current y = {1}".format(currentx,currenty))
+            if debug == True: logger.info("Specfile being processed is: {0}\n".format(spec))
  
             for Element in range(len(element_list)):
             
@@ -424,7 +422,7 @@ def getpeakmap(element_list,datacube):
 
                         elmap[currentx][currenty][1][Element] = kb
 
-                    logging.debug("ka {0}, kb {1}".format(ka,kb))
+                    logger.debug("ka {0}, kb {1}".format(ka,kb))
                     elmap[currentx][currenty][0][Element] = ka
                     if datacube.max_counts[element_list[Element]+"_a"] < ka:
                         datacube.max_counts[element_list[Element]+"_a"] = ka
@@ -443,7 +441,7 @@ def getpeakmap(element_list,datacube):
                         r_file = open(ratiofiles[Element],'a')
                         if debug == True: 
                             r_file.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
-                            logging.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
+                            logger.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
                                     .format(spec,ka,kb,element_list[Element]))
                         else:
                             if ka == 0: ka,kb,ka_kb = 0,0,0
@@ -451,7 +449,7 @@ def getpeakmap(element_list,datacube):
                             elif ka > 0 and kb > 0: ka_kb = ka/kb
                             r_file.write("%d\t%d\t%d\t%d\t%f\n" % (row, column, ka, kb, (ka_kb)))
                     except:
-                        logging.warning("ka and kb not calculated for some unknown reason.\
+                        logger.warning("ka and kb not calculated for some unknown reason.\
                     Check Config.cfg for the correct spelling of peakmethod option!\
                     ka={0},kb={1}".format(ka,kb))
 
@@ -473,23 +471,26 @@ def getpeakmap(element_list,datacube):
         #  OVER THE BATCH OF SPECTRA   #
         ################################
         
-        logging.info("Finished iteration process for element(s) {0}".format(element_list))
+        logger.info("Finished iteration process for element(s) {0}".format(element_list))
         
         
         timestamp = time.time() - partialtimer
-        logging.info("Execution took %s seconds" % (timestamp))
-        if peakmethod == 'PyMcaFit': logging.warning("Fit fail: {0}%".format(100*FITFAIL/dimension))
+        logger.info("Execution took %s seconds" % (timestamp))
+        if peakmethod == 'PyMcaFit': logger.warning("Fit fail: {0}%".format(100*FITFAIL/dimension))
         
-        timestamps = open(SpecRead.workpath + '/timestamps.txt'\
-                    .format(Element,SpecRead.DIRECTORY),'a')
-        timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n"\
-                    .format(Element,bgstrip,normalize,peakmethod,timestamp,\
-                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),element_list))
+        timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+        timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n".format(Element,
+            bgstrip,
+            normalize,
+            peakmethod,
+            timestamp,
+            time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+            element_list))
        
-        logging.info("Finished map acquisition!")
+        logger.info("Finished map acquisition!")
     
     else:
-        logging.warning("{0} not an element!".format(element_list))
+        logger.warning("{0} not an element!".format(element_list))
         raise ValueError("{0} not an element!".format(element_list))
     
     if peakmethod == 'auto_roi': 
@@ -509,7 +510,7 @@ def getdensitymap(datacube):
     #####################################
 
     #print("BG mode: {0}".format(datacube.config.get('bgstrip')))
-    logging.info("Started acquisition of density map")
+    logger.info("Started acquisition of density map")
     
     density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]])
     for x in range(datacube.dimension[0]):
@@ -518,8 +519,8 @@ def getdensitymap(datacube):
             background = datacube.background[x][y]    
             density_map[x][y] = sum(spec)-sum(background)
      
-    logging.info("Finished fetching density map!")
-    logging.info("Execution took %s seconds" % (time.time() - timer))
+    logger.info("Finished fetching density map!")
+    logger.info("Execution took %s seconds" % (time.time() - timer))
     return density_map
 
 if __name__=="__main__":

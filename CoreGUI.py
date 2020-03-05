@@ -20,10 +20,10 @@ def start_up():
     """ Initializes SpecRead global variables and paths """
 
     SpecRead.conditional_setup()
-    logging.info("Setting up...")
+    logger.info("Setting up...")
     try: load_cube()
     except: pass
-    logging.info("Done.")
+    logger.info("Done.")
     global FIND_ELEMENT_LIST
     FIND_ELEMENT_LIST = []
 
@@ -221,8 +221,8 @@ def call_compilecube():
     try: 
         os.mkdir(SpecRead.output_path)
     except IOError as exception:
-        logging.warning("Error {}.".format(exception.__class__.__name__))
-        logging.warning("Can't create output folder {}".format(SpecRead.output_path))
+        logger.warning("Error {}.".format(exception.__class__.__name__))
+        logger.warning("Can't create output folder {}".format(SpecRead.output_path))
         #if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
         #else: exists = None
         #messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
@@ -238,7 +238,7 @@ def call_compilecube():
         root.StatusBox.insert(END, "\nStarting cube compilation.\n")
         root.StatusBox.insert(END, "\nImage size: {} x {}.\n".format(root.config_xy[0], root.config_xy[1]))
         root.StatusBox.insert(END, "\nSpectra count: {}.\n".format(root.mcacount[SpecRead.CONFIG["directory"]]))
-        logging.warning("Starting cube {} compilation!".format(SpecRead.CONFIG["directory"]))
+        logger.warning("Starting cube {} compilation!".format(SpecRead.CONFIG["directory"]))
         specbatch = Cube(['xrf'],SpecRead.CONFIG)
         fail = specbatch.compile_cube()
         root.ButtonLoad.config(state=NORMAL)
@@ -253,11 +253,11 @@ def prompt_folder():
 
     folder = filedialog.askdirectory()
     if folder != "":
-        ini_file = open(os.getcwd() + "\\folder.ini","w")
-        folder = folder.replace("/","\\")
-        ini_file.write(folder+"\\")
+        ini_file = open(os.path.join(SpecRead.__BIN__,"folder.ini"),"w")
+        #folder = folder.replace("/","\\")
+        ini_file.write(folder)
         ini_file.close()
-        SpecRead.samples_folder = folder+"\\"
+        SpecRead.samples_folder = folder
         root.refresh_samples()
     else:
         pass
@@ -269,16 +269,16 @@ def load_cube():
     latest SpecRead parameters. See setup conditions inside SpecRead module.
     Returns the datacube object """
 
-    logging.debug("Trying to load cube file.")
-    logging.debug(SpecRead.cube_path)
+    logger.debug("Trying to load cube file.")
+    logger.debug(SpecRead.cube_path)
     if os.path.exists(SpecRead.cube_path):
         cube_file = open(SpecRead.cube_path,'rb')
         global MY_DATACUBE
         MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
-        logging.debug("Loaded cube {} to memory.".format(cube_file))
+        logger.debug("Loaded cube {} to memory.".format(cube_file))
     else:
-        logging.debug("No cube found.")
+        logger.debug("No cube found.")
         MainGUI.toggle_(root,toggle='Off') 
         pass
     return MY_DATACUBE
@@ -379,7 +379,7 @@ class Welcome:
         if __self__.tag.get() == True:
             root.checker = False
             checker = False
-        inipath = os.getcwd() + "\settings.tag"
+        inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
         ini = open(inipath,'w+')
         ini.write("{}\n".format(SpecRead.samples_folder))
         ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
@@ -1474,17 +1474,19 @@ class Samples:
         __self__.label2.grid(row=1,column=0,sticky=W)
 
     def list_all(__self__):
-        logging.info("Loading sample list...")
+        logger.info("Loading sample list...")
         skip_list = []
         try:
             mca_prefix = None
             __self__.samples_database = {}
 
             samples = [name for name in os.listdir(SpecRead.samples_folder) \
-                    if os.path.isdir(SpecRead.samples_folder+name)]
+                    if os.path.isdir(os.path.join(SpecRead.samples_folder,name))]
+            
             for folder in samples:
-                if os.path.exists(".\\output\\{}\\".format(folder)):
-                    for name in os.listdir(".\\output\\{}".format(folder)):
+                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
+                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
+                        "output",folder)):
                         if name.lower().endswith(".cube"):
                             __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
                             __self__.label2.update()
@@ -1492,8 +1494,8 @@ class Samples:
                             except: __self__.popup.update_idletasks()
                             finally: pass
                             skip_list.append(name.split(".cube")[0])
-                files = [name for name in os.listdir(SpecRead.samples_folder+folder) \
-                        if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                files = [name for name in os.listdir(os.path.join(SpecRead.samples_folder,
+                    folder))if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                 extension = files[:]
                 if files == []: pass
                 else:
@@ -1535,15 +1537,18 @@ class Samples:
             the actual selected folder """
 
             if __self__.samples_database == {}:
-                local_path = SpecRead.samples_folder.split("\\")
-                folder = local_path.pop(-2)
+                local_path = SpecRead.samples_folder.split("/")
+                folder = local_path.pop(-1)
+                
+                # builds new path
                 new_path = ""
                 for name in local_path:
-                    new_path = new_path + name + "\\"
+                    new_path = new_path + name + "/"
                 SpecRead.samples_folder = new_path
 
-                if os.path.exists(".\\output\\{}\\".format(folder)):
-                    for name in os.listdir(".\\output\\{}".format(folder)):
+                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
+                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
+                        "output")):
                         if name.lower().endswith(".cube"):
                             __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
                             __self__.label2.update()
@@ -1592,12 +1597,12 @@ class Samples:
             """ If no samples are found, try looking for training_data """
 
             if __self__.samples_database == {}:
-                folder = "training_data"
-                new_path = ".\\training_data\\"
-                #SpecRead.samples_folder = os.path.join(os.getcwd(),"training_data")
-                SpecRead.samples_folder = ".\\"
-                if os.path.exists(".\\output\\{}\\".format(folder)):
-                    for name in os.listdir(".\\output\\{}".format(folder)):
+                folder = "Example Data"
+                new_path = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+                SpecRead.samples_folder = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
+                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
+                        "output",folder)):
                         if name.lower().endswith(".cube"):
                             __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
                             __self__.label2.update()
@@ -1643,11 +1648,11 @@ class Samples:
                             
             """ Verify packed cubes """
 
-            output_folder = ".\\output\\"
+            output_folder = os.path.join(SpecRead.__PERSONAL__,"output")
             outputs = [folder for folder in os.listdir(output_folder) \
-                    if os.path.isdir(output_folder + folder)]
+                    if os.path.isdir(os.path.join(output_folder,folder))]
             for folder in outputs:
-                cubes = [cube for cube in os.listdir(output_folder + folder) \
+                cubes = [cube for cube in os.listdir(os.path.join(output_folder,folder)) \
                         if cube.lower().endswith('.cube')]
                 if folder not in __self__.samples_database: 
                     if cubes != []: 
@@ -1659,9 +1664,9 @@ class Samples:
         except IOError as exception:
             __self__.splash_kill()
             if exception.__class__.__name__ == "FileNotFoundError":
-                logging.info("No folder {} found.".format(SpecRead.samples_folder))
+                logger.info("No folder {} found.".format(SpecRead.samples_folder))
             elif exception.__class__.__name__ == "PermissionError":
-                logging.info("Cannot load samples. Error {}.".format(exception.__class__.__name__))
+                logger.info("Cannot load samples. Error {}.".format(exception.__class__.__name__))
                 messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(SpecRead.samples_folder))
             else: pass
         __self__.splash_kill()
@@ -1754,7 +1759,7 @@ class Settings:
     
     def write_to_ini(__self__):
         try: 
-            inipath = ".\\settings.tag"
+            inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
             ini = open(inipath,'w+')
             ini.write("{}\n".format(SpecRead.samples_folder))
             ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
@@ -1826,8 +1831,8 @@ class MainGUI:
         if LOW_RES == "extreme": 
             quit = messagebox.showinfo("WARNING","Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
             if quit == "ok": sys.exit()
-        logging.info("Initializing program...")
-        f = open(".\\settings.tag","r")
+        logger.info("Initializing program...")
+        f = open(os.path.join(SpecRead.__BIN__,"settings.tag"),"r")
         for line in f:
             if line.startswith("<welcome>"):
                 if line.split("\t")[1] == "True": __self__.checker = True
@@ -1856,7 +1861,7 @@ class MainGUI:
         __self__.sample_plot.set_title('Sample Counts Map',**mapfont)
 
         sys_mem = dict(virtual_memory()._asdict())
-        inipath = ".\\settings.tag"
+        inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
         __self__.MultiCore, __self__.PlotMode, __self__.RAM_limit = grab_GUI_config(inipath)
         __self__.RAM_limit_value = sys_mem["available"]
         if __self__.PlotMode == "Logarithmic": __self__.plot_display = "-semilog"
@@ -2033,7 +2038,6 @@ class MainGUI:
         if packed_maps == []:
             no_map = messagebox.showinfo("No Maps!","No compiled maps are present in the set of samples selected!")
             if no_map == "ok": return
-        #print(set.intersection(*map(set,packed_maps)))
         element_maps = set.intersection(*map(set,packed_maps))
         
         """ get the absolute maximum from all cubes
@@ -2234,7 +2238,7 @@ class MainGUI:
 
     def open_output_folder(__self__, event=""):
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-        path = ".\\output\\"+value
+        path = os.path.join(SpecRead.__PERSONAL__,"output",value)
         if os.path.exists(path):
             path = os.path.realpath(path)
             os.startfile(path)
@@ -2257,8 +2261,7 @@ class MainGUI:
         try: 
             __self__.ConfigDiag.master.grab_release()
             __self__.ConfigDiag.master.destroy()
-        except: logging.warning("Tried to destroy ConfigDiag before calling it for the \
-                first time")
+        except: pass
         global MY_DATACUBE
         MY_DATACUBE = None
         load_cube()
@@ -2466,20 +2469,21 @@ class MainGUI:
         if os.path.exists(SpecRead.selected_sample_folder):
             if MY_DATACUBE != None: 
                 root.mcacount[SpecRead.DIRECTORY] = MY_DATACUBE.img_size
-                __self__.StatusBox.insert(\
-                        END, "\nSpectra files folder: {0}\n".format(SpecRead.selected_sample_folder))
+                __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
                 __self__.StatusBox.insert(END, "\nDatacube loaded.\n")
                 __self__.StatusBox.insert(END, "\n{} spectra packed!\n".format(root.mcacount[SpecRead.DIRECTORY]))
                 __self__.no_sample = False
             else: 
-                __self__.StatusBox.insert(\
-                        END, "\nLooking for spectra files at: {0}\n".format(SpecRead.selected_sample_folder))
+                __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
+                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
                 __self__.StatusBox.insert(END, "\n{} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
                 __self__.no_sample = False
 
         else: 
             __self__.StatusBox.insert(\
-                    END, "\nLooking for spectra files at: {0}\n".format(SpecRead.selected_sample_folder))
+                    END, "\nLooking for spectra files at:\n")
+            __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
             __self__.StatusBox.insert(END, "\nSpetra for sample {} not found!\n".format(SpecRead.DIRECTORY))
             __self__.StatusBox.insert(END, "\nUsing compiled cube data.\n")
             __self__.no_sample = True
@@ -2523,7 +2527,7 @@ class MainGUI:
     def reset_sample(__self__):
         
         def repack(__self__, sample):
-            logging.warning("Cube {} and its output contents were erased!".\
+            logger.warning("Cube {} and its output contents were erased!".\
                     format(sample))
             shutil.rmtree(SpecRead.output_path)
             try: x,y,tag_dimension_file = SpecRead.getdimension()
@@ -2532,7 +2536,7 @@ class MainGUI:
             if tag_dimension_file == True:
                 try: 
                     os.remove(SpecRead.dimension_file)
-                    logging.warning("Custom image dimension was deleted.")
+                    logger.warning("Custom image dimension was deleted.")
                 except: raise PermissionError("Can't delete custom dimension file!")
 
             # clears all open plot windows
@@ -2811,7 +2815,7 @@ class ConfigDiag:
         try: 
             __self__.master.grab_release()
             __self__.master.destroy()
-        except: logging.warning("Tried to destroy ConfigDiag before calling it for the \
+        except: logger.warning("Tried to destroy ConfigDiag before calling it for the \
                 first time")
         global MY_DATACUBE
         MY_DATACUBE = None
@@ -2897,8 +2901,8 @@ class ConfigDiag:
             try:
                 os.mkdir(SpecRead.output_path)
             except IOError as exception:
-                logging.warning("Error {}.".format(exception.__class__.__name__))
-                logging.warning("Can't create output folder {}".format(SpecRead.output_path))
+                logger.warning("Error {}.".format(exception.__class__.__name__))
+                logger.warning("Can't create output folder {}".format(SpecRead.output_path))
                 if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
                 else: exists = None
                 messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
@@ -2937,7 +2941,7 @@ class ConfigDiag:
                 SpecRead.CONFIG["calibration"] = "from_source"
                 calibparam = SpecRead.getcalibration()
 
-            cfgpath = ".\\config.cfg"
+            cfgpath = os.path.join(SpecRead.__PERSONAL__,"bin","config.cfg")
             cfgfile = open(cfgpath,"w+")
             cfgfile.write("<<CONFIG_START>>\r")
             for key in configdict:
@@ -2964,7 +2968,7 @@ class ConfigDiag:
             root.toggle_(toggle='on')
 
         else:
-            cfgpath = ".\\config.cfg"
+            cfgpath = os.path.join(SpecRead.__PERSONAL__,"bin","config.cfg")
             cfgfile = open(cfgpath,'w+')
             cfgfile.write("<<CONFIG_START>>\r")
             for key in configdict:
@@ -3163,7 +3167,7 @@ class PeriodicTable:
             needed_memory = cube_size*len(FIND_ELEMENT_LIST)
             
             if cube_size*(len(FIND_ELEMENT_LIST)) > sys_mem["available"]:
-                logging.warning("Non-fatal MEMORY ERROR! Memony size needed for cube copies not available!")
+                logger.warning("Non-fatal MEMORY ERROR! Memony size needed for cube copies not available!")
                 messagebox.showerror("Memory Error!","Multiprocessing copies the datacube for each running instance.\nMemory needed: {}\nMemory available: {}\nProcess will follow in a single instance and may take a while.".format(process_memory[0],process_memory[1]))   
 
             # multi-core mode
@@ -3485,7 +3489,6 @@ def _init_numpy_mkl():
         pass
 
 if __name__.endswith('__main__'):         
-    
     optimum_resolution = (1920,1080)
     _init_numpy_mkl()
     del _init_numpy_mkl
@@ -3523,24 +3526,38 @@ if __name__.endswith('__main__'):
     from matplotlib.patches import Rectangle
     from matplotlib import style
     style.use('ggplot')
+    
+    def open_log():
+        # wipes logfile
+        try:
+            with open(os.path.join(SpecRead.__PERSONAL__,
+                "logfile.log"),'w+') as mylog: mylog.truncate(0)
+        except: pass
 
-    # tries to create logfile on exe folder
-    try: 
-        logging.basicConfig(format = '%(asctime)s\t%(levelname)s\t%(message)s',\
-            filename = 'logfile.log',level = logging.INFO)
-        with open('logfile.log','w+') as mylog: mylog.truncate(0)
-        logging.info('*'* 10 + ' LOG START! ' + '*'* 10)
-        log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-        logging.info(log_start)   
-    except IOError as exception:
-        p = Tk()
-        p.iconify()
-        messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.getcwd()))
-        #sys.exit()
+        # tries to create logfile on user folder
+        try: 
+            logger = logging.getLogger("logfile")
+            logger.setLevel(logging.INFO)
+            lHandler = logging.FileHandler(os.path.join(SpecRead.__PERSONAL__,
+                "logfile.log"))
+            formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
+            lHandler.setFormatter(formatter)
+            logger.addHandler(lHandler)
+            logger.info('*'* 10 + ' LOG START! ' + '*'* 10)
+            log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+            logger.info(log_start)   
+        except IOError as exception:
+            p = Tk()
+            p.iconify()
+            messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.path.join(SpecRead.__PERSONAL__,"logfile.log")))
+            sys.exit()
+        return 0
     
     check_screen_resolution(optimum_resolution)
     # internal imports
     import SpecRead
+    open_log()
+    logger = logging.getLogger("logfile")
     from ReadConfig import checkout_config
     from ImgMath import LEVELS
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
@@ -3550,7 +3567,7 @@ if __name__.endswith('__main__'):
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results
 
-    logging.info("Loading GUI...")
+    logger.info("Loading GUI...")
     start_up()
     root = MainGUI()
     GUIicon = os.getcwd()+"\\images\\icons\\icon.ico"

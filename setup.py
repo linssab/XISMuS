@@ -128,7 +128,7 @@ cx_Freeze.setup(
         version = VERSION,
         author = AUTHOR,
         author_email = "sergio.lins@roma3.infn.it",
-        description = "X-Ray Imaging Software for Multiple Samples.\nhttps://github.com/linssab/XISMuS",
+        description = "X-Ray Imaging Software for Multiple Samples.",
         executables = [target]
         )
 

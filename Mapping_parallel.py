@@ -7,6 +7,7 @@
 
 import numpy as np
 import os, sys, logging, multiprocessing
+logger = logging.getLogger("logfile")
 from multiprocessing import freeze_support
 from psutil import cpu_count
 freeze_support()
@@ -14,7 +15,7 @@ freeze_support()
 import queue
 import pickle
 import time
-from SpecRead import dump_ratios, setup
+from SpecRead import dump_ratios, setup, __BIN__, __PERSONAL__
 from matplotlib import pyplot as plt
 from SpecMath import getpeakarea, refresh_position, setROI, getdif2, Busy
 from EnergyLib import ElementList, Energies, kbEnergies
@@ -85,7 +86,7 @@ def grab_line(cube,lines,iterator,Element):
             #except:
             #    FITFAIL += 1
             #    usedif2 = True
-            #    logging.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
+            #    logger.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
             #            .format(pos,cube.img_size))
         elif cube.config["peakmethod"] == 'auto_roi': specdata = specdata
         else: 
@@ -112,7 +113,7 @@ def grab_line(cube,lines,iterator,Element):
         #  ITERATE OVER LIST OF ELEMENTS  #
         ###################################
         
-        logging.debug("current x = {0} / current y = {1}".format(currentx,currenty))
+        logger.debug("current x = {0} / current y = {1}".format(currentx,currenty))
 
         ################################################################
         #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
@@ -149,13 +150,23 @@ def grab_line(cube,lines,iterator,Element):
     ################################
     
     timestamp = time.time() - start_time
-
+    logger.info("Execution took %s seconds" % (timestamp))
+    timestamps = open(os.path.join(__BIN__,"timestamps.txt"),"a")
+    timestamps.write("\n{5} - MULTIPROCESSING\n{0} bgtrip={1} enhance={2} peakmethod={3}\n{4} seconds\n".format(
+        Element,
+        cube.config["bgstrip"],
+        cube.config["enhance"],
+        cube.config["peakmethod"],
+        timestamp,
+        time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+       
+    logger.info("Finished map acquisition!")
     if cube.config["peakmethod"] == 'auto_roi': 
         el_dist_map = interpolate_zeros(el_dist_map)
     
-    logging.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
+    logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
             format(Element,lines[0],lines[1]))
-    logging.info("Runtime for {}: {}".format(Element,time.time()-start_time))
+    logger.info("Runtime for {}: {}".format(Element,time.time()-start_time))
     return el_dist_map, ROI
 
 def digest_results(datacube,results,elements):
@@ -191,7 +202,7 @@ def start_reader(cube,Element,iterator,results):
         element_idx = ElementList.index(Element)
         kaenergy = Energies[element_idx]*1000
         kbenergy = kbEnergies[element_idx]*1000
-        logging.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
+        logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
                 format(Element,kaenergy,kbenergy))
 
         # other function
@@ -241,7 +252,7 @@ class Cube_reader():
             try:
                 for p in __self__.processes:
                     p.terminate()
-                    logging.info("Terminated {}".format(p))
+                    logger.info("Terminated {}".format(p))
             except: pass
             __self__.processes = []
             __self__.process_names = []
@@ -252,7 +263,7 @@ class Cube_reader():
                     args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results))
                 __self__.processes.append(p)
                 __self__.process_names.append(p.name)
-                logging.info("Pooling process {}".format(p))
+                logger.info("Pooling process {}".format(p))
             
         
             for p in __self__.processes:
@@ -335,4 +346,4 @@ if __name__=="__main__":
         reader.p_bar.update_text("Digesting results...")
         digest_results(datacube,results,elements)
     """
-    logging.info("This is Mapping_parallel.py module")
+    logger.info("This is Mapping_parallel.py module")

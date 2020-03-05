@@ -8,7 +8,8 @@ TESTFNC = False
 
 # import utilities
 import logging
-logging.debug("Importing module SpecMath.py...")
+logger = logging.getLogger("logfile")
+logger.debug("Importing module SpecMath.py...")
 import os, time
 import sys
 import numpy as np
@@ -28,15 +29,15 @@ from Mapping import getdensitymap
 
 # import other modules
 import matplotlib.pyplot as plt
-logging.debug("Importing numba jit...")
+logger.debug("Importing numba jit...")
 try:
     from numba import jit
 except:
     print("Failed to load numba")
-logging.debug("Importing module math...")
+logger.debug("Importing module math...")
 import math
 from math import factorial
-logging.info("Finished SpecMath imports.")
+logger.info("Finished SpecMath imports.")
 
 from tkinter import *
 from tkinter import ttk
@@ -125,7 +126,7 @@ class datacube:
             __self__.name = name
         else:
             __self__.name = configuration["directory"]
-        logging.debug("Initializing cube file")
+        logger.debug("Initializing cube file")
         try: specsize = getdata(getfirstfile()) 
         except: specsize = 0
         __self__.datatypes = \
@@ -173,7 +174,7 @@ class datacube:
         from SpecRead import output_path, cube_path
         try: os.mkdir(output_path)
         except: pass
-        sum_file = open(output_path+'stacksum.mca','w+')
+        sum_file = open(os.path.join(output_path,"stacksum.mca"),'w+')
         
         #writes header
         sum_file.write("<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - Piratininga SM Sum Spectrum\n")
@@ -192,7 +193,7 @@ class datacube:
         sum_file.write("<<END>>")
         sum_file.close()
 
-        ANSII_file = open(output_path+'ANSII_SUM.txt','w+')
+        ANSII_file = open(os.path.join(output_path,"ANSII_SUM.txt"),'w+')
         ANSII_file.write("counts\tenergy (KeV)\n")
         for index in range(__self__.sum.shape[0]):
             ANSII_file.write("{0}\t{1}\n".format(
@@ -240,11 +241,11 @@ class datacube:
         __self__.root = samples_folder
         try: 
             if not os.path.exists(output_path):
-                logging.info("Creating outputh path {0}".forma(output_path))
+                logger.info("Creating outputh path {0}".forma(output_path))
                 os.mkdir(output_path)
-            else: logging.debug("Output path exists")
+            else: logger.debug("Output path exists")
         except: 
-            logging.warning("Could not create output folder {}".format(output_path))
+            logger.warning("Could not create output folder {}".format(output_path))
             pass
         p_output = open(cube_path,'wb')
         pickle.dump(__self__,p_output)
@@ -264,10 +265,10 @@ class datacube:
         This method saves all derived spectra, writes summation mca to disk and calculates
         the density map. """
 
-        logging.debug("Started mca compilation")
+        logger.debug("Started mca compilation")
         __self__.progressbar = Busy(__self__.img_size,0)
         currentspectra = getfirstfile()
-        logging.debug("First mca on list: {}".format(currentspectra))
+        logger.debug("First mca on list: {}".format(currentspectra))
         x,y,scan = 0,0,(0,0)
         for iteration in range(__self__.img_size):
             spec = currentspectra
@@ -285,26 +286,26 @@ class datacube:
             currentspectra = updatespectra(spec,__self__.img_size)
             __self__.progressbar.updatebar(iteration)
 
-        logging.debug("Calculating MPS...")
+        logger.debug("Calculating MPS...")
         __self__.progressbar.update_text("Calculating MPS...")
         datacube.MPS(__self__)
-        logging.debug("Calculating summation spectrum...")
+        logger.debug("Calculating summation spectrum...")
         __self__.progressbar.update_text("Calculating sum spec...")
         datacube.stacksum(__self__)
-        logging.debug("Stripping background...")
+        logger.debug("Stripping background...")
         __self__.progressbar.update_text("Stripping background...")
         datacube.strip_background(__self__)
-        logging.debug("Writing summation mca and ANSII files...")
+        logger.debug("Writing summation mca and ANSII files...")
         datacube.write_sum(__self__)
-        logging.debug("Calculating sum map...")
+        logger.debug("Calculating sum map...")
         __self__.progressbar.update_text("Calculating sum map...")
         datacube.create_densemap(__self__)
-        logging.debug("Saving cube file to disk...")
+        logger.debug("Saving cube file to disk...")
         __self__.progressbar.update_text("Writing to disk...")
         __self__.progressbar.destroybar()
         del __self__.progressbar 
         datacube.save_cube(__self__)
-        logging.debug("Finished packing.")
+        logger.debug("Finished packing.")
         return 0,None
         
     def pack_element(__self__,image,element,line):
@@ -316,7 +317,7 @@ class datacube:
 
         from SpecRead import output_path, cube_path
         __self__.__dict__[element+"_"+line] = image
-        logging.info("Packed {0} map to datacube {1}".format(element,cube_path))
+        logger.info("Packed {0} map to datacube {1}".format(element,cube_path))
     
     def pack_hist(__self__,hist,bins,element):
         
@@ -341,7 +342,7 @@ class datacube:
 
         from SpecRead import output_path, cube_path
         unpacked = __self__.__dict__[element+"_"+line]
-        logging.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
+        logger.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
         return unpacked
 
     def check_packed_elements(__self__):
@@ -554,49 +555,49 @@ def setROI(lookup,xarray,yarray,localconfig):
     localconfig.get('peakmethod') != 'PyMcaFit': 
         yarray  = savgol_filter(yarray,5,3)
     
-    logging.debug("-"*15 + " Setting ROI " + "-"*15)
+    logger.debug("-"*15 + " Setting ROI " + "-"*15)
     
     for peak_corr in range(2):
-        logging.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
-        logging.debug("lookup: %d" % lookup)
+        logger.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
+        logger.debug("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
         lowx = (lookup - (FWHM))/1000
         highx = (lookup + (FWHM))/1000
-        logging.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
+        logger.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
         
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
         lowx_idx = idx-3
-        logging.debug("lowx_idx: %d" % lowx_idx)
+        logger.debug("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
         highx_idx = idx+3
-        logging.debug("highx_idx: %d" % highx_idx)
+        logger.debug("highx_idx: %d" % highx_idx)
         
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
         shift = shift_center(ROIaxis,ROIdata)
-        logging.debug("Shift: {0}".format(shift))
+        logger.debug("Shift: {0}".format(shift))
         
         if 1.10*(-FWHM/2) < (shift[0]*1000)-lookup < 1.10*(FWHM/2):
             if (shift[0]*1000)-lookup == 0:
-                logging.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
+                logger.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
             lookup = shift[0]*1000
             peak_corr = 0
-            logging.debug("GAP IS LESSER THAN {0}!".format(1.10 * FWHM/2))
+            logger.debug("GAP IS LESSER THAN {0}!".format(1.10 * FWHM/2))
         else: 
-            logging.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
+            logger.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
             lookupcenter = int(len(ROIaxis)/2)
             shift = (0,0,lookupcenter)
             isapeak = False
         
-        logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
+        logger.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     
     lowx_idx = lowx_idx + 3
     highx_idx = highx_idx - 3
     peak_center = shift[2]-3
-    logging.debug("peak_center = {0}, channels = {1} {2}, peakwidth= {3}"\
+    logger.debug("peak_center = {0}, channels = {1} {2}, peakwidth= {3}"\
             .format(peak_center,lowx_idx,highx_idx,(highx_idx-lowx_idx))) 
     return lowx_idx,highx_idx,peak_center,isapeak
 
@@ -642,14 +643,14 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     
         # checks second differential and calculates the net area - background
         if smooth_dif2[idx[2]] < 0 or smooth_dif2[idx[2]+1] < 0 or smooth_dif2[idx[2]-1] < 0:
-            logging.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
-            logging.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
+            logger.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
+            logger.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
                     smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
             if ROIbg.sum() < ydata.sum(): Area += ydata.sum() - ROIbg.sum()
         else: 
-            logging.debug("{0} has no peak! Dif2 = {1} and isapeak = {2}\n"\
+            logger.debug("{0} has no peak! Dif2 = {1} and isapeak = {2}\n"\
                     .format(lookup,smooth_dif2[idx[2]],isapeak))
-            logging.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
+            logger.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
                 smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
     
     ##########################
@@ -663,7 +664,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     
     # PyMcaFit method does not check for second differential
     elif localconfig.get('peakmethod') == 'PyMcaFit':
-        logging.info("No dif 2 criteria for {0} method".format(localconfig.get('peakmethod')))
+        logger.info("No dif 2 criteria for {0} method".format(localconfig.get('peakmethod')))
         smooth_dif2 = np.zeros([len(xdata)])
         if ROIbg.sum() < ydata.sum(): Area += ydata.sum() - ROIbg.sum()
                
@@ -807,5 +808,5 @@ def correlate(map1,map2):
     return correlation_matrix
 
 if __name__=="__main__":
-    logging.info("This is SpecMath")
+    logger.info("This is SpecMath")
 

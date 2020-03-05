@@ -7,21 +7,22 @@
 
 """ import all modules """
 
-import logging,os
-logging.info("Importing module ImgMath.py...")
+import logging, os
+logger = logging.getLogger("logfile")
+logger.info("Importing module ImgMath.py...")
 import numpy as np
 import SpecRead
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-logging.debug("Importing module matplotlib.colors...")
+logger.debug("Importing module matplotlib.colors...")
 from matplotlib.colors import ListedColormap
-logging.debug("Importing module mpl_toolkits.axes_grid1...")
+logger.debug("Importing module mpl_toolkits.axes_grid1...")
 try: from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
-except: logging.warning("Failed to load make_axes_locatable from mpl_toolkits.axes_grid1.axes_divider")
+except: logger.warning("Failed to load make_axes_locatable from mpl_toolkits.axes_grid1.axes_divider")
 import cv2
 import math
-logging.info("Finished ImgMath imports.")
+logger.info("Finished ImgMath imports.")
 
 """ Set the gray levels variable """
 
@@ -79,7 +80,7 @@ def median_filter(a_2D_array,x,y):
                                 except:
                                     try: average = (2*a_2D_array[x,y] + a_2D_array[x-1,y] +\
                                             a_2D_array[x,y-1] + a_2D_array[x-1,y-1])/5
-                                    except: logging.warning("Something went wrong with the median filter!")
+                                    except: logger.warning("Something went wrong with the median filter!")
     return average
 
 def iteractive_median(img,iterations=1):
@@ -197,7 +198,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
 
     mu1 = coefficients[0]
     mu2 = coefficients[1]
-    logging.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
+    logger.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
     
     ANGLE = 73  # IN DEGREES # - effective angle, used for fibbia2
     #ANGLE = 27  # IN DEGREES #
@@ -517,15 +518,14 @@ def split_and_save(datacube,map_array,element_list):
                         large_image,
                         (newY,newX),
                         interpolation=cv2.INTER_NEAREST)
-            
-            cv2.imwrite(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
-                '/{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png'\
-                .format(
+            save_path = os.path.join(SpecRead.workpath,"output",SpecRead.DIRECTORY,       
+            "{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png".format(
                     element_list[Element]+"_"+lines[line],
                     datacube.config.get('bgstrip'),
                     datacube.config.get('ratio'),
                     datacube.config.get('enhance'),
-                    datacube.config.get('peakmethod')),large_image)
+                    datacube.config.get('peakmethod')))
+            cv2.imwrite(save_path,large_image)
             
             # function test
             #checker = datacube.unpack_element('Cu')
@@ -539,9 +539,9 @@ def split_and_save(datacube,map_array,element_list):
             ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
     
     datacube.save_cube() 
-    logging.warning("cube has been saved and {} packed!".format(element_list))
+    logger.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
-    logging.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
+    logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0
 
 def write_image(image,size,path,enhance=False):

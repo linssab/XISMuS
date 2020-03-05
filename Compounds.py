@@ -5,16 +5,17 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import logging
-logging.debug("Importing module Compounds.py...")
+import logger
+logger = logging.getLogger("logfile")
+logger.debug("Importing module Compounds.py...")
 import numpy as np
-logging.debug("Importing module EnergyLib.py...")
+logger.debug("Importing module EnergyLib.py...")
 import EnergyLib
 try: 
     import xraylib as xlib
-    logging.info("Sucessfully imported xraylib module!")
+    logger.info("Sucessfully imported xraylib module!")
 except: 
-    logging.warning("Failed to load xraylib module!")
+    logger.warning("Failed to load xraylib module!")
     raise ImportError("Module xraylib not fould. Cannot proceed.")
 
 CompoundList = {

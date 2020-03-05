@@ -7,13 +7,14 @@
 
 import numpy as np
 import logging
-logging.debug("Importing module EnergyLib.py...")
+logger = logging.getLogger("logfile")
+logger.debug("Importing module EnergyLib.py...")
 try: 
     import xraylib as xlib
     USEXLIB = True
     xlib.SetErrorMessages(0)
 except: 
-    logging.warning("xraylib module not found!")
+    logger.warning("xraylib module not found!")
     print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.")
     USEXLIB = False
 

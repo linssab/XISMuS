@@ -6,15 +6,20 @@
 #################################################################
 
 import logging
+logger = logging.getLogger("logfile")
 from ReadConfig import unpack_cfg as CONFIGURE
-from ReadConfig import pop_error
-logging.debug("Importing module SpecRead.py...")
+from ReadConfig import pop_error, __PERSONAL__, __BIN__ 
+logger.debug("Importing module SpecRead.py...")
 import sys
 import os
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-logging.debug("Finished SpecRead imports.")
+logger.debug("Finished SpecRead imports.")
+
+global __PERSONAL__, __BIN__
+__PERSONAL__ = __PERSONAL__
+__BIN__ = __BIN__
 
 def get_samples_folder(inifile):
 
@@ -25,8 +30,8 @@ def get_samples_folder(inifile):
     ini.close() 
     return folder
 
-samples_folder = get_samples_folder(os.path.join(os.getcwd(),"folder.ini"))
-logging.info("Samples path: {0}".format(samples_folder))
+samples_folder = get_samples_folder(os.path.join(__BIN__,"folder.ini"))
+logger.info("Samples path: {0}".format(samples_folder))
 FIRSTFILE_ABSPATH = None
 
 def getfirstfile():
@@ -42,7 +47,7 @@ def setup(prefix, extension):
     """ Reads config.cfg file and sets up the configuration according to what is
     contained there """
 
-    logging.debug("Running setup from Config.cfg") 
+    logger.debug("Running setup from Config.cfg") 
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
 
     CONFIG,CALIB = CONFIGURE()
@@ -50,7 +55,7 @@ def setup(prefix, extension):
     
     # build paths
     selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
-    workpath = os.getcwd()
+    workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
     output_path = os.path.join(workpath,"output",DIRECTORY)
     dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
@@ -68,7 +73,7 @@ def setup_from_datacube(datacube,sample_database):
     """ Read Cube class object configuration and sets up the application
     configuration parameters accordingly """
 
-    logging.debug("Running setup from datacube {}".format(datacube.name)) 
+    logger.debug("Running setup from datacube {}".format(datacube.name)) 
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
     
     CONFIG,CALIB = datacube.config, datacube.calibration
@@ -76,7 +81,7 @@ def setup_from_datacube(datacube,sample_database):
     
     # build sample paths
     selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
-    workpath = os.getcwd()
+    workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
     output_path = os.path.join(workpath,"output",DIRECTORY)
     dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
@@ -96,7 +101,7 @@ def conditional_setup(name='None'):
     """ Reads Config.cfg file configuration parameters and changes DIRECTORY
     parameter to input value. """
     
-    logging.debug("Running conditional setup for {}".format(name)) 
+    logger.debug("Running conditional setup for {}".format(name)) 
     global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
     
     CONFIG,CALIB = CONFIGURE()
@@ -105,7 +110,7 @@ def conditional_setup(name='None'):
     # build paths
     DIRECTORY = CONFIG.get("directory")
     selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
-    workpath = os.getcwd()
+    workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
     output_path = os.path.join(workpath,"output",DIRECTORY)
     dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
@@ -300,7 +305,7 @@ def calibrate():
     GAIN=coefficients[0]
     B=coefficients[1]
     R=coefficients[2]
-    logging.info("Correlation coefficient R = %f!" % R)
+    logger.info("Correlation coefficient R = %f!" % R)
     n = len(getdata(getfirstfile()))
     curve = []
     for i in range(n):
@@ -393,8 +398,7 @@ def dump_ratios(maps_list,element_list):
     
     ratiofiles = ["" for x in range(len(element_list))]
     for Element in range(len(element_list)): 
-        ratiofiles[Element] = str(output_path+\
-                "{1}_ratio_{0}.txt".format(element_list[Element],DIRECTORY))
+        ratiofiles[Element] = str(os.path.join(output_path,"{1}_ratio_{0}.txt".format(element_list[Element],DIRECTORY)))
         r_file = open(ratiofiles[Element],'w+')
         r_file.readline()
         r_file.truncate()
@@ -411,10 +415,10 @@ def dump_ratios(maps_list,element_list):
                 b = int(maps_list[Element][0][1][x][y])
                 if b > 0: 
                     r_file.write("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,a/b))
-                    logging.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,a/b))
+                    logger.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,a/b))
                 else: 
                     r_file.write("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
-                    logging.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
+                    logger.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
         r_file.close()
     return 0
 
@@ -497,4 +501,4 @@ def linregress(x, y, sigmay=None, full_output=False):
     return slope, intercept, r_value, ddict
 
 if __name__ == "__main__":
-    logging.info("This is SpecRead")
+    logger.info("This is SpecRead")
