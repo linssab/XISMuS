@@ -1,8 +1,11 @@
 import cx_Freeze
-import sys
+import sys, shutil
 import os, opcode
 from CoreGUI import VERSION
-from SpecRead import __PERSONAL__
+from win32com.shell import shell, shellcon
+docs = shell.SHGetFolderPath(0, shellcon.CSIDL_PERSONAL, None, 0)
+__PERSONAL__ = os.path.join(docs,"XISMuS")
+__BIN__ = os.path.join(__PERSONAL__,"bin")
 AUTHOR = "Sergio Augusto Barcellos Lins"
 __ICON__ = os.path.join(os.getcwd(),"images","icons","icon.ico")
 
@@ -14,32 +17,27 @@ PYTHON_INSTALL_DIR = os.path.dirname(os.path.dirname(os.__file__))
 os.environ['TCL_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
 
-includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png"),\
-                (".\\images\\icons\\img_anal.png",".\\images\\icons\\img_anal.png"),\
-                (".\\images\\icons\\img_anal.ico",".\\images\\icons\\img_anal.ico"),\
-                (".\\images\\icons\\load.png",".\\images\\icons\\load.png"),\
-                (".\\images\\icons\\plot.ico",".\\images\\icons\\plot.ico"),\
-                (".\\images\\icons\\quit.png",".\\images\\icons\\quit.png"),\
-                (".\\images\\icons\\reset.png",".\\images\\icons\\reset.png"),\
-                (".\\images\\icons\\refresh.png",".\\images\\icons\\refresh.png"),\
-                (".\\images\\icons\\refresh.ico",".\\images\\icons\\refresh.ico"),\
-                (".\\images\\icons\\rubik.png",".\\images\\icons\\rubik.png"),\
-                (".\\images\\icons\\rubik.ico",".\\images\\icons\\rubik.ico"),\
-                (".\\images\\icons\\settings.png",".\\images\\icons\\settings.png"),\
-                (".\\images\\icons\\settings.ico",".\\images\\icons\\settings.ico"),\
-                (".\\images\\icons\\export_1.png",".\\images\\icons\\export_1.png"),\
-                (".\\images\\icons\\export_2.png",".\\images\\icons\\export_2.png"),\
-                (".\\images\\icons\\next.png",".\\images\\icons\\next.png"),\
-                (".\\images\\icons\\previous.png",".\\images\\icons\\previous.png"),\
-                (".\\images\\icons\\export_merge.png",".\\images\\icons\\export_merge.png"),\
-                (".\\images\\icons\\icon.ico",".\\images\\icons\\icon.ico"),\
-                (".\\images\\splash.png",".\\images\\splash.png"),\
-                (".\\images\\no_data.png",".\\images\\no_data.png"),\
-                (".\\output.ini",".\\output\\output.ini"),\
-                (".\\folder.ini",".\\folder.ini"),\
-                ".\\config.cfg",\
-                ".\\logfile.log",\
-                ".\\settings.tag",\
+includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png"),
+                (".\\images\\icons\\img_anal.png",".\\images\\icons\\img_anal.png"),
+                (".\\images\\icons\\img_anal.ico",".\\images\\icons\\img_anal.ico"),
+                (".\\images\\icons\\load.png",".\\images\\icons\\load.png"),
+                (".\\images\\icons\\plot.ico",".\\images\\icons\\plot.ico"),
+                (".\\images\\icons\\quit.png",".\\images\\icons\\quit.png"),
+                (".\\images\\icons\\reset.png",".\\images\\icons\\reset.png"),
+                (".\\images\\icons\\refresh.png",".\\images\\icons\\refresh.png"),
+                (".\\images\\icons\\refresh.ico",".\\images\\icons\\refresh.ico"),
+                (".\\images\\icons\\rubik.png",".\\images\\icons\\rubik.png"),
+                (".\\images\\icons\\settings.png",".\\images\\icons\\settings.png"),
+                (".\\images\\icons\\rubik.ico",".\\images\\icons\\rubik.ico"),
+                (".\\images\\icons\\settings.ico",".\\images\\icons\\settings.ico"),
+                (".\\images\\icons\\export_1.png",".\\images\\icons\\export_1.png"),
+                (".\\images\\icons\\export_2.png",".\\images\\icons\\export_2.png"),
+                (".\\images\\icons\\next.png",".\\images\\icons\\next.png"),
+                (".\\images\\icons\\previous.png",".\\images\\icons\\previous.png"),
+                (".\\images\\icons\\export_merge.png",".\\images\\icons\\export_merge.png"),
+                (".\\images\\icons\\icon.ico",".\\images\\icons\\icon.ico"),
+                (".\\images\\splash.png",".\\images\\splash.png"),
+                (".\\images\\no_data.png",".\\images\\no_data.png"),
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'), 
                     os.path.join('lib', 'tcl86t.dll')),
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tk86t.dll'), 
@@ -82,7 +80,29 @@ with open(".\\config.cfg","w+") as cfgfile:
 
 with open(".\\logfile.log","w+") as logfile:
     logfile.write(" ")
-
+doc_files = [
+    (".\\output.ini",os.path.join(__PERSONAL__,"output","output.ini")),
+    (".\\folder.ini",os.path.join(__BIN__,"folder.ini")),
+    (".\\config.cfg",os.path.join(__BIN__,"config.cfg")),
+    (".\\logfile.log",os.path.join(__PERSONAL__,"logfile.log")),
+    (".\\settings.tag",os.path.join(__BIN__,"settings.tag"))
+    ]
+try:
+    os.mkdir(__BIN__)
+except: print("Can't create folder {}".format(__BIN__))
+try:
+    os.mkdir(os.path.join(__PERSONAL__,"output"))
+except: print("Can't create folder {}".format(os.path.join(__PERSONAL__,"output")))
+try: 
+    os.mkdir(__PERSONAL__)
+    os.mkdir(__BIN__)
+    os.mkdir(os.path.join(__PERSONAL__,"output"))
+except: 
+    print("{} folder tree already exists! Overwriting files.".format(__PERSONAL__))
+for pair in doc_files:
+    print(pair)
+    shutil.copy(pair[0],pair[1])
+    
 ###########################################################################
 
 """ USE IF NEEDED
