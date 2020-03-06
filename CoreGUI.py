@@ -2015,17 +2015,17 @@ class MainGUI:
         if cubes == []: 
             messagebox.showinfo("No Sample!","No sample selected!")
             return 
-        _path = ".\\output\\"
+        _path = os.path.join(SpecRead.__PERSONAL__,"output")
         """ list all packed cubes """
         cube_folders = [name for name in os.listdir(_path) if os.path.isdir(_path+name)]
         for folder in cube_folders:
-            for name in os.listdir(_path+folder):
+            for name in os.listdir(os.path.join(_path,folder)):
                 if name.lower().endswith(".cube")\
                         and name.split(".cube")[0] in cubes:\
                         cube_dict[folder] = name
         for cube in cube_dict: 
             maps[cube] = {}
-            cube_file = open(_path+cube+"\\"+cube_dict[cube],'rb')
+            cube_file = open(os.path.join(_path,cube,cube_dict[cube]),'rb')
             datacube = pickle.load(cube_file)
             cube_file.close()
             maps[cube]["densemap"] = datacube.densitymap
@@ -2907,7 +2907,7 @@ class ConfigDiag:
                 else: exists = None
                 messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
                 return
-            dm_file = open(SpecRead.output_path + "colonneXrighe.txt","w")
+            dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
             dm_file.write("righe\t{}\n".format(root.config_xy[0]))
             dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
             dm_file.write(5*"*"+" user input data "+5*"*")
