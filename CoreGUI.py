@@ -2017,7 +2017,7 @@ class MainGUI:
             return 
         _path = os.path.join(SpecRead.__PERSONAL__,"output")
         """ list all packed cubes """
-        cube_folders = [name for name in os.listdir(_path) if os.path.isdir(_path+name)]
+        cube_folders = [name for name in os.listdir(_path) if os.path.isdir(os.path.join(_path,name))]
         for folder in cube_folders:
             for name in os.listdir(os.path.join(_path,folder)):
                 if name.lower().endswith(".cube")\
