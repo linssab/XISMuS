@@ -1477,6 +1477,7 @@ class Samples:
     def list_all(__self__):
         logger.info("Loading sample list...")
         skip_list = []
+        indexing = None
         try:
             mca_prefix = None
             __self__.samples_database = {}
@@ -1523,10 +1524,13 @@ class Samples:
 
                                     """ Gets rid of file numbering """
                                     for i in range(len(files[item])):
-                                            if not files[item][-i-1].isdigit(): 
-                                                if item == 0: indexing = files[item][-i:]
-                                                files[item] = files[item][:-i]
-                                                break
+                                        if not files[item][-1].isdigit(): break
+                                        if files[item][-i].isdigit() and \
+                                                not files[item][-i-1].isdigit(): 
+                                            if indexing == None:
+                                                indexing = files[item][-i:]
+                                            files[item] = files[item][:-i]
+                                            break
                                 except: pass
 
                         files_set = set(files)
@@ -1597,10 +1601,13 @@ class Samples:
 
                                     """ Gets rid of file numbering """
                                     for i in range(len(files[item])):
-                                            if item == 0: indexing = files[item][-i:]
-                                            if not files[item][-i-1].isdigit(): 
-                                                files[item] = files[item][:-i]
-                                                break
+                                        if not files[item][-1].isdigit(): break
+                                        if files[item][-i].isdigit() and \
+                                                not files[item][-i-1].isdigit(): 
+                                            if indexing == None:
+                                                indexing = files[item][-i:]
+                                            files[item] = files[item][:-i]
+                                            break
                                 except: pass
 
                         files_set = set(files)
@@ -1662,10 +1669,13 @@ class Samples:
 
                                 """ Gets rid of file numbering """
                                 for i in range(len(files[item])):
-                                        if item == 0: indexing = files[item][-i:]
-                                        if not files[item][-i-1].isdigit(): 
-                                            files[item] = files[item][:-i]
-                                            break
+                                    if not files[item][-1].isdigit(): break
+                                    if files[item][-i].isdigit() and \
+                                            not files[item][-i-1].isdigit(): 
+                                        if indexing == None:
+                                            indexing = files[item][-i:]
+                                        files[item] = files[item][:-i]
+                                        break
                             except: pass
                         files_set = set(files)
                         extension_set = set(extension)

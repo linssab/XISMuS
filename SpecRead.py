@@ -242,7 +242,7 @@ def getdata(mca):
         Data; 1D-array """
 
     name = str(mca)
-    name = name.split("\\")[0]
+    name = name.split("\\")[-1]
     name = name.replace('_',' ')
     
     # custom MC generated files
@@ -258,13 +258,15 @@ def getdata(mca):
             Data.append(counts)
         Data = np.asarray(Data)
 
-    # this works for mca files
+    # this works for mca extension files
     else:
         ObjectData=[]
         datafile = open(mca)
         line = datafile.readline()
         line = line.replace("\r","")
         line = line.replace("\n","")
+
+        # AMPTEK files start with this tag
         if "<<PMCA SPECTRUM>>" in line:
             while "<<DATA>>" not in line:
                 line = datafile.readline()
@@ -277,11 +279,25 @@ def getdata(mca):
                     raise exception.__class__.__name__
                 line = datafile.readline()
                 if line == "": break
+
+        # Works if file is just counts per line
         elif line.isdigit():
             while "<<END>>" not in line:
                 ObjectData.append(int(line))
                 line = datafile.readline()
                 if line == "": break
+        
+        # if file has two columns separated by space or tab
+        elif "\t" in line or " " in line: 
+            while "<<END>>" not in line:
+                counts = line.split("\t")[-1]
+                if counts.isdigit(): ObjectData.append(int(counts))
+                else:
+                    counts = line.split(" ")[-1]
+                    ObjectData.append(int(counts))
+                line = datafile.readline()
+                if line == "": break
+
         Data = np.asarray(ObjectData)
     datafile.close()
     return Data
