@@ -8,20 +8,21 @@ XISMuS most recent distribution packages can be found here [32-Bit][x86] and her
 A comprehensive guide is provided in the Wiki section. And a User Guide PDF is provided in [this link][UserGuide].
 <br>
 ## Installation
-To install XISMuS through any of the installers distribution provided above, simply double-click the executable *XISMuS-1.0.0-x86.exe* or *XISMuS-1.0.0-x64.exe* (depending on your system), carefully read the license agreement and follow the instructions on screen. If you chose to, XISMuS will launch after the setup is finished.<br>
+To install XISMuS through any of the installers distribution provided above, simply double-click the executable *XISMuS-1.0.0-x86.exe* or *XISMuS-1.0.0-x64.exe* (depending on your system), carefully read the license agreement and follow the instructions on screen. If you chose to, XISMuS will launch after the setup is finished.
 <br>
-If you rather run it from the source, straight inside your local Python environment interpreter, simply fork or clone the repository as 
-no package form distribution is yet available to use with Python.<br>
+**Note:** XISMuS uses xraylib version 3.3.0 but it is optional. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>It is strongly recommended that you install the xraylib package.</ins><br>
+If xraylib is not installed, the program will still run, but chemical mapping will be limited to few elements.<br>
+Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
+
+## From Source
+If you rather run it from the source, straight inside your local Python environment interpreter, simply fork or clone the repository.<br>
 <br>
 `git clone https://github.com/linssab/XISMuS`<br>
 <br>
-Be sure to have all the required Python modules installed! They are listed below:<br>
+Be sure to have all the required Python modules installed! They are listed in the section below.<br>
 
-## Dependencies
-XISMuS uses xraylib version 3.3.0 but it is optional. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>Note: It is strongly recommended that you install the xraylib package.</ins><br>
-If xraylib is not installed, the program will still run, but chemical mapping will be limited to few elements.<br>
-Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
-<br>
+### Dependencies
+
 To run it within a Python interpreter, we recommend you have Python 3.7 installed and the following packages:<br>
 The packages whose versions are mentioned are the stable versions working with XISMuS. Numba, for example, has some issues with opencv and may cause JIT funtions to malfunction.<br>
 * numpy _v 1.18.1_<br>
@@ -30,6 +31,12 @@ The packages whose versions are mentioned are the stable versions working with X
 * opencv-python<br>
 * psutil<br>
 * matplotlib<br>
+
+#### Optional recomended: xraylib _v 3.3.0
+XISMuS uses xraylib version 3.3.0 but it is optional. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>Note: It is strongly recommended that you install the xraylib package.</ins><br>
+If xraylib is not installed, the program will still run, but chemical mapping will be limited to few elements.<br>
+Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
+<br>
 
 [xraylib]: http://lvserver.ugent.be/xraylib/xraylib-3.3.0-win64.exe
 [x64]: https://mega.nz/#!oTJVXYIY!jAJ3u8dL8_ItcH-8jYYzgkcLBibLeWosSU7msBzSZK0
