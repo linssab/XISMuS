@@ -42,7 +42,7 @@ def getfirstfile():
     
     return FIRSTFILE_ABSPATH
 
-def setup(prefix, extension):
+def setup(prefix, indexing, extension):
     
     """ Reads config.cfg file and sets up the configuration according to what is
     contained there """
@@ -61,7 +61,7 @@ def setup(prefix, extension):
     dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
     
     # builds path to first spectrum file
-    FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder,prefix+"_1."+extension)
+    FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder,prefix+indexing+"."+extension)
     global_list =  [CONFIG, CALIB, DIRECTORY, 
             samples_folder, selected_sample_folder, workpath, 
             cube_path, output_path, dimension_file, 
@@ -337,15 +337,19 @@ def updatespectra(specfile,size):
 
     name=str(specfile)
     specfile_name = name.split("\\")[-1]
-    prefix = specfile_name.split("_")[0]
+    name = specfile_name.split(".")[0]
     extension = specfile_name.split(".")[-1]
-    index = specfile_name.replace(".","_").split("_")[1]
+    for i in range(len(name)):
+        if not name[-i-1].isdigit(): 
+            prefix = name[:-i]
+            index = name[-i:]
+            break
     
     if int(index) < size: index = str(int(index)+1)
     else: index = str(size)
     newfile = os.path.join(samples_folder,
             CONFIG["directory"],
-            str(prefix+"_"+index+"."+extension))
+            str(prefix+index+"."+extension))
     return newfile
 
 def getdimension():
@@ -358,9 +362,9 @@ def getdimension():
 
     global dimension_file, samples_folder
     if not os.path.exists(dimension_file):
-        dimension_file = samples_folder + "\colonneXrighe.txt"
+        dimension_file = os.path.join(samples_folder,"colonneXrighe.txt")
         if not os.path.exists(dimension_file):
-            dimension_file = output_path+"colonneXrighe.txt"
+            dimension_file = os.path.join(output_path,"colonneXrighe.txt")
             if not os.path.exists(dimension_file):
                 raise IOError("Dimension file not found!") 
     user_input = False

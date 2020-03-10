@@ -670,7 +670,7 @@ class PeakClipper:
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
             __self__.plot.plot(__self__.spectrum,color="blue",\
-                    label=(root.samples[folder] + "_{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
+                    label=(root.samples[folder] + "{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
             try: 
                 background = __self__.stripbg()
                 __self__.plot.plot(background, label="Background",color="yellow")
@@ -680,7 +680,7 @@ class PeakClipper:
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
             __self__.plot.semilogy(__self__.spectrum,color="blue",\
-                    label=(root.samples[folder] + "_{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
+                    label=(root.samples[folder] + "{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
             try: 
                 background = __self__.stripbg()
                 __self__.plot.plot(background, label="Background",color="yellow")
@@ -694,9 +694,9 @@ class PeakClipper:
     def random_sample(__self__):
         folder = SpecRead.CONFIG.get('directory')
         spec_no = root.mcacount[folder]
-        __self__.sample = random.randint(1,spec_no)
+        __self__.sample = random.randint(1,spec_no-1)
         mca = os.path.join(SpecRead.selected_sample_folder,
-                root.samples[folder]+"_{0}.{1}".format(__self__.sample,root.mca_extension[folder]))
+                root.samples[folder]+"{0}.{1}".format(__self__.sample,root.mca_extension[folder]))
         __self__.spectrum = SpecRead.getdata(mca)
         if isinstance(__self__.spectrum,np.ndarray):
             __self__.refresh_plot() 
@@ -1417,6 +1417,7 @@ class Samples:
     def __init__(__self__):
         __self__.samples_database = {}
         __self__.mcacount = {}
+        __self__.mca_indexing = {}
         __self__.mca_extension = {}
 
     def splash_screen(__self__,parent):
@@ -1479,24 +1480,32 @@ class Samples:
         try:
             mca_prefix = None
             __self__.samples_database = {}
-
+            
+            """ Lists all possible samples """
             samples = [name for name in os.listdir(SpecRead.samples_folder) \
                     if os.path.isdir(os.path.join(SpecRead.samples_folder,name))]
             
+            """ Verifies which samples have a compiled datacube in output folder """
             for folder in samples:
                 if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
                     for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
                         "output",folder)):
                         if name.lower().endswith(".cube"):
-                            __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
+                            __self__.filequeue.set(
+                                    "Cube for {} already compiled, skipping mca\'s".format(
+                                        folder))
                             __self__.label2.update()
                             try: __self__.splash.update_idletasks()
                             except: __self__.popup.update_idletasks()
                             finally: pass
                             skip_list.append(name.split(".cube")[0])
+                
+                """ Lists the spectra files """            
                 files = [name for name in os.listdir(os.path.join(SpecRead.samples_folder,
                     folder))if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                 extension = files[:]
+
+                """ If no spectra are found, move to next step """
                 if files == []: pass
                 else:
                     if folder not in skip_list:
@@ -1506,11 +1515,20 @@ class Samples:
                             __self__.label2.update()
                             try: __self__.splash.update_idletasks()
                             except: __self__.popup.update_idletasks()
-                            finally: pass
-                            try:
-                                files[item], extension[item] = \
-                                        files[item].split("_",1)[0], files[item].split(".",1)[1]
-                            except: pass
+                            finally:
+                                try:
+                                    files[item], extension[item] = \
+                                            files[item].split(".",1)[0],\
+                                            files[item].split(".",1)[1]
+
+                                    """ Gets rid of file numbering """
+                                    for i in range(len(files[item])):
+                                            if not files[item][-i-1].isdigit(): 
+                                                if item == 0: indexing = files[item][-i:]
+                                                files[item] = files[item][:-i]
+                                                break
+                                except: pass
+
                         files_set = set(files)
                         extension_set = set(extension)
                         counter = dict((x,files.count(x)) for x in files_set)
@@ -1532,9 +1550,10 @@ class Samples:
                             __self__.samples_database[folder] = mca_prefix
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
+                            __self__.mca_indexing[folder] = indexing
 
-            """ After trying to look at every folder under the folder selected, priority is given to
-            the actual selected folder """
+            """ After trying to look at every folder under the folder selected, 
+            priority is given to the actual selected folder """
 
             if __self__.samples_database == {}:
                 local_path = SpecRead.samples_folder.split("/")
@@ -1550,7 +1569,9 @@ class Samples:
                     for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
                         "output")):
                         if name.lower().endswith(".cube"):
-                            __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
+                            __self__.filequeue.set(
+                                    "Cube for {} already compiled, skipping mca\'s".format(
+                                        folder))
                             __self__.label2.update()
                             try: __self__.splash.update_idletasks()
                             except: __self__.popup.update_idletasks()
@@ -1568,10 +1589,83 @@ class Samples:
                             __self__.label2.update()
                             try: __self__.splash.update_idletasks()
                             except: __self__.popup.update_idletasks()
+                            finally: 
+                                try:
+                                    files[item], extension[item] = \
+                                            files[item].split(".",1)[0],\
+                                            files[item].split(".",1)[1]
+
+                                    """ Gets rid of file numbering """
+                                    for i in range(len(files[item])):
+                                            if item == 0: indexing = files[item][-i:]
+                                            if not files[item][-i-1].isdigit(): 
+                                                files[item] = files[item][:-i]
+                                                break
+                                except: pass
+
+                        files_set = set(files)
+                        extension_set = set(extension)
+                        counter = dict((x,files.count(x)) for x in files_set)
+                        counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                        mca_prefix_count = 0
+                        mca_extension_count = 0
+                        # counts mca files and stores the prefix string and no. of files
+                        for counts in counter:
+                            if counter[counts] > mca_prefix_count:
+                                mca_prefix = counts
+                                mca_prefix_count = counter[counts]
+                        for ext in counter_ext:
+                            if counter_ext[ext] > mca_extension_count:
+                                mca_extension = ext
+                                mca_extension_count = counter_ext[ext]
+                        # creates a dict key only if the numer of mca's is larger than 20.
+                        if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                            __self__.samples_database[folder] = mca_prefix
+                            __self__.mcacount[folder] = len(files)
+                            __self__.mca_extension[folder] = mca_extension
+                            __self__.mca_indexing[folder] = indexing
+
+            """ If no samples are found, try looking for training_data """
+
+            if __self__.samples_database == {}:
+                folder = "Example Data"
+                new_path = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+                SpecRead.samples_folder = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
+                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
+                        "output",folder)):
+                        if name.lower().endswith(".cube"):
+                            __self__.filequeue.set(
+                                    "Cube for {} already compiled, skipping mca\'s".format(
+                                        folder))
+                            __self__.label2.update()
+                            try: __self__.splash.update_idletasks()
+                            except: __self__.popup.update_idletasks()
                             finally: pass
+                            skip_list.append(name.split(".cube")[0])
+
+                if os.path.exists(new_path):
+                    files = [name for name in os.listdir(new_path) \
+                            if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                    extension = files[:]
+                    for item in range(len(files)): 
+                        # displays file being read on splash screen
+                        __self__.filequeue.set("{}".format(files[item]))
+                        __self__.label2.update()
+                        try: __self__.splash.update_idletasks()
+                        except: __self__.popup.update_idletasks()
+                        finally: 
                             try:
                                 files[item], extension[item] = \
-                                        files[item].split("_",1)[0], files[item].split(".",1)[1]
+                                        files[item].split(".",1)[0],\
+                                        files[item].split(".",1)[1]
+
+                                """ Gets rid of file numbering """
+                                for i in range(len(files[item])):
+                                        if item == 0: indexing = files[item][-i:]
+                                        if not files[item][-i-1].isdigit(): 
+                                            files[item] = files[item][:-i]
+                                            break
                             except: pass
                         files_set = set(files)
                         extension_set = set(extension)
@@ -1593,58 +1687,7 @@ class Samples:
                             __self__.samples_database[folder] = mca_prefix
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
-
-            """ If no samples are found, try looking for training_data """
-
-            if __self__.samples_database == {}:
-                folder = "Example Data"
-                new_path = os.path.join(SpecRead.__PERSONAL__,"Example Data")
-                SpecRead.samples_folder = os.path.join(SpecRead.__PERSONAL__,"Example Data")
-                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
-                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
-                        "output",folder)):
-                        if name.lower().endswith(".cube"):
-                            __self__.filequeue.set("{}".format("Cube for {} already compiled, skipping mca\'s".format(folder)))
-                            __self__.label2.update()
-                            try: __self__.splash.update_idletasks()
-                            except: __self__.popup.update_idletasks()
-                            finally: pass
-                            skip_list.append(name.split(".cube")[0])
-
-                if os.path.exists(new_path):
-                    files = [name for name in os.listdir(new_path) if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
-                    extension = files[:]
-                    for item in range(len(files)): 
-                        # displays file being read on splash screen
-                        __self__.filequeue.set("{}".format(files[item]))
-                        __self__.label2.update()
-                        try: __self__.splash.update_idletasks()
-                        except: __self__.popup.update_idletasks()
-                        finally: pass
-                        try:
-                            files[item], extension[item] = \
-                                    files[item].split("_",1)[0], files[item].split(".",1)[1]
-                        except: pass
-                        files_set = set(files)
-                        extension_set = set(extension)
-                        counter = dict((x,files.count(x)) for x in files_set)
-                        counter_ext = dict((x,extension.count(x)) for x in extension_set)
-                        mca_prefix_count = 0
-                        mca_extension_count = 0
-                        # counts mca files and stores the prefix string and no. of files
-                        for counts in counter:
-                            if counter[counts] > mca_prefix_count:
-                                mca_prefix = counts
-                                mca_prefix_count = counter[counts]
-                        for ext in counter_ext:
-                            if counter_ext[ext] > mca_extension_count:
-                                mca_extension = ext
-                                mca_extension_count = counter_ext[ext]
-                        # creates a dict key only if the numer of mca's is larger than 20.
-                        if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
-                            __self__.samples_database[folder] = mca_prefix
-                            __self__.mcacount[folder] = len(files)
-                            __self__.mca_extension[folder] = mca_extension
+                            __self__.mca_indexing[folder] = indexing
                             
             """ Verify packed cubes """
 
@@ -1845,6 +1888,7 @@ class MainGUI:
         __self__.master.after(300,__self__.SampleLoader.list_all())
         __self__.samples = __self__.SampleLoader.samples_database
         __self__.mcacount = __self__.SampleLoader.mcacount
+        __self__.mca_indexing = __self__.SampleLoader.mca_indexing
         __self__.mca_extension = __self__.SampleLoader.mca_extension
         __self__.snip_config = []
         __self__.find_elements_diag = None
@@ -2919,7 +2963,8 @@ class ConfigDiag:
                     SpecRead.DIRECTORY)
             SpecRead.FIRSTFILE_ABSPATH = os.path.join(SpecRead.selected_sample_folder,
                     root.samples[configdict["directory"]]+\
-                    "_1."+root.mca_extension[configdict["directory"]])
+                    root.mca_indexing[configdict["directory"]]+\
+                    "."+root.mca_extension[configdict["directory"]])
 
             # reads configuration integrity prior opening config.cfg for writing
             if configdict['calibration'] == 'manual': 
@@ -2953,6 +2998,7 @@ class ConfigDiag:
             cfgfile.close()
             
             SpecRead.setup(root.samples[configdict["directory"]],
+                    root.mca_indexing[configdict["directory"]],
                     root.mca_extension[configdict["directory"]])
             __self__.master.grab_release()
             __self__.master.destroy()
@@ -2988,6 +3034,7 @@ class ConfigDiag:
                     format(configdict['directory']))
             
             SpecRead.setup(root.samples[configdict["directory"]],
+                    root.mca_indexing[configdict["directory"]],
                     root.mca_extension[configdict["directory"]])
             __self__.master.grab_release()
             __self__.master.destroy()
