@@ -21,7 +21,7 @@ If you rather run it from the source, straight inside your local Python environm
 <br>
 Be sure to have all the required Python modules installed! They are listed in the section below.<br>
 
-### Dependencies
+#### Dependencies
 
 To run it within a Python interpreter, we recommend you have Python 3.7 installed and the following packages:<br>
 The packages whose versions are mentioned are the stable versions working with XISMuS. Numba, for example, has some issues with opencv and may cause JIT funtions to malfunction.<br>
@@ -32,7 +32,7 @@ The packages whose versions are mentioned are the stable versions working with X
 * psutil<br>
 * matplotlib<br>
 
-#### Optional recomended: xraylib _v 3.3.0
+#### Optional: xraylib _v 3.3.0_
 XISMuS uses xraylib version 3.3.0 but it is optional. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>Note: It is strongly recommended that you install the xraylib package.</ins><br>
 If xraylib is not installed, the program will still run, but chemical mapping will be limited to few elements.<br>
 Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
@@ -40,5 +40,5 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 
 [xraylib]: http://lvserver.ugent.be/xraylib/xraylib-3.3.0-win64.exe
 [x64]: https://mega.nz/#!oTJVXYIY!jAJ3u8dL8_ItcH-8jYYzgkcLBibLeWosSU7msBzSZK0
-[x86]: https://mega.nz/#!MbY1WKzA!AKqHqlcAQQzaLGkF1BPhasG85U9dA67baJV7gOICo14
-[UserGuide]: https://www.google.com
+[x86]: https://mega.nz/#!xO4XkIDR!6XUTw85GweJrKyKe8yPEsGWVE0qHu2-OiMqJ60meyZM
+[UserGuide]: https://mega.nz/#!tSxlDSQT!1S-WJugueCeJimb7O6IVyVDh4ymnojHVNp459T88Beg
