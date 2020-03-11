@@ -2948,8 +2948,8 @@ class ConfigDiag:
         except: pass
         global MY_DATACUBE
         MY_DATACUBE = None
-        try: root.samples.pop(SpecRead.CONFIG["directory"])
-        except: pass
+        if isinstance(root.samples[SpecRead.CONFIG["directory"]],tuple):
+            root.samples.pop(SpecRead.CONFIG["directory"])
         load_cube()
         root.write_stat()
         root.draw_map()
