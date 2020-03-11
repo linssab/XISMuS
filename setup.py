@@ -17,31 +17,20 @@ PYTHON_INSTALL_DIR = os.path.dirname(os.path.dirname(os.__file__))
 os.environ['TCL_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
 
-includefiles_list=[(".\\images\\icons\\erase.png",".\\images\\icons\\erase.png"),
-                (".\\images\\icons\\img_anal.png",".\\images\\icons\\img_anal.png"),
+includefiles_list=[
                 (".\\images\\icons\\img_anal.ico",".\\images\\icons\\img_anal.ico"),
-                (".\\images\\icons\\load.png",".\\images\\icons\\load.png"),
                 (".\\images\\icons\\plot.ico",".\\images\\icons\\plot.ico"),
-                (".\\images\\icons\\quit.png",".\\images\\icons\\quit.png"),
-                (".\\images\\icons\\reset.png",".\\images\\icons\\reset.png"),
-                (".\\images\\icons\\refresh.png",".\\images\\icons\\refresh.png"),
                 (".\\images\\icons\\refresh.ico",".\\images\\icons\\refresh.ico"),
-                (".\\images\\icons\\rubik.png",".\\images\\icons\\rubik.png"),
-                (".\\images\\icons\\settings.png",".\\images\\icons\\settings.png"),
                 (".\\images\\icons\\rubik.ico",".\\images\\icons\\rubik.ico"),
                 (".\\images\\icons\\settings.ico",".\\images\\icons\\settings.ico"),
-                (".\\images\\icons\\export_1.png",".\\images\\icons\\export_1.png"),
-                (".\\images\\icons\\export_2.png",".\\images\\icons\\export_2.png"),
-                (".\\images\\icons\\next.png",".\\images\\icons\\next.png"),
-                (".\\images\\icons\\previous.png",".\\images\\icons\\previous.png"),
-                (".\\images\\icons\\export_merge.png",".\\images\\icons\\export_merge.png"),
                 (".\\images\\icons\\icon.ico",".\\images\\icons\\icon.ico"),
-                (".\\images\\splash.png",".\\images\\splash.png"),
-                (".\\images\\no_data.png",".\\images\\no_data.png"),
+                (".\\images\\icons\\icons.tz",".\\images\\icons\\icons.tz"),
+                (".\\images\\utils.tz",".\\images\\utils.tz"),
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'), 
                     os.path.join('lib', 'tcl86t.dll')),
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tk86t.dll'), 
-                    os.path.join('lib', 'tk86t.dll'))]
+                    os.path.join('lib', 'tk86t.dll'))
+                ]
 
 
 mkls_path = os.path.join(os.path.dirname(os.path.dirname(os.__file__)),"Library","bin")
