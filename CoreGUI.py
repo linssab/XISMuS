@@ -3037,10 +3037,30 @@ class ConfigDiag:
                 "peakmethod":__self__.MethodVar.get(),
                 "bg_settings":root.snip_config}
         
+        if not os.path.exists(SpecRead.output_path):
+            try:
+                os.mkdir(SpecRead.output_path)
+            except IOError as exception:
+                logger.warning("Error {}.".format(exception.__class__.__name__))
+                logger.warning("Can't create output folder {}".format(SpecRead.output_path))
+                if exception.__class__.__name__ == "FileExistsError": 
+                    exists = "Folder already exists!"
+                else: exists = None
+                messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
+                root.write_stat()
+                root.draw_map()
+                return
+            if not os.path.exists(SpecRead.dimension_file):
+                dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
+                dm_file.write("righe\t{}\n".format(root.config_xy[0]))
+                dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
+                dm_file.write(5*"*"+" user input data "+5*"*")
+                dm_file.close()
+
         
         if os.path.exists(os.path.join(SpecRead.samples_folder, configdict["directory"]))\
                 or isinstance(root.samples[configdict["directory"]],tuple):
-            SpecRead.DIRECTORY = configdict["directory"] + '\\'
+            SpecRead.DIRECTORY = configdict["directory"]
             SpecRead.selected_sample_folder = os.path.join(SpecRead.samples_folder, 
                     SpecRead.DIRECTORY)
             if not isinstance(root.samples[configdict["directory"]],tuple):
@@ -3081,26 +3101,7 @@ class ConfigDiag:
                 cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
             cfgfile.write("<<END>>\r")
             cfgfile.close()
-        
-        if not os.path.exists(SpecRead.dimension_file):
-            try:
-                os.mkdir(SpecRead.output_path)
-            except IOError as exception:
-                logger.warning("Error {}.".format(exception.__class__.__name__))
-                logger.warning("Can't create output folder {}".format(SpecRead.output_path))
-                if exception.__class__.__name__ == "FileExistsError": 
-                    exists = "Folder already exists!"
-                else: exists = None
-                messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
-                root.write_stat()
-                root.draw_map()
-                return
-            dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
-            dm_file.write("righe\t{}\n".format(root.config_xy[0]))
-            dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
-            dm_file.write(5*"*"+" user input data "+5*"*")
-            dm_file.close()
-    
+            
             SpecRead.setup(root.samples[configdict["directory"]],
                     root.mca_indexing[configdict["directory"]],
                     root.mca_extension[configdict["directory"]])
