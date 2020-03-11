@@ -127,6 +127,7 @@ class datacube:
         else:
             __self__.name = configuration["directory"]
         logger.debug("Initializing cube file")
+        
         try: specsize = getdata(getfirstfile()) 
         except: specsize = 0
         __self__.datatypes = \

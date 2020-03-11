@@ -48,7 +48,7 @@ def setup(prefix, indexing, extension):
     contained there """
 
     logger.debug("Running setup from Config.cfg") 
-    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list, file_pool
 
     CONFIG,CALIB = CONFIGURE()
     DIRECTORY = CONFIG.get("directory")
@@ -61,7 +61,9 @@ def setup(prefix, indexing, extension):
     dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
     
     # builds path to first spectrum file
-    FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder,prefix+indexing+"."+extension)
+    ### being deprecated, for the direct setup, FIRSTFILE_ABSPATH is built on GUI
+    #FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder,prefix+indexing+"."+extension)
+    file_pool = []
     global_list =  [CONFIG, CALIB, DIRECTORY, 
             samples_folder, selected_sample_folder, workpath, 
             cube_path, output_path, dimension_file, 
@@ -341,7 +343,7 @@ def getgain():
         GAIN+=curve[i+1]-curve[i]
     return GAIN/n
    
-def updatespectra(specfile,size):
+def updatespectra(specfile,size,from_list=False):
 
     """ Returns the next spectrum file to be read
     INPUT:
@@ -349,23 +351,32 @@ def updatespectra(specfile,size):
         size; int
     OUTPUT:
         newfile; string """        
-    global samples_folder
-
-    name=str(specfile)
-    specfile_name = name.split("\\")[-1]
-    name = specfile_name.split(".")[0]
-    extension = specfile_name.split(".")[-1]
-    for i in range(len(name)):
-        if not name[-i-1].isdigit(): 
-            prefix = name[:-i]
-            index = name[-i:]
-            break
     
-    if int(index) < size: index = str(int(index)+1)
-    else: index = str(size)
-    newfile = os.path.join(samples_folder,
-            CONFIG["directory"],
-            str(prefix+index+"."+extension))
+    try:
+        global file_pool
+        index = file_pool.index(specfile)
+        newfile = file_pool[index+1]
+    
+    except (IndexError, ValueError): 
+
+        global samples_folder
+
+        name=str(specfile)
+        specfile_name = name.split("\\")[-1]
+        name = specfile_name.split(".")[0]
+        extension = specfile_name.split(".")[-1]
+        for i in range(len(name)):
+            if not name[-i-1].isdigit(): 
+                prefix = name[:-i]
+                index = name[-i:]
+                break
+        
+        if int(index) < size: index = str(int(index)+1)
+        else: index = str(size)
+        newfile = os.path.join(samples_folder,
+                CONFIG["directory"],
+                str(prefix+index+"."+extension))
+        
     return newfile
 
 def getdimension():

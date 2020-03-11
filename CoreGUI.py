@@ -217,15 +217,11 @@ def call_compilecube():
     
     If a certain file cannot be read, an error is raised. SpecMath returns the name 
     of the file. """
-
     try: 
         os.mkdir(SpecRead.output_path)
     except IOError as exception:
         logger.warning("Error {}.".format(exception.__class__.__name__))
         logger.warning("Can't create output folder {}".format(SpecRead.output_path))
-        #if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
-        #else: exists = None
-        #messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
     
     if os.path.exists(SpecRead.cube_path): 
         pass
@@ -239,22 +235,28 @@ def call_compilecube():
         root.StatusBox.insert(END, "\nImage size: {} x {}.\n".format(root.config_xy[0], root.config_xy[1]))
         root.StatusBox.insert(END, "\nSpectra count: {}.\n".format(root.mcacount[SpecRead.CONFIG["directory"]]))
         logger.warning("Starting cube {} compilation!".format(SpecRead.CONFIG["directory"]))
+        SpecRead.file_pool = root.samples[SpecRead.CONFIG["directory"]]
         specbatch = Cube(['xrf'],SpecRead.CONFIG)
         fail = specbatch.compile_cube()
         root.ButtonLoad.config(state=NORMAL)
         root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+
+        """ changes the prefix if sample was loaded manually """
+        if isinstance(SpecRead.file_pool,tuple):
+            root.samples[SpecRead.CONFIG["directory"]] = \
+                    root.samples[SpecRead.CONFIG["directory"]][0].split("/")[-1].split(".")[0]
         if fail[0] == True:
-            messagebox.showerror("Error!","Could not read {} file! Aborting compilation".format(fail[1]))
+            messagebox.showerror("Error!",
+                    "Could not read {} file! Aborting compilation".format(fail[1]))
             shutil.rmtree(SpecRead.output_path) 
 
 def prompt_folder():
 
     """ Opens dialogue to change the samples folder """
 
-    folder = filedialog.askdirectory()
+    folder = filedialog.askdirectory(title="Select the samples folder")
     if folder != "":
         ini_file = open(os.path.join(SpecRead.__BIN__,"folder.ini"),"w")
-        #folder = folder.replace("/","\\")
         ini_file.write(folder)
         ini_file.close()
         SpecRead.samples_folder = folder
@@ -442,12 +444,16 @@ class export_diag():
         enhance = __self__.parent.DATACUBE.config["enhance"]
         try:
             if tag == 1: 
-                f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+                f = filedialog.asksaveasfile(mode='w', 
+                        defaultextension=".png",
+                        title="Save image 1 as...")
                 if f is None: 
                     return
                 write_image(__self__.parent.newimage1,__self__.TARGET,f.name,enhance=enhance)
             elif tag == 2: 
-                f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+                f = filedialog.asksaveasfile(mode='w', 
+                        defaultextension=".png",
+                        title="Save image 2 as...")
                 if f is None: 
                     return
                 write_image(__self__.parent.newimage2,__self__.TARGET,f.name,enhance=enhance)
@@ -460,7 +466,9 @@ class export_diag():
     def merge(__self__):
         enhance = __self__.parent.DATACUBE.config["enhance"]
         stack = stackimages(__self__.parent.newimage1,__self__.parent.newimage2)
-        f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+        f = filedialog.asksaveasfile(mode='w', 
+                defaultextension=".png",
+                title="Save merge as...")
         if f is None: 
             return
         write_image(stack,__self__.TARGET,f.name,enhance=enhance)
@@ -564,6 +572,7 @@ class dimension_diag():
     
     def kill(__self__,e):
         __self__.exit_code = "cancel"
+        root.samples.pop(SpecRead.CONFIG["directory"])
         __self__.win.destroy()
 
 
@@ -666,11 +675,23 @@ class PeakClipper:
     def refresh_plot(__self__):
         __self__.plot.clear()
         folder = SpecRead.CONFIG.get('directory')
+
+        """ Gives the spectrum name for label according to need. Is user loaded a list
+        of files, name must be taken straight from the list. Else, the file builder
+        concatenates prefix, index and prefix to form the name """
+        
+        if isinstance(root.samples[folder],tuple): 
+            label = root.samples[folder][__self__.sample].split("/")[-1]
+        else:
+            label = root.samples[folder]+"{0}.{1}".format(
+                        __self__.sample,root.mca_extension[folder])
+
         if root.PlotMode == "Linear":
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
-            __self__.plot.plot(__self__.spectrum,color="blue",\
-                    label=(root.samples[folder] + "{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
+            __self__.plot.plot(__self__.spectrum,
+                    color="blue",
+                    label=label)
             try: 
                 background = __self__.stripbg()
                 __self__.plot.plot(background, label="Background",color="yellow")
@@ -679,8 +700,9 @@ class PeakClipper:
         else:
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
-            __self__.plot.semilogy(__self__.spectrum,color="blue",\
-                    label=(root.samples[folder] + "{0}.{1}".format(__self__.sample,root.mca_extension[folder])))
+            __self__.plot.semilogy(__self__.spectrum,
+                    color="blue",
+                    label=label)
             try: 
                 background = __self__.stripbg()
                 __self__.plot.plot(background, label="Background",color="yellow")
@@ -694,9 +716,18 @@ class PeakClipper:
     def random_sample(__self__):
         folder = SpecRead.CONFIG.get('directory')
         spec_no = root.mcacount[folder]
-        __self__.sample = random.randint(1,spec_no-1)
-        mca = os.path.join(SpecRead.selected_sample_folder,
-                root.samples[folder]+"{0}.{1}".format(__self__.sample,root.mca_extension[folder]))
+        
+        """ When loading a list of files - when the sample is manually loaded by the user,
+        not detected automatically - root.samples carries the list of all mca's path """
+        if isinstance(root.samples[folder],tuple):
+            __self__.sample = random.randint(1,len(root.samples[folder]))
+            mca = root.samples[folder][__self__.sample]
+        else:
+            __self__.sample = random.randint(1,spec_no-1)
+            mca = os.path.join(SpecRead.selected_sample_folder,
+                    root.samples[folder]+"{0}.{1}".format(__self__.sample,
+                        root.mca_extension[folder]))
+            
         __self__.spectrum = SpecRead.getdata(mca)
         if isinstance(__self__.spectrum,np.ndarray):
             __self__.refresh_plot() 
@@ -2126,7 +2157,7 @@ class MainGUI:
         selection = []
         for item in __self__.maps_list.curselection():
             selection.append(__self__.maps_list.get(item))
-        _path = filedialog.askdirectory()
+        _path = filedialog.askdirectory(title="Export to")
         if _path != "":
             try: os.mkdir(_path+"\\")
             except: pass
@@ -2227,10 +2258,10 @@ class MainGUI:
         # If the cube does not exists, the user is promped to config the sample and click ok to compile it.
         # Let the user cancel the cofiguration dialogue, the global variable cube_path is unchanged.
         
-        local_cube_path = SpecRead.workpath+"\output\\"+value+"\\"+value+".cube"
+        local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
         if os.path.exists(local_cube_path): 
             global MY_DATACUBE
-            SpecRead.cube_path = SpecRead.workpath+"\output\\"+value+"\\"+value+".cube"
+            SpecRead.cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
             load_cube()
             SpecRead.setup_from_datacube(MY_DATACUBE,__self__.samples)
             __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
@@ -2274,8 +2305,8 @@ class MainGUI:
     
     def open_files_location(__self__, event=""):
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-        path = SpecRead.samples_folder + value + "\\"
-        local_cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
+        path = os.path.join(SpecRead.samples_folder,value)
+        local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
         if os.path.exists(local_cube_path):
             global MY_DATACUBE
             __self__.sample_select(event)
@@ -2303,7 +2334,9 @@ class MainGUI:
         global MY_DATACUBE
         __self__.sample_select(event)
         if os.path.exists(SpecRead.cube_path): 
-            f = filedialog.asksaveasfile(mode='w', defaultextension=".png")
+            f = filedialog.asksaveasfile(mode='w', 
+                    defaultextension=".png",
+                    title="Save as...")
         else: 
             return
         if f is None: 
@@ -2334,7 +2367,39 @@ class MainGUI:
             __self__.sample_plot.imshow(__self__.densitymap,cmap='jet',label='Counts Map')
         except: 
             __self__.sample_plot.imshow(np.zeros([20,20]))
-    
+            
+            
+    def batch(__self__):
+        #1 prompt for files
+        file_batch = filedialog.askopenfilenames(parent=__self__.master,title="Select mca's")
+        if file_batch == "": return
+        
+        #1.1 get the name of parent directory
+        try: sample_name = str(file_batch[0]).split("/")[-2]
+        except IndexError: messagebox.showerror("No parent folder!","No parent folder detected. Be sure the spectra files are under a common folder (Hard drives are not parent folders!)")
+
+        #2 setups variables in SpecRead and GUI
+        SpecRead.conditional_setup(name=sample_name)
+        __self__.mcacount[sample_name] = len(file_batch)
+        """ samples dict attribute is always a string, except in this particular case """
+        __self__.samples[sample_name] = file_batch
+        __self__.mca_indexing[sample_name] = file_batch[0].split(".")[0]
+        __self__.mca_extension[sample_name] = "---"
+        SpecRead.FIRSTFILE_ABSPATH = file_batch[0]
+
+        #3 ask for a sample name and dimension (modified dimension diag)
+        dimension = dimension_diag(SpecRead.DIRECTORY)
+        __self__.master.wait_window(dimension.win) 
+        if dimension.exit_code == "cancel":
+            __self__.wipe()
+            return 0
+        __self__.ManualParam = []
+                
+        # calls the configuration window
+        __self__.ConfigDiag = ConfigDiag(__self__.master)
+        __self__.ConfigDiag.build_widgets()
+
+   
         
     def plot_ROI(__self__):
         master = __self__.master
@@ -2440,16 +2505,21 @@ class MainGUI:
         __self__.MenuBar.add_command(label="Help", command=call_help)
         #__self__.MenuBar.entryconfig("Help",state=DISABLED)
         __self__.MenuBar.add_command(label="Author", command=call_author)
-        __self__.derived_spectra.add_command(label="Summation", command=__self__.call_summation)
-        __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)", \
+        __self__.derived_spectra.add_command(label="Summation", 
+                command=__self__.call_summation)
+        __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)",
                 command=__self__.call_mps)
         __self__.derived_spectra.add_command(label="Combined", command=__self__.call_combined)
-        __self__.Toolbox.add_command(label="Change samples folder . . .", command=prompt_folder)
+        __self__.Toolbox.add_command(label="Change samples folder . . .", 
+                command=prompt_folder)
+        __self__.Toolbox.add_command(label="Load file selection . . .",
+                command=__self__.batch)
         __self__.Toolbox.add_command(label="Load sample", command=__self__.list_samples)
         __self__.Toolbox.add_command(label="Reset sample", command=__self__.reset_sample)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_cascade(label="Derived spectra", menu=__self__.derived_spectra)
-        __self__.Toolbox.add_command(label="Check calibration", command=__self__.plot_calibration_curve)
+        __self__.Toolbox.add_command(label="Check calibration", 
+                command=__self__.plot_calibration_curve)
         __self__.Toolbox.add_command(label="Verify calculated ROI", command=__self__.plot_ROI)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Map elements", command=__self__.find_elements)
@@ -2617,9 +2687,12 @@ class MainGUI:
             __self__.ResetWindow = Toplevel(master=__self__.master)
             __self__.ResetWindow.title("Attention!")
             __self__.ResetWindow.resizable(False,False)
-            LocalLabel = Label(__self__.ResetWindow, text=\
-                    "Resetting the sample will erase all files in the OUTPUT folder of sample {}! Are you sure you want to proceed?".\
-                    format(SpecRead.DIRECTORY),padx=10, pady=4, wraplength=250)
+            LocalLabel = Label(__self__.ResetWindow, 
+                    text="Resetting the sample will erase all files in the OUTPUT folder of sample {}! Are you sure you want to proceed?".format(
+                        SpecRead.DIRECTORY),
+                    padx=10, 
+                    pady=4, 
+                    wraplength=250)
             LocalLabel.pack()
             Erase_ico = PhotoImage(file = ".\\images\\icons\\erase.png")
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
@@ -2835,14 +2908,14 @@ class ConfigDiag:
         __self__.master.resizable(False,False)
         __self__.master.title("Configuration")
         __self__.master.bind("<Escape>",__self__.wipe)
-        __self__.master.bind("<Return>",__self__.save_config)
+        __self__.master.bind("<Return>",__self__.check_method_and_save)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe)
         __self__.Frame = Frame(__self__.master,padx=15,pady=15)
         __self__.Labels = Frame(__self__.master,padx=15,pady=15)
         __self__.Frame.grid(row=0, column=1)
         __self__.Labels.grid(row=0, column=0)
 
-    def check_method_and_save(__self__):
+    def check_method_and_save(__self__,e=""):
         if __self__.CalibVar.get() == 'manual':
             __self__.manual_calib()
         else: __self__.save_config()
@@ -2859,6 +2932,7 @@ class ConfigDiag:
             elif EntryParam[index][0] < 0 or EntryParam[index][1] < 0:
                 messagebox.showerror("Calibration Error",\
                         "Can't receive negative values!")
+                __self__.CalibDiag.focus_set()
                 root.ManualParam = []
                 raise ValueError("Manual calibration can't receive negative values!")
         __self__.CalibDiag.grab_release()
@@ -2869,10 +2943,11 @@ class ConfigDiag:
         try: 
             __self__.master.grab_release()
             __self__.master.destroy()
-        except: logger.warning("Tried to destroy ConfigDiag before calling it for the \
-                first time")
+        except: pass
         global MY_DATACUBE
         MY_DATACUBE = None
+        try: root.samples.pop(SpecRead.CONFIG["directory"])
+        except: pass
         load_cube()
         root.write_stat()
         root.draw_map()
@@ -2889,6 +2964,7 @@ class ConfigDiag:
         __self__.CalibDiag = Toplevel(master = __self__.master)
         __self__.CalibDiag.title("Manual configuration")
         __self__.CalibDiag.resizable(False,False)
+        __self__.CalibDiag.protocol("WM_DELETE_WINDOW",__self__.focus_grab)
         __self__.CalibDiag.grab_set()
         icon = ".\\images\\icons\\settings.ico"
         __self__.CalibDiag.iconbitmap(icon)
@@ -2945,33 +3021,28 @@ class ConfigDiag:
         __self__.clipper = PeakClipper(root.master)
         __self__.clipper.master.grab_set()
 
-    def save_config(__self__,e=""):
-        configdict = {'directory':__self__.DirectoryVar.get(),'bgstrip':__self__.BgstripVar.get(),\
-                'ratio':__self__.RatioVar.get(),'thickratio':__self__.ThickVar.get(),\
-                'calibration':__self__.CalibVar.get(),'enhance':__self__.EnhanceVar.get(),\
-                'peakmethod':__self__.MethodVar.get(),'bg_settings':root.snip_config}
-        
-        if not os.path.exists(SpecRead.dimension_file):
-            try:
-                os.mkdir(SpecRead.output_path)
-            except IOError as exception:
-                logger.warning("Error {}.".format(exception.__class__.__name__))
-                logger.warning("Can't create output folder {}".format(SpecRead.output_path))
-                if exception.__class__.__name__ == "FileExistsError": exists = "Folder already exists!"
-                else: exists = None
-                messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
-                return
-            dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
-            dm_file.write("righe\t{}\n".format(root.config_xy[0]))
-            dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
-            dm_file.write(5*"*"+" user input data "+5*"*")
-            dm_file.close()
+    def focus_grab(__self__):
+        __self__.master.focus_set()
+        __self__.master.grab_set()
 
-        if os.path.exists(os.path.join(SpecRead.samples_folder, configdict["directory"])):
+    def save_config(__self__,e=""):
+        configdict = {"directory":__self__.DirectoryVar.get(),
+                "bgstrip":__self__.BgstripVar.get(),
+                "ratio":__self__.RatioVar.get(),
+                "thickratio":__self__.ThickVar.get(),
+                "calibration":__self__.CalibVar.get(),
+                "enhance":__self__.EnhanceVar.get(),
+                "peakmethod":__self__.MethodVar.get(),
+                "bg_settings":root.snip_config}
+        
+        
+        if os.path.exists(os.path.join(SpecRead.samples_folder, configdict["directory"]))\
+                or isinstance(root.samples[configdict["directory"]],tuple):
             SpecRead.DIRECTORY = configdict["directory"] + '\\'
             SpecRead.selected_sample_folder = os.path.join(SpecRead.samples_folder, 
                     SpecRead.DIRECTORY)
-            SpecRead.FIRSTFILE_ABSPATH = os.path.join(SpecRead.selected_sample_folder,
+            if not isinstance(root.samples[configdict["directory"]],tuple):
+                SpecRead.FIRSTFILE_ABSPATH = os.path.join(SpecRead.selected_sample_folder,
                     root.samples[configdict["directory"]]+\
                     root.mca_indexing[configdict["directory"]]+\
                     "."+root.mca_extension[configdict["directory"]])
@@ -2985,11 +3056,13 @@ class ConfigDiag:
                 if calibparam == []: 
                     messagebox.showerror("Calibration Error",\
                             "No acceptable parameters passed!")
+                    __self__.CalibDiag.focus_set()
                     root.ManualParam = []
                     raise ValueError("No acceptable parameters passed!")
                 elif len(calibparam) <= 1: 
                     messagebox.showerror("Calibration Error",\
                             "Need at least two anchors!")
+                    __self__.CalibDiag.focus_set()
                     root.ManualParam = []
                     raise ValueError("Calibration need at least two anchors!")
             else: 
@@ -3006,7 +3079,26 @@ class ConfigDiag:
                 cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
             cfgfile.write("<<END>>\r")
             cfgfile.close()
-            
+        
+        if not os.path.exists(SpecRead.dimension_file):
+            try:
+                os.mkdir(SpecRead.output_path)
+            except IOError as exception:
+                logger.warning("Error {}.".format(exception.__class__.__name__))
+                logger.warning("Can't create output folder {}".format(SpecRead.output_path))
+                if exception.__class__.__name__ == "FileExistsError": 
+                    exists = "Folder already exists!"
+                else: exists = None
+                messagebox.showerror("{}".format(exception.__class__.__name__),"Cannot create output folder {}\n{}".format(SpecRead.output_path, exists))
+                root.write_stat()
+                root.draw_map()
+                return
+            dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
+            dm_file.write("righe\t{}\n".format(root.config_xy[0]))
+            dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
+            dm_file.write(5*"*"+" user input data "+5*"*")
+            dm_file.close()
+    
             SpecRead.setup(root.samples[configdict["directory"]],
                     root.mca_indexing[configdict["directory"]],
                     root.mca_extension[configdict["directory"]])
@@ -3081,7 +3173,12 @@ class ConfigDiag:
         ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
         
         __self__.BgstripVar = StringVar()
-        __self__.ConfigDiagBgstrip = ttk.Combobox(__self__.Frame, textvariable=__self__.BgstripVar, values=("None","SNIPBG"),state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
+        __self__.ConfigDiagBgstrip = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.BgstripVar, 
+                values=("None","SNIPBG"),
+                state="readonly",
+                width=13+ConfigDiagRatioYes.winfo_width())
         
         __self__.DirectoryVar = StringVar()
         #__self__.ConfigDiagDirectory = Entry(__self__.ConfigDiagFrame,textvariable=DirectoryVar,width=__self__.ConfigDiagBgstrip.winfo_width())
@@ -3095,15 +3192,22 @@ class ConfigDiag:
                width=13+ConfigDiagRatioYes.winfo_width(),command=__self__.call_PeakClipper)
         
         __self__.CalibVar = StringVar()
-        __self__.ConfigDiagCalib = ttk.Combobox(__self__.Frame, textvariable=__self__.CalibVar, values=("from_source","manual"),\
+        __self__.ConfigDiagCalib = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.CalibVar, 
+                values=("from_source","manual"),
                 state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
 
         __self__.EnhanceVar = BooleanVar()
         #__self__.ConfigDiagEnhance = Checkbutton(__self__.ConfigDiagFrame, variable=EnhanceVar)
         
         __self__.MethodVar = StringVar()
-        __self__.ConfigDiagMethod = ttk.Combobox(__self__.Frame, textvariable=__self__.MethodVar, values=("simple_roi","auto_roi"),\
-                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
+        __self__.ConfigDiagMethod = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.MethodVar, 
+                values=("simple_roi","auto_roi"),
+                state="readonly",
+                width=13+ConfigDiagRatioYes.winfo_width())
         
         __self__.DirectoryVar.set(SpecRead.CONFIG.get('directory'))
         __self__.BgstripVar.set(SpecRead.CONFIG.get('bgstrip'))
