@@ -329,9 +329,9 @@ class Welcome:
                 height=7,
                 padx=5)
         __self__.info.grid(row=0, column=1, sticky=W+E)
-        icon_fw = PhotoImage(file=os.getcwd()+"\\images\\icons\\next.png")
+        icon_fw = PhotoImage(data=ICO_NEXT)
         __self__.icon_fw = icon_fw.subsample(1,1)
-        icon_bw= PhotoImage(file=os.getcwd()+"\\images\\icons\\previous.png")
+        icon_bw= PhotoImage(data=ICO_PREVIOUS)
         __self__.icon_bw = icon_bw.subsample(1,1)
         __self__.fw = Button(__self__.text_frame, image=__self__.icon_fw, command=__self__.next_page, width=32,height=32)
         __self__.fw.grid(row=0, column=2)
@@ -416,9 +416,9 @@ class export_diag():
     def build_widgets(__self__):
         __self__.Frame = Frame(__self__.master, height=64, width=288)
         __self__.Frame.grid(pady=32)
-        icon1 = PhotoImage(file=os.getcwd()+"\\images\\icons\\export_1.png")
-        icon2 = PhotoImage(file=os.getcwd()+"\\images\\icons\\export_2.png")
-        icon3 = PhotoImage(file=os.getcwd()+"\\images\\icons\\export_merge.png")
+        icon1 = PhotoImage(data=ICO_EXPORT1)
+        icon2 = PhotoImage(data=ICO_EXPORT2)
+        icon3 = PhotoImage(data=ICO_EXPORT_MERGE)
         __self__.icon1 = icon1.subsample(1,1)
         __self__.icon2 = icon2.subsample(1,1)
         __self__.icon3 = icon3.subsample(1,1)
@@ -882,7 +882,6 @@ class Annotator:
 class ImageAnalyzer:
 
     def __init__(__self__,parent,datacube):
-        
         __self__.DATACUBE = datacube
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
         __self__.master = Toplevel(master=parent)
@@ -1051,10 +1050,10 @@ class ImageAnalyzer:
                 try: __self__.Map2Combo.current(0)
                 except: pass
             if __self__.ElementalMap1.max() == 0:
-                __self__.ElementalMap1 = np.array(plt.imread(os.getcwd()+"\\images\\no_data.png"))
+                __self__.ElementalMap1 = IMG_NODATA
                 __self__.draw_image1(0)
             if __self__.ElementalMap2.max() == 0:
-                __self__.ElementalMap2 = np.array(plt.imread(os.getcwd()+"\\images\\no_data.png"))
+                __self__.ElementalMap2 = IMG_NODATA
                 __self__.draw_image2(0)
             __self__.update_sample1(None)
             __self__.update_sample2(None)
@@ -1462,7 +1461,7 @@ class Samples:
         __self__.splash.grid_rowconfigure(1,weight=1)
         __self__.splash.grid_columnconfigure(0,weight=1)
         __self__.splash.grid_columnconfigure(1,weight=1)
-        __self__.splash_image = PhotoImage(file=".\\images\\splash.png")
+        __self__.splash_image = PhotoImage(data=IMG_SPLASH)
         __self__.canvas = Label(__self__.splash, 
                 image = __self__.splash_image,
                 height=374)
@@ -2491,7 +2490,7 @@ class MainGUI:
         __self__.TableLeft.grid(row=5, column=2, sticky=N+S)
         __self__.TableMiddle.grid(row=5, column=3, columnspan=2, sticky=N+S)
         
-        re_configure_icon = PhotoImage(file=".\\images\\icons\\refresh.png")
+        re_configure_icon = PhotoImage(data=ICO_REFRESH)
         __self__.re_configure_icon = re_configure_icon.subsample(1,1)
         __self__.re_configure = Button(__self__.ConfigFrame, image=__self__.re_configure_icon, width=32, height=32, command=__self__.reconfigure)
         __self__.re_configure.grid(row=5, column=5, sticky=S)
@@ -2537,17 +2536,17 @@ class MainGUI:
         # define the buttons wich go inside the ButtonsFrame (top left corner)
         subx,suby = 1,1
 
-        ButtonLoad_icon = PhotoImage(file = ".\\images\\icons\\load.png")
+        ButtonLoad_icon = PhotoImage(data=ICO_LOAD)
         __self__.ButtonLoad_icon = ButtonLoad_icon.subsample(subx,suby)
-        ButtonReset_icon = PhotoImage(file = ".\\images\\icons\\reset.png")
+        ButtonReset_icon = PhotoImage(data=ICO_RESET)
         __self__.ButtonReset_icon = ButtonReset_icon.subsample(subx,suby)
-        ImgAnalButton_icon = PhotoImage(file = ".\\images\\icons\\img_anal.png")
+        ImgAnalButton_icon = PhotoImage(data=ICO_IMGANAL)
         __self__.ImgAnalButton_icon = ImgAnalButton_icon.subsample(subx,suby)
-        FindElementButton_icon = PhotoImage(file = ".\\images\\icons\\rubik.png")
+        FindElementButton_icon = PhotoImage(data=ICO_RUBIK)
         __self__.FindElementButton_icon = FindElementButton_icon.subsample(subx,suby)
-        QuitButton_icon = PhotoImage(file = ".\\images\\icons\\quit.png")
+        QuitButton_icon = PhotoImage(data=ICO_QUIT)
         __self__.QuitButton_icon = QuitButton_icon.subsample(subx,suby)
-        SettingsButton_icon = PhotoImage(file = ".\\images\\icons\\settings.png")
+        SettingsButton_icon = PhotoImage(data=ICO_SETTINGS)
         __self__.SettingsButton_icon = SettingsButton_icon.subsample(subx,suby)
 
         __self__.ButtonLoad = Button(__self__.ButtonsFrame, text="  Load Sample", anchor=W,\
@@ -2696,7 +2695,7 @@ class MainGUI:
                     pady=4, 
                     wraplength=250)
             LocalLabel.pack()
-            Erase_ico = PhotoImage(file = ".\\images\\icons\\erase.png")
+            Erase_ico = PhotoImage(data=ICO_ERASE)
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
             EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
                     pack(side=LEFT, pady=8, padx=16)
@@ -3652,6 +3651,7 @@ def _init_numpy_mkl():
     except Exception:
         pass
 
+
 if __name__.endswith('__main__'):         
     optimum_resolution = (1920,1080)
     _init_numpy_mkl()
@@ -3672,7 +3672,7 @@ if __name__.endswith('__main__'):
     # general utilities
     import numpy as np
     import cv2
-    import sys, os, copy, pickle, stat, random
+    import sys, os, copy, pickle, stat, random, base64
     import shutil
     import webbrowser
     from psutil import virtual_memory
@@ -3725,6 +3725,7 @@ if __name__.endswith('__main__'):
     from ReadConfig import checkout_config
     from ImgMath import LEVELS
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
+    from Decoder import *
     from SpecMath import getstackplot, correlate, peakstrip
     from SpecMath import datacube as Cube
     from EnergyLib import plottables_dict
