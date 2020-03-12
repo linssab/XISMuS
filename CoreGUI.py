@@ -290,6 +290,7 @@ class Convert_File_Name:
 
     def __init__(__self__,parent):
         __self__.master = Toplevel(master=parent)
+        __self__.master.withdraw()
         __self__.master.title("Spectrum name converter")
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Escape>",__self__.kill)
@@ -314,9 +315,7 @@ class Convert_File_Name:
         __self__.RightPane = Frame(__self__.master, width=150,padx=16)
         __self__.RightPane.grid(row=0, column=1)
 
-        __self__.master.withdraw()
         __self__.build_widgets()
-        __self__.master.deiconify()
         place_center(root.master,__self__.master)
         __self__.master.grab_set()
 
@@ -391,6 +390,7 @@ class Convert_File_Name:
         for i in range(5):
             __self__.master.rowconfigure(i, weight=0)
         __self__.master.rowconfigure(5, weight=1)
+        __self__.master.deiconify()
 
     def grab_file_list(__self__,e=""):
         __self__.files = []
