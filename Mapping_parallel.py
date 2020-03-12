@@ -30,9 +30,16 @@ def convert_bytes(num):
             return "%3.1f %s" % (num, x)
         num /= 1024.0
 
-def break_list(element_list):
+def break_list(element_list,max_instances):
+    
+    """ cores variable governs how many instances can be 
+    called and divides the chuncks """
+
     cores = cpu_count()
-    #cores = 3
+    if max_instances == 0:
+        cores = cpu_count()
+    elif max_instances < cores:
+        cores = max_instances
     chunks = []
     chunk_slice = 0
     quo = int(len(element_list)/cores)
@@ -227,7 +234,7 @@ def start_reader(cube,Element,iterator,results):
 
 class Cube_reader():
     
-    def __init__(__self__,datacube,element_list):
+    def __init__(__self__,datacube,element_list,instances):
         __self__.cube = datacube
         __self__.element_list = element_list
         __self__.bar_max = len(element_list)*datacube.img_size
@@ -239,7 +246,7 @@ class Cube_reader():
         __self__.processes = []
         __self__.process_names = []
         __self__.run_count = 0 
-        __self__.chunks = break_list(__self__.element_list)
+        __self__.chunks = break_list(__self__.element_list,instances)
     
     def start_workers(__self__):
         __self__.p_bar.progress["maximum"] = __self__.cube.img_size*len(__self__.element_list)

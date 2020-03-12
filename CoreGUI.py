@@ -286,6 +286,172 @@ def load_cube():
     return MY_DATACUBE
 
 
+class Convert_File_Name:
+
+    def __init__(__self__,parent):
+        __self__.master = Toplevel(master=parent)
+        __self__.master.title("Spectrum name converter")
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+        __self__.master.bind("<Escape>",__self__.kill)
+        __self__.master.bind("<Return>",__self__.grab_file_list)
+        icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
+        __self__.master.iconbitmap(icon)
+        __self__.master.resizable(False,False)
+        __self__.files = []
+        
+        __self__.prefix = StringVar()
+        __self__.starting_index = IntVar()
+        __self__.width = IntVar()
+        __self__.height = IntVar()
+
+        __self__.prefix.set("Spectrum")
+        __self__.starting_index.set(1)
+
+        __self__.LeftPane = Frame(__self__.master, width=150,padx=16,pady=16)
+        __self__.LeftPane.grid(row=0,column=0)
+        __self__.bar = ttk.Separator(__self__.master, orient=VERTICAL)
+        __self__.bar.grid(column=1,row=0, rowspan=5,sticky=N+W)
+        __self__.RightPane = Frame(__self__.master, width=150,padx=16)
+        __self__.RightPane.grid(row=0, column=1)
+
+        __self__.master.withdraw()
+        __self__.build_widgets()
+        __self__.master.deiconify()
+        place_center(root.master,__self__.master)
+        __self__.master.grab_set()
+
+    def build_widgets(__self__):
+        
+        """ Left Pane """
+        __self__.LeftLabel = Label(__self__.LeftPane, text="Input")
+        icon = PhotoImage(data=ICO_LOAD)
+        __self__.LoadIco = icon.subsample(1,1)
+        __self__.LoadBtn = Button(__self__.LeftPane, 
+                image=__self__.LoadIco,
+                command=__self__.grab_file_list,
+                width=64, height=64, bd=3)
+        
+        """ Right Pane Labels """
+        __self__.RightLabel = Label(__self__.RightPane, text="Ouput")
+        __self__.PrefixLabel = Label(__self__.RightPane, text="Prefix")
+        __self__.StartLabel = Label(__self__.RightPane, text="Starting No.")
+        __self__.WidthLabel = Label(__self__.RightPane, text="Width (optional)")
+        __self__.HeightLabel = Label(__self__.RightPane, text="Height (optional)")
+
+        """ Right Pane Entries """
+        __self__.PrefixEntry = Entry(__self__.RightPane, 
+                textvariable=__self__.prefix)
+        __self__.StartEntry = Entry(__self__.RightPane,
+                textvariable=__self__.starting_index)
+        __self__.WidthEntry = Entry(__self__.RightPane,
+                textvariable=__self__.width)
+        __self__.HeightEntry = Entry(__self__.RightPane,
+                textvariable=__self__.height)
+        
+        """ Right Pane Buttons """
+        icon = PhotoImage(data=ICO_ACCEPT)
+        __self__.OkIcon = icon.subsample(1,1)
+        __self__.OkBtn = Button(__self__.RightPane, 
+                image=__self__.OkIcon, 
+                text= " Convert",
+                anchor=CENTER,
+                compound=LEFT,
+                command=__self__.start_conversion,
+                width=80,
+                height=24, bd=3)
+        icon = PhotoImage(data=ICO_REJECT)
+        __self__.QuitIcon = icon.subsample(1,1)
+        __self__.QuitBtn = Button(__self__.RightPane, 
+                text=" Quit",
+                anchor=CENTER,
+                compound=LEFT,
+                image=__self__.QuitIcon,
+                command=__self__.kill,
+                width=80,
+                height=24, bd=3)
+        
+        __self__.LeftLabel.grid(row=0,column=0,sticky=N+W+E)
+        __self__.LoadBtn.grid(row=1,column=0,rowspan=5,sticky=W+E,pady=16)
+        __self__.RightLabel.grid(row=0,column=2,columnspan=2,sticky=N+W+E, pady=4)
+        __self__.PrefixLabel.grid(row=1,column=2)
+        __self__.StartLabel.grid(row=2,column=2)
+        __self__.HeightLabel.grid(row=3,column=2)
+        __self__.WidthLabel.grid(row=4,column=2)
+        __self__.PrefixEntry.grid(row=1,column=3)
+        __self__.StartEntry.grid(row=2,column=3)
+        __self__.HeightEntry.grid(row=3,column=3)
+        __self__.WidthEntry.grid(row=4,column=3)
+        __self__.OkBtn.grid(row=5,column=2,pady=8)
+        __self__.QuitBtn.grid(row=5,column=3,pady=8)
+        
+        __self__.master.columnconfigure(0, weight=2)
+        __self__.master.columnconfigure(1, weight=2)
+        __self__.master.columnconfigure(2, weight=1)
+        __self__.master.columnconfigure(3, weight=1)
+        for i in range(5):
+            __self__.master.rowconfigure(i, weight=0)
+        __self__.master.rowconfigure(5, weight=1)
+
+    def grab_file_list(__self__,e=""):
+        __self__.files = []
+        __self__.files = filedialog.askopenfilenames(
+                parent=__self__.master, title="Select spectra")
+        if __self__.files == "": return
+
+    def start_conversion(__self__):
+        
+        if __self__.files == "" or __self__.files == []: 
+            messagebox.showinfo("No files selected!",
+                    "Please first select the spectra you wish to rename.")
+            return
+        out_path = filedialog.askdirectory(parent=__self__.master,
+                title="Select output folder")
+        if out_path == "": return
+        else: 
+            __self__.bar = Busy(len(__self__.files),0)
+            __self__.bar.update_text("Copying files...")
+            new_folder = __self__.files[0].split("/")[-2]+"-conv"
+            try: os.mkdir(os.path.join(out_path,new_folder))
+            except FileExistsError:
+                messagebox.showerror("Folder exists!",
+                        "Can't create folder {}, it already exists.".format(
+                            os.path.join(out_path,new_folder)))
+                __self__.bar.destroybar()
+                __self__.master.deiconify()
+                __self__.master.focus_set()
+                return
+            
+            if __self__.width.get() > 0 and __self__.height.get() > 0: 
+                dm_file = open(os.path.join(out_path,new_folder,"colonneXrighe.txt"),"w")
+                dm_file.write("righe\t{}\n".format(__self__.height.get()))
+                dm_file.write("colonne\t{}\n".format(__self__.width.get()))
+                dm_file.close()
+            elif __self__.width.get() <= 0 or __self__.height.get() <= 0:
+                messagebox.showerror("Invalid values!",
+                        "The dimensions can't be negative or zero!")
+                __self__.bar.destroybar()
+                __self__.files = []
+                return
+
+            index = __self__.starting_index.get()
+            extension = __self__.files[0].split(".")[-1]
+            for spectrum in __self__.files:
+                new_name = __self__.prefix.get()+str(index)+"."+extension
+                shutil.copy(os.path.join(spectrum), 
+                        os.path.join(out_path,new_folder,new_name))
+                index += 1
+                __self__.bar.updatebar(index)
+            __self__.bar.destroybar()
+            messagebox.showinfo("File name conversion","Conversion finished!")
+            __self__.kill()
+
+    def kill(__self__,e=""):
+        __self__.files = []
+        __self__.master.grab_release()
+        root.master.focus_set()
+        __self__.master.destroy()
+
+
 class Welcome:
 
     """ Welcome window class. Spawns a window with given texts at the center
@@ -584,7 +750,7 @@ class PeakClipper:
         __self__.master = Toplevel(parent)
         __self__.master.tagged = True
         __self__.parent = parent
-        #__self__.master.withdraw()
+        __self__.master.attributes("-alpha",0.0)
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Escape>",__self__.kill)
@@ -662,6 +828,7 @@ class PeakClipper:
         icon = os.getcwd()+"\\images\\icons\\settings.ico"
         __self__.master.iconbitmap(icon)
         __self__.random_sample()
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     
     def stripbg(__self__):
@@ -1246,6 +1413,7 @@ class PlotWin:
     def __init__(__self__,master):
         plot_font = {'fontname':'Arial','fontsize':10}
         __self__.master = Toplevel(master=master)
+        __self__.master.attributes("-alpha",0.0)
         __self__.master.title("Plot")
         __self__.master.tagged = None
         __self__.master.minsize(width=600,height=480)
@@ -1272,6 +1440,7 @@ class PlotWin:
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
         icon = os.getcwd()+"\\images\\icons\\plot.ico"
         __self__.master.iconbitmap(icon)
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
     
     def wipe_plot(__self__):
 
@@ -1470,9 +1639,9 @@ class Samples:
         __self__.filequeue.set(" ")
         __self__.bar = Frame(__self__.splash,bg="#DCDCDC")
         __self__.bar.grid(row=1,column=0,columnspan=2,sticky=W+E)
-        __self__.label1 = Label(__self__.bar, text="Reading samples files...\t")
+        __self__.label1 = Label(__self__.bar, text="Reading samples files...\t",bg="#DCDCDC")
         __self__.label1.grid(row=0,column=0,sticky=W)
-        __self__.label2 = Label(__self__.bar, textvariable = __self__.filequeue)
+        __self__.label2 = Label(__self__.bar, textvariable = __self__.filequeue,bg="#DCDCDC")
         __self__.label2.grid(row=0,column=1)
         __self__.splash.update()
         __self__.splash.update_idletasks()
@@ -1923,21 +2092,18 @@ class MainGUI:
                 if line.split("\t")[1] == "True": __self__.checker = True
                 else: __self__.checker = False
         f.close()
+        
         __self__.master = Tk()
+        __self__.master.title("XISMuS {}".format(VERSION))
         __self__.master.withdraw() 
-        __self__.SampleLoader = Samples()
-        __self__.SampleLoader.splash_screen(__self__)
-        __self__.master.after(300,__self__.SampleLoader.list_all())
-        __self__.samples = __self__.SampleLoader.samples_database
-        __self__.mcacount = __self__.SampleLoader.mcacount
-        __self__.mca_indexing = __self__.SampleLoader.mca_indexing
-        __self__.mca_extension = __self__.SampleLoader.mca_extension
+        __self__.master.attributes("-alpha",0.0)
+                
         __self__.snip_config = []
         __self__.find_elements_diag = None
-        __self__.ImageAnalyzers = [] #everytime ImgAnalyzer API is opened, instance is appended
-        __self__.ConfigDiag = None
+        __self__.ImageAnalyzers = [] 
+        #everytime ImgAnalyzer API is opened, instance is appended
         
-        __self__.master.title("XISMuS {}".format(VERSION))
+        __self__.ConfigDiag = None
         __self__.master.resizable(False,False)
         __self__.sample_figure = Figure(figsize=(3,2), dpi=100)
         __self__.sample_plot =__self__.sample_figure.add_subplot(111)
@@ -1954,8 +2120,23 @@ class MainGUI:
         if __self__.PlotMode == "Linear": __self__.plot_display = None
         
         __self__.build_widgets()
-        __self__.toggle_(toggle='off')
+        
+        # Spawn splash scree and look for samples under the search folder
+        # from folder.ini
+
+        __self__.SampleLoader = Samples()
+        __self__.SampleLoader.splash_screen(__self__)
+        __self__.master.after(100,__self__.SampleLoader.list_all())
+        __self__.samples = __self__.SampleLoader.samples_database
+        __self__.mcacount = __self__.SampleLoader.mcacount
+        __self__.mca_indexing = __self__.SampleLoader.mca_indexing
+        __self__.mca_extension = __self__.SampleLoader.mca_extension
+        
+        time.sleep(0.1)
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
         __self__.master.deiconify()
+
+        __self__.toggle_(toggle='off')
         __self__.pop_welcome()
                
     def root_quit(__self__):
@@ -2368,7 +2549,9 @@ class MainGUI:
             __self__.sample_plot.imshow(__self__.densitymap,cmap='jet',label='Counts Map')
         except: 
             __self__.sample_plot.imshow(np.zeros([20,20]))
-            
+    
+    def converter(__self__):
+        __self__.converterGUI = Convert_File_Name(__self__.master) 
             
     def batch(__self__):
         #1 prompt for files
@@ -2511,12 +2694,15 @@ class MainGUI:
         __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)",
                 command=__self__.call_mps)
         __self__.derived_spectra.add_command(label="Combined", command=__self__.call_combined)
+        __self__.Toolbox.add_command(label="Load sample", command=__self__.list_samples)
+        __self__.Toolbox.add_command(label="Reset sample", command=__self__.reset_sample)
+        __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Change samples folder . . .", 
                 command=prompt_folder)
         __self__.Toolbox.add_command(label="Load file selection . . .",
                 command=__self__.batch)
-        __self__.Toolbox.add_command(label="Load sample", command=__self__.list_samples)
-        __self__.Toolbox.add_command(label="Reset sample", command=__self__.reset_sample)
+        __self__.Toolbox.add_command(label="Convert spectra name . . .",
+                command=__self__.converter)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_cascade(label="Derived spectra", menu=__self__.derived_spectra)
         __self__.Toolbox.add_command(label="Check calibration", 
@@ -3345,22 +3531,34 @@ class PeriodicTable:
                     digest_results(MY_DATACUBE,results,["custom"])
 
                 if len(FIND_ELEMENT_LIST) > 2 and MY_DATACUBE.img_size > 999\
-                        and needed_memory < sys_mem["available"] and\
-                        needed_memory < root.RAM_limit_value and root.MultiCore == True:
+                        and root.MultiCore == True:
                     
-                    cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST)
-                    results = cuber.start_workers()
-                    cuber.p_bar.update_text("Digesting results...")
-                    results = sort_results(results,FIND_ELEMENT_LIST)
-                    digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
-                    cuber.p_bar.destroybar()
+                    max_copies = 0 #as many copies as cores available
+                    if needed_memory > root.RAM_limit_value:
+                        max_copies = 1
+                        while cube_size*max_copies < root.RAM_limit_value:
+                            max_copies += 1
+                    elif needed_memory > sys_mem["available"]:
+                        max_copies = 1
+                        while cube_size*max_copies < sys_mem["available"]:
+                            max_copies += 1
+                    if max_copies == 1:
+                        # if only one copy can be made, it's pointless to run multicore
+                        MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
+                    else:
+                        cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST,max_copies)
+                        results = cuber.start_workers()
+                        cuber.p_bar.update_text("Digesting results...")
+                        results = sort_results(results,FIND_ELEMENT_LIST)
+                        digest_results(MY_DATACUBE,results,FIND_ELEMENT_LIST)
+                        cuber.p_bar.destroybar()
 
                 # single-core mode
                 else: 
                     if len(FIND_ELEMENT_LIST) > 0:
                         MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
                     else: pass
-            
+
             else:
                 results = []
                 for element in FIND_ELEMENT_LIST:
@@ -3726,7 +3924,7 @@ if __name__.endswith('__main__'):
     from ImgMath import LEVELS
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from Decoder import *
-    from SpecMath import getstackplot, correlate, peakstrip
+    from SpecMath import getstackplot, correlate, peakstrip, Busy
     from SpecMath import datacube as Cube
     from EnergyLib import plottables_dict
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
