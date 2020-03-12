@@ -39,6 +39,6 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 <br>
 
 [xraylib]: http://lvserver.ugent.be/xraylib/xraylib-3.3.0-win64.exe
-[x64]: https://mega.nz/#!oTJVXYIY!jAJ3u8dL8_ItcH-8jYYzgkcLBibLeWosSU7msBzSZK0
-[x86]: https://mega.nz/#!xO4XkIDR!6XUTw85GweJrKyKe8yPEsGWVE0qHu2-OiMqJ60meyZM
-[UserGuide]: https://mega.nz/#!tSxlDSQT!1S-WJugueCeJimb7O6IVyVDh4ymnojHVNp459T88Beg
+[x64]: https://mega.nz/#!JGwRkDza!sGN7rOzP-bit8-WnHspeWDpNnZgZVrE7zKv7bHt87UE
+[x86]: https://mega.nz/#!MCo1SbLJ!TNgSX4mnxJEM4NgjzhxQW82eswun3MCRI-ypZepgPrI
+[UserGuide]: https://mega.nz/#!UHRUEYYQ!7PeijTr0P63wUXZQJ9U1xAGyFaLE-8mpyvUEKX50EME
