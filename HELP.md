@@ -1,6 +1,7 @@
 # XISMuS Tutorial
 Here we will guide you, step-by-step on how to use XISMuS.<br>
 You will learn:<br>
+
 **1.  [How to load a sample](#loadingSample)<br>**
 **2.  [How to configure a sample](#configureSample)<br>**
 **3.  [How to change the configuration](#reconfigure)<br>**
@@ -15,9 +16,7 @@ This tutorial makes use of the Example Data provided with the distribution packa
 ## Loading Sample <a name="loadingSample"></a>
 XISMuS automatically looks for *.mca and *.txt files inside the **samples folder**. By default, it is "../My Documents/XISMuS/Example Data". When launching it from a fresh start, the Example Data should be automatically identified. If, not, click on the "Toolbox" dropdown menu and select "Change samples folder...". There are other ways to load your data, even if XISMuS doesn't recognize the spectra name structure. For that, please refer to the User Manual also available for download separately **[here](https://mega.nz/#!UHRUEYYQ!7PeijTr0P63wUXZQJ9U1xAGyFaLE-8mpyvUEKX50EME)**.<br>
 To load a sample and compile it (configure and create its *.cube file), click on "Load Sample". The panel below should come up showing the two example data provided.<br>
-<br>
-<a href="https://imgbb.com/"><img src="https://i.ibb.co/5cCTLWy/sample-list.png" alt="sample-list" border="0" height=250 title="Sample List"></a>
-<br>
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/5cCTLWy/sample-list.png" alt="sample-list" border="0" height=250 title="Sample List"></a><br>
 Double click "Training Data 1" and the configurational panel will show up. If you're loading data other than the example data provided, a dimension dialog will display instead; asking for the image dimensions. In this case, enter the values and hit "Return" to validate and proceed to the configuration panel. To close it and go back to the main panel, hit "Escape"<br>
 
 ## Configuring the sample <a name="configureSample"></a>
@@ -29,6 +28,9 @@ When ready, click "Save" and wait for the data to be compiled.<br>
 At the end of the process, an image should appear at the Front Panel and the subpanels on the top- and bottom-right parts should be updated.<br>
 
 ## Changing compiled sample configuration <a name="reconfigure"></a>
+If calculating the netpeak area for both alpha and beta macros is getting confusing or is not needed any longer or if the output images are too chunky or too smooth, or even if the images are presenting too many dead pixels, you can change/tweak few configuration parameters to what is more suitable. This can be done by clicking the small rubik's cube icon in the bottom-right part of the front panel.<br>
+You will immediately see some options that were not available in the configuration panel before. For now ignore thickratio option, it it only there to be used in the future updates with extended functionalities. As for the other option, "enhance", will change how the exported images look. Leaving it ON will create smoother images, while leaving it OFF will produce chunkier images.<br>
+The other options you are already familiar with, so change them accordingly. Background estimation method cannot be changed unless you reset the sample by clicking the corresponding front panel button. After resetting the sample you'll have to recompile the data.<br>
 
 ## Verifying and accessing the compiled data <a name="output"></a>
 
