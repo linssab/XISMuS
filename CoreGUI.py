@@ -276,6 +276,7 @@ def load_cube():
     if os.path.exists(SpecRead.cube_path):
         cube_file = open(SpecRead.cube_path,'rb')
         global MY_DATACUBE
+        del MY_DATACUBE
         MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
         logger.debug("Loaded cube {} to memory.".format(cube_file))
@@ -308,12 +309,10 @@ class Convert_File_Name:
         __self__.prefix.set("Spectrum")
         __self__.starting_index.set(1)
 
-        __self__.LeftPane = Frame(__self__.master, width=150,padx=16,pady=16)
-        __self__.LeftPane.grid(row=0,column=0)
-        __self__.bar = ttk.Separator(__self__.master, orient=VERTICAL)
-        __self__.bar.grid(column=1,row=0, rowspan=5,sticky=N+W)
-        __self__.RightPane = Frame(__self__.master, width=150,padx=16)
-        __self__.RightPane.grid(row=0, column=1)
+        __self__.LeftPane = LabelFrame(__self__.master,height=250,width=128,text="Input")
+        __self__.LeftPane.grid(row=0,column=0,sticky=N+W+S+E,padx=(3,2),pady=2)
+        __self__.RightPane = LabelFrame(__self__.master, height=250,text="Output")
+        __self__.RightPane.grid(row=0, column=1,sticky=N+S,padx=(2,3),pady=2)
 
         __self__.build_widgets()
         place_center(root.master,__self__.master)
@@ -322,7 +321,6 @@ class Convert_File_Name:
     def build_widgets(__self__):
         
         """ Left Pane """
-        __self__.LeftLabel = Label(__self__.LeftPane, text="Input")
         icon = PhotoImage(data=ICO_LOAD)
         __self__.LoadIco = icon.subsample(1,1)
         __self__.LoadBtn = Button(__self__.LeftPane, 
@@ -331,7 +329,6 @@ class Convert_File_Name:
                 width=64, height=64, bd=3)
         
         """ Right Pane Labels """
-        __self__.RightLabel = Label(__self__.RightPane, text="Ouput")
         __self__.PrefixLabel = Label(__self__.RightPane, text="Prefix")
         __self__.StartLabel = Label(__self__.RightPane, text="Starting No.")
         __self__.WidthLabel = Label(__self__.RightPane, text="Width (optional)")
@@ -369,27 +366,24 @@ class Convert_File_Name:
                 width=80,
                 height=24, bd=3)
         
-        __self__.LeftLabel.grid(row=0,column=0,sticky=N+W+E)
-        __self__.LoadBtn.grid(row=1,column=0,rowspan=5,sticky=W+E,pady=16)
-        __self__.RightLabel.grid(row=0,column=2,columnspan=2,sticky=N+W+E, pady=4)
-        __self__.PrefixLabel.grid(row=1,column=2)
-        __self__.StartLabel.grid(row=2,column=2)
-        __self__.HeightLabel.grid(row=3,column=2)
-        __self__.WidthLabel.grid(row=4,column=2)
-        __self__.PrefixEntry.grid(row=1,column=3)
-        __self__.StartEntry.grid(row=2,column=3)
-        __self__.HeightEntry.grid(row=3,column=3)
-        __self__.WidthEntry.grid(row=4,column=3)
-        __self__.OkBtn.grid(row=5,column=2,pady=8)
-        __self__.QuitBtn.grid(row=5,column=3,pady=8)
+        __self__.LoadBtn.grid(row=1,column=0,rowspan=5,padx=24,pady=24)
+        __self__.PrefixLabel.grid(row=1,column=1)
+        __self__.StartLabel.grid(row=2,column=1)
+        __self__.HeightLabel.grid(row=3,column=1)
+        __self__.WidthLabel.grid(row=4,column=1)
+        __self__.PrefixEntry.grid(row=1,column=2)
+        __self__.StartEntry.grid(row=2,column=2)
+        __self__.HeightEntry.grid(row=3,column=2)
+        __self__.WidthEntry.grid(row=4,column=2)
+        __self__.OkBtn.grid(row=5,column=1,pady=8)
+        __self__.QuitBtn.grid(row=5,column=2,pady=8)
         
-        __self__.master.columnconfigure(0, weight=2)
-        __self__.master.columnconfigure(1, weight=2)
-        __self__.master.columnconfigure(2, weight=1)
-        __self__.master.columnconfigure(3, weight=1)
+        __self__.master.columnconfigure(0, weight=1,minsize=128)
+        __self__.master.columnconfigure(1, weight=0)
+        __self__.master.columnconfigure(2, weight=0)
         for i in range(5):
-            __self__.master.rowconfigure(i, weight=0)
-        __self__.master.rowconfigure(5, weight=1)
+            __self__.master.rowconfigure(i, weight=1)
+        __self__.master.rowconfigure(5, weight=0)
         __self__.master.deiconify()
 
     def grab_file_list(__self__,e=""):
@@ -1052,22 +1046,22 @@ class ImageAnalyzer:
         __self__.DATACUBE = datacube
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
         __self__.master = Toplevel(master=parent)
+        __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
-        #__self__.master.bind("<Configure>", __self__.resize)
         __self__.master.title("Image Analyzer v1.0.1")
-        __self__.master.resizable(False,False)
+        #__self__.master.resizable(False,False)
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP,anchor=CENTER)
         __self__.SampleFrame = Frame(__self__.master)
-        __self__.SampleFrame.pack(side=TOP)
+        __self__.SampleFrame.pack(side=TOP,expand=True,fill=BOTH)
         __self__.LeftCanvas = Canvas(__self__.SampleFrame)
-        __self__.LeftCanvas.pack(side=LEFT)
+        __self__.LeftCanvas.pack(side=LEFT,expand=True,fill=BOTH)
         __self__.RightCanvas = Canvas(__self__.SampleFrame)
-        __self__.RightCanvas.pack(side=RIGHT)
-        __self__.sliders = Frame(__self__.master)
-        __self__.sliders.pack(side=BOTTOM,fill=X)
+        __self__.RightCanvas.pack(side=RIGHT,expand=True,fill=BOTH)
+        __self__.sliders = LabelFrame(__self__.master,text="Control Panel")
+        __self__.sliders.pack(side=BOTTOM,fill=X,anchor=CENTER)
         __self__.buttons = Frame(__self__.sliders)
-        __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W)
+        __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W+E)
         
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
@@ -1107,14 +1101,14 @@ class ImageAnalyzer:
         __self__.plot1.axis('On')
         __self__.plot1.grid(b=None)
         __self__.canvas1 = FigureCanvasTkAgg(__self__.figure1,__self__.LeftCanvas)
-        __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W)
+        __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
         
         __self__.figure2 = Figure(figsize=(5,4), dpi=75)
         __self__.plot2 = __self__.figure2.add_subplot(111)
         __self__.plot2.axis('On')
         __self__.plot2.grid(b=None)
         __self__.canvas2 = FigureCanvasTkAgg(__self__.figure2,__self__.RightCanvas)
-        __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W)
+        __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
        
 
         # image controls Threshold, LowPass and Smooth
@@ -1226,6 +1220,10 @@ class ImageAnalyzer:
             __self__.update_sample2(None)
         except: 
             pass
+        x = __self__.master.winfo_width()
+        y = __self__.master.winfo_height()
+        __self__.master.minsize(x,y)
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
     
     def resize(__self__, event):
         wi = __self__.LeftCanvas.winfo_width()
@@ -1447,6 +1445,7 @@ class PlotWin:
         """clears and destroy plot"""
 
         __self__.plot.clear()
+        del __self__.plot
         __self__.master.destroy()
         del __self__
 
