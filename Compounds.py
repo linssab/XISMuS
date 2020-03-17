@@ -5,7 +5,7 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import logger
+import logging
 logger = logging.getLogger("logfile")
 logger.debug("Importing module Compounds.py...")
 import numpy as np
