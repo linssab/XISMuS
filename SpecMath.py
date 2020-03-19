@@ -136,7 +136,7 @@ class datacube:
             __self__.dimension = getdimension()
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
             __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
-                specsize.shape[0]],dtype='float64',order='C')
+                specsize.shape[0]],dtype="float32",order='C')
             __self__.config = configuration
             __self__.calibration = getcalibration()
             __self__.energyaxis = energyaxis()
@@ -150,7 +150,7 @@ class datacube:
         is the maximum value found in the matrix for that same index.
         MPS stands for Maximum Pixel Spectrum """
 
-        __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype='float64')
+        __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype="float32")
         for c in range(__self__.matrix.shape[2]):
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
@@ -160,10 +160,12 @@ class datacube:
 
         """ Reall all data in datacube.matrix and return the summation derived spectrum """
 
-        __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype='float64')
+        __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype="float32")
+        __self__.sum_bg = np.zeros([__self__.matrix.shape[2]],dtype="float32")
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
+                __self__.sum_bg += __self__.background[x,y]
     
     def write_sum(__self__):
 
@@ -211,7 +213,7 @@ class datacube:
         bgstrip = __self__.config['bgstrip']
         counter = 0
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
-                __self__.energyaxis.shape[0]],dtype='float64',order='C')
+                __self__.energyaxis.shape[0]],dtype="float32",order='C')
         if bgstrip == 'None':
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
         elif bgstrip == 'SNIPBG':
@@ -223,7 +225,6 @@ class datacube:
                     # default cycle and sampling window = 24,5
                     stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
                     __self__.background[x,y] = stripped
-                    __self__.sum_bg += stripped
                     counter = counter + 1
                     __self__.progressbar.updatebar(counter)
 
@@ -551,6 +552,7 @@ def setROI(lookup,xarray,yarray,localconfig):
     lookup = int(lookup)
     peak_corr = 0
     isapeak = True
+    TOLERANCE = 1.10
     
     if localconfig.get('bgstrip') == 'SNIPBG' and\
     localconfig.get('peakmethod') != 'PyMcaFit': 
@@ -581,12 +583,12 @@ def setROI(lookup,xarray,yarray,localconfig):
         shift = shift_center(ROIaxis,ROIdata)
         logger.debug("Shift: {0}".format(shift))
         
-        if 1.10*(-FWHM/2) < (shift[0]*1000)-lookup < 1.10*(FWHM/2):
+        if TOLERANCE*(-FWHM/2) < (shift[0]*1000)-lookup < TOLERANCE*(FWHM/2):
             if (shift[0]*1000)-lookup == 0:
                 logger.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
             lookup = shift[0]*1000
             peak_corr = 0
-            logger.debug("GAP IS LESSER THAN {0}!".format(1.10 * FWHM/2))
+            logger.debug("GAP IS LESSER THAN {0}!".format(TOLERANCE * FWHM/2))
         else: 
             logger.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
             lookupcenter = int(len(ROIaxis)/2)

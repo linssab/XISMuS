@@ -166,39 +166,37 @@ def call_help():
         return 0
 
 def call_author():
+    try:
+        if root.AuthorWin.master.state() == "normal":
+            root.AuthorWin.master.focus_force()
+    except:
+        root.AuthorWin = Author()
+
+
+class Author:
 
     """ Spawns author information """
+    def __init__(__self__):
+        __self__.master = Toplevel(master=root.master)
+        __self__.master.title("Author")
+        __self__.master.resizable(False,False)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.master.destroy)
+        icon = os.getcwd()+"\\images\\icons\\icon.ico"
+        __self__.master.iconbitmap(icon)  
+        infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
+        __self__.winFrame = Frame(__self__.master)
+        __self__.winFrame.pack(padx=(16,16),pady=(16,16))
+        __self__.Info = Label(__self__.winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
+        __self__.Info.pack()
+        __self__.Link = Label(__self__.winFrame, text="RG Profile", fg="blue", cursor="hand2")
+        __self__.Link.bind("<Button-1>", __self__.go_to_RS)
+        __self__.Link.pack(side=LEFT)
+        place_center(root.master,__self__.master)
 
-    try:
-        if root.AuthorWin.state() == "normal":
-            root.AuthorWin.focus_force()
-        else:
-            root.AuthorWin = Toplevel(master=root.master)
-            root.AuthorWin.title("Author")
-            root.AuthorWin.resizable(False,False)
-            icon = os.getcwd()+"\\images\\icons\\icon.ico"
-            root.AuthorWin.iconbitmap(icon)  
-            infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
-            winFrame = Frame(root.AuthorWin)
-            winFrame.pack(padx=(16,16),pady=(16,16))
-            Info = Label(winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
-            Info.pack()
-            place_center(root.master,root.AuthorWin)
-    except:
-            root.AuthorWin = Toplevel(master=root.master)
-            root.AuthorWin.title("Author")
-            root.AuthorWin.resizable(False,False)
-            icon = os.getcwd()+"\\images\\icons\\icon.ico"
-            root.AuthorWin.iconbitmap(icon)  
-            infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(VERSION)
-            winFrame = Frame(root.AuthorWin)
-            winFrame.pack(padx=(16,16),pady=(16,16))
-            Info = Label(winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
-            Info.pack()
-            Link = Label(winFrame, text="RG Profile", fg="blue", cursor="hand2")
-            Link.bind("<Button-1>", lambda e: openURL("https://www.researchgate.net/profile/Sergio_Augusto_Lins"))
-            Link.pack(side=LEFT)
-            place_center(root.master,root.AuthorWin)
+    def go_to_RS(__self__,e=""):
+        openURL("https://www.researchgate.net/profile/Sergio_Augusto_Lins")
+        __self__.master.destroy()
+
 
 def open_analyzer():
 
@@ -916,11 +914,17 @@ class PeakClipper:
 
 class Annotator:
 
-    """Creates an annotator to select areas on matplotlib canvases"""
+    """ Creates an annotator to select areas on matplotlib canvases
+    Annotator is invoked from Image Analyzer and is destroyed when Set ROI
+    button is toggled off """
 
     def __init__(__self__,parent):
-      
+
+        # parent is the Image Analyzer object. The PlotWin object is the plot attribute:
+        # parent.plot
+
         __self__.parent = parent
+        __self__.alive = True #This exists because killing this object seems impossible
         __self__.element1 = parent.Map1Var.get()
         __self__.element2 = parent.Map2Var.get()
         __self__.roibox1 = parent.roibox1
@@ -951,12 +955,6 @@ class Annotator:
         __self__.canvas2.draw()
         __self__.parent.plot1.add_patch(__self__.area1)
         __self__.parent.plot2.add_patch(__self__.area2)
-        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.on_press)
-        __self__.parent.canvas1.mpl_connect("motion_notify_event",__self__.on_drag)
-        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.on_release)
-        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.on_press)
-        __self__.parent.canvas2.mpl_connect("motion_notify_event",__self__.on_drag)
-        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.on_release)
 
     def wipe_annotator(__self__):
         __self__.area1.remove()
@@ -968,6 +966,19 @@ class Annotator:
         __self__.ratebox["text"] = "Ratio: None"
         try: __self__.parent.plot.wipe_plot()
         except: pass
+        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.do_nothing)
+        __self__.parent.canvas1.mpl_connect("button_notify_event",__self__.do_nothing)
+        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.do_nothing)
+        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.do_nothing)
+        __self__.parent.canvas2.mpl_connect("button_notify_event",__self__.do_nothing)
+        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.do_nothing)
+        __self__.parent.master.after(50,delattr(__self__.parent,"annotator"))
+        __self__.alive = False #prevents on_drag from working
+        del __self__
+
+    def do_nothing(__self__,e=""):
+        """ doing bunches of nothing """
+        return
 
     def refresh_roi_plot(__self__):
         global FIND_ELEMENT_LIST
@@ -975,10 +986,14 @@ class Annotator:
             lines = True
         else: 
             lines = False
-        __self__.parent.plot.draw_selective_sum(__self__.parent.DATACUBE,\
-                __self__.parent.sum_spectrum,
-                display_mode = root.plot_display,
-                lines = lines)
+        
+        __self__.parent.plot.DATA.set_ydata(__self__.parent.sum_spectrum)
+        __self__.parent.plot.plot.set_ylim(
+                bottom=1,
+                top=1.20*__self__.parent.sum_spectrum.max())
+        try:
+            __self__.parent.plot.canvas.draw()
+        except: pass
 
     def on_press(__self__,event):
         __self__.press = True
@@ -988,7 +1003,7 @@ class Annotator:
         except: pass
 
     def on_drag(__self__,event):
-        if __self__.press:
+        if __self__.press and __self__.alive:
             __self__.move = True
             try: __self__.x1 = int(event.xdata)
             except: pass
@@ -1004,8 +1019,8 @@ class Annotator:
             __self__.parent.canvas2.draw()
             __self__.calculate_area()
 
-            """Create local method to avoid using the global refresh!!!"""
-            __self__.refresh_roi_plot()
+            try: __self__.refresh_roi_plot()
+            except: pass
 
     def on_release(__self__,event):
         __self__.press = False
@@ -1048,8 +1063,7 @@ class ImageAnalyzer:
         __self__.master = Toplevel(master=parent)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
-        __self__.master.title("Image Analyzer v1.0.1")
-        #__self__.master.resizable(False,False)
+        __self__.master.title("Image Analyzer v1.0.2")
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP,anchor=CENTER)
         __self__.SampleFrame = Frame(__self__.master)
@@ -1059,7 +1073,7 @@ class ImageAnalyzer:
         __self__.RightCanvas = Canvas(__self__.SampleFrame)
         __self__.RightCanvas.pack(side=RIGHT,expand=True,fill=BOTH)
         __self__.sliders = LabelFrame(__self__.master,text="Control Panel")
-        __self__.sliders.pack(side=BOTTOM,fill=X,anchor=CENTER)
+        __self__.sliders.pack(side=BOTTOM,fill=X,anchor=CENTER,padx=(5,5),pady=(0,5))
         __self__.buttons = Frame(__self__.sliders)
         __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W+E)
         
@@ -1251,14 +1265,14 @@ class ImageAnalyzer:
                 place_center(__self__.master, __self__.plot.master)
             __self__.plot.draw_selective_sum(__self__.DATACUBE,
                     __self__.DATACUBE.sum,
-                    root.plot_display)
+                    root.plot_display,lines=True)
         else:
             __self__.annotate.config(relief="raised")
-            # the easiest way to recover the default color button is pointing to an existing button
-            # that never changes its color
+            # the easiest way to recover the default 
+            #color button is pointing to an existing button that never changes its color
             __self__.annotate.config(bg=__self__.correlate.cget("background"))
             __self__.annotator.wipe_annotator()
-            del __self__.annotator
+            del __self__.plot
  
     def update_sample1(__self__,event):
         label1 = "Maximum net counts: {}".format(int(__self__.DATACUBE.max_counts[__self__.Map1Var.get()]))
@@ -1268,7 +1282,9 @@ class ImageAnalyzer:
         __self__.ElementalMap1 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap1 = __self__.ElementalMap1/__self__.ElementalMap1.max()*LEVELS
         __self__.draw_image1(0)
-        try: __self__.annotator.refresh_annotator()
+        try: 
+            __self__.annotator.wipe_annotator()
+            del __self__.plot
         except: pass
      
     def update_sample2(__self__,event):
@@ -1279,7 +1295,9 @@ class ImageAnalyzer:
         __self__.ElementalMap2 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap2 = __self__.ElementalMap2/__self__.ElementalMap2.max()*LEVELS
         __self__.draw_image2(0)
-        try: __self__.annotator.refresh_annotator()
+        try: 
+            __self__.annotator.wipe_annotator()
+            del __self__.plot
         except: pass
     
     def switchT1LP1(__self__):
@@ -1330,7 +1348,7 @@ class ImageAnalyzer:
             __self__.annotate.config(relief="raised")
             __self__.annotate.config(bg=__self__.correlate.cget("background"))
             __self__.annotator.wipe_annotator()
-            del __self__.annotator
+            del __self__.plot
         except: pass
             
         return image
@@ -1355,7 +1373,7 @@ class ImageAnalyzer:
             __self__.annotate.config(relief="raised")
             __self__.annotate.config(bg=__self__.correlate.cget("background"))
             __self__.annotator.wipe_annotator()
-            del __self__.annotator
+            del __self__.plot
         except: pass
          
         return image   
@@ -1367,7 +1385,7 @@ class ImageAnalyzer:
     def draw_image1(__self__,i):
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
         __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
-        __self__.CACHEMAP1
+        del __self__.CACHEMAP1
         __self__.plot1.clear()
         __self__.plot1.imshow(__self__.newimage1, cmap='gray')
         __self__.plot1.grid(b=None)
@@ -1376,7 +1394,7 @@ class ImageAnalyzer:
     def draw_image2(__self__,i):
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
         __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
-        __self__.CACHEMAP2 = None
+        del __self__.CACHEMAP2
         __self__.plot2.clear()
         __self__.plot2.imshow(__self__.newimage2, cmap='gray')
         __self__.plot2.grid(b=None)
@@ -1420,9 +1438,8 @@ class PlotWin:
         __self__.upper = Canvas(__self__.master)
         __self__.upper.config(bg='white')
         __self__.upper.pack(side=TOP, expand=True, fill=BOTH, padx=(16,16),pady=(16,16))
-        __self__.lower = Canvas(__self__.master,height=35)
-        __self__.lower.pack(side=TOP, anchor=N, fill=BOTH)
-        __self__.master.bind("<Configure>", __self__.resize)
+        __self__.lower = Frame(__self__.master,height=35)
+        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
         
         __self__.figure = Figure(figsize=(5,4), dpi=75)
         __self__.plot = __self__.figure.add_subplot(111)
@@ -1431,7 +1448,7 @@ class PlotWin:
         __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
         __self__.canvas.draw()
         __self__.mplCanvas = __self__.canvas.get_tk_widget()
-        __self__.mplCanvas.pack()
+        __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
         __self__.toolbar = NavigationToolbar2Tk(__self__.canvas,__self__.lower)
         __self__.toolbar.update()
         __self__.canvas._tkcanvas.pack()
@@ -1445,16 +1462,9 @@ class PlotWin:
         """clears and destroy plot"""
 
         __self__.plot.clear()
-        del __self__.plot
         __self__.master.destroy()
+        del __self__.plot
         del __self__
-
-    def resize(__self__, event):
-        wi = __self__.upper.winfo_width()
-        hi = __self__.upper.winfo_height()
-        wi_t = __self__.lower.winfo_width()
-        hi_t = __self__.lower.winfo_height()
-        __self__.mplCanvas.config(width=wi, height=hi)
 
     def draw_calibration(__self__):
         __self__.master.tagged = True
@@ -1564,49 +1574,45 @@ class PlotWin:
         colors = ["blue","red","green"]
         __self__.plot.set_title('{0}'.format(DATACUBE.name),**plot_font)
         __self__.plot.set_ylabel("Counts")
+        __self__.plot.set_xlabel("Energy (KeV)")
 
         if display_mode == '-semilog':
             __self__.plotdata = y_data
-            __self__.plot.semilogy(DATACUBE.energyaxis,__self__.plotdata,\
-                    label="ROI Sum",color=colors[0])
-            if lines==True:
-                __self__.master.tagged = True
-                for element in FIND_ELEMENT_LIST:
-                    if element == "custom":
-                        energies = plottables_dict[element]
-                        __self__.plot.plot((energies[0],energies[0]),\
-                                (0,__self__.plotdata.max()),'k--',color="cornflowerblue",\
-                                label="Custom Low")
-                        __self__.plot.plot((energies[1],energies[1]),\
-                                (0,__self__.plotdata.max()),'k--',color="tomato",\
-                                label="Custom High")
-                    else:
-                        energies = plottables_dict[element]
-                        __self__.plot.plot((energies,energies),\
-                                (0,__self__.plotdata.max()),'k--')
-            __self__.plot.set_xlabel("Energy (KeV)")
-            __self__.plot.legend()
+            __self__.DATA, = __self__.plot.semilogy(
+                    DATACUBE.energyaxis,
+                    __self__.plotdata,
+                    label="ROI Sum",
+                    color=colors[0])
         else:
             __self__.plotdata = y_data
-            __self__.plot.plot(DATACUBE.energyaxis,__self__.plotdata,\
-                    label="ROI Sum",color=colors[0])
-            if lines==True:
-                __self__.master.tagged = True
-                for element in FIND_ELEMENT_LIST:
-                    if element == "custom":
-                        energies = plottables_dict[element]
-                        __self__.plot.plot((energies[0],energies[0]),\
-                                (0,__self__.plotdata.max()),'k--',color="cornflowerblue",\
-                                label="Custom Low")
-                        __self__.plot.plot((energies[1],energies[1]),\
-                                (0,__self__.plotdata.max()),'k--',color="tomato",\
-                                label="Custom High")
-                    else:
-                        energies = plottables_dict[element]
-                        __self__.plot.plot((energies,energies),\
-                                (0,__self__.plotdata.max()),'k--')
-            __self__.plot.set_xlabel("Energy (KeV)")
-            __self__.plot.legend()
+            __self__.DATA, = __self__.plot.plot(
+                    DATACUBE.energyaxis,
+                    __self__.plotdata,
+                    label="ROI Sum",
+                    color=colors[0])
+        if lines==True:
+            energy_list = []
+            __self__.master.tagged = True
+            for element in FIND_ELEMENT_LIST:
+                if element == "custom":
+                    energies = plottables_dict[element]
+                    __self__.EL_CUST_LOW, = __self__.plot.plot(
+                            (energies[0],energies[0]),
+                            (0,__self__.plotdata.max()),
+                            'k--',color="cornflowerblue",
+                            label="Custom Low")
+                    __self__.EL_CUST_HIGH, =__self__.plot.plot(
+                            (energies[1],energies[1]),
+                            (0,__self__.plotdata.max()),
+                            'k--',color="tomato",
+                            label="Custom High")
+                else:
+                    energies = plottables_dict[element]
+                    for value in energies: energy_list.append(value)
+                __self__.EL = __self__.plot.plot(
+                        (energy_list,energy_list),
+                        (0,__self__.plotdata.max()),'k--')
+        __self__.plot.legend()
         __self__.canvas.draw()
 
 
@@ -2930,19 +2936,19 @@ def refresh_plots(exclusive=""):
     
     if exclusive == "mps":
         try:
-            root.MPS.draw_spec(\
+            root.MPS.draw_spec(
                 mode=['mps'],display_mode=root.plot_display,lines=lines)
             root.MPS.update_idletasks()
         except: pass
     elif exclusive == "summation":
         try: 
-            root.summation.draw_spec(\
+            root.summation.draw_spec(
                 mode=['summation'],display_mode=root.plot_display,lines=lines)
             root.summation.update_idletasks()
         except: pass
     elif exclusive == "combined":
         try: 
-            root.combined.draw_spec(\
+            root.combined.draw_spec(
                 mode=['summation','mps'],display_mode=root.plot_display,lines=lines)
             root.combined.update_idletasks()
         except: pass
@@ -2950,31 +2956,31 @@ def refresh_plots(exclusive=""):
         for API in root.ImageAnalyzers: 
             try:
                 API.plot.draw_selective_sum(API.DATACUBE,
-                        API.sum_spectrum,\
+                        API.sum_spectrum,
                         display_mode = root.plot_display,
                         lines = lines)
                 API.plot.master.update_idletasks()
             except: pass
     else:
         try:
-            root.MPS.draw_spec(\
+            root.MPS.draw_spec(
                 mode=['mps'],display_mode=root.plot_display,lines=lines)
             root.MPS.update_idletasks()
         except: pass
         try: 
-            root.summation.draw_spec(\
+            root.summation.draw_spec(
                 mode=['summation'],display_mode=root.plot_display,lines=lines)
             root.summation.update_idletasks()
         except: pass
         try: 
-            root.combined.draw_spec(\
+            root.combined.draw_spec(
                 mode=['summation','mps'],display_mode=root.plot_display,lines=lines)
             root.combined.update_idletasks()
         except: pass
         for API in root.ImageAnalyzers:
             try :
                 API.plot.draw_selective_sum(API.DATACUBE,
-                        API.sum_spectrum,\
+                        API.sum_spectrum,
                         display_mode = root.plot_display,
                         lines = lines)
                 API.plot.master.update_idletasks()

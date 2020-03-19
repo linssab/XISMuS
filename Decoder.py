@@ -18,12 +18,16 @@ def unpack_images():
     IMG_NODATA = b64_to_array(no_data)
 
 def unpack_icons():
-    global ICO_ACCEPT, ICO_ERASE, ICO_EXPORT1, ICO_EXPORT2, ICO_EXPORT_MERGE, ICO_IMGANAL
+    global ICO_ACCEPT, ICO_CCW, ICO_CW, ICO_DOWN
+    global ICO_ERASE, ICO_EXPORT1, ICO_EXPORT2, ICO_EXPORT_MERGE, ICO_IMGANAL
     global ICO_LOAD, ICO_NEXT, ICO_PREVIOUS, ICO_QUIT, ICO_REFRESH, ICO_RESET
-    global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS
+    global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP
 
     icons_file = open(".\\images\\icons\\icons.tz","rb")
     ICO_ACCEPT = icons_file.read(1548)
+    ICO_CCW = icons_file.read(4364)
+    ICO_CW = icons_file.read(4328)
+    ICO_DOWN = icons_file.read(4028)
     ICO_ERASE = icons_file.read(1944)
     ICO_EXPORT1 = icons_file.read(4548)
     ICO_EXPORT2 = icons_file.read(4512)
@@ -38,6 +42,7 @@ def unpack_icons():
     ICO_RESET = icons_file.read(2184)
     ICO_RUBIK = icons_file.read(4348)
     ICO_SETTINGS = icons_file.read(3624)
+    ICO_UP = icons_file.read(4064)
 
 unpack_images()
 unpack_icons()
