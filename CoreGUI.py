@@ -387,7 +387,8 @@ class Convert_File_Name:
     def grab_file_list(__self__,e=""):
         __self__.files = []
         __self__.files = filedialog.askopenfilenames(
-                parent=__self__.master, title="Select spectra")
+                parent=__self__.master, title="Select spectra",
+                filetypes=(("MCA Files", "*.mca"),("Text Files", "*.txt"),("All files", "*.*")))
         if __self__.files == "": return
 
     def start_conversion(__self__):
@@ -604,6 +605,7 @@ class export_diag():
             if tag == 1: 
                 f = filedialog.asksaveasfile(mode='w', 
                         defaultextension=".png",
+                        filetypes=[("Portable Network Graphic", "*.png")],
                         title="Save image 1 as...")
                 if f is None: 
                     return
@@ -611,6 +613,7 @@ class export_diag():
             elif tag == 2: 
                 f = filedialog.asksaveasfile(mode='w', 
                         defaultextension=".png",
+                        filetypes=[("Portable Network Graphic", "*.png")],
                         title="Save image 2 as...")
                 if f is None: 
                     return
@@ -626,6 +629,7 @@ class export_diag():
         stack = stackimages(__self__.parent.newimage1,__self__.parent.newimage2)
         f = filedialog.asksaveasfile(mode='w', 
                 defaultextension=".png",
+                filetypes=[("Portable Network Graphic", "*.png")],
                 title="Save merge as...")
         if f is None: 
             return
@@ -1060,6 +1064,7 @@ class ImageAnalyzer:
     def __init__(__self__,parent,datacube):
         __self__.DATACUBE = datacube
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
+        __self__.sum_spectrum = __self__.DATACUBE.sum
         __self__.master = Toplevel(master=parent)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
@@ -1402,20 +1407,41 @@ class ImageAnalyzer:
 
     def get_correlation(__self__):
         labels = __self__.Map1Var.get(),__self__.Map2Var.get()
-        corr = correlate(__self__.newimage1,__self__.newimage2)
-
-        # this step is necessary to make a proper correlation between the two
-        # displayed images. Transforming them only cuts the desired signals,
-        # therefore the gray levels remain the same. The image looks brighter when
-        # displayed because matplot adjust the axes maxima and minima when plotting
-        try: 
-            corr[0] = corr[0]/corr[0].max()*LEVELS
-            corr[1] = corr[1]/corr[1].max()*LEVELS
         
-            corr_plot = PlotWin(__self__.master)
-            corr_plot.draw_correlation(corr,labels)
-        except:
-            pass
+        """ Transformed and displayed maps are converted to 0-LEVELS scale (usually 255)
+        to correlate raw values i.e. the net area contained in each pixel,
+        maps must be unpacked from cube again """
+        """ This could be avoided by NOT deleting the CACHEMAP variables, but since 
+        correlation tool is used much less than the filters (which perform several 
+        iterations), the gain in performance is more important in filtering than correlating
+        maps """
+
+        unpacker1 = __self__.Map1Var.get()
+        unpacker1 = unpacker1.split("_")
+        Map1 = __self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
+        unpacker2 = __self__.Map2Var.get()
+        unpacker2 = unpacker2.split("_")
+        Map2 = __self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
+
+        """ Correlation region must now be limited according to the transformed area
+        (any applied filter) and to selected area made with set ROI tool (Annotator class) """
+        
+        for x,y in zip(range(__self__.newimage1.shape[0]),
+                range(__self__.newimage1.shape[1])):
+            if __self__.newimage1[x,y] == 0: Map1[x,y] = 0
+            if __self__.newimage2[x,y] == 0: Map2[x,y] = 0
+
+        if __self__.annotate.config("relief")[-1] == "sunken":
+            x = [__self__.annotator.x0, __self__.annotator.x1]
+            y = [__self__.annotator.y0, __self__.annotator.y1]
+            x.sort()
+            y.sort()
+            Map1 = Map1[x[0]:x[1],y[0]:y[1]]
+            Map2 = Map2[x[0]:x[1],y[0]:y[1]]
+
+        corr = correlate(Map1,Map2)
+        corr_plot = PlotWin(__self__.master)
+        corr_plot.draw_correlation(corr,labels)
 
     def export_maps(__self__):
         export = export_diag(__self__)
@@ -2523,6 +2549,7 @@ class MainGUI:
         if os.path.exists(SpecRead.cube_path): 
             f = filedialog.asksaveasfile(mode='w', 
                     defaultextension=".png",
+                    filetypes=[("Portable Network Graphic", "*.png")],
                     title="Save as...")
         else: 
             return
@@ -2560,7 +2587,9 @@ class MainGUI:
             
     def batch(__self__):
         #1 prompt for files
-        file_batch = filedialog.askopenfilenames(parent=__self__.master,title="Select mca's")
+        file_batch = filedialog.askopenfilenames(parent=__self__.master, 
+                title="Select mca's",                        
+                filetypes=(("MCA Files", "*.mca"),("Text Files", "*.txt"),("All files", "*.*")))
         if file_batch == "": return
         
         #1.1 get the name of parent directory

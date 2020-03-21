@@ -253,11 +253,20 @@ class datacube:
         pickle.dump(__self__,p_output)
         p_output.close()
 
-    def digest_merge(__self__):
+    def digest_merge(__self__,bar=None):
+        bar.progress["maximum"] = 4
+        bar.updatebar(1)
+        bar.update_text("1/4 Calculating MPS...")
         datacube.MPS(__self__)
+        bar.update_text("2/4 Calculating Stacksum...")
+        bar.updatebar(2)
         datacube.stacksum(__self__)
         datacube.write_sum(__self__)
+        bar.update_text("3/4 Creating densemap...")
+        bar.updatebar(3)
         datacube.create_densemap(__self__)
+        bar.update_text("4/4 Writing to disk...")
+        bar.updatebar(4)
         datacube.save_cube(__self__)
 
     def compile_cube(__self__):
@@ -291,12 +300,12 @@ class datacube:
         logger.debug("Calculating MPS...")
         __self__.progressbar.update_text("Calculating MPS...")
         datacube.MPS(__self__)
-        logger.debug("Calculating summation spectrum...")
-        __self__.progressbar.update_text("Calculating sum spec...")
-        datacube.stacksum(__self__)
         logger.debug("Stripping background...")
         __self__.progressbar.update_text("Stripping background...")
         datacube.strip_background(__self__)
+        logger.debug("Calculating summation spectrum...")
+        __self__.progressbar.update_text("Calculating sum spec...")
+        datacube.stacksum(__self__)
         logger.debug("Writing summation mca and ANSII files...")
         datacube.write_sum(__self__)
         logger.debug("Calculating sum map...")
@@ -804,11 +813,14 @@ def correlate(map1,map2):
     """ Correlates the pixels of two bi-dimensional arrays
     - This function is deprecated and will be replaced in future releases """
 
-    correlation_matrix = np.zeros([map1.shape[0],map1.shape[1],2])
+    corr_x, corr_y = [],[]
     for x in range(map1.shape[0]):
         for y in range(map2.shape[1]):
-            correlation_matrix[x][y] = [map1[x][y],map2[x][y]]
-    return correlation_matrix
+            corr_x.append(map1[x,y])
+            corr_y.append(map2[x,y])
+    corr_x, corr_y = np.asarray(corr_x), np.asarray(corr_y)
+    print(corr_x.max(),corr_y.max())
+    return corr_x, corr_y
 
 if __name__=="__main__":
     logger.info("This is SpecMath")
