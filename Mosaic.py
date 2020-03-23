@@ -1,4 +1,5 @@
 VERSION = "1.0.0"
+from numba import jit
 
 def load_cube(cube=""):
     cube_file = open(os.path.join(SpecRead.__PERSONAL__,
@@ -36,9 +37,9 @@ class Layer:
 
         __self__.name = cube.name
         __self__.matrix = np.zeros([cube.dimension[0],cube.dimension[1],\
-                cube.energyaxis.shape[0]],dtype='float64',order='C')
+                cube.energyaxis.shape[0]],dtype='float32',order='C')
         __self__.bg = np.zeros([cube.dimension[0],cube.dimension[1],\
-                cube.energyaxis.shape[0]],dtype='float64',order='C')
+                cube.energyaxis.shape[0]],dtype='float32',order='C')
         for i in range(__self__.matrix.shape[0]):
             for j in range(__self__.matrix.shape[1]):
                 __self__.matrix[i,j] = cube.matrix[i,j]
@@ -75,13 +76,15 @@ class Mosaic:
         pad = 16
         zbar = 35
         __self__.master = Tk()
+        icon = os.getcwd()+"\\images\\icons\\icon.ico"
+        __self__.master.iconbitmap(icon)
         __self__.master.title("Mosaic v{}".format(VERSION))
         __self__.master.geometry("1024x768")
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.NameVar = StringVar()
         __self__.NameVar.set("New Cube")
         my_dpi = __self__.master.winfo_fpixels("1i")
-        __self__.image = np.zeros([size[0],size[1]])
+        __self__.image = np.zeros([size[0],size[1]])+59
         __self__.layer = {}
         __self__.master.resizable(True,True)
         __self__.master.minsize(1024,768)
@@ -176,12 +179,14 @@ class Mosaic:
                 __self__.container, 
                 image=__self__.icon_up,
                 width=32,
-                height=32)
+                height=32,
+                command=__self__.move_layer_up)
         __self__.layer_down = Button(
                 __self__.container, 
                 image=__self__.icon_down,
                 width=32,
-                height=32)
+                height=32,
+                command=__self__.move_layer_down)
         __self__.rotate_cw = Button(
                 __self__.container, 
                 image=__self__.icon_cw,
@@ -287,41 +292,43 @@ class Mosaic:
             
             # sets new y start
             new_start_y = __self__.y1 - __self__.y0  + __self__.layer[name].start[1]
-            #print("New Start Y, previous")
-            #print(new_start_y, __self__.layer[name].start[1])
-            if new_start_y < 0: __self__.layer[name].start[1] = 0
-            elif new_start_y + __self__.layer[name].img.shape[1] > __self__.image.shape[1]: print(new_start_y + __self__.layer[name].img.shape[1], __self__.image.shape[1]) 
+            if new_start_y < 0: 
+                __self__.layer[name].start[1] = 0
+            elif new_start_y + __self__.layer[name].img.shape[1] > __self__.image.shape[1]: 
+                print(new_start_y + __self__.layer[name].img.shape[1], 
+                        __self__.image.shape[1]) 
             else: 
                 __self__.layer[name].start[1] = new_start_y
             
             # sets new x start
             new_start_x = __self__.x1 - __self__.x0  + __self__.layer[name].start[0]
-            #print("New Start X, previous")
-            #print(new_start_x, __self__.layer[name].start[0])
-            if new_start_x < 0: __self__.layer[name].start[0] = 0
-            elif new_start_x + __self__.layer[name].img.shape[0] > __self__.image.shape[0]: pass 
+            if new_start_x < 0: 
+                __self__.layer[name].start[0] = 0
+            elif new_start_x + __self__.layer[name].img.shape[0] > __self__.image.shape[0]: 
+                pass 
             else: 
                 __self__.layer[name].start[0] = new_start_x
             
             # sets new y end
             new_end_y = __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
-            #print("New End Y, previous")
-            #print(new_end_y, __self__.layer[name].end[1])
-            if new_start_y < 0: __self__.layer[name].end[1] = __self__.layer[name].img.shape[1]
-            elif new_end_y > __self__.image.shape[1]:  __self__.layer[name].end[1] = __self__.image.shape[1]
+            if new_start_y < 0: 
+                __self__.layer[name].end[1] = __self__.layer[name].img.shape[1]
+            elif new_end_y > __self__.image.shape[1]:
+                __self__.layer[name].end[1] = __self__.image.shape[1]
             else: 
-                __self__.layer[name].end[1] = __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
+                __self__.layer[name].end[1] = \
+                        __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
 
             # sets new x end
             new_end_x = __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
-            #print("New End X, previous")
-            #print(new_end_x, __self__.layer[name].end[0])
-            if new_start_x < 0: __self__.layer[name].end[0] = __self__.layer[name].img.shape[0]
-            elif new_end_x > __self__.image.shape[0]: __self__.layer[name].end[0] = __self__.image.shape[0]
+            if new_start_x < 0: 
+                __self__.layer[name].end[0] = __self__.layer[name].img.shape[0]
+            elif new_end_x > __self__.image.shape[0]: 
+                __self__.layer[name].end[0] = __self__.image.shape[0]
             else: 
-                __self__.layer[name].end[0] = __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
+                __self__.layer[name].end[0] = \
+                        __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
             
-            print(__self__.layer[name].start, __self__.layer[name].end, __self__.layer[name].name) 
             
             __self__.build_image(__self__.image.shape)
 
@@ -391,12 +398,73 @@ class Mosaic:
         llist = __self__.layers_list.get(0,END)
         for entry in llist:
             idx = __self__.layers_list.get(0,END).index(entry)
-            layer_name = entry.split(",")[0]
+            layer_name, el_map = entry.split(",",1)
             __self__.layers_list.delete(idx)
             __self__.layer[layer_name].layer = idx
-            __self__.layers_list.insert(idx,"{},{}".format(layer_name,idx))
+            element = el_map.split(",")[0]
+            if len(element) > 3: 
+                __self__.layers_list.insert(idx,"{},{},{}".format(layer_name,element,idx))
+            else:
+                __self__.layers_list.insert(idx,"{},{}".format(layer_name,idx))
 
+    def move_layer_up(__self__):
+        active_layer_idx = __self__.layers_list.curselection()
+        if active_layer_idx == (): return
+        else:
+            active_layer_idx = active_layer_idx[0]
+            active_layer_entry = __self__.layers_list.get(active_layer_idx).split(",",1)[0]
+            active_layer_name = active_layer_entry.split(",")[0]
+            if active_layer_idx > 0:
+                previous_layer = __self__.layers_list.get(active_layer_idx-1)
+                previous_layer_idx = active_layer_idx-1
+                previous_layer_entry = previous_layer.split(",",1)[0]
+                previous_layer_name = previous_layer_entry.split(",")[0]
+                __self__.layers_list.delete(active_layer_idx)
+                __self__.layers_list.delete(previous_layer_idx)
+                __self__.layers_list.insert(active_layer_idx-1,
+                        "{},{}".format(active_layer_name,
+                            active_layer_idx-1))
+                __self__.layers_list.insert(previous_layer_idx+1,
+                        "{},{}".format(previous_layer_name,
+                            previous_layer_idx+1))
+            else: return
+            llist = __self__.layers_list.get(0,END)
+            for entry in llist:
+                idx = __self__.layers_list.get(0,END).index(entry)
+                layer_name, el_map = entry.split(",",1)
+                __self__.layer[layer_name].layer = idx
+
+            __self__.build_image(__self__.image.shape)
     
+    def move_layer_down(__self__):
+        active_layer_idx = __self__.layers_list.curselection()
+        if active_layer_idx == (): return
+        else:
+            active_layer_idx = active_layer_idx[0]
+            active_layer_entry = __self__.layers_list.get(active_layer_idx).split(",",1)[0]
+            active_layer_name = active_layer_entry.split(",")[0]
+            if active_layer_idx+1 < __self__.layers_list.size():
+                next_layer = __self__.layers_list.get(active_layer_idx+1)
+                next_layer_idx = active_layer_idx+1
+                next_layer_entry = next_layer.split(",",1)[0]
+                next_layer_name = next_layer_entry.split(",")[0]
+                __self__.layers_list.delete(next_layer_idx)
+                __self__.layers_list.delete(active_layer_idx)
+                __self__.layers_list.insert(active_layer_idx,
+                        "{},{}".format(next_layer_name,
+                            active_layer_idx))
+                __self__.layers_list.insert(next_layer_idx,
+                        "{},{}".format(active_layer_name,
+                            next_layer_idx))
+            else: return
+            llist = __self__.layers_list.get(0,END)
+            for entry in llist:
+                idx = __self__.layers_list.get(0,END).index(entry)
+                layer_name, el_map = entry.split(",",1)
+                __self__.layer[layer_name].layer = idx
+
+            __self__.build_image(__self__.image.shape)
+
     def check_calibration(__self__, cube):
         proceed = True
         candidate = cube.calibration
@@ -437,14 +505,18 @@ class Mosaic:
             layer_no = __self__.layer_count
             __self__.layer_count += 1
         __self__.layer[cube.name] = Layer(cube,layer_no,element)
-        __self__.layers_list.insert(END,"{}_{},{}".format(cube.name,element,layer_no))
+        __self__.layers_list.insert(END,"{},{},{}".format(cube.name,element,layer_no))
         __self__.build_image(__self__.image.shape)
         __self__.maps_window.destroy()
 
     def grep_cube(__self__, e=""):
         selected_cube = __self__.maps_list.get(ACTIVE)
         cube = load_cube(selected_cube)
-        if __self__.layer_count == 0: can_import = True
+        if __self__.layer.__contains__(selected_cube):
+            messagebox.showinfo("Cube already imported!",
+                    "Cabn't add same cube twice!")
+            return
+        elif __self__.layer_count == 0: can_import = True
         else: can_import = __self__.check_calibration(cube)
         if can_import == True and __self__.layer_count > 0: 
             can_import = __self__.check_configuration(cube)
@@ -484,16 +556,17 @@ class Mosaic:
                 __self__.maps_window.destroy()
 
     def read_pixels(__self__,i,j):
-        front_layer, top_layer, pixel = 0, 0, 0
+        front_layer, top_layer, pixel = -1, 0, 59
         for layer in __self__.layer:
             try:
                 x, y = __self__.layer[layer].start
                 x_, y_ = __self__.layer[layer].end
                 conv_x, conv_y = i-x, j-y
-                if x <= i < x_ and y <= j < y_ and __self__.layer[layer].layer >= front_layer:
+                if x <= i < x_ and y <= j < y_ \
+                        and __self__.layer[layer].layer > front_layer:
                     pixel = __self__.layer[layer].img[conv_x,conv_y]
-                    front_layer += 1
                     top_layer = __self__.layer[layer]
+                    front_layer = top_layer.layer
             except:
                 return pixel, top_layer
         return pixel, top_layer
@@ -502,7 +575,6 @@ class Mosaic:
         for i in range(size[0]):
             for j in range(size[1]):
                 __self__.image[i,j] = __self__.read_pixels(i,j)[0]
-        #__self__.plot1.clear()
         __self__.im_plot.set_data(__self__.image)
         __self__.canvas.draw()
  
@@ -523,23 +595,25 @@ class Mosaic:
         return spectrum, bg
     
     def build_cube(__self__):
+        if __self__.layer == {}:
+            messagebox.showerror("No Layers!",
+                    "Please add cubes to canvas before trying to compile a new cube!")
+            return
         start_x, start_y = __self__.image.shape
         end_x, end_y = 0, 0
         for layer in __self__.layer:
-            if __self__.layer[layer].start[0] < start_x: 
+            if __self__.layer[layer].start[0] <= start_x: 
                 start_x = __self__.layer[layer].start[0]
-            if __self__.layer[layer].start[1] < start_y:
+            if __self__.layer[layer].start[1] <= start_y:
                 start_y = __self__.layer[layer].start[1]
-            if __self__.layer[layer].end[0] > end_x: 
+            if __self__.layer[layer].end[0] >= end_x: 
                 end_x = __self__.layer[layer].end[0]
-            if __self__.layer[layer].end[1] > end_y:
+            if __self__.layer[layer].end[1] >= end_y:
                 end_y = __self__.layer[layer].end[1]
             specsize = __self__.layer[layer].matrix.shape[2]
         void_spectrum = np.zeros([specsize])
-        print(start_x, start_y)
-        print(end_x, end_y)
-        __self__.merge_matrix = np.zeros([(end_x-start_x)+1,(end_y-start_y)+1,specsize])
-        __self__.merge_bg = np.zeros([(end_x-start_x)+1,(end_y-start_y)+1,specsize])
+        __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize])
+        __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize])
         __self__.progress_bar = Busy((end_x-start_x)*(end_y-start_y),0)
         __self__.progress_bar.update_text("Packing...")
         x, iteration = 0,0
@@ -568,28 +642,21 @@ class Mosaic:
         new_cube = Cube(["xrf"],SpecRead.CONFIG,mode="merge",name=NAME)
         new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
         new_cube.dimension = (end_x-start_x), (end_y-start_y)
+        print(new_cube.dimension)
+        print(__self__.merge_matrix.shape)
         __self__.progress_bar.progress["maximum"] = \
                 new_cube.dimension[0]*new_cube.dimension[1]
         new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
         new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
-                new_cube.energyaxis.shape[0]],dtype='float64',order='C')
+                new_cube.energyaxis.shape[0]],dtype='float32',order='C')
         new_cube.background = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
-                new_cube.energyaxis.shape[0]],dtype='float64',order='C')
-        iteration = 0
-        for x in range(new_cube.dimension[0]):
-            for y in range(new_cube.dimension[1]):
-                iteration += 1
-                __self__.progress_bar.updatebar(iteration)
-                new_cube.matrix[x,y] = __self__.merge_matrix[x,y]
-                new_cube.background[x,y] = __self__.merge_bg[x,y]
-                #print("Assembling {}, {} - Μ{} Β{} Σ{}".format(x,y,
-                    #new_cube.matrix[x,y].sum(),
-                    #new_cube.background[x,y].sum(),
-                    #new_cube.matrix[x,y].sum()-new_cube.background[x,y].sum()))
+                new_cube.energyaxis.shape[0]],dtype='float32',order='C')
+        new_cube.matrix = __self__.merge_matrix
+        new_cube.background = __self__.merge_bg
         new_cube.calibration = __self__.layer[layers[0]].calibration
         new_cube.config = SpecRead.CONFIG
         __self__.progress_bar.update_text("Digesting...")
-        new_cube.digest_merge()
+        new_cube.digest_merge(bar=__self__.progress_bar)
         __self__.progress_bar.destroybar()
 
     def kill(__self__):
