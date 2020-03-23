@@ -1,5 +1,5 @@
 VERSION = "1.0.0"
-from numba import jit
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
 def load_cube(cube=""):
     cube_file = open(os.path.join(SpecRead.__PERSONAL__,
@@ -28,6 +28,10 @@ def place_center(window1,window2):
     window2.deiconify()
     window2.focus_force()
 
+class NavigationToolbar(NavigationToolbar2Tk):
+    # only display the buttons we need
+    toolitems = [t for t in NavigationToolbar2Tk.toolitems if
+                 t[0] in ('Home', 'Pan', 'Zoom')]
 
 class Layer:
 
@@ -76,6 +80,7 @@ class Mosaic:
         pad = 16
         zbar = 35
         __self__.master = Tk()
+        __self__.master.attributes("-alpha",0.0)
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
         __self__.master.iconbitmap(icon)
         __self__.master.title("Mosaic v{}".format(VERSION))
@@ -111,7 +116,8 @@ class Mosaic:
         # allocates the canvas and toolbar spaces
         __self__.Canvas = Canvas(__self__.LeftPane, 
                 height=768-zbar-2,
-                width=768-2-2*pad) 
+                width=768-2-2*pad,
+                bg="#3b3b38") 
         __self__.Canvas.pack(side=TOP,expand=True,fill=BOTH)
         __self__.barframe = Frame(__self__.LeftPane,
                 height=zbar,
@@ -131,16 +137,28 @@ class Mosaic:
         __self__.map = plt.figure(
                 figsize=(round(768-2*pad)/my_dpi,round(768-zbar)/my_dpi), 
                 dpi=my_dpi)
+        __self__.map.set_facecolor("#3b3b38")
         __self__.im_plot = plt.imshow(__self__.image, cmap="gray",vmin=0, vmax=255)
+        __self__.map.subplots_adjust(
+                top=0.99,
+                bottom=0.01,
+                left=0.01,
+                right=0.99)
         __self__.axs = plt.gca()
-        __self__.axs.axis('off')
+        __self__.axs.axis("on")
+        __self__.axs.get_yaxis().set_visible(False)
+        __self__.axs.get_xaxis().set_visible(False)
+        __self__.axs.spines["top"].set_color("#86888a")
+        __self__.axs.spines["bottom"].set_color("#86888a")
+        __self__.axs.spines["left"].set_color("#86888a")
+        __self__.axs.spines["right"].set_color("#86888a")
         __self__.axs.grid(b=None)
 
         __self__.canvas = FigureCanvasTkAgg(__self__.map,__self__.Canvas)
         __self__.canvas.draw()
         __self__.mpl_canvas = __self__.canvas.get_tk_widget()
         __self__.mpl_canvas.pack(fill=BOTH,anchor=N+W,expand=True)
-        __self__.toolbar = NavigationToolbar2Tk(__self__.canvas,__self__.barframe)
+        __self__.toolbar = NavigationToolbar(__self__.canvas,__self__.barframe)
         __self__.toolbar.update()
         __self__.canvas._tkcanvas.pack()
         
@@ -236,6 +254,7 @@ class Mosaic:
         __self__.cube_name_label.grid(row=4, column=0, padx=pad, pady=pad/2, sticky=E)
         __self__.validate.grid(row=5, column=0, columnspan=2, pady=pad)
         
+        __self__.master.after(200,__self__.master.attributes,"-alpha",1.0)
         __self__.canvas.draw()
 
     def rotate(__self__,direction,e=""):
@@ -642,8 +661,6 @@ class Mosaic:
         new_cube = Cube(["xrf"],SpecRead.CONFIG,mode="merge",name=NAME)
         new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
         new_cube.dimension = (end_x-start_x), (end_y-start_y)
-        print(new_cube.dimension)
-        print(__self__.merge_matrix.shape)
         __self__.progress_bar.progress["maximum"] = \
                 new_cube.dimension[0]*new_cube.dimension[1]
         new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
@@ -685,7 +702,7 @@ if __name__.endswith('__main__'):
     import matplotlib
     import matplotlib.pyplot as plt
     matplotlib.use("TkAgg")
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
     from matplotlib.figure import Figure
     from matplotlib.patches import Rectangle
     from matplotlib import style
