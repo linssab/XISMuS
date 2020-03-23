@@ -269,15 +269,22 @@ def load_cube():
     latest SpecRead parameters. See setup conditions inside SpecRead module.
     Returns the datacube object """
 
+    global MY_DATACUBE
     logger.debug("Trying to load cube file.")
     logger.debug(SpecRead.cube_path)
     if os.path.exists(SpecRead.cube_path):
         cube_file = open(SpecRead.cube_path,'rb')
-        global MY_DATACUBE
         del MY_DATACUBE
         MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
         logger.debug("Loaded cube {} to memory.".format(cube_file))
+    elif os.path.exists(os.path.join(SpecRead.output_path,
+        "{}.lz".format(SpecRead.DIRECTORY))):
+        lz_file = open(SpecRead.cube_path,'rb')
+        data = lz_file.read()
+        del MY_DATACUBE
+        MY_DATACUBE = data
+        lz_file.close()
     else:
         logger.debug("No cube found.")
         MainGUI.toggle_(root,toggle='Off') 
@@ -1418,26 +1425,25 @@ class ImageAnalyzer:
 
         unpacker1 = __self__.Map1Var.get()
         unpacker1 = unpacker1.split("_")
-        Map1 = __self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
+        Map1 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1]))
         unpacker2 = __self__.Map2Var.get()
         unpacker2 = unpacker2.split("_")
-        Map2 = __self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
+        Map2 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1]))
 
         """ Correlation region must now be limited according to the transformed area
         (any applied filter) and to selected area made with set ROI tool (Annotator class) """
+        for x in range(__self__.newimage1.shape[0]):
+            for y in range(__self__.newimage1.shape[1]):
+                if __self__.newimage1[x,y] <= 1: Map1[x,y] = 0
+                if __self__.newimage2[x,y] <= 1: Map2[x,y] = 0
         
-        for x,y in zip(range(__self__.newimage1.shape[0]),
-                range(__self__.newimage1.shape[1])):
-            if __self__.newimage1[x,y] == 0: Map1[x,y] = 0
-            if __self__.newimage2[x,y] == 0: Map2[x,y] = 0
-
         if __self__.annotate.config("relief")[-1] == "sunken":
             x = [__self__.annotator.x0, __self__.annotator.x1]
             y = [__self__.annotator.y0, __self__.annotator.y1]
             x.sort()
             y.sort()
-            Map1 = Map1[x[0]:x[1],y[0]:y[1]]
-            Map2 = Map2[x[0]:x[1],y[0]:y[1]]
+            Map1 = Map1[y[0]:y[1],x[0]:x[1]]
+            Map2 = Map2[y[0]:y[1],x[0]:x[1]]
 
         corr = correlate(Map1,Map2)
         corr_plot = PlotWin(__self__.master)
@@ -1586,11 +1592,21 @@ class PlotWin:
         __self__.plot.legend()
 
     def draw_correlation(__self__,corr,labels):
+        A, B, R = SpecRead.linregress(corr[0],corr[1]) 
+        fit = []
         plot_font = {'fontname':'Times New Roman','fontsize':10}
         __self__.plot.set_title('{0}'.format(SpecRead.DIRECTORY),**plot_font)
         __self__.plot.set_xlabel(labels[0])
         __self__.plot.set_ylabel(labels[1])
+        #__self__.plot.set_ylim(bottom=1,top=corr[1].max()*1.20)
+        #__self__.plot.set_xlim(left=1,right=corr[0].max()*1.20)
         __self__.plot.scatter(corr[0],corr[1])
+        for i in range(int(corr[0].max())):
+            value = A*i+B
+            if value < corr[1].max(): 
+                fit.append(value)
+        __self__.plot.plot(fit, color="blue", label="y(x) = {0:0.2f}x + {1:0.2f}\nR = {2:0.4f}".format(A,B,R))
+        __self__.plot.legend()
         place_topright(__self__.master.master,__self__.master)
 
     def draw_selective_sum(__self__,DATACUBE,y_data,display_mode=None,lines=False):

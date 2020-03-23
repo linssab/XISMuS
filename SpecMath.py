@@ -140,21 +140,22 @@ class datacube:
             __self__.config = configuration
             __self__.calibration = getcalibration()
             __self__.energyaxis = energyaxis()
+            __self__.mps = specsize.shape[0]
         __self__.ROI = {}
         __self__.hist = {}
         __self__.max_counts = {}
 
-    def MPS(__self__):
+    @jit(forceobj=True)
+    def MPS(__self__,mps):
 
         """ Read all data in datacube.matrix and returns a spectrum where each index
         is the maximum value found in the matrix for that same index.
         MPS stands for Maximum Pixel Spectrum """
 
-        __self__.mps = np.zeros([__self__.matrix.shape[2]],dtype="float32")
-        for c in range(__self__.matrix.shape[2]):
+        for c in range(len(mps)):
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
-                    if __self__.mps[c] < __self__.matrix[x,y,c]: __self__.mps[c] = __self__.matrix[x,y,c]
+                    if mps[c] < __self__.matrix[x][y][c]: mps[c] = __self__.matrix[x][y][c]
 
     def stacksum(__self__):
 
@@ -257,7 +258,9 @@ class datacube:
         bar.progress["maximum"] = 4
         bar.updatebar(1)
         bar.update_text("1/4 Calculating MPS...")
-        datacube.MPS(__self__)
+        mps = np.zeros([__self__.matrix.shape[2]],dtype="float32")
+        datacube.MPS(__self__,mps)
+        __self__.mps = mps
         bar.update_text("2/4 Calculating Stacksum...")
         bar.updatebar(2)
         datacube.stacksum(__self__)
@@ -299,7 +302,9 @@ class datacube:
 
         logger.debug("Calculating MPS...")
         __self__.progressbar.update_text("Calculating MPS...")
-        datacube.MPS(__self__)
+        mps = np.zeros([__self__.matrix.shape[2]],dtype="float32")
+        datacube.MPS(__self__,mps)
+        __self__.mps = mps
         logger.debug("Stripping background...")
         __self__.progressbar.update_text("Stripping background...")
         datacube.strip_background(__self__)
@@ -819,7 +824,6 @@ def correlate(map1,map2):
             corr_x.append(map1[x,y])
             corr_y.append(map2[x,y])
     corr_x, corr_y = np.asarray(corr_x), np.asarray(corr_y)
-    print(corr_x.max(),corr_y.max())
     return corr_x, corr_y
 
 if __name__=="__main__":
