@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: 0.0.0                         #
+#                        version: 1.0.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -199,8 +199,8 @@ def getpeakmap(element_list,datacube):
         
         FITFAIL = 0
         partialtimer = time.time()
-        if ratio == True: elmap = np.zeros([imagex,imagey,2,len(element_list)])
-        else: elmap = np.zeros([imagex,imagey,1,len(element_list)])
+        if ratio == True: elmap = np.zeros([imagex,imagey,2,len(element_list)],dtype="float32")
+        else: elmap = np.zeros([imagex,imagey,1,len(element_list)],dtype="float32")
         ka_idx, kb_idx = [],[]
         ka_peakdata, kb_peakdata = [],[]
         for Element in element_list:

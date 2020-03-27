@@ -72,8 +72,8 @@ def grab_line(cube,lines,iterator,Element):
     scan = ([0,0])
     currentx = scan[0]
     currenty = scan[1]
-    el_dist_map = np.zeros([2,matrix_dimension[0],matrix_dimension[1]]) 
-    ROI = np.zeros([energyaxis.shape[0]])
+    el_dist_map = np.zeros([2,matrix_dimension[0],matrix_dimension[1]],dtype="float32") 
+    ROI = np.zeros([energyaxis.shape[0]],dtype="float32")
     FITFAIL = 0
 
     for pos in range(cube.img_size):
@@ -177,7 +177,8 @@ def grab_line(cube,lines,iterator,Element):
     return el_dist_map, ROI
 
 def digest_results(datacube,results,elements):
-    element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)])
+    element_map = np.zeros([datacube.dimension[0],datacube.dimension[1],2,len(elements)],
+            dtype="float32")
     line = ["_a","_b"]
     for element in range(len(results)):
         for dist_map in range(len(results[element][0])):
@@ -214,12 +215,12 @@ def start_reader(cube,Element,iterator,results):
 
         # other function
         if  cube.config["ratio"] == True:
-            elmap = np.zeros([2,cube.dimension[0],cube.dimension[1]])
+            elmap = np.zeros([2,cube.dimension[0],cube.dimension[1]],dtype="float32")
             max_counts = [0,0]
             line_no = 2
             lines = [kaenergy,kbenergy]
         else: 
-            elmap = np.zeros([1,cube.dimension[0],cube.dimension[1]])
+            elmap = np.zeros([1,cube.dimension[0],cube.dimension[1]],dtype="float32")
             max_counts = [0]
             line_no = 1
             lines = [kaenergy,0]
