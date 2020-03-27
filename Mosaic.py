@@ -1,5 +1,49 @@
-VERSION = "1.0.0"
+#################################################################
+#                                                               #
+#          Mosaic API Module                                    #
+#                        version: 1.1.0 - Mar - 2020            #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
+VERSION = "1.1.0"
+global layers_dict
+layers_dict = {}
+
+# tcl/Tk imports
+from tkinter import *
+from tkinter import ttk
+from tkinter import messagebox
+from tkinter import filedialog
+ 
+# general utilities
+import numpy as np
+import cv2
+import sys, os, copy, pickle, stat, random
+import logging, time
+from Decoder import *
+
+# matplotlib imports
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+from matplotlib import style
+style.use('ggplot')
+
+# internal imports
+import SpecRead
+from ReadConfig import checkout_config
+from ImgMath import LEVELS
+from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
+from SpecMath import getstackplot, correlate, peakstrip, Busy
+from SpecMath import datacube as Cube
+from EnergyLib import plottables_dict
+from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
+from Mapping_parallel import Cube_reader, sort_results, digest_results
+import cy_funcs
 
 def load_cube(cube=""):
     cube_file = open(os.path.join(SpecRead.__PERSONAL__,
@@ -28,6 +72,17 @@ def place_center(window1,window2):
     window2.deiconify()
     window2.focus_force()
 
+def convert_layers_to_dict(MosaicAPI_obj):
+    new_dict = {}
+    for layer in MosaicAPI_obj.layer:
+        new_dict[MosaicAPI_obj.layer[layer].name] = {
+                "start":MosaicAPI_obj.layer[layer].start,
+                "end":MosaicAPI_obj.layer[layer].end,
+                "img":MosaicAPI_obj.layer[layer].img,
+                "layer":MosaicAPI_obj.layer[layer].layer
+                }
+    return new_dict
+
 class NavigationToolbar(NavigationToolbar2Tk):
     # only display the buttons we need
     toolitems = [t for t in NavigationToolbar2Tk.toolitems if
@@ -51,11 +106,14 @@ class Layer:
         __self__.calibration = cube.calibration
         __self__.energyaxis = cube.energyaxis
         __self__.config = cube.config
-        if element == "": __self__.img = cube.densitymap/cube.densitymap.max()*255
+        if element == "": 
+            __self__.img = cube.densitymap/cube.densitymap.max()*255
+            __self__.img = __self__.img.astype("int32")
         else: 
             unpacker = element.split("_")
             image = cube.unpack_element(unpacker[0],unpacker[1])
             __self__.img = image/image.max()*255
+            __self__.img = __self__.img.astype("int32")
         
         """ Get rid of 0 values in grayscale image. This is done to
         facilitate detecting if a pixel belongs or not to a Layer """
@@ -72,14 +130,16 @@ class Layer:
         """ Gives a layer number """
 
         __self__.layer = layer
+        
+        
 
-
-class Mosaic:
+class Mosaic_API:
 
     def __init__(__self__, size):
         pad = 16
         zbar = 35
-        __self__.master = Tk()
+        __self__.master = Toplevel()
+        __self__.master.grab_set()
         __self__.master.attributes("-alpha",0.0)
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
         __self__.master.iconbitmap(icon)
@@ -89,11 +149,12 @@ class Mosaic:
         __self__.NameVar = StringVar()
         __self__.NameVar.set("New Cube")
         my_dpi = __self__.master.winfo_fpixels("1i")
-        __self__.image = np.zeros([size[0],size[1]])+59
+        __self__.image = np.zeros([size[0],size[1]],dtype="int")+59
         __self__.layer = {}
         __self__.master.resizable(True,True)
         __self__.master.minsize(1024,768)
         __self__.layer_count = 0
+        __self__.layer_numbering = {}
 
         # create panels
         __self__.RightPane = Frame(__self__.master,
@@ -148,10 +209,10 @@ class Mosaic:
         __self__.axs.axis("on")
         __self__.axs.get_yaxis().set_visible(False)
         __self__.axs.get_xaxis().set_visible(False)
-        __self__.axs.spines["top"].set_color("#86888a")
-        __self__.axs.spines["bottom"].set_color("#86888a")
-        __self__.axs.spines["left"].set_color("#86888a")
-        __self__.axs.spines["right"].set_color("#86888a")
+        __self__.axs.spines["top"].set_color("#3b3b38")
+        __self__.axs.spines["bottom"].set_color("#3b3b38")
+        __self__.axs.spines["left"].set_color("#3b3b38")
+        __self__.axs.spines["right"].set_color("#3b3b38")
         __self__.axs.grid(b=None)
 
         __self__.canvas = FigureCanvasTkAgg(__self__.map,__self__.Canvas)
@@ -258,6 +319,7 @@ class Mosaic:
         __self__.canvas.draw()
 
     def rotate(__self__,direction,e=""):
+        global layers_dict
         active_layer = __self__.layers_list.curselection()
         if active_layer == (): return
         else: 
@@ -287,7 +349,7 @@ class Mosaic:
             layer.img, layer.end = img, end
             layer.matrix = np.rot90(layer.matrix)
             layer.bg = np.rot90(layer.bg)
-
+        layers_dict = convert_layers_to_dict(__self__)
         __self__.build_image(__self__.image.shape)
 
     def on_press(__self__,event):
@@ -348,18 +410,7 @@ class Mosaic:
                 __self__.layer[name].end[0] = \
                         __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
             
-            
             __self__.build_image(__self__.image.shape)
-
-            #__self__.area1.set_width(__self__.x1 - __self__.x0)
-            #__self__.area2.set_width(__self__.x1 - __self__.x0)
-            #__self__.area1.set_height(__self__.y1 - __self__.y0)
-            #__self__.area2.set_height(__self__.y1 - __self__.y0)
-            #__self__.area1.set_xy((__self__.x0,__self__.y0))
-            #__self__.area2.set_xy((__self__.x0,__self__.y0))
-            #__self__.parent.canvas1.draw()
-            #__self__.parent.canvas2.draw()
-            #__self__.calculate_area()
 
     def on_release(__self__,event):
         __self__.press = False
@@ -379,6 +430,8 @@ class Mosaic:
                 if name.lower().endswith(".cube"): cube_dict[folder] = name.split(".cube")[0]
         __self__.maps_window = Toplevel()
         __self__.maps_window.withdraw()
+        __self__.maps_window.bind("<Escape>",__self__.refocus)
+        __self__.maps_window.protocol("WM_DELETE_WINDOW",__self__.refocus)
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
         __self__.maps_window.title("Available samples")
         __self__.maps_window.iconbitmap(icon)
@@ -415,16 +468,19 @@ class Mosaic:
 
     def reorder_layers(__self__):
         llist = __self__.layers_list.get(0,END)
+        __self__.layer_numbering = {}
         for entry in llist:
             idx = __self__.layers_list.get(0,END).index(entry)
             layer_name, el_map = entry.split(",",1)
             __self__.layers_list.delete(idx)
             __self__.layer[layer_name].layer = idx
+            __self__.layer_numbering[idx] = layer_name
             element = el_map.split(",")[0]
             if len(element) > 3: 
                 __self__.layers_list.insert(idx,"{},{},{}".format(layer_name,element,idx))
             else:
                 __self__.layers_list.insert(idx,"{},{}".format(layer_name,idx))
+        layers_dict = convert_layers_to_dict(__self__)
 
     def move_layer_up(__self__):
         active_layer_idx = __self__.layers_list.curselection()
@@ -447,12 +503,7 @@ class Mosaic:
                         "{},{}".format(previous_layer_name,
                             previous_layer_idx+1))
             else: return
-            llist = __self__.layers_list.get(0,END)
-            for entry in llist:
-                idx = __self__.layers_list.get(0,END).index(entry)
-                layer_name, el_map = entry.split(",",1)
-                __self__.layer[layer_name].layer = idx
-
+            __self__.reorder_layers()
             __self__.build_image(__self__.image.shape)
     
     def move_layer_down(__self__):
@@ -476,12 +527,7 @@ class Mosaic:
                         "{},{}".format(active_layer_name,
                             next_layer_idx))
             else: return
-            llist = __self__.layers_list.get(0,END)
-            for entry in llist:
-                idx = __self__.layers_list.get(0,END).index(entry)
-                layer_name, el_map = entry.split(",",1)
-                __self__.layer[layer_name].layer = idx
-
+            __self__.reorder_layers()
             __self__.build_image(__self__.image.shape)
 
     def check_calibration(__self__, cube):
@@ -516,6 +562,7 @@ class Mosaic:
         else: return True
 
     def grep_map(__self__, cube, e=""):
+        global layers_dict
         element = __self__.maps_list.get(ACTIVE)
         if __self__.layer_count == 0: 
             layer_no = 0
@@ -523,17 +570,23 @@ class Mosaic:
         else: 
             layer_no = __self__.layer_count
             __self__.layer_count += 1
+        __self__.layer_numbering[__self__.layer_count] = cube.name
         __self__.layer[cube.name] = Layer(cube,layer_no,element)
         __self__.layers_list.insert(END,"{},{},{}".format(cube.name,element,layer_no))
+        layers_dict = convert_layers_to_dict(__self__)
         __self__.build_image(__self__.image.shape)
         __self__.maps_window.destroy()
+        __self__.refocus()
+
 
     def grep_cube(__self__, e=""):
+        global layers_dict
         selected_cube = __self__.maps_list.get(ACTIVE)
         cube = load_cube(selected_cube)
         if __self__.layer.__contains__(selected_cube):
             messagebox.showinfo("Cube already imported!",
                     "Cabn't add same cube twice!")
+            __self__.refocus()
             return
         elif __self__.layer_count == 0: can_import = True
         else: can_import = __self__.check_calibration(cube)
@@ -557,10 +610,14 @@ class Mosaic:
                     else: 
                         layer_no = __self__.layer_count
                         __self__.layer_count += 1
+                    __self__.layer_numbering[__self__.layer_count] = cube.name
                     __self__.layer[cube.name] = Layer(cube,layer_no)
                     __self__.layers_list.insert(END,"{},{}".format(cube.name,layer_no))
+                    layers_dict = convert_layers_to_dict(__self__)
                     __self__.build_image(__self__.image.shape)
                     __self__.maps_window.destroy()
+                    __self__.refocus()
+
 
             elif packed_elements == []:
                 if __self__.layer_count == 0: 
@@ -569,10 +626,25 @@ class Mosaic:
                 else: 
                     layer_no = __self__.layer_count
                     __self__.layer_count += 1
+                __self__.layer_numbering[__self__.layer_count] = cube.name
                 __self__.layer[cube.name] = Layer(cube,layer_no)
                 __self__.layers_list.insert(END,"{},{}".format(cube.name,layer_no))
+                layers_dict = convert_layers_to_dict(__self__)
                 __self__.build_image(__self__.image.shape)
                 __self__.maps_window.destroy()
+                __self__.refocus()
+
+            else: return
+    
+    def get_toplayer(__self__,i,j):
+        layer = __self__.layer_numbering[__self__.layer_count]
+        # convert canvas coordinates to datacube coordinates
+        x, y = __self__.layer[layer].start
+        x_, y_ = __self__.layer[layer].end
+        conv_x, conv_y = i-x, j-y
+        if x <= i < x_ and y <= j < y_: #verifies if pixels belongs to the datacube
+            return  __self__.layer[layer].name
+        else: return ""
 
     def read_pixels(__self__,i,j):
         front_layer, top_layer, pixel = -1, 0, 59
@@ -591,12 +663,15 @@ class Mosaic:
         return pixel, top_layer
     
     def build_image(__self__, size):
-        for i in range(size[0]):
-            for j in range(size[1]):
-                __self__.image[i,j] = __self__.read_pixels(i,j)[0]
+        global layers_dict
+        __self__.image = cy_funcs.cy_build_image(
+                __self__.image, 
+                np.asarray(__self__.image.shape),
+                layers_dict)
         __self__.im_plot.set_data(__self__.image)
         __self__.canvas.draw()
- 
+
+     
     def pack_spectra(__self__,i,j,void_spectrum):
         front_layer, top_layer, spectrum, bg = 0, 0, void_spectrum, void_spectrum
         for layer in __self__.layer:
@@ -676,49 +751,24 @@ class Mosaic:
         new_cube.digest_merge(bar=__self__.progress_bar)
         __self__.progress_bar.destroybar()
 
-    def kill(__self__):
+    def refocus(__self__,e=""):
+        try: __self__.maps_window.destroy()
+        except: pass
+        __self__.master.grab_set()
+        __self__.master.focus_set()
+
+    def kill(__self__,e=""):
+        __self__.master.grab_release()
         __self__.master.destroy()
-        sys.exit(1)
 
    
 if __name__.endswith('__main__'):         
     
+    """ This is an independent module, which can be run separately from CoreGUI.py """
+
     optimum_resolution = (1920,1080)
 
-    # tcl/Tk imports
-    from tkinter import *
-    from tkinter import ttk
-    from tkinter import messagebox
-    from tkinter import filedialog
-     
-    # general utilities
-    import numpy as np
-    import cv2
-    import sys, os, copy, pickle, stat, random
-    import logging, time
-    from Decoder import *
     
-    # matplotlib imports
-    import matplotlib
-    import matplotlib.pyplot as plt
-    matplotlib.use("TkAgg")
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-    from matplotlib.figure import Figure
-    from matplotlib.patches import Rectangle
-    from matplotlib import style
-    style.use('ggplot')
-
-    # internal imports
-    import SpecRead
-    from ReadConfig import checkout_config
-    from ImgMath import LEVELS
-    from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
-    from SpecMath import getstackplot, correlate, peakstrip, Busy
-    from SpecMath import datacube as Cube
-    from EnergyLib import plottables_dict
-    from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
-    from Mapping_parallel import Cube_reader, sort_results, digest_results
-
     SpecRead.conditional_setup()
-    mosaic_root = Mosaic((500,500))
+    mosaic_root = Mosaic_API((500,500))
     mosaic_root.master.mainloop()
