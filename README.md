@@ -28,6 +28,7 @@ The packages whose versions are mentioned are the stable versions working with X
 * numpy _v 1.18.1_<br>
 * numba _v 0.45.1_<br>
 * llvmlite _v 0.31_<br>
+* cython<br>
 * opencv-python<br>
 * psutil<br>
 * matplotlib<br>
