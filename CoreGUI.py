@@ -39,7 +39,6 @@ def wipe_list():
 def openURL(url):
     webbrowser.open(url)
 
-
 def place_topright(window1,window2):
     global LOW_RES
     
@@ -205,6 +204,72 @@ def open_analyzer():
     global MY_DATACUBE
     API = ImageAnalyzer(root.master,MY_DATACUBE)
     root.ImageAnalyzers.append(API) 
+
+class open_mosaic:
+    
+    def __init__(__self__):
+        __self__.win = Toplevel(root.master)
+        __self__.win.bind("<Escape>",__self__.kill)
+        __self__.win.withdraw()
+        __self__.win.resizable(False,False)
+        __self__.win.overrideredirect(True)
+        __self__.win.grab_set()
+        __self__.diag = Frame(__self__.win,relief=RIDGE,bd=3)
+        __self__.diag.grid()
+        label0 = Label(__self__.diag,text="Canvas Size")
+        label0.grid(row=0,column=0,columnspan=2)
+        label1 = Label(__self__.diag,text="Height (px): ")
+        label1.grid(row=1,column=0)
+        label2 = Label(__self__.diag,text="Width (px): ")
+        label2.grid(row=2,column=0)
+        __self__.x = IntVar()
+        __self__.y = IntVar()
+        __self__.x.set(100)
+        __self__.y.set(100)
+        __self__.win.bind("<Return>",__self__.spawn_mosaic)
+        
+        x_ = Entry(__self__.diag,textvariable=__self__.x,validate="focusout",
+                width=9)
+        x_.grid(row=1,column=1)
+        y_ = Entry(__self__.diag,textvariable=__self__.y,validate="focusout",
+                width=9)
+        y_.grid(row=2,column=1)
+        
+        accept = Button(__self__.diag,text="Ok", width=10, 
+                command=__self__.spawn_mosaic)
+        cancel = Button(__self__.diag,text="Cancel", width=10, 
+                command=__self__.kill)
+        accept.grid(row=3,column=0,pady=5,sticky=W+E,padx=3)
+        cancel.grid(row=3,column=1,pady=5,sticky=W+E,padx=3)
+        
+        __self__.win.update()
+        place_center(root.master,__self__.win)
+        __self__.win.deiconify()
+        x_.focus_set()
+
+    def kill(__self__,e=""):
+        __self__.win.grab_release()
+        __self__.win.destroy()
+        root.master.focus_set()
+        del __self__
+
+    def spawn_mosaic(__self__,e=""):
+        if __self__.x.get() == 0 or __self__.y.get()==0:
+            messagebox.showerror("Ivalid dimension!",
+                    "Can't create {}x{} canvas!".format(__self__.x.get(),__self__.y.get()))
+            return
+        try:
+            size = (__self__.x.get(),__self__.y.get())
+            if root.Mosaic.master.state == "normal": return
+            else: 
+                root.Mosaic = Mosaic_API(size)
+                root.Mosaic.master.focus_set()
+                __self__.kill()
+        except: 
+            root.Mosaic = Mosaic_API(size)
+            root.Mosaic.master.focus_set()
+            __self__.kill()
+
 
 def call_compilecube():
     
@@ -426,24 +491,25 @@ class Convert_File_Name:
                 dm_file.write("righe\t{}\n".format(__self__.height.get()))
                 dm_file.write("colonne\t{}\n".format(__self__.width.get()))
                 dm_file.close()
-            elif __self__.width.get() <= 0 or __self__.height.get() <= 0:
+            elif __self__.width.get() < 0 or __self__.height.get() < 0:
                 messagebox.showerror("Invalid values!",
                         "The dimensions can't be negative or zero!")
                 __self__.bar.destroybar()
                 __self__.files = []
                 return
-
-            index = __self__.starting_index.get()
-            extension = __self__.files[0].split(".")[-1]
-            for spectrum in __self__.files:
-                new_name = __self__.prefix.get()+str(index)+"."+extension
-                shutil.copy(os.path.join(spectrum), 
-                        os.path.join(out_path,new_folder,new_name))
-                index += 1
-                __self__.bar.updatebar(index)
-            __self__.bar.destroybar()
-            messagebox.showinfo("File name conversion","Conversion finished!")
-            __self__.kill()
+            elif __self__.width.get() == 0 or __self__.height.get() == 0:
+                index = __self__.starting_index.get()
+                extension = __self__.files[0].split(".")[-1]
+                for spectrum in __self__.files:
+                    new_name = __self__.prefix.get()+str(index)+"."+extension
+                    shutil.copy(os.path.join(spectrum), 
+                            os.path.join(out_path,new_folder,new_name))
+                    index += 1
+                    __self__.bar.updatebar(index)
+                __self__.bar.destroybar()
+                messagebox.showinfo("File name conversion","Conversion finished!")
+                __self__.kill()
+            else: return
 
     def kill(__self__,e=""):
         __self__.files = []
@@ -1481,7 +1547,7 @@ class PlotWin:
         __self__.canvas.draw()
         __self__.mplCanvas = __self__.canvas.get_tk_widget()
         __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
-        __self__.toolbar = NavigationToolbar2Tk(__self__.canvas,__self__.lower)
+        __self__.toolbar = NavigationToolbar(__self__.canvas,__self__.lower)
         __self__.toolbar.update()
         __self__.canvas._tkcanvas.pack()
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
@@ -1610,6 +1676,7 @@ class PlotWin:
         place_topright(__self__.master.master,__self__.master)
 
     def draw_selective_sum(__self__,DATACUBE,y_data,display_mode=None,lines=False):
+        
         global FIND_ELEMENT_LIST
         __self__.plot.clear()
         plot_font = {'fontname':'Arial','fontsize':10}
@@ -2205,7 +2272,6 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Check calibration",state=NORMAL)
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=NORMAL)
             __self__.Toolbox.entryconfig("Map elements",state=NORMAL)
-            __self__.Toolbox.entryconfig("Height-mapping",state=NORMAL)
             __self__.re_configure.config(state=NORMAL)
         if toggle == 'off':
             __self__.Toolbox.entryconfig("Derived spectra", state=DISABLED)
@@ -2217,7 +2283,6 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Check calibration",state=DISABLED)
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=DISABLED)
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
-            __self__.Toolbox.entryconfig("Height-mapping",state=DISABLED)
             __self__.re_configure.config(state=DISABLED)
 
     def refresh_samples(__self__):
@@ -2760,7 +2825,7 @@ class MainGUI:
         __self__.Toolbox.add_command(label="Verify calculated ROI", command=__self__.plot_ROI)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Map elements", command=__self__.find_elements)
-        __self__.Toolbox.add_command(label="Height-mapping", command=doNothing)
+        __self__.Toolbox.add_command(label="Open Mosaic...", command=open_mosaic)
         __self__.Toolbox.add_command(label="Image Analyzer . . .", command=open_analyzer)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
@@ -3964,10 +4029,19 @@ if __name__.endswith('__main__'):
             messagebox.showerror(exception.__class__.__name__,"Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.path.join(SpecRead.__PERSONAL__,"logfile.log")))
             sys.exit()
         return 0
-    
+    class NavigationToolbar(NavigationToolbar2Tk):
+    # only display the buttons we need
+        toolitems = (
+        ('Home', 'Reset original view', 'home', 'home'),
+        ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
+        ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
+        ('Save', 'Save the figure', 'filesave', 'save_figure')
+      )
+   
     check_screen_resolution(optimum_resolution)
     # internal imports
     import SpecRead
+    from Mosaic import Mosaic_API
     open_log()
     logger = logging.getLogger("logfile")
     from ReadConfig import checkout_config
