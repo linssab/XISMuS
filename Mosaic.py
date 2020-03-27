@@ -467,6 +467,7 @@ class Mosaic_API:
             __self__.layer_count -= 1
 
     def reorder_layers(__self__):
+        global layers_dict
         llist = __self__.layers_list.get(0,END)
         __self__.layer_numbering = {}
         for entry in llist:
@@ -706,8 +707,10 @@ class Mosaic_API:
                 end_y = __self__.layer[layer].end[1]
             specsize = __self__.layer[layer].matrix.shape[2]
         void_spectrum = np.zeros([specsize])
-        __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize])
-        __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize])
+        __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
+                dtype="float32")
+        __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
+                dtype="float32")
         __self__.progress_bar = Busy((end_x-start_x)*(end_y-start_y),0)
         __self__.progress_bar.update_text("Packing...")
         x, iteration = 0,0

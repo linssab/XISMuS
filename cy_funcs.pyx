@@ -127,4 +127,15 @@ def cy_build_image(int[:,:] image, int[:] size, dict all_layers):
             new_image[i][j] = cy_read_pixels(all_layers,i,j)
     return new_image
 
+# from SpecMath
+
+def cy_MPS(float[:,:,:] matrix, int[:] m_size, float[:] mps_spec, int spec_size):
+    cdef int c = 0
+    cdef int x = 0
+    cdef int y = 0
+    for c in range(spec_size):
+        for x in range(m_size[0]):
+            for y in range(m_size[1]):
+                if mps_spec[c] < matrix[x][y][c]: mps_spec[c] = matrix[x][y][c]
+    return mps_spec
 

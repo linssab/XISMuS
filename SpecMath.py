@@ -26,6 +26,7 @@ updatespectra)
 from EnergyLib import ElementList
 from ImgMath import LEVELS
 from Mapping import getdensitymap
+import cy_funcs
 
 # import other modules
 import matplotlib.pyplot as plt
@@ -145,17 +146,14 @@ class datacube:
         __self__.hist = {}
         __self__.max_counts = {}
 
-    @jit(forceobj=True)
     def MPS(__self__,mps):
 
         """ Read all data in datacube.matrix and returns a spectrum where each index
         is the maximum value found in the matrix for that same index.
         MPS stands for Maximum Pixel Spectrum """
-
-        for c in range(len(mps)):
-            for x in range(__self__.matrix.shape[0]):
-                for y in range(__self__.matrix.shape[1]):
-                    if mps[c] < __self__.matrix[x][y][c]: mps[c] = __self__.matrix[x][y][c]
+        size = int(len(mps))
+        shape = np.asarray(__self__.matrix.shape)
+        mps = cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
 
     def stacksum(__self__):
 
