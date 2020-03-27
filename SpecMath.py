@@ -386,9 +386,11 @@ class datacube:
         """ Allocates keys in the datacube object to store the elemental distribution maps """
 
         for element in element_list:
-            __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
-            __self__.__dict__[element+"_b"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
-            __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]])
+            __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],
+                __self__.dimension[1]],dtype="float32")
+            __self__.__dict__[element+"_b"] = np.zeros([__self__.dimension[0],
+                __self__.dimension[1]],dtype="float32")
+            __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]],dtype="float32")
             __self__.max_counts[element+"_a"] = 0
             __self__.max_counts[element+"_b"] = 0
             __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
