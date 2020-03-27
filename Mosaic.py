@@ -362,22 +362,19 @@ class Mosaic_API:
     def on_drag(__self__,event):
         if __self__.press:
             __self__.move = True
-            try: __self__.x1 = int(event.ydata)
-            except: pass
-            try: __self__.y1 = int(event.xdata)
-            except: pass
+            __self__.x1 = int(event.ydata)
+            __self__.y1 = int(event.xdata)
+            
             # adjust drag pointer to image click position
             try: name = __self__.read_pixels(__self__.x0,__self__.y0)[1].name
             except: return 0
-            x_size, y_size = __self__.layer[name].img.shape
             
             # sets new y start
             new_start_y = __self__.y1 - __self__.y0  + __self__.layer[name].start[1]
             if new_start_y < 0: 
                 __self__.layer[name].start[1] = 0
             elif new_start_y + __self__.layer[name].img.shape[1] > __self__.image.shape[1]: 
-                print(new_start_y + __self__.layer[name].img.shape[1], 
-                        __self__.image.shape[1]) 
+                pass
             else: 
                 __self__.layer[name].start[1] = new_start_y
             
@@ -409,8 +406,10 @@ class Mosaic_API:
             else: 
                 __self__.layer[name].end[0] = \
                         __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
-            
+             
             __self__.build_image(__self__.image.shape)
+            __self__.x0 = __self__.x1
+            __self__.y0 = __self__.y1
 
     def on_release(__self__,event):
         __self__.press = False
