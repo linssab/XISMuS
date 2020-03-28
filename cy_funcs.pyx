@@ -23,8 +23,24 @@ def cy_threshold(float[:,:] a_2D_array, int[:] shape, int t):
     cdef float[:,:] new_array = a_2D_array[:,:]
     for x in range(shape[0]):
         for y in range(shape[1]):
-            average = cy_median_filter(a_2D_array,x,y)
-            if a_2D_array[x][y] < t and average < t: 
+            if a_2D_array[x][y] < t: 
+                new_array[x][y] = 0
+            else:
+                new_array[x][y] = a_2D_array[x][y]
+    return new_array
+
+def cy_threshold_low(float[:,:] a_2D_array, int[:] shape, int t):
+    
+    """ Applies a threshold filter cutting the values ABOVE threshold.
+    Returns a 2D-array """
+
+    cdef int x = 0
+    cdef int y = 0
+    cdef float average = 0.0
+    cdef float[:,:] new_array = a_2D_array[:,:]
+    for x in range(shape[0]):
+        for y in range(shape[1]):
+            if a_2D_array[x][y] > t: 
                 new_array[x][y] = 0
             else:
                 new_array[x][y] = a_2D_array[x][y]
@@ -70,6 +86,14 @@ def cy_median_filter(float[:,:] a_2D_array, int x, int y):
                                     except: average = 0.0
     return average
 
+cdef float cy_simple_median(float[:,:] a_2D_array, int x, int y):
+
+    """ Returns the average value of pixel x,y. Ignores edges """
+    cdef float average = 0.0
+    return (2*a_2D_array[x][y] + a_2D_array[x-1][y] + a_2D_array[x+1][y] +\
+            a_2D_array[x][y-1] + a_2D_array[x-1][y-1] + a_2D_array[x+1][y-1] +\
+            a_2D_array[x][y+1] + a_2D_array[x-1][y+1] + a_2D_array[x+1][y+1])/10
+
 def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
 
     """ Applies the median_filter funtion to all pixels within a 2D-array.
@@ -84,9 +108,9 @@ def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
     cdef int x = 0
     cdef int y = 0
     for i in range(iterations):
-        for x in range(shape[0]):
-            for y in range(shape[1]):
-                new_image[x][y] = cy_median_filter(current_image,x,y)
+        for x in range(1,shape[0]-1,1):
+            for y in range(1,shape[1]-1,1):
+                new_image[x][y] = cy_simple_median(current_image,x,y)
         current_img = new_image
     return new_image 
 

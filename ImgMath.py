@@ -77,12 +77,9 @@ def low_pass(a_2D_array,t):
 
     if len(a_2D_array.shape) != 2:
         raise ValueError("Input shape {} is not bi-dimensional")
-
-    for x in range(a_2D_array.shape[0]):
-        for y in range(a_2D_array.shape[1]):
-            average = median_filter(a_2D_array,x,y)
-            if a_2D_array[x,y] > t: a_2D_array[x,y] = 0
-    return a_2D_array 
+    shape = np.asarray(a_2D_array.shape)
+    new_array = cy_funcs.cy_threshold_low(a_2D_array, shape, t)
+    return new_array
 
 def mask(a_datacube,a_compound,mask_threshold):
 
