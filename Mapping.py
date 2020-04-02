@@ -512,13 +512,12 @@ def getdensitymap(datacube):
     #print("BG mode: {0}".format(datacube.config.get('bgstrip')))
     logger.info("Started acquisition of density map")
     
-    density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]])
+    density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]],dtype="int32")
     for x in range(datacube.dimension[0]):
         for y in range(datacube.dimension[1]):
             spec = datacube.matrix[x][y]
             background = datacube.background[x][y]    
-            density_map[x][y] = sum(spec)-sum(background)
-     
+            density_map[x][y] = spec.sum()-background.sum()
     logger.info("Finished fetching density map!")
     logger.info("Execution took %s seconds" % (time.time() - timer))
     return density_map

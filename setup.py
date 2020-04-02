@@ -26,6 +26,7 @@ includefiles_list=[
                 (".\\images\\icons\\icon.ico",".\\images\\icons\\icon.ico"),
                 (".\\images\\icons\\icons.tz",".\\images\\icons\\icons.tz"),
                 (".\\images\\utils.tz",".\\images\\utils.tz"),
+                (".\\images\\colours.txt",".\\images\\colours.txt"),
                 (".\\cy_funcs.cp37-win_amd64.pyd",".\\cy_funcs.cp37-win_amd64.pyd"),
                 (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'), 
                     os.path.join('lib', 'tcl86t.dll')),

@@ -1579,6 +1579,7 @@ class PlotWin:
         __self__.plot.legend()
 
     def draw_spec(__self__,mode,display_mode=None,lines=False):
+        energy_list=[]
         __self__.master.tagged = False
         if __self__.master.winfo_exists() == True:
             global FIND_ELEMENT_LIST
@@ -1607,8 +1608,12 @@ class PlotWin:
                                     label="Custom High")
                         else:
                             energies = plottables_dict[element]
-                            __self__.plot.plot((energies,energies),\
-                                    (0,__self__.plotdata.max()),'k--')
+                            for value in energies: 
+                                energy_list.append(value)
+                                __self__.EL = __self__.plot.axvline(
+                                x=value, color=ElementColors[element],label=element)
+                            energy_list=[]
+
 
                 __self__.plot.set_title('{0} {1}'.format(SpecRead.DIRECTORY,mode),**plot_font)
                 __self__.plot.set_xlabel("Energy (KeV)")
@@ -1634,8 +1639,11 @@ class PlotWin:
                                     label="Custom High")
                         else:
                             energies = plottables_dict[element]
-                            __self__.plot.plot((energies,energies),\
-                                    (0,__self__.plotdata.max()),'k--')
+                            for value in energies: 
+                                energy_list.append(value)
+                                __self__.EL = __self__.plot.axvline(
+                                x=value, color=ElementColors[element],label=element)
+                            energy_list=[]
 
                 __self__.plot.set_title('{0} {1}'.format(SpecRead.DIRECTORY,mode),**plot_font)
                 __self__.plot.set_xlabel("Energy (KeV)")
@@ -1653,8 +1661,24 @@ class PlotWin:
                 except: net = (MY_DATACUBE.max_counts[element+"_a"],"Alpha")
             else: net = (MY_DATACUBE.max_counts[element+"_a"],"Alpha")
             roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
-            __self__.plot.semilogy(MY_DATACUBE.energyaxis,__self__.plotdata,label=roi_label)
-        __self__.plot.semilogy(MY_DATACUBE.energyaxis,MY_DATACUBE.sum,label="Sum spectrum",color="blue")
+            if element != "custom":
+                __self__.plot.semilogy(
+                    MY_DATACUBE.energyaxis,
+                    __self__.plotdata,
+                    label=roi_label,
+                    color=ElementColors[element])
+            else: 
+                __self__.plot.semilogy(
+                MY_DATACUBE.energyaxis,
+                __self__.plotdata,
+                label=roi_label,
+                color=ElementColors["Custom"])
+
+        __self__.plot.semilogy(
+                MY_DATACUBE.energyaxis,
+                MY_DATACUBE.sum,
+                label="Sum spectrum",
+                color="blue")
         __self__.plot.legend()
 
     def draw_correlation(__self__,corr,labels):
@@ -1717,11 +1741,12 @@ class PlotWin:
                             label="Custom High")
                 else:
                     energies = plottables_dict[element]
-                    for value in energies: energy_list.append(value)
-                __self__.EL = __self__.plot.plot(
-                        (energy_list,energy_list),
-                        (0,__self__.plotdata.max()),'k--')
-        __self__.plot.legend()
+                    for value in energies: 
+                        energy_list.append(value)
+                        __self__.EL = __self__.plot.axvline(
+                        x=value, color=ElementColors[element],label=element)
+                    energy_list=[]
+        __self__.plot.legend(loc="upper right")
         __self__.canvas.draw()
 
 
@@ -3114,46 +3139,55 @@ class ReConfigDiag:
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.Frame = Frame(__self__.master,padx=15,pady=15)
         __self__.Labels = Frame(__self__.master,padx=15,pady=15)
+        __self__.MergeSettings = LabelFrame(__self__.master,padx=15,pady=15, 
+                text="Merged Cube Settings:")
+        __self__.MergeSettings.grid(row=1, column=0,columnspan=2)
         __self__.Frame.grid(row=0, column=1)
         __self__.Labels.grid(row=0, column=0)
         __self__.build_widgets()
     
     def build_widgets(__self__):
 
-        Label5 = Label(__self__.Labels, text="Thick ratio:")
-        Label6 = Label(__self__.Labels, text="Netpeak area method:")
-        Label7 = Label(__self__.Labels, text="Enhance image?")
-        Label8 = Label(__self__.Labels, text="Calculate ratios?")
+        #Label1 = Label(__self__.Labels, text="Thick ratio:")
+        Label2 = Label(__self__.Labels, text="Netpeak area method:")
+        Label3 = Label(__self__.Labels, text="Enhance image?")
+        Label4 = Label(__self__.Labels, text="Calculate ratios?")
+        __self__.Label5 = Label(__self__.MergeSettings, text="Scale data?")
+        __self__.Label6 = Label(__self__.MergeSettings, text="Re-calculate continuum?")
         
-        Label5.grid(row=4,column=0,sticky=W,pady=2)
-        Label6.grid(row=5,column=0,sticky=W,pady=2)
-        Label7.grid(row=6,column=0,sticky=W,pady=2)
-        Label8.grid(row=7,column=0,sticky=W,pady=2)
+        #Label1.grid(row=1,column=0,sticky=W,pady=2)
+        Label2.grid(row=2,column=0,sticky=W,pady=2)
+        Label3.grid(row=3,column=0,sticky=W,pady=2)
+        Label4.grid(row=4,column=0,sticky=W,pady=2)
+        __self__.Label5.grid(row=0,column=1,sticky=W,pady=2)
+        __self__.Label6.grid(row=1,column=1,sticky=W,pady=2)
         
         ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes")
-        ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
+        ConfigDiagEnhanceYes.grid(row=3,column=1,sticky=E,pady=2)
         ConfigDiagRatioYes = Label(__self__.Frame, text="Yes")
-        ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
+        ConfigDiagRatioYes.grid(row=4,column=1,sticky=E,pady=2)
 
         __self__.BgstripVar = StringVar()
         __self__.DirectoryVar = StringVar()
         __self__.RatioVar = BooleanVar()
-        __self__.ThickVar = DoubleVar()
+        #__self__.ThickVar = DoubleVar()
         __self__.EnhanceVar = BooleanVar()
         __self__.MethodVar = StringVar()
+        __self__.ScaleVar = BooleanVar()
+        __self__.ContVar = BooleanVar()
         __self__.DirectoryVar.set(MY_DATACUBE.config.get('directory'))
         __self__.BgstripVar.set(MY_DATACUBE.config.get('bgstrip'))
         __self__.RatioVar.set(MY_DATACUBE.config.get('ratio'))
-        __self__.ThickVar.set(MY_DATACUBE.config.get('thickratio'))
+        #__self__.ThickVar.set(MY_DATACUBE.config.get('thickratio'))
         __self__.MethodVar.set(MY_DATACUBE.config.get('peakmethod'))
         __self__.EnhanceVar.set(MY_DATACUBE.config.get('enhance'))
         
         __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
         
-        __self__.ConfigDiagThick = Entry(
-                __self__.Frame, 
-                textvariable=__self__.ThickVar,
-                width=15)
+        #__self__.ConfigDiagThick = Entry(
+        #        __self__.Frame, 
+        #        textvariable=__self__.ThickVar,
+        #        width=15)
         
         __self__.ConfigDiagEnhance = Checkbutton(__self__.Frame, variable=__self__.EnhanceVar)
         
@@ -3165,38 +3199,75 @@ class ReConfigDiag:
                 width=13)
         
         
-        __self__.ConfigDiagThick.grid(row=4,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagMethod.grid(row=5,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagEnhance.grid(row=6,column=0,sticky=E,pady=2)
-        __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
+        #__self__.ConfigDiagThick.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagMethod.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagEnhance.grid(row=3,column=0,sticky=E,pady=2)
+        __self__.ConfigDiagRatio.grid(row=4,column=0,sticky=E,pady=2)
         
         dimension_text = "Image size = {0} x {1} pixels"\
                 .format(MY_DATACUBE.dimension[0],MY_DATACUBE.dimension[1])
         img_dimension_display = Label(__self__.master,text=dimension_text)
-        img_dimension_display.grid(row=1,column=0,sticky=W,padx=17,pady=2)
+        img_dimension_display.grid(row=2,column=0,sticky=W,padx=17,pady=2)
+        
+        __self__.scale = Checkbutton(__self__.MergeSettings, variable=__self__.ScaleVar)
+        __self__.cont = Checkbutton(__self__.MergeSettings, variable=__self__.ContVar)
+        __self__.scale.grid(row=0,column=0)
+        __self__.cont.grid(row=1,column=0)
 
         ButtonsFrame = Frame(__self__.master)
-        ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
+        ButtonsFrame.grid(row=5,columnspan=2,pady=10,padx=10)
         SaveButton = Button(ButtonsFrame, text="Save", justify=CENTER, width=10,\
                 command=__self__.save)
-        SaveButton.grid(row=8,column=0,sticky=S)
+        SaveButton.grid(row=5,column=0,sticky=S)
         CancelButton = Button(ButtonsFrame, text="Cancel", justify=CENTER, width=10,\
                 command=__self__.kill)
-        CancelButton.grid(row=8,column=1,sticky=S)
-        
+        CancelButton.grid(row=5,column=1,sticky=S)
+        if hasattr(MY_DATACUBE,"scalable"):
+            __self__.toggle("on")
+            __self__.ScaleVar.set(MY_DATACUBE.scalable)
+        else: __self__.toggle("off")
         place_center(root.master,__self__.master)
         icon = ".\\images\\icons\\refresh.ico"
         __self__.master.iconbitmap(icon)
         root.master.wait_window(__self__.master)
 
     def save(__self__):
-        MY_DATACUBE.config["thickratio"] = __self__.ThickVar.get()
+        #MY_DATACUBE.config["thickratio"] = __self__.ThickVar.get()
         MY_DATACUBE.config["enhance"] = __self__.EnhanceVar.get()
         MY_DATACUBE.config["peakmethod"] = __self__.MethodVar.get()
         MY_DATACUBE.config["ratio"] = __self__.RatioVar.get()
-        MY_DATACUBE.save_cube()
+        if hasattr(MY_DATACUBE,"scalable"):
+            if MY_DATACUBE.scalable == False and __self__.ScaleVar.get() == True:
+                MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                apply_scaling(MY_DATACUBE,1)
+            if MY_DATACUBE.scalable == True and __self__.ScaleVar.get() == False:
+                MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                apply_scaling(MY_DATACUBE,-1)
+            if __self__.ContVar.get() == True:
+                bar = Busy(MY_DATACUBE.img_size,0)
+                bar.update_text("Stripping background")
+                MY_DATACUBE.strip_background(bgstrip="SNIPBG",
+                        recalculating=True,
+                        progressbar=bar)
+                bar.destroybar()
+            
+            MY_DATACUBE.create_densemap()
+            MY_DATACUBE.save_cube()
+            root.draw_map()
         root.write_stat()
         __self__.kill()
+
+    def toggle(__self__,mode):
+        if mode == "on":
+            __self__.scale.config(state=NORMAL)
+            __self__.cont.config(state=NORMAL)
+            __self__.Label5.config(state=NORMAL)
+            __self__.Label6.config(state=NORMAL)
+        elif mode == "off":
+            __self__.scale.config(state=DISABLED)
+            __self__.cont.config(state=DISABLED)
+            __self__.Label5.config(state=DISABLED)
+            __self__.Label6.config(state=DISABLED)
 
     def kill(__self__):
         __self__.master.destroy()
@@ -3331,7 +3402,7 @@ class ConfigDiag:
         configdict = {"directory":__self__.DirectoryVar.get(),
                 "bgstrip":__self__.BgstripVar.get(),
                 "ratio":__self__.RatioVar.get(),
-                "thickratio":__self__.ThickVar.get(),
+                #"thickratio":__self__.ThickVar.get(),
                 "calibration":__self__.CalibVar.get(),
                 "enhance":__self__.EnhanceVar.get(),
                 "peakmethod":__self__.MethodVar.get(),
@@ -3489,7 +3560,7 @@ class ConfigDiag:
         __self__.RatioVar = BooleanVar()
         __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
         
-        __self__.ThickVar = DoubleVar()
+        #__self__.ThickVar = DoubleVar()
         #__self__.ConfigDiagThick = Entry(__self__.ConfigDiagFrame, textvariable=ThickVar,width=13)
         __self__.ConfigDiagSetBG = Button(__self__.Frame, text="Set BG",\
                width=13+ConfigDiagRatioYes.winfo_width(),command=__self__.call_PeakClipper)
@@ -4045,12 +4116,12 @@ if __name__.endswith('__main__'):
     open_log()
     logger = logging.getLogger("logfile")
     from ReadConfig import checkout_config
-    from ImgMath import LEVELS
+    from ImgMath import LEVELS, apply_scaling
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from Decoder import *
     from SpecMath import getstackplot, correlate, peakstrip, Busy
     from SpecMath import datacube as Cube
-    from EnergyLib import plottables_dict
+    from EnergyLib import plottables_dict, ElementColors
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results
 

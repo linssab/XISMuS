@@ -203,13 +203,17 @@ class datacube:
                 __self__.energyaxis[index]))
         ANSII_file.close()
 
-    def strip_background(__self__,bgstrip=None):
+    def strip_background(__self__,
+            bgstrip=None,
+            recalculating=False,
+            progressbar=None):
 
         """ Calculates the background contribution to each invidual spectrum.
         The calculated data is saved into the datacube object.
         bgstrip; a string """
-
-        bgstrip = __self__.config['bgstrip']
+        
+        if recalculating == True: bgstrip = bgstrip
+        else: bgstrip = __self__.config['bgstrip']
         counter = 0
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
                 __self__.energyaxis.shape[0]],dtype="float32",order='C')
@@ -225,7 +229,8 @@ class datacube:
                     stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
                     __self__.background[x,y] = stripped
                     counter = counter + 1
-                    __self__.progressbar.updatebar(counter)
+                    if recalculating == True: progressbar.updatebar(counter)
+                    else: __self__.progressbar.updatebar(counter)
 
     def create_densemap(__self__):
 

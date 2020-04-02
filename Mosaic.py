@@ -36,7 +36,7 @@ style.use('ggplot')
 # internal imports
 import SpecRead
 from ReadConfig import checkout_config
-from ImgMath import LEVELS
+from ImgMath import LEVELS, apply_scaling
 from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
 from SpecMath import getstackplot, correlate, peakstrip, Busy
 from SpecMath import datacube as Cube
@@ -79,7 +79,12 @@ def convert_layers_to_dict(MosaicAPI_obj):
                 "start":MosaicAPI_obj.layer[layer].start,
                 "end":MosaicAPI_obj.layer[layer].end,
                 "img":MosaicAPI_obj.layer[layer].img,
-                "layer":MosaicAPI_obj.layer[layer].layer
+                "dense":MosaicAPI_obj.layer[layer].dense,
+                "max":MosaicAPI_obj.layer[layer].dense.max(),
+                "min":MosaicAPI_obj.layer[layer].dense.min(),
+                "layer":MosaicAPI_obj.layer[layer].layer,
+                "matrix":MosaicAPI_obj.layer[layer].matrix,
+                "bg":MosaicAPI_obj.layer[layer].bg,
                 }
     return new_dict
 
@@ -99,6 +104,8 @@ class Layer:
                 cube.energyaxis.shape[0]],dtype='float32',order='C')
         __self__.bg = np.zeros([cube.dimension[0],cube.dimension[1],\
                 cube.energyaxis.shape[0]],dtype='float32',order='C')
+        __self__.gross = int(cube.densitymap.sum()/cube.img_size)
+        __self__.dense = cube.densitymap
         for i in range(__self__.matrix.shape[0]):
             for j in range(__self__.matrix.shape[1]):
                 __self__.matrix[i,j] = cube.matrix[i,j]
@@ -194,6 +201,7 @@ class Mosaic_API:
         pad = 16
         zbar = 35
         my_dpi = __self__.master.winfo_fpixels("1i")
+        
         # draw matplotlib canvas
         __self__.map = plt.figure(
                 figsize=(round(768-2*pad)/my_dpi,round(768-zbar)/my_dpi), 
@@ -250,8 +258,12 @@ class Mosaic_API:
         __self__.icon_cw = cw.subsample(1,1)
         __self__.icon_ccw = ccw.subsample(1,1)
         
-        # container for the buttons
+        # container for buttons
         __self__.container = Frame(__self__.RightPane,width=64,height=64)
+        # container for options
+        __self__.options = LabelFrame(__self__.RightPane,text="Options ",
+                width=1024-768-2*pad,
+                height=128)
 
         __self__.layers_list = Listbox(__self__.RightPane, height=10)
         __self__.layer_up = Button(
@@ -302,9 +314,27 @@ class Mosaic_API:
         __self__.cube_name_label = Label(
                 __self__.RightPane,
                 text = "Cube name: ")
+    
+        __self__.ScaleVarLinStr = BooleanVar()
+        __self__.ScaleVarSum = BooleanVar()
+
+        __self__.scale_check = Checkbutton(__self__.options, 
+                variable=__self__.ScaleVarLinStr,
+                padx=pad)
+        __self__.scale_label = Label(__self__.options, text="Linear stretching scaling")
+        __self__.scale_check.grid(row=0,column=0,sticky=W)
+        __self__.scale_label.grid(row=0,column=1,sticky=W)
+        __self__.scale_check2 = Checkbutton(__self__.options, 
+                variable=__self__.ScaleVarSum,
+                padx=pad)
+        __self__.scale_label2 = Label(__self__.options, text="Average counts/px scaling")
+        __self__.scale_check2.grid(row=1,column=0,sticky=W)
+        __self__.scale_label2.grid(row=1,column=1,sticky=W)
 
         __self__.layers_list.grid(row=0, column=0, rowspan=4)
         __self__.container.grid(row=0,column=1)
+        __self__.options.grid(row=6,column=0,columnspan=2,
+                sticky=W+E)
         __self__.layer_up.grid(row=0, column=0)
         __self__.layer_down.grid(row=0, column=1)
         __self__.rotate_ccw.grid(row=1, column=0)
@@ -337,6 +367,7 @@ class Mosaic_API:
                     return
             layer.img, layer.end = img, end
             layer.matrix = np.rot90(layer.matrix,3)
+            layer.dense = np.rot90(layer.dense,3)
             layer.bg = np.rot90(layer.bg,3)
 
         elif direction == 0:
@@ -348,6 +379,7 @@ class Mosaic_API:
                     return
             layer.img, layer.end = img, end
             layer.matrix = np.rot90(layer.matrix)
+            layer.dense = np.rot90(layer.dense)
             layer.bg = np.rot90(layer.bg)
         layers_dict = convert_layers_to_dict(__self__)
         __self__.build_image(__self__.image.shape)
@@ -362,8 +394,10 @@ class Mosaic_API:
     def on_drag(__self__,event):
         if __self__.press:
             __self__.move = True
-            __self__.x1 = int(event.ydata)
-            __self__.y1 = int(event.xdata)
+            try: __self__.x1 = int(event.ydata)
+            except: pass
+            try: __self__.y1 = int(event.xdata)
+            except: pass
             
             # adjust drag pointer to image click position
             try: name = __self__.read_pixels(__self__.x0,__self__.y0)[1].name
@@ -689,69 +723,151 @@ class Mosaic_API:
         return spectrum, bg
     
     def build_cube(__self__):
+        
+        """ Before proceeding, checks if any layers are loaded and if 
+        only one scaling mode was selected """
+        
         if __self__.layer == {}:
             messagebox.showerror("No Layers!",
                     "Please add cubes to canvas before trying to compile a new cube!")
             return
-        start_x, start_y = __self__.image.shape
-        end_x, end_y = 0, 0
-        for layer in __self__.layer:
-            if __self__.layer[layer].start[0] <= start_x: 
-                start_x = __self__.layer[layer].start[0]
-            if __self__.layer[layer].start[1] <= start_y:
-                start_y = __self__.layer[layer].start[1]
-            if __self__.layer[layer].end[0] >= end_x: 
-                end_x = __self__.layer[layer].end[0]
-            if __self__.layer[layer].end[1] >= end_y:
-                end_y = __self__.layer[layer].end[1]
-            specsize = __self__.layer[layer].matrix.shape[2]
-        void_spectrum = np.zeros([specsize])
-        __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
-                dtype="float32")
-        __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
-                dtype="float32")
-        __self__.progress_bar = Busy((end_x-start_x)*(end_y-start_y),0)
-        __self__.progress_bar.update_text("Packing...")
-        x, iteration = 0,0
-        for i in range(start_x, end_x):
-            y=0
-            for j in range(start_y, end_y):
-                iteration += 1
-                __self__.progress_bar.updatebar(iteration)
-                __self__.merge_matrix[x,y], __self__.merge_bg[x,y] = \
-                        __self__.pack_spectra(i,j,void_spectrum)
-                y=y+1
-            x=x+1
-        layers = list(__self__.layer.keys())
+        else:
+            if __self__.ScaleVarLinStr.get() == True and __self__.ScaleVarSum.get() == True:
+                messagebox.showerror("Error",
+                        "Can't use more than one scaling method. Please select only one from the options box.")
+                return 
+            proceed = messagebox.askquestion("Cube merge!","You are about to merge datacubes. This procedure may take a while depending on the size of the final image. Are you sure you want to proceed?")
+        if proceed == "yes":
+            NAME = __self__.NameVar.get()
+            global layers_dict
+            layers_dict = convert_layers_to_dict(__self__)
 
-        """ Setup configuration dictionary according to the first loaded layer """
+           
+            """ Calculates the global densemap """
+            """ gets the global maximum and minimum """
+            total_densemap = np.zeros([__self__.image.shape[0],__self__.image.shape[1]],
+                    dtype="int32")
+            TARGET = np.zeros([2],dtype="int32")
+            # target[0] = minimum
+            # target[1] = maximum
+            cy_funcs.cy_build_densemap(
+                    total_densemap, 
+                    np.asarray(__self__.image.shape,dtype="int32"),
+                    layers_dict,
+                    TARGET)
+            
+            gross = 0
+            for layer in layers_dict:
+                val = layers_dict[layer]["dense"].sum()
+                tot_pix = layers_dict[layer]["dense"].shape[0]\
+                        *layers_dict[layer]["dense"].shape[0]
+                inst_gross = val/tot_pix
+                if inst_gross > gross:
+                    gross = int(inst_gross)
 
-        NAME = __self__.NameVar.get()
-        SpecRead.conditional_setup(name=NAME)
+            """ Builds the scaling matrix with a linear contrast stretching method """
+            if __self__.ScaleVarLinStr.get() == True:
+                mode = 1
+            elif __self__.ScaleVarSum.get() == True:
+                mode = 2
+            else: mode = 0
+            scale_matrix = np.zeros([__self__.image.shape[0],__self__.image.shape[1]],
+                    dtype="float32")
+            cy_funcs.cy_build_scaling_matrix(
+                    scale_matrix,
+                    np.asarray(__self__.image.shape,dtype="int32"),
+                    layers_dict,
+                    TARGET,
+                    gross,
+                    mode)
 
-        """ Datacube object was not created with merging in mind, therefore some
-        workaround had to be done. Main attributes are set externally rather than in the
-        __init__ method """
-        
-        __self__.progress_bar.update_text("Building cube...")
-        __self__.progress_bar.updatebar(0)
-        new_cube = Cube(["xrf"],SpecRead.CONFIG,mode="merge",name=NAME)
-        new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
-        new_cube.dimension = (end_x-start_x), (end_y-start_y)
-        __self__.progress_bar.progress["maximum"] = \
-                new_cube.dimension[0]*new_cube.dimension[1]
-        new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
-        new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
-                new_cube.energyaxis.shape[0]],dtype='float32',order='C')
-        new_cube.background = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
-                new_cube.energyaxis.shape[0]],dtype='float32',order='C')
-        new_cube.matrix = __self__.merge_matrix
-        new_cube.background = __self__.merge_bg
-        new_cube.calibration = __self__.layer[layers[0]].calibration
-        new_cube.config = SpecRead.CONFIG
-        __self__.progress_bar.update_text("Digesting...")
-        new_cube.digest_merge(bar=__self__.progress_bar)
-        __self__.progress_bar.destroybar()
+            start_x, start_y = __self__.image.shape
+            end_x, end_y = 0, 0
+            for layer in __self__.layer:
+                specsize = __self__.layer[layer].matrix.shape[2]
+                if __self__.layer[layer].start[0] <= start_x: 
+                    start_x = __self__.layer[layer].start[0]
+                if __self__.layer[layer].start[1] <= start_y:
+                    start_y = __self__.layer[layer].start[1]
+                if __self__.layer[layer].end[0] >= end_x: 
+                    end_x = __self__.layer[layer].end[0]
+                if __self__.layer[layer].end[1] >= end_y:
+                    end_y = __self__.layer[layer].end[1]
+            
+            # cuts down the scale_matrix image (it is calculated for the entire canvas size
+            if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
+                __self__.cropped = scale_matrix[start_x:end_x,start_y:end_y]
+
+            
+            __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
+                    dtype="float32")
+            __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
+                    dtype="float32")
+            __self__.progress_bar = Busy(2,0)
+            __self__.progress_bar.update_text("1/2 Packing...")
+            x, iteration = 0,0
+            x_bounds = [start_x,end_x]
+            y_bounds = [start_y,end_y]
+            
+            """ to avoid defining a new array inside cython, a zero np array
+            is passed as memoryview object, so it is mutated inside cy_funcs and attributed
+            to the proper merge_matrix indexes """
+            __self__.progress_bar.updatebar(1)
+            void_array = np.zeros([specsize],dtype="float32")
+            cy_funcs.cy_build_merge_cube(layers_dict,
+                    np.asarray(x_bounds,dtype="int32"),
+                    np.asarray(y_bounds,dtype="int32"),
+                    void_array,
+                    __self__.merge_matrix,
+                    specsize)
+
+            layers = list(__self__.layer.keys())
+
+            """ Setup configuration dictionary according to the first loaded layer """
+
+            SpecRead.conditional_setup(name=NAME)
+
+            """ Datacube object was not created with merging in mind, therefore some
+            workaround had to be done. Main attributes are set externally rather than in the
+            __init__ method """
+            
+            __self__.progress_bar.update_text("2/2 Building cube...")
+            __self__.progress_bar.updatebar(0)
+            new_cube = Cube(["xrf"],SpecRead.CONFIG,mode="merge",name=NAME)
+            new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
+            new_cube.dimension = (end_x-start_x), (end_y-start_y)
+            __self__.progress_bar.progress["maximum"] = \
+                    new_cube.dimension[0]*new_cube.dimension[1]
+            new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
+            new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
+                    new_cube.energyaxis.shape[0]],dtype='float32',order='C')
+            new_cube.background = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
+                    new_cube.energyaxis.shape[0]],dtype='float32',order='C')
+            new_cube.matrix = __self__.merge_matrix
+            new_cube.background = __self__.merge_bg
+            if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
+                new_cube.scale_matrix = __self__.cropped
+                apply_scaling(new_cube,1)
+                new_cube.scalable = True
+            new_cube.calibration = __self__.layer[layers[0]].calibration
+            new_cube.config = SpecRead.CONFIG
+            __self__.progress_bar.update_text("Digesting...")
+            new_cube.digest_merge(bar=__self__.progress_bar)
+
+            if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
+                __self__.cropped = scale_matrix[start_x:end_x,start_y:end_y]
+                cv2.imwrite(os.path.join(SpecRead.__PERSONAL__,"output",NAME,
+                    "{}_scaling_matrix.png".format(NAME)),
+                    __self__.cropped/__self__.cropped.max()*255)
+            cropped = total_densemap[start_x:end_x,start_y:end_y]
+            cv2.imwrite(os.path.join(SpecRead.__PERSONAL__,"output",NAME,
+                "{}_global_densemap.png".format(NAME)),cropped/cropped.max()*255)
+
+
+            __self__.progress_bar.destroybar()
+            __self__.tis_cool_i_leave_now()
+            return 1
+        else: return 0
 
     def refocus(__self__,e=""):
         try: __self__.maps_window.destroy()
@@ -762,6 +878,11 @@ class Mosaic_API:
     def kill(__self__,e=""):
         __self__.master.grab_release()
         __self__.master.destroy()
+
+    def tis_cool_i_leave_now(__self__):
+        messagebox.showinfo("Merge complete!",
+                "Datacubes were successfully merged. Mosaic will now be closed. To find your new datacube, please refresh the sample list by changing the samples folder.")
+        __self__.kill()
 
    
 if __name__.endswith('__main__'):         

@@ -7,6 +7,7 @@
 
 import numpy as np
 import logging
+import random, os
 logger = logging.getLogger("logfile")
 logger.debug("Importing module EnergyLib.py...")
 try: 
@@ -286,9 +287,27 @@ if USEXLIB == True: DensityDict = set_densities_from_xlib()
 
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
+ElementColors = {}
+try: 
+    f = open(os.path.join(os.getcwd(),"images","colours.txt"),"r")
+    for element in ElementList:
+        line = f.readline()
+        line = line.replace("\r","")
+        line = line.replace("\n","")
+        ElementColors[element] = line.split("\t")[-1]
+    f.close()
+except: 
+    print("fudeu")
+    ElementColors = {element:"#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)]) for element in ElementList}
 
 if __name__ == "__main__":
     """
+    import os
     print(DensityDict)
     print(DensityDict["Au"])
+    print(ElementColors)
+    f_colour = open(os.path.join(os.getcwd(),"images","colours.txt"),"w")
+    for element in ElementColors:
+        f_colour.write("{}\t{}\r".format(element,ElementColors[element]))
+    f_colour.close()
     """

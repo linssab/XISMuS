@@ -81,6 +81,22 @@ def low_pass(a_2D_array,t):
     new_array = cy_funcs.cy_threshold_low(a_2D_array, shape, t)
     return new_array
 
+def apply_scaling(datacube, scalemode=0):
+    """ scalemode:
+    0 = Returns zero matrix
+    1 = Applies scaling to datacube.matrix
+    -1 = Reverse scaling applied to datacube.matrix """
+
+    scaled_matrix = cy_funcs.cy_apply_scaling(
+            datacube.scale_matrix,
+            datacube.matrix,
+            scalemode,
+            np.asarray(datacube.matrix.shape,dtype="int32"))
+    datacube.matrix = scaled_matrix
+    datacube.create_densemap()
+    if scaled_matrix.max() > 0: return 1
+    else: return 0
+
 def mask(a_datacube,a_compound,mask_threshold):
 
     """ Creates a mask to limit the heightmap calculation.
