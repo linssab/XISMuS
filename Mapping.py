@@ -517,7 +517,7 @@ def getdensitymap(datacube):
         for y in range(datacube.dimension[1]):
             spec = datacube.matrix[x][y]
             background = datacube.background[x][y]    
-            density_map[x][y] = spec.sum()-background.sum()
+            density_map[x][y] = abs(spec.sum()-background.sum())
     logger.info("Finished fetching density map!")
     logger.info("Execution took %s seconds" % (time.time() - timer))
     return density_map
