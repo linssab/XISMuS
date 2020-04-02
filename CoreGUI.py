@@ -831,9 +831,13 @@ class PeakClipper:
         __self__.frame3.grid(row=1,column=1,padx=15,pady=15)
 
         __self__.savgol = IntVar()
+        __self__.savgol.set(5)
         __self__.order = IntVar()
+        __self__.order.set(3)
         __self__.window = IntVar()
+        __self__.window.set(5)
         __self__.iter = IntVar()
+        __self__.iter.set(24)
         
         __self__.build_widgets()
 
@@ -1972,27 +1976,17 @@ class Samples:
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
 
-            """ If no samples are found, try looking for training_data """
+            """ Try looking for training_data """
 
-            if __self__.samples_database == {}:
-                folder = "Example Data"
-                new_path = os.path.join(SpecRead.__PERSONAL__,"Example Data")
-                SpecRead.samples_folder = os.path.join(SpecRead.__PERSONAL__,"Example Data")
-                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
-                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
-                        "output",folder)):
-                        if name.lower().endswith(".cube"):
-                            __self__.filequeue.set(
-                                    "Cube for {} already compiled, skipping mca\'s".format(
-                                        folder))
-                            __self__.label2.update()
-                            try: __self__.splash.update_idletasks()
-                            except: __self__.popup.update_idletasks()
-                            finally: pass
-                            skip_list.append(name.split(".cube")[0])
-
-                if os.path.exists(new_path):
-                    files = [name for name in os.listdir(new_path) \
+            folder = "Example Data"
+            new_path = os.path.join(SpecRead.__PERSONAL__,folder)
+            #SpecRead.samples_folder = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+            
+            if os.path.exists(new_path):
+                examples = [folder for folder in os.listdir(new_path) if \
+                        os.path.isdir(os.path.join(new_path,folder))]
+                for folder in examples:
+                    files = [name for name in os.listdir(os.path.join(new_path,folder)) \
                             if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                     extension = files[:]
                     for item in range(len(files)): 
@@ -2017,27 +2011,27 @@ class Samples:
                                         files[item] = files[item][:-i]
                                         break
                             except: pass
-                        files_set = set(files)
-                        extension_set = set(extension)
-                        counter = dict((x,files.count(x)) for x in files_set)
-                        counter_ext = dict((x,extension.count(x)) for x in extension_set)
-                        mca_prefix_count = 0
-                        mca_extension_count = 0
-                        # counts mca files and stores the prefix string and no. of files
-                        for counts in counter:
-                            if counter[counts] > mca_prefix_count:
-                                mca_prefix = counts
-                                mca_prefix_count = counter[counts]
-                        for ext in counter_ext:
-                            if counter_ext[ext] > mca_extension_count:
-                                mca_extension = ext
-                                mca_extension_count = counter_ext[ext]
-                        # creates a dict key only if the numer of mca's is larger than 20.
-                        if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
-                            __self__.samples_database[folder] = mca_prefix
-                            __self__.mcacount[folder] = len(files)
-                            __self__.mca_extension[folder] = mca_extension
-                            __self__.mca_indexing[folder] = indexing
+                    files_set = set(files)
+                    extension_set = set(extension)
+                    counter = dict((x,files.count(x)) for x in files_set)
+                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                    mca_prefix_count = 0
+                    mca_extension_count = 0
+                    # counts mca files and stores the prefix string and no. of files
+                    for counts in counter:
+                        if counter[counts] > mca_prefix_count:
+                            mca_prefix = counts
+                            mca_prefix_count = counter[counts]
+                    for ext in counter_ext:
+                        if counter_ext[ext] > mca_extension_count:
+                            mca_extension = ext
+                            mca_extension_count = counter_ext[ext]
+                    # creates a dict key only if the numer of mca's is larger than 20.
+                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                        __self__.samples_database[folder] = mca_prefix
+                        __self__.mcacount[folder] = len(files)
+                        __self__.mca_extension[folder] = mca_extension
+                        __self__.mca_indexing[folder] = indexing
                             
             """ Verify packed cubes """
 
@@ -3586,7 +3580,7 @@ class ConfigDiag:
         __self__.DirectoryVar.set(SpecRead.CONFIG.get('directory'))
         __self__.BgstripVar.set(SpecRead.CONFIG.get('bgstrip'))
         __self__.RatioVar.set(SpecRead.CONFIG.get('ratio'))
-        __self__.ThickVar.set(SpecRead.CONFIG.get('thickratio'))
+        #__self__.ThickVar.set(SpecRead.CONFIG.get('thickratio'))
         __self__.CalibVar.set(SpecRead.CONFIG.get('calibration'))
         __self__.MethodVar.set(SpecRead.CONFIG.get('peakmethod'))
         __self__.EnhanceVar.set(SpecRead.CONFIG.get('enhance'))

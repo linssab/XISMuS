@@ -387,13 +387,16 @@ def getdimension():
         y; int
         user_input; bool """
 
-    global dimension_file, samples_folder
+    global dimension_file, samples_folder, DIRECTORY
     if not os.path.exists(dimension_file):
         dimension_file = os.path.join(samples_folder,"colonneXrighe.txt")
         if not os.path.exists(dimension_file):
             dimension_file = os.path.join(output_path,"colonneXrighe.txt")
             if not os.path.exists(dimension_file):
-                raise IOError("Dimension file not found!") 
+                dimension_file = os.path.join(__PERSONAL__,
+                        "Example Data",DIRECTORY,"colonneXrighe.txt") 
+                if not os.path.exists(dimension_file):
+                    raise IOError("Dimension file not found!") 
     user_input = False
     dm_file = open(dimension_file, "r")
     line = dm_file.readline()
