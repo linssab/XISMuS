@@ -125,8 +125,11 @@ class datacube:
     def __init__(__self__,dtypes,configuration,mode="",name=""):
         if mode == "merge": 
             __self__.name = name
+            __self__.path = "No path, this cube was merged"
         else:
+            from SpecRead import samples_folder
             __self__.name = configuration["directory"]
+            __self__.path = os.path.join(samples_folder,__self__.name)
         logger.debug("Initializing cube file")
         
         try: specsize = getdata(getfirstfile()) 

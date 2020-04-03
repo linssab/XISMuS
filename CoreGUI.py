@@ -320,9 +320,9 @@ def prompt_folder():
     folder = filedialog.askdirectory(title="Select the samples folder")
     if folder != "":
         ini_file = open(os.path.join(SpecRead.__BIN__,"folder.ini"),"w")
-        ini_file.write(folder)
+        ini_file.write(os.path.abspath(folder))
         ini_file.close()
-        SpecRead.samples_folder = folder
+        SpecRead.samples_folder = os.path.abspath(folder)
         root.refresh_samples()
     else:
         pass
@@ -954,12 +954,17 @@ class PeakClipper:
         __self__.canvas.draw()
 
     def random_sample(__self__):
-        folder = SpecRead.CONFIG.get('directory')
+        folder = SpecRead.CONFIG.get("directory")
         spec_no = root.mcacount[folder]
         
         """ When loading a list of files - when the sample is manually loaded by the user,
         not detected automatically - root.samples carries the list of all mca's path """
-        if isinstance(root.samples[folder],tuple):
+        if folder == "Training Data 1" or folder == "Training Data 2":
+            __self__.sample = random.randint(1,spec_no-1)
+            mca = os.path.join(SpecRead.__PERSONAL__,"Example Data",folder,
+                    root.samples[folder]+"{0}.{1}".format(__self__.sample,
+                        root.mca_extension[folder]))
+        elif isinstance(root.samples[folder],tuple):
             __self__.sample = random.randint(1,len(root.samples[folder]))
             mca = root.samples[folder][__self__.sample]
         else:
@@ -1904,13 +1909,13 @@ class Samples:
             priority is given to the actual selected folder """
 
             if __self__.samples_database == {}:
-                local_path = SpecRead.samples_folder.split("/")
+                local_path = SpecRead.samples_folder.split("\\")
                 folder = local_path.pop(-1)
                 
                 # builds new path
                 new_path = ""
                 for name in local_path:
-                    new_path = new_path + name + "/"
+                    new_path = new_path + name + "\\"
                 SpecRead.samples_folder = new_path
 
                 if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
@@ -2706,12 +2711,14 @@ class MainGUI:
         SpecRead.FIRSTFILE_ABSPATH = file_batch[0]
 
         #3 ask for a sample name and dimension (modified dimension diag)
-        dimension = dimension_diag(SpecRead.DIRECTORY)
-        __self__.master.wait_window(dimension.win) 
-        if dimension.exit_code == "cancel":
-            __self__.wipe()
-            return 0
-        __self__.ManualParam = []
+        try: __self__.config_xy = SpecRead.getdimension()
+        except:
+            dimension = dimension_diag(SpecRead.DIRECTORY)
+            __self__.master.wait_window(dimension.win) 
+            if dimension.exit_code == "cancel":
+                __self__.wipe()
+                return 0
+            __self__.ManualParam = []
                 
         # calls the configuration window
         __self__.ConfigDiag = ConfigDiag(__self__.master)
@@ -2910,33 +2917,48 @@ class MainGUI:
         __self__.StatusBox.delete(0,END)
         __self__.TableMiddle.delete(0,END)
         __self__.TableLeft.delete(0,END)
-
-        if os.path.exists(SpecRead.selected_sample_folder):
-            if MY_DATACUBE != None: 
+        
+        if MY_DATACUBE != None and not os.path.exists(SpecRead.selected_sample_folder): 
+            if os.path.exists(MY_DATACUBE.path):
+                files = [f for f in os.listdir(MY_DATACUBE.path) if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
+                root.mcacount[SpecRead.DIRECTORY] = len(files)
+                __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                __self__.StatusBox.insert(END,"{0}\n".format(MY_DATACUBE.path))
+                __self__.StatusBox.insert(END,"{0} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
+                __self__.StatusBox.insert(END, "\nDatacube loaded with {} spectra packed\n".format(MY_DATACUBE.img_size))
+                __self__.no_sample = False
+            else:
                 root.mcacount[SpecRead.DIRECTORY] = MY_DATACUBE.img_size
                 __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
-                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
-                __self__.StatusBox.insert(END, "\nDatacube loaded.\n")
-                __self__.StatusBox.insert(END, "\n{} spectra packed!\n".format(root.mcacount[SpecRead.DIRECTORY]))
+                __self__.StatusBox.insert(END,"{0}\n".format(MY_DATACUBE.path))
+                __self__.StatusBox.insert(END,"Path doesn't exist, continuing with datacube information.")
+                __self__.StatusBox.insert(END, "\nDatacube loaded with {} spectra packed\n".format(MY_DATACUBE.img_size))
                 __self__.no_sample = False
+
+        if os.path.exists(SpecRead.selected_sample_folder):
+            if MY_DATACUBE != None:
+                files = [f for f in os.listdir(MY_DATACUBE.path) if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
+                root.mcacount[SpecRead.DIRECTORY] = len(files)
+                __self__.StatusBox.insert(END, 
+                        "\nSpectra files found within current samples folder tree:\n")
+                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.samples_folder))
+                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
+                __self__.StatusBox.insert(END,"{0} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
+                __self__.StatusBox.insert(END, "\nDatacube loaded. With {} spectra packed\n".format(MY_DATACUBE.img_size))
+                __self__.no_sample = False
+
             else: 
                 __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
                 __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
-                __self__.StatusBox.insert(END, "\n{} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
+                __self__.StatusBox.insert(END, 
+                        "\n{} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
                 __self__.no_sample = False
-
-        else: 
-            __self__.StatusBox.insert(\
-                    END, "\nLooking for spectra files at:\n")
-            __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
-            __self__.StatusBox.insert(END, "\nSpetra for sample {} not found!\n".format(SpecRead.DIRECTORY))
-            __self__.StatusBox.insert(END, "\nUsing compiled cube data.\n")
-            __self__.no_sample = True
 
         if os.path.exists(SpecRead.cube_path):
             cube_stats = os.stat(SpecRead.cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
-            __self__.StatusBox.insert(END,"Datacube is compiled. Cube size: {0}".format(cube_size))
+            __self__.StatusBox.insert(END,
+                    "Datacube is compiled. Cube size: {0}".format(cube_size))
             __self__.StatusBox.insert(END,"Verifying packed elements...")
             
             packed_elements = MY_DATACUBE.check_packed_elements()
@@ -3393,6 +3415,19 @@ class ConfigDiag:
         __self__.master.grab_set()
 
     def save_config(__self__,e=""):
+
+        """ A workaround to always have Training Data in samples list and working, is
+        backing up the samples_folder variable, changing it temporarily to compile the 
+        Training Data datacube and then set it back so the other samples can be compiled
+        properly """
+
+        samples_folder_backup = copy.deepcopy(SpecRead.samples_folder)
+        if __self__.DirectoryVar.get() == "Training Data 1" or\
+                __self__.DirectoryVar.get() == "Training Data 2":
+            SpecRead.samples_folder = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+        
+        ##########################################################
+            
         configdict = {"directory":__self__.DirectoryVar.get(),
                 "bgstrip":__self__.BgstripVar.get(),
                 "ratio":__self__.RatioVar.get(),
@@ -3514,6 +3549,7 @@ class ConfigDiag:
             except: pass
             root.write_stat()
             root.draw_map()
+        SpecRead.samples_folder = samples_folder_backup
    
     def build_widgets(__self__):
 

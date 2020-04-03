@@ -95,7 +95,6 @@ def setup_from_datacube(datacube,sample_database):
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file,
             FIRSTFILE_ABSPATH]
-
     return np.nan 
 
 def conditional_setup(name='None'):
@@ -123,7 +122,6 @@ def conditional_setup(name='None'):
             samples_folder, selected_sample_folder, workpath,
             cube_path, output_path, dimension_file,
             FIRSTFILE_ABSPATH]
-    
     return np.nan
 
 def RatioMatrixReadFile(ratiofile):
