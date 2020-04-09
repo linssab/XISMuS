@@ -7,9 +7,8 @@
 
 import cython
 import numpy as np
-from cpython cimport array
 cimport numpy as np
-import array
+from ProgressBar import Busy
 
 # utils
 
@@ -211,6 +210,9 @@ def cy_build_merge_cube(dict layers,
         float[:] spectrum,
         float[:,:,:] cube_matrix,
         int size):
+    
+    cdef int total_iterations = 0
+    total_iterations = (x_limit[1]-x_limit[0])
 
     """ DATACUBE constructor. Calls cy_pack_spectra() to grab the
     corresponding spectrum and attribute it to the new datacube x y index. """
@@ -220,10 +222,13 @@ def cy_build_merge_cube(dict layers,
     cdef int c = 0
     cdef int x = 0
     cdef int y = 0
+    cdef int iterator = 0
     
+    print("Started packing")
+    mec = Busy(total_iterations,0)
     for i in range(x_limit[0],x_limit[1]):
         for j in range(y_limit[0],y_limit[1]):
-            spectrum = cy_pack_spectra(
+            cy_pack_spectra(
                     layers,
                     i,
                     j,
@@ -236,9 +241,11 @@ def cy_build_merge_cube(dict layers,
         i = 0
         y = 0
         x+=1
-    x = 0
-    j = 0
-    return cube_matrix
+        iterator += 1
+        mec.updatebar(iterator)
+    mec.destroybar()
+    print("Finished packing, bar destroyed")
+    return 1
 
 def cy_pack_spectra(dict layers, 
         int i, 

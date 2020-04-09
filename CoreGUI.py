@@ -262,13 +262,15 @@ class open_mosaic:
             size = (__self__.x.get(),__self__.y.get())
             if root.Mosaic.master.state == "normal": return
             else: 
+                __self__.kill()
                 root.Mosaic = Mosaic_API(size)
                 root.Mosaic.master.focus_set()
-                __self__.kill()
+                root.master.wait_window(root.Mosaic.master)
         except: 
+            __self__.kill()
             root.Mosaic = Mosaic_API(size)
             root.Mosaic.master.focus_set()
-            __self__.kill()
+            root.master.wait_window(root.Mosaic.master)
 
 
 def call_compilecube():

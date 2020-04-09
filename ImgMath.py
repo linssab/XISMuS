@@ -82,6 +82,7 @@ def low_pass(a_2D_array,t):
     return new_array
 
 def apply_scaling(datacube, scalemode=0):
+
     """ scalemode:
     0 = Returns zero matrix
     1 = Applies scaling to datacube.matrix

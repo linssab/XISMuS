@@ -803,8 +803,6 @@ class Mosaic_API:
                     dtype="float32")
             __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                     dtype="float32")
-            __self__.progress_bar = Busy(2,0)
-            __self__.progress_bar.update_text("1/2 Packing...")
             x, iteration = 0,0
             x_bounds = [start_x,end_x]
             y_bounds = [start_y,end_y]
@@ -812,7 +810,6 @@ class Mosaic_API:
             """ to avoid defining a new array inside cython, a zero np array
             is passed as memoryview object, so it is mutated inside cy_funcs and attributed
             to the proper merge_matrix indexes """
-            __self__.progress_bar.updatebar(1)
             void_array = np.zeros([specsize],dtype="float32")
             cy_funcs.cy_build_merge_cube(layers_dict,
                     np.asarray(x_bounds,dtype="int32"),
@@ -820,6 +817,7 @@ class Mosaic_API:
                     void_array,
                     __self__.merge_matrix,
                     specsize)
+            print("Finished packing")
 
             layers = list(__self__.layer.keys())
 
@@ -830,9 +828,11 @@ class Mosaic_API:
             """ Datacube object was not created with merging in mind, therefore some
             workaround had to be done. Main attributes are set externally rather than in the
             __init__ method """
-            
-            __self__.progress_bar.update_text("2/2 Building cube...")
-            __self__.progress_bar.updatebar(0)
+
+            print("Building cube") 
+            __self__.progress_bar = Busy(2,0)
+            __self__.progress_bar.update_text("Building cube...")
+            __self__.progress_bar.updatebar(1)
             new_cube = Cube(["xrf"],SpecRead.CONFIG,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
