@@ -31,6 +31,7 @@ The packages whose versions are mentioned are the stable versions working with X
 * cython<br>
 * opencv-python<br>
 * psutil<br>
+* pywin32 (for 32-bit system builds)<br>
 * matplotlib<br>
 
 #### Optional: xraylib _v 3.3.0_
