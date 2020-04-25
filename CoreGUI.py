@@ -396,9 +396,11 @@ class Convert_File_Name:
         icon = PhotoImage(data=ICO_LOAD)
         __self__.LoadIco = icon.subsample(1,1)
         __self__.LoadBtn = Button(__self__.LeftPane, 
+                text="Load",
                 image=__self__.LoadIco,
                 command=__self__.grab_file_list,
-                width=64, height=64, bd=3)
+                compound=TOP,
+                width=64, height=64, bd=2)
         
         """ Right Pane Labels """
         __self__.PrefixLabel = Label(__self__.RightPane, text="Prefix")
@@ -426,17 +428,17 @@ class Convert_File_Name:
                 compound=LEFT,
                 command=__self__.start_conversion,
                 width=80,
-                height=24, bd=3)
+                height=24, bd=1)
         icon = PhotoImage(data=ICO_REJECT)
         __self__.QuitIcon = icon.subsample(1,1)
         __self__.QuitBtn = Button(__self__.RightPane, 
-                text=" Quit",
+                text=" Cancel",
                 anchor=CENTER,
                 compound=LEFT,
                 image=__self__.QuitIcon,
                 command=__self__.kill,
                 width=80,
-                height=24, bd=3)
+                height=24, bd=1)
         
         __self__.LoadBtn.grid(row=1,column=0,rowspan=5,padx=24,pady=24)
         __self__.PrefixLabel.grid(row=1,column=1)
@@ -447,8 +449,8 @@ class Convert_File_Name:
         __self__.StartEntry.grid(row=2,column=2)
         __self__.HeightEntry.grid(row=3,column=2)
         __self__.WidthEntry.grid(row=4,column=2)
-        __self__.OkBtn.grid(row=5,column=1,pady=8)
-        __self__.QuitBtn.grid(row=5,column=2,pady=8)
+        __self__.OkBtn.grid(row=5,column=1,pady=8,padx=(3,0),sticky=W+E)
+        __self__.QuitBtn.grid(row=5,column=2,pady=8,padx=(3,3),sticky=W+E)
         
         __self__.master.columnconfigure(0, weight=1,minsize=128)
         __self__.master.columnconfigure(1, weight=0)
@@ -541,7 +543,7 @@ class Welcome:
         __self__.page = StringVar()
         __self__.tag = BooleanVar()
         __self__.infotext = StringVar()
-        __self__.messages = ["Welcome to XISMuS {}\n\nClick the left or right arrows to navigate.".format(VERSION),\
+        __self__.messages = ["Welcome to XISMuS {}\n\nClick the left or right arrows to navigate through this menu.".format(VERSION),\
                 "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, XISMuS looks for mca files under C:\\Samples\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nXISMuS also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
         __self__.current_page = 1
         __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
@@ -550,7 +552,7 @@ class Welcome:
         __self__.build_widgets()
 
     def build_widgets(__self__):
-        __self__.page_counter = Label(__self__.master, textvariable=__self__.page)
+        __self__.page_counter = Label(__self__.master, textvariable=__self__.page, relief=RIDGE)
         __self__.page_counter.grid(row=0, column=0, sticky=W+E, columnspan=2, pady=3)
         __self__.text_frame = Frame(__self__.master, width=320, height=150)
         __self__.text_frame.grid(row=1, column=0, sticky=W+E, columnspan=2)
@@ -568,9 +570,9 @@ class Welcome:
         icon_bw= PhotoImage(data=ICO_PREVIOUS)
         __self__.icon_bw = icon_bw.subsample(1,1)
         __self__.fw = Button(__self__.text_frame, image=__self__.icon_fw, command=__self__.next_page, width=32,height=32)
-        __self__.fw.grid(row=0, column=2)
+        __self__.fw.grid(row=0, column=2,padx=6)
         __self__.bw = Button(__self__.text_frame, image=__self__.icon_bw, command=__self__.previous_page, width=32, height=32)
-        __self__.bw.grid(row=0, column=0)
+        __self__.bw.grid(row=0, column=0,padx=6)
 
         __self__.button_frame = Frame(__self__.master)
         __self__.button_frame.grid(row=3,column=0,columnspan=2)
@@ -1285,13 +1287,13 @@ class ImageAnalyzer:
         
         __self__.annotate = Button(__self__.buttons,text="Set ROI",\
                 command=__self__.toggle_annotator,relief="raised",width=14)
-        __self__.annotate.grid(row=4,column=0,columnspan=2)
+        __self__.annotate.grid(row=4,column=0,columnspan=2,sticky=W+E)
         __self__.correlate = Button(__self__.buttons,text="Correlate",\
                 command=__self__.get_correlation,width=round(__self__.annotate.winfo_width()/2))
-        __self__.correlate.grid(row=3,column=0)
+        __self__.correlate.grid(row=3,column=0,sticky=W+E)
         __self__.export = Button(__self__.buttons,text="Export",\
                 command=__self__.export_maps,width=round(__self__.annotate.winfo_width()/2))
-        __self__.export.grid(row=3,column=1)
+        __self__.export.grid(row=3,column=1,sticky=W+E)
         
         # Disable sliders
         __self__.T1Slider.config(state=DISABLED)
@@ -2780,15 +2782,26 @@ class MainGUI:
         __self__.ImageCanvas = Canvas(__self__.master,width=200, height=200,\
                 bg='black', relief=SUNKEN, bd=5)
         __self__.ImageCanvas.grid(row=3, column=0, rowspan=3, columnspan=2, padx=(8,8))
-        __self__.ImageCanvas.propagate(0)
+        __self__.ImageCanvas.propagate(1)
         __self__.DataFrame = Frame(__self__.master).grid(padx=16, pady=16, row=0, column=2, rowspan=3, columnspan=3)
         __self__.StatusScroller = Scrollbar(__self__.DataFrame, relief=SUNKEN)
-        __self__.StatusBox = Listbox(__self__.DataFrame, yscrollcommand=__self__.StatusScroller.set)
-        __self__.StatusBox.grid(row=0, column=2, rowspan=3, columnspan=3, sticky=W+E, padx=(16,0))
+        __self__.StatusBox = Listbox(__self__.DataFrame, 
+                yscrollcommand=__self__.StatusScroller.set)
+        __self__.StatusBox.grid(
+                row=0, 
+                column=2, 
+                rowspan=3, 
+                columnspan=3, 
+                sticky=W+E, 
+                padx=(16,0))
         __self__.StatusScroller.grid(row=0, column=5, rowspan=3, sticky=N+W+E+S, padx=(0,16))
         __self__.StatusScroller.config(command=__self__.StatusBox.yview) 
-        __self__.ConfigFrame = Frame(__self__.DataFrame, padx=5,pady=5,relief=SUNKEN)
-        __self__.ConfigFrame.grid(row=3, column=2, rowspan=3, columnspan=3, padx=16)
+        __self__.ConfigFrame = LabelFrame(
+                __self__.DataFrame,
+                padx=8, pady=8,
+                text="Configuration: ")
+        __self__.master.columnconfigure(3,weight=1,minsize=4)
+        __self__.ConfigFrame.grid(row=3, column=2, rowspan=3, columnspan=4, padx=16,pady=10)
          
         # start matplotlib call inside __self__.ImageCanvas
         blank_image = np.zeros([1,1])
@@ -2802,11 +2815,8 @@ class MainGUI:
         #####
         # define the tables which go inside the DataFrame (bottom left corner)
         
-        __self__.TableLabel1 = Label(\
-                __self__.ConfigFrame,text="Configuration embedded:",justify=CENTER)
         __self__.TableLabel2 = Label(__self__.ConfigFrame,text="KEY")
         __self__.TableLabel3 = Label(__self__.ConfigFrame,text="PACKED")
-        __self__.TableLabel1.grid(row=3, column=2, columnspan=3, sticky=W+E)
         __self__.TableLabel2.grid(row=4, column=2)
         __self__.TableLabel3.grid(row=4, column=3, columnspan=2)
 
@@ -2819,7 +2829,7 @@ class MainGUI:
         re_configure_icon = PhotoImage(data=ICO_REFRESH)
         __self__.re_configure_icon = re_configure_icon.subsample(1,1)
         __self__.re_configure = Button(__self__.ConfigFrame, image=__self__.re_configure_icon, width=32, height=32, command=__self__.reconfigure)
-        __self__.re_configure.grid(row=5, column=5, sticky=S)
+        __self__.re_configure.grid(row=5, column=5, sticky=S,padx=6)
         
         #####
         # define the menu bar
@@ -3268,7 +3278,6 @@ class ReConfigDiag:
                         recalculating=True,
                         progressbar=bar)
                 bar.destroybar()
-            
             MY_DATACUBE.create_densemap()
             MY_DATACUBE.save_cube()
             root.draw_map()
@@ -4151,8 +4160,9 @@ if __name__.endswith('__main__'):
     from ImgMath import LEVELS, apply_scaling
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from Decoder import *
-    from SpecMath import getstackplot, correlate, peakstrip, Busy
+    from SpecMath import getstackplot, correlate, peakstrip
     from SpecMath import datacube as Cube
+    from ProgressBar import Busy
     from EnergyLib import plottables_dict, ElementColors
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results

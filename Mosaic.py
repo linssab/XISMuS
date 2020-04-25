@@ -16,6 +16,7 @@ from tkinter import messagebox
 from tkinter import filedialog
  
 # general utilities
+import threading
 import numpy as np
 import cv2
 import sys, os, copy, pickle, stat, random
@@ -38,7 +39,8 @@ import SpecRead
 from ReadConfig import checkout_config
 from ImgMath import LEVELS, apply_scaling
 from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
-from SpecMath import getstackplot, correlate, peakstrip, Busy
+from SpecMath import getstackplot, correlate, peakstrip
+from ProgressBar import Busy 
 from SpecMath import datacube as Cube
 from EnergyLib import plottables_dict
 from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
@@ -817,7 +819,6 @@ class Mosaic_API:
                     void_array,
                     __self__.merge_matrix,
                     specsize)
-            print("Finished packing")
 
             layers = list(__self__.layer.keys())
 
@@ -828,16 +829,10 @@ class Mosaic_API:
             """ Datacube object was not created with merging in mind, therefore some
             workaround had to be done. Main attributes are set externally rather than in the
             __init__ method """
-
-            print("Building cube") 
-            __self__.progress_bar = Busy(2,0)
-            __self__.progress_bar.update_text("Building cube...")
-            __self__.progress_bar.updatebar(1)
+            
             new_cube = Cube(["xrf"],SpecRead.CONFIG,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
-            __self__.progress_bar.progress["maximum"] = \
-                    new_cube.dimension[0]*new_cube.dimension[1]
             new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
             new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
                     new_cube.energyaxis.shape[0]],dtype='float32',order='C')
@@ -845,12 +840,18 @@ class Mosaic_API:
                     new_cube.energyaxis.shape[0]],dtype='float32',order='C')
             new_cube.matrix = __self__.merge_matrix
             new_cube.background = __self__.merge_bg
+            __self__.progress_bar = Busy(2,0)
+            __self__.progress_bar.updatebar(1)
+            __self__.progress_bar.update_text("Scaling data...")
             if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
                 new_cube.scale_matrix = __self__.cropped
-                apply_scaling(new_cube,1)
+                __self__.thread2 = threading.Thread(target=apply_scaling, args=(new_cube,1,))
+                __self__.thread2.start()
+                __self__.thread2.join()
                 new_cube.scalable = True
             new_cube.calibration = __self__.layer[layers[0]].calibration
             new_cube.config = SpecRead.CONFIG
+            __self__.progress_bar.updatebar(2)
             __self__.progress_bar.update_text("Digesting...")
             new_cube.digest_merge(bar=__self__.progress_bar)
 
@@ -863,12 +864,11 @@ class Mosaic_API:
             cv2.imwrite(os.path.join(SpecRead.__PERSONAL__,"output",NAME,
                 "{}_global_densemap.png".format(NAME)),cropped/cropped.max()*255)
 
-
             __self__.progress_bar.destroybar()
             __self__.tis_cool_i_leave_now()
             return 1
         else: return 0
-
+    
     def refocus(__self__,e=""):
         try: __self__.maps_window.destroy()
         except: pass

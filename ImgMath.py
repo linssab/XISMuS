@@ -7,7 +7,8 @@
 
 """ import all modules """
 
-import logging, os
+import logging, os, time
+import threading
 logger = logging.getLogger("logfile")
 logger.info("Importing module ImgMath.py...")
 import numpy as np
@@ -44,10 +45,10 @@ def colorbar(mappable):
     cax = divider.append_axes("right", size="5%", pad=0.05)
     return fig.colorbar(mappable, cax=cax)
 
-def median_filter(a_2D_array,x,y):
+def median_filter(array,x,y):
 
     """ Returns the average value of pixel x,y. Includes edges """
-    average = cy_funcs.cy_median_filter(a_2D_array,x,y)
+    average = cy_funcs.cy_average(array,x,y)
     return average
 
 def iteractive_median(img,iterations=1):
@@ -87,16 +88,20 @@ def apply_scaling(datacube, scalemode=0):
     0 = Returns zero matrix
     1 = Applies scaling to datacube.matrix
     -1 = Reverse scaling applied to datacube.matrix """
-
-    scaled_matrix = cy_funcs.cy_apply_scaling(
-            datacube.scale_matrix,
+    
+    scaled_matrix = np.zeros([datacube.matrix.shape[0],
+        datacube.matrix.shape[1],datacube.matrix.shape[2]],dtype="float32")
+    cy_funcs.cy_apply_scaling(datacube.scale_matrix,
             datacube.matrix,
             scalemode,
+            scaled_matrix,
             np.asarray(datacube.matrix.shape,dtype="int32"))
     datacube.matrix = scaled_matrix
     datacube.create_densemap()
-    if scaled_matrix.max() > 0: return 1
-    else: return 0
+    if scaled_matrix.max() > 0: 
+        return 1
+    else: 
+        return 0
 
 def mask(a_datacube,a_compound,mask_threshold):
 

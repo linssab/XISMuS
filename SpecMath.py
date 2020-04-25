@@ -261,21 +261,25 @@ class datacube:
         p_output.close()
 
     def digest_merge(__self__,bar=None):
-        bar.progress["maximum"] = 4
-        bar.updatebar(1)
-        bar.update_text("1/4 Calculating MPS...")
+        if bar != None: 
+            bar.progress["maximum"] = 4
+            bar.updatebar(1)
+            bar.update_text("1/4 Calculating MPS...")
         mps = np.zeros([__self__.matrix.shape[2]],dtype="float32")
         datacube.MPS(__self__,mps)
         __self__.mps = mps
-        bar.update_text("2/4 Calculating Stacksum...")
-        bar.updatebar(2)
+        if bar != None: 
+            bar.update_text("2/4 Calculating Stacksum...")
+            bar.updatebar(2)
         datacube.stacksum(__self__)
         datacube.write_sum(__self__)
-        bar.update_text("3/4 Creating densemap...")
-        bar.updatebar(3)
+        if bar != None:
+            bar.update_text("3/4 Creating densemap...")
+            bar.updatebar(3)
         datacube.create_densemap(__self__)
-        bar.update_text("4/4 Writing to disk...")
-        bar.updatebar(4)
+        if bar != None:
+            bar.update_text("4/4 Writing to disk...")
+            bar.updatebar(4)
         datacube.save_cube(__self__)
 
     def compile_cube(__self__):

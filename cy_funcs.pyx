@@ -8,7 +8,7 @@
 import cython
 import numpy as np
 cimport numpy as np
-from ProgressBar import Busy
+from ProgressBar import Busy, Thinking
 
 # utils
 
@@ -29,14 +29,9 @@ cdef int cy_second_min(
 def cy_apply_scaling(float[:,:] scale_matrix,
     float[:,:,:] cube_matrix,
     int scale_mode,
+    float[:,:,:] scaled_matrix,
     int[:] shape):
     
-    cdef np.ndarray[np.float32_t, ndim=3] scaled_matrix = np.zeros([
-        shape[0],
-        shape[1],
-        shape[2]
-        ],dtype=np.float32)
-
     for i in range(shape[0]):
         for j in range(shape[1]):
             for c in range(shape[2]):
@@ -45,6 +40,16 @@ def cy_apply_scaling(float[:,:] scale_matrix,
                 elif scale_mode == -1:
                     scaled_matrix[i][j][c] = cube_matrix[i][j][c]/scale_matrix[i][j]
     return scaled_matrix
+
+def cy_img_linear_contrast_expansion(int[:,:] grayimg, int a, int b,
+        int[:] shape, int c, int d):
+    
+    cdef int i = 0
+    cdef int j = 0
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            grayimg[i][j] = cy_stretch(grayimg[i][j],a,b,c,d)
+    return 0
 
 # from ImgMath:
 
@@ -85,10 +90,21 @@ def cy_threshold_low(float[:,:] a_2D_array, int[:] shape, int t):
 cdef float cy_simple_median(float[:,:] a_2D_array, int x, int y):
 
     """ Returns the average value of pixel x,y. Ignores edges """
+    """ For use with Cython exclusively """
     cdef float average = 0.0
     return (2*a_2D_array[x][y] + a_2D_array[x-1][y] + a_2D_array[x+1][y] +\
             a_2D_array[x][y-1] + a_2D_array[x-1][y-1] + a_2D_array[x+1][y-1] +\
             a_2D_array[x][y+1] + a_2D_array[x-1][y+1] + a_2D_array[x+1][y+1])/10
+
+def cy_average(float[:,:] a_2D_array, int x, int y):
+
+    """ Returns the average value of pixel x,y. Ignores edges """
+    """ This function can be called by pure python modules """ 
+    cdef float average = 0.0
+    return (2*a_2D_array[x][y] + a_2D_array[x-1][y] + a_2D_array[x+1][y] +\
+            a_2D_array[x][y-1] + a_2D_array[x-1][y-1] + a_2D_array[x+1][y-1] +\
+            a_2D_array[x][y+1] + a_2D_array[x-1][y+1] + a_2D_array[x+1][y+1])/10
+
 
 def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
 
@@ -286,7 +302,7 @@ def cy_pack_spectra(dict layers,
             specout[c] = 0.0
         return specout
 
-def cy_stretch(int r, int a, int b, int c, int d):
+cdef int cy_stretch(int r, int a, int b, int c, int d):
     # b and d are the target and local maxima respectively
     # if the maximum is zero, than the whole image is zero
     cdef int toss = 0
