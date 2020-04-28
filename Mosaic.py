@@ -741,7 +741,6 @@ class Mosaic_API:
                 title="Save mosaic",
                 defaultextension=".mosaic",
                 filetypes=[("Mosaic file","*.mosaic")])
-        print(f.name)
         if f == "": return
         else:
             f = os.path.abspath(f.name)
@@ -805,7 +804,6 @@ class Mosaic_API:
                 layers[name]["coords"][1] = layers[name]["coords"][1].split(",")
                 layers[name]["coords"][0] = [int(i) for i in layers[name]["coords"][0]]
                 layers[name]["coords"][1] = [int(i) for i in layers[name]["coords"][1]]
-                print(layers[name]["coords"])
                 layers[name]["rotate"] = int(string[4])
             f.close()
         else:
