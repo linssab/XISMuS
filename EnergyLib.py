@@ -297,7 +297,6 @@ try:
         ElementColors[element] = line.split("\t")[-1]
     f.close()
 except: 
-    print("fudeu")
     ElementColors = {element:"#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)]) for element in ElementList}
 
 if __name__ == "__main__":
