@@ -1,11 +1,11 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 1.1.0 - Mar - 2020            #
+#                        version: 1.2.0 - Apr - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 global layers_dict
 layers_dict = {}
 
@@ -48,11 +48,15 @@ from Mapping_parallel import Cube_reader, sort_results, digest_results
 import cy_funcs
 
 def load_cube(cube=""):
-    cube_file = open(os.path.join(SpecRead.__PERSONAL__,
-        "output",cube,"{}.cube".format(cube)),"rb")
-    cube = pickle.load(cube_file)
-    cube_file.close()
-    return cube
+    path = os.path.join(SpecRead.__PERSONAL__,
+        "output",cube,"{}.cube".format(cube))
+    if os.path.exists(path):
+        cube_file = open(path,"rb")
+        cube = pickle.load(cube_file)
+        cube_file.close()
+        return cube
+    else:
+        return
 
 def place_center(window1,window2):
     window1.update_idletasks()
@@ -97,11 +101,12 @@ class NavigationToolbar(NavigationToolbar2Tk):
 
 class Layer:
 
-    def __init__(__self__,cube,layer,element=""):
+    def __init__(__self__,cube,layer,element="",coords=None):
         
         """ Inherit properties from Cube parent """
 
         __self__.name = cube.name
+        __self__.rotation = 0
         __self__.matrix = np.zeros([cube.dimension[0],cube.dimension[1],\
                 cube.energyaxis.shape[0]],dtype='float32',order='C')
         __self__.bg = np.zeros([cube.dimension[0],cube.dimension[1],\
@@ -116,9 +121,11 @@ class Layer:
         __self__.energyaxis = cube.energyaxis
         __self__.config = cube.config
         if element == "": 
+            __self__.element = None
             __self__.img = cube.densitymap/cube.densitymap.max()*255
             __self__.img = __self__.img.astype("int32")
         else: 
+            __self__.element = element
             unpacker = element.split("_")
             image = cube.unpack_element(unpacker[0],unpacker[1])
             __self__.img = image/image.max()*255
@@ -132,9 +139,13 @@ class Layer:
                 if __self__.img[i,j] == 0: __self__.img[i,j] = 1
         
         """ Define anchors """
-
-        __self__.start = [0,0]
-        __self__.end = [__self__.img.shape[0],__self__.img.shape[1]]
+        
+        if coords == None:
+            __self__.start = [0,0]
+            __self__.end = [__self__.img.shape[0],__self__.img.shape[1]]
+        else:
+            __self__.start = coords[0]
+            __self__.end = coords[1]
 
         """ Gives a layer number """
 
@@ -291,7 +302,18 @@ class Mosaic_API:
                 image=__self__.icon_ccw,
                 width=32,
                 height=32,
-                command= lambda: __self__.rotate(0))
+                command= lambda: __self__.rotate(-1))
+        
+        __self__.save = Button(__self__.RightPane, 
+                text="Save mosaic",
+                width=13,
+                height=1,
+                command=__self__.prompt_savefile)
+        __self__.load = Button(__self__.RightPane, 
+                text="Load mosaic",
+                width=13,
+                height=1,
+                command=__self__.prompt_loadfile)
 
         __self__.validate = Button(__self__.RightPane, 
                 text="Merge!",
@@ -343,20 +365,23 @@ class Mosaic_API:
         __self__.rotate_cw.grid(row=1, column=1)
         __self__.add_layer.grid(row=2, column=1, padx=pad)
         __self__.del_layer.grid(row=3, column=1, padx=pad)
+        __self__.save.grid(row=7, column=0,pady=(10,0))
+        __self__.load.grid(row=8, column=0,pady=(0,10))
         __self__.cube_name.grid(row=4, column=1, sticky=W, padx=pad, pady=pad/2)
         __self__.cube_name_label.grid(row=4, column=0, padx=pad, pady=pad/2, sticky=E)
-        __self__.validate.grid(row=5, column=0, columnspan=2, pady=pad)
+        __self__.validate.grid(row=5, column=0, columnspan=2, pady=pad/2)
         
         __self__.master.after(200,__self__.master.attributes,"-alpha",1.0)
         __self__.canvas.draw()
 
-    def rotate(__self__,direction,e=""):
+    def rotate(__self__,direction,active_layer="",e=""):
         global layers_dict
-        active_layer = __self__.layers_list.curselection()
-        if active_layer == (): return
-        else: 
-            active_layer = __self__.layers_list.get(active_layer).split(",")[0]
-            active_layer = active_layer.split("_")[0]
+        if active_layer == "":
+            active_layer = __self__.layers_list.curselection()
+            if active_layer == (): return
+            else: 
+                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
+                active_layer = active_layer.split("_")[0]
         layer = __self__.layer[active_layer]
         if direction == 1:
             #cv2.rotate(layer.matrix, cv2.ROTATE_90_CLOCKWISE)
@@ -371,8 +396,11 @@ class Mosaic_API:
             layer.matrix = np.rot90(layer.matrix,3)
             layer.dense = np.rot90(layer.dense,3)
             layer.bg = np.rot90(layer.bg,3)
+            layer.rotation += direction
+            if layer.rotation >= 3: layer.rotation = -1
+            elif layer.rotation <= -3: layer.rotation = 1
 
-        elif direction == 0:
+        elif direction == -1:
             img = layer.img[:]
             img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
@@ -383,6 +411,10 @@ class Mosaic_API:
             layer.matrix = np.rot90(layer.matrix)
             layer.dense = np.rot90(layer.dense)
             layer.bg = np.rot90(layer.bg)
+            layer.rotation += direction
+            if layer.rotation >= 3: layer.rotation = -1
+            elif layer.rotation <= -3: layer.rotation = 1
+
         layers_dict = convert_layers_to_dict(__self__)
         __self__.build_image(__self__.image.shape)
 
@@ -523,21 +555,36 @@ class Mosaic_API:
         if active_layer_idx == (): return
         else:
             active_layer_idx = active_layer_idx[0]
-            active_layer_entry = __self__.layers_list.get(active_layer_idx).split(",",1)[0]
-            active_layer_name = active_layer_entry.split(",")[0]
+            active_layer_name, active_el = __self__.layers_list.get(active_layer_idx).split(",",1)
             if active_layer_idx > 0:
                 previous_layer = __self__.layers_list.get(active_layer_idx-1)
                 previous_layer_idx = active_layer_idx-1
-                previous_layer_entry = previous_layer.split(",",1)[0]
-                previous_layer_name = previous_layer_entry.split(",")[0]
+                previous_layer_name, previous_el = previous_layer.split(",",1)
                 __self__.layers_list.delete(active_layer_idx)
                 __self__.layers_list.delete(previous_layer_idx)
-                __self__.layers_list.insert(active_layer_idx-1,
-                        "{},{}".format(active_layer_name,
-                            active_layer_idx-1))
-                __self__.layers_list.insert(previous_layer_idx+1,
-                        "{},{}".format(previous_layer_name,
-                            previous_layer_idx+1))
+
+                element = active_el.split(",")[0]
+                if len(element) > 3: 
+                    __self__.layers_list.insert(active_layer_idx-1,
+                            "{},{},{}".format(active_layer_name,
+                                element,
+                                active_layer_idx-1))
+                else:
+                    __self__.layers_list.insert(active_layer_idx-1,
+                            "{},{}".format(active_layer_name,
+                                active_layer_idx-1))
+
+                element = previous_el.split(",")[0]
+                if len(element) > 3: 
+                    __self__.layers_list.insert(previous_layer_idx+1,
+                            "{},{},{}".format(previous_layer_name,
+                                element,
+                                previous_layer_idx+1))
+                else:
+                    __self__.layers_list.insert(previous_layer_idx+1,
+                            "{},{}".format(previous_layer_name,
+                                previous_layer_idx+1))
+
             else: return
             __self__.reorder_layers()
             __self__.build_image(__self__.image.shape)
@@ -547,21 +594,36 @@ class Mosaic_API:
         if active_layer_idx == (): return
         else:
             active_layer_idx = active_layer_idx[0]
-            active_layer_entry = __self__.layers_list.get(active_layer_idx).split(",",1)[0]
-            active_layer_name = active_layer_entry.split(",")[0]
+            active_layer_name, active_el = __self__.layers_list.get(active_layer_idx).split(",",1)
             if active_layer_idx+1 < __self__.layers_list.size():
                 next_layer = __self__.layers_list.get(active_layer_idx+1)
                 next_layer_idx = active_layer_idx+1
-                next_layer_entry = next_layer.split(",",1)[0]
-                next_layer_name = next_layer_entry.split(",")[0]
+                next_layer_name, next_el = next_layer.split(",",1)
                 __self__.layers_list.delete(next_layer_idx)
                 __self__.layers_list.delete(active_layer_idx)
-                __self__.layers_list.insert(active_layer_idx,
-                        "{},{}".format(next_layer_name,
-                            active_layer_idx))
-                __self__.layers_list.insert(next_layer_idx,
-                        "{},{}".format(active_layer_name,
-                            next_layer_idx))
+
+                element = next_el.split(",")[0]
+                if len(element) > 3: 
+                    __self__.layers_list.insert(active_layer_idx,
+                            "{},{},{}".format(next_layer_name,
+                                element,
+                                active_layer_idx))
+                else:
+                    __self__.layers_list.insert(active_layer_idx,
+                            "{},{}".format(next_layer_name,
+                                active_layer_idx))
+
+                element = active_el.split(",")[0]
+                if len(element) > 3: 
+                    __self__.layers_list.insert(next_layer_idx,
+                            "{},{},{}".format(active_layer_name,
+                                element,
+                                next_layer_idx))
+                else:
+                    __self__.layers_list.insert(next_layer_idx,
+                            "{},{}".format(active_layer_name,
+                                next_layer_idx))
+
             else: return
             __self__.reorder_layers()
             __self__.build_image(__self__.image.shape)
@@ -671,7 +733,141 @@ class Mosaic_API:
                 __self__.refocus()
 
             else: return
+
+    ############### SAVE SECTION ###############
     
+    def prompt_savefile(__self__,e=""):
+        f = filedialog.asksaveasfile(mode="w+",
+                title="Save mosaic",
+                defaultextension=".mosaic",
+                filetypes=[("Mosaic file","*.mosaic")])
+        print(f.name)
+        if f == "": return
+        else:
+            f = os.path.abspath(f.name)
+            __self__.save_mosaic(f)
+    
+    def save_mosaic(__self__,savefile):
+        savefile = open(savefile,"+w")
+        savefile.write("## MOSAIC SAVEFILE ## shape:{}x{}\n".format(__self__.image.shape[0],__self__.image.shape[1]))
+        savefile.write("name\telement mirror\tlayer pos\tcoords\trotate factor\n")
+        for layer in __self__.layer:
+            string = "{}\t{}\t{}\t{};{}\t{}\n".format(
+                __self__.layer[layer].name,
+                __self__.layer[layer].element,
+                __self__.layer[layer].layer,
+                __self__.layer[layer].start,
+                __self__.layer[layer].end,
+                __self__.layer[layer].rotation)
+            savefile.write(string)
+        savefile.close()
+
+    ########### END OF SAVE SECTION ############
+
+    ############### LOAD SECTION ###############
+
+    def prompt_loadfile(__self__,e=""):
+        f = filedialog.askopenfilename(title="Open mosaic",
+                filetypes=[("Mosaic files","*.mosaic")])
+        if f == "": return
+        else: __self__.import_layers(loadfile=os.path.abspath(f))
+
+    def read_loadfile(__self__,loadfile):
+        layers = {}
+        if os.path.exists(loadfile):
+            f = open(loadfile,"r")
+            lines = f.readlines()
+            shape = lines[0].split(":")[-1]
+            shape = [int(i) for i in shape.split("x")]
+            for i in range(len(shape)):
+                if shape[i] > __self__.image.shape[i]: 
+                    messagebox.showerror("Unable to load {}".format(loadfile.split("\\")[-1]),
+                            "The mosaic file being loaded cannot fit into current canvas dimension! Re-open Mosaic API with a larger canvas size.")
+                    return 0
+            lines.pop(0)
+            lines.pop(0)
+            for line in lines:
+                line = line.replace("\n","")
+                string = line.split("\t")
+                name = string[0]
+                layers[name] = {}
+                layers[name]["name"] = string[0]
+                layers[name]["element"] = string[1]
+                layers[name]["layer_no"] = string[2]
+                layers[name]["coords"] = []
+                layers[name]["coords"].append(string[3].split(";")[0])
+                layers[name]["coords"][0] = layers[name]["coords"][0].replace("[","")
+                layers[name]["coords"][0] = layers[name]["coords"][0].replace("]","")
+                layers[name]["coords"][0] = layers[name]["coords"][0].split(",")
+                layers[name]["coords"].append(string[3].split(";")[1])
+                layers[name]["coords"][1] = layers[name]["coords"][1].replace("[","")
+                layers[name]["coords"][1] = layers[name]["coords"][1].replace("]","")
+                layers[name]["coords"][1] = layers[name]["coords"][1].split(",")
+                layers[name]["coords"][0] = [int(i) for i in layers[name]["coords"][0]]
+                layers[name]["coords"][1] = [int(i) for i in layers[name]["coords"][1]]
+                print(layers[name]["coords"])
+                layers[name]["rotate"] = int(string[4])
+            f.close()
+        else:
+            raise FileNotFoundError
+        return layers
+
+    def import_layers(__self__,loadfile=None):
+        global layers_dict
+        layers_to_import = __self__.read_loadfile(loadfile)
+        if layers_to_import == 0: return
+
+        if __self__.layer_count > 0:
+            del __self__.layer
+            del __self__.layer_numbering
+            __self__.layer_count = 0
+            __self__.build_image(__self__.image.shape)
+            __self__.layers_list.delete(0,END)
+            layers_dict = {}
+            __self__.layer = {}
+            __self__.layer_numbering = {}
+
+        for layer in layers_to_import.keys():
+            success = __self__.load_layer(layers_to_import[layer])
+            if success == 0: break
+        
+        layers_dict = convert_layers_to_dict(__self__)
+        __self__.reorder_layers()
+        __self__.build_image(__self__.image.shape)
+        __self__.refocus()
+
+    def load_layer(__self__,layer):
+        global layers_dict
+        # first, verify if layer was an element image
+        element = ""
+        if layer["element"] != "None":
+            element = layer["element"]
+        layer_no = layer["layer_no"]
+       
+        # loads cube to extract the matrix and all metadata
+        cube = load_cube(layer["name"])
+        if cube == None: 
+            messagebox.showerror("Cube not found!",
+                    "Cannot find cube {}! Aborting operation.".format(layer["name"]))
+            return 0
+        
+        __self__.layer_count += 1 #increase layer counter
+        __self__.layer_numbering[layer_no] = layer["name"] #load data cube
+        __self__.layer[layer["name"]] = Layer(cube,layer_no,element,layer["coords"]) #create layer object
+
+        # must rotate cube accordingly
+        rotate_factor = layer["rotate"] 
+        if rotate_factor == 2 or rotate_factor == -2:
+            __self__.rotate(1,active_layer=layer["name"])
+            __self__.rotate(1,active_layer=layer["name"])
+        else: __self__.rotate(rotate_factor,active_layer=layer["name"])
+
+        if element != "": __self__.layers_list.insert(layer_no,"{},{},{}".format(cube.name,element,layer_no))
+        else: __self__.layers_list.insert(layer_no,"{},{}".format(cube.name,layer_no))
+        return 1
+    
+    ########### END OF LOAD SECTION ############
+
     def get_toplayer(__self__,i,j):
         layer = __self__.layer_numbering[__self__.layer_count]
         # convert canvas coordinates to datacube coordinates
