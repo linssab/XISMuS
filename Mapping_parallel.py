@@ -65,9 +65,9 @@ def grab_line(cube,lines,iterator,Element):
     """
     
     start_time = time.time()
-    energyaxis = cube.energyaxis
-    matrix = cube.matrix
-    matrix_dimension = cube.dimension
+    energyaxis = cube["energyaxis"]
+    matrix = cube["matrix"]
+    matrix_dimension = cube["dimension"]
     usedif2 = True
     scan = ([0,0])
     currentx = scan[0]
@@ -76,7 +76,7 @@ def grab_line(cube,lines,iterator,Element):
     ROI = np.zeros([energyaxis.shape[0]],dtype="float32")
     FITFAIL = 0
 
-    for pos in range(cube.img_size):
+    for pos in range(cube["img_size"]):
                
         RAW = matrix[currentx][currenty]
         specdata = matrix[currentx][currenty]
@@ -86,26 +86,17 @@ def grab_line(cube,lines,iterator,Element):
         # PYMCAFIT DOES NOT USE 2ND DIF CHECK #
         #######################################
 
-        if cube.config["peakmethod"] == 'PyMcaFit': 
-            #try:
-            usedif2 = False
-            specdata = fit(specdata,Element)
-            #except:
-            #    FITFAIL += 1
-            #    usedif2 = True
-            #    logger.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
-            #            .format(pos,cube.img_size))
-        elif cube.config["peakmethod"] == 'auto_roi': specdata = specdata
+        if cube["config"]["peakmethod"] == 'auto_roi': specdata = specdata
         else: 
             raise Exception("peakmethod {0} not recognized.".\
-                    format(cube.config["peakmethod"]))
+                    format(cube["config"]["peakmethod"]))
 
         ###########################
         #   SETS THE BACKGROUND   #
         # AND SECOND DIFFERENTIAL #
         ###########################
         
-        background = cube.background[currentx][currenty]
+        background = cube["background"][currentx][currenty]
        
         # low-passes second differential
         if usedif2 == True: 
@@ -129,14 +120,14 @@ def grab_line(cube,lines,iterator,Element):
         ################################################################
             
         ka_info = getpeakarea(lines[0],specdata,\
-                energyaxis,background,cube.config,RAW,usedif2,dif2)
+                energyaxis,background,cube["config"],RAW,usedif2,dif2)
         ka = ka_info[0]
         ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
         el_dist_map[0][currentx][currenty] = ka
 
-        if cube.config["ratio"]: 
+        if cube["config"]["ratio"]: 
             kb_info = getpeakarea(lines[1],specdata,\
-                    energyaxis,background,cube.config,RAW,usedif2,dif2)
+                    energyaxis,background,cube["config"],RAW,usedif2,dif2)
             kb = kb_info[0]
             ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
             el_dist_map[1][currentx][currenty] = kb
@@ -161,14 +152,14 @@ def grab_line(cube,lines,iterator,Element):
     timestamps = open(os.path.join(__BIN__,"timestamps.txt"),"a")
     timestamps.write("\n{5} - MULTIPROCESSING\n{0} bgtrip={1} enhance={2} peakmethod={3}\n{4} seconds\n".format(
         Element,
-        cube.config["bgstrip"],
-        cube.config["enhance"],
-        cube.config["peakmethod"],
+        cube["config"]["bgstrip"],
+        cube["config"]["enhance"],
+        cube["config"]["peakmethod"],
         timestamp,
         time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
        
     logger.info("Finished map acquisition!")
-    if cube.config["peakmethod"] == 'auto_roi': 
+    if cube["config"]["peakmethod"] == 'auto_roi': 
         el_dist_map = interpolate_zeros(el_dist_map)
     
     logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
@@ -214,13 +205,13 @@ def start_reader(cube,Element,iterator,results):
                 format(Element,kaenergy,kbenergy))
 
         # other function
-        if  cube.config["ratio"] == True:
-            elmap = np.zeros([2,cube.dimension[0],cube.dimension[1]],dtype="float32")
+        if  cube["config"]["ratio"] == True:
+            elmap = np.zeros([2,cube["dimension"][0],cube["dimension"][1]],dtype="float32")
             max_counts = [0,0]
             line_no = 2
             lines = [kaenergy,kbenergy]
         else: 
-            elmap = np.zeros([1,cube.dimension[0],cube.dimension[1]],dtype="float32")
+            elmap = np.zeros([1,cube["dimension"][0],cube["dimension"][1]],dtype="float32")
             max_counts = [0]
             line_no = 1
             lines = [kaenergy,0]
@@ -235,10 +226,17 @@ def start_reader(cube,Element,iterator,results):
 
 class Cube_reader():
     
-    def __init__(__self__,datacube,element_list,instances):
-        __self__.cube = datacube
+    def __init__(__self__,matrix,energyaxis,background,config,element_list,instances):
+        __self__.cube = {}
+        __self__.cube["matrix"] = matrix
+        __self__.cube["background"] = background
+        __self__.cube["energyaxis"] = energyaxis
+        __self__.cube["config"] = config
+        __self__.cube["dimension"] = matrix.shape
         __self__.element_list = element_list
-        __self__.bar_max = len(element_list)*datacube.img_size
+        __self__.cube["img_size"] = __self__.cube["matrix"].shape[0]*\
+                __self__.cube["matrix"].shape[1]
+        __self__.bar_max = len(element_list)*__self__.cube["img_size"]
         __self__.p_bar = Busy(len(element_list),0)
         __self__.p_bar.update_text("Pre-loading data...")
         __self__.results = multiprocessing.Queue()
@@ -250,7 +248,8 @@ class Cube_reader():
         __self__.chunks = break_list(__self__.element_list,instances)
     
     def start_workers(__self__):
-        __self__.p_bar.progress["maximum"] = __self__.cube.img_size*len(__self__.element_list)
+        __self__.p_bar.progress["maximum"] = __self__.cube["img_size"]\
+                *len(__self__.element_list)
         __self__.p_bar.update_text("Processing data...")
         __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
 
@@ -271,7 +270,7 @@ class Cube_reader():
                     args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results))
                 __self__.processes.append(p)
                 __self__.process_names.append(p.name)
-                logger.info("Pooling process {}".format(p))
+                logger.info("Polling process {}".format(p))
             
         
             for p in __self__.processes:
@@ -281,7 +280,7 @@ class Cube_reader():
                 being pooled at the moment. This is deprecated.
                 """
                 i = i + 1
-                __self__.p_bar.update_text("Queueing "+p.name)
+                __self__.p_bar.update_text("Polling "+p.name)
                 __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
                 p.start()
                 
@@ -304,7 +303,7 @@ class Cube_reader():
         __self__.p_bar.update_text("Processing data...")
         while __self__.p_bar_iterator.value < \
                 int(len(__self__.chunks[__self__.run_count-1]*__self__.run_count)*\
-                __self__.cube.img_size*0.98):
+                __self__.cube["img_size"]*0.98):
             __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
         if __self__.run_count == len(__self__.chunks):
             while __self__.p_bar_iterator.value < int(__self__.p_bar.progress["maximum"]*0.98):

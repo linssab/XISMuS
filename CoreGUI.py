@@ -3773,7 +3773,11 @@ class PeriodicTable:
                         # if only one copy can be made, it's pointless to run multicore
                         MAPS = getpeakmap(FIND_ELEMENT_LIST,MY_DATACUBE)
                     else:
-                        cuber = Cube_reader(MY_DATACUBE,FIND_ELEMENT_LIST,max_copies)
+                        cuber = Cube_reader(MY_DATACUBE.matrix,
+                                MY_DATACUBE.energyaxis,
+                                MY_DATACUBE.background,
+                                MY_DATACUBE.config,
+                                FIND_ELEMENT_LIST,max_copies)
                         results = cuber.start_workers()
                         cuber.p_bar.update_text("Digesting results...")
                         results = sort_results(results,FIND_ELEMENT_LIST)
