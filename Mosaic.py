@@ -90,7 +90,7 @@ def convert_layers_to_dict(MosaicAPI_obj):
                 "min":MosaicAPI_obj.layer[layer].dense.min(),
                 "layer":MosaicAPI_obj.layer[layer].layer,
                 "matrix":MosaicAPI_obj.layer[layer].matrix,
-                "bg":MosaicAPI_obj.layer[layer].bg,
+                #"bg":MosaicAPI_obj.layer[layer].bg,
                 }
     return new_dict
 
@@ -109,14 +109,14 @@ class Layer:
         __self__.rotation = 0
         __self__.matrix = np.zeros([cube.dimension[0],cube.dimension[1],\
                 cube.energyaxis.shape[0]],dtype='float32',order='C')
-        __self__.bg = np.zeros([cube.dimension[0],cube.dimension[1],\
-                cube.energyaxis.shape[0]],dtype='float32',order='C')
+        #__self__.bg = np.zeros([cube.dimension[0],cube.dimension[1],\
+        #        cube.energyaxis.shape[0]],dtype='float32',order='C')
         __self__.gross = int(cube.densitymap.sum()/cube.img_size)
         __self__.dense = cube.densitymap
-        for i in range(__self__.matrix.shape[0]):
-            for j in range(__self__.matrix.shape[1]):
-                __self__.matrix[i,j] = cube.matrix[i,j]
-                __self__.bg[i,j] = cube.background[i,j]
+        #for i in range(__self__.matrix.shape[0]):
+        #    for j in range(__self__.matrix.shape[1]):
+        __self__.matrix = cube.matrix
+                #__self__.bg[i,j] = cube.background[i,j]
         __self__.calibration = cube.calibration
         __self__.energyaxis = cube.energyaxis
         __self__.config = cube.config
@@ -395,7 +395,7 @@ class Mosaic_API:
             layer.img, layer.end = img, end
             layer.matrix = np.rot90(layer.matrix,3)
             layer.dense = np.rot90(layer.dense,3)
-            layer.bg = np.rot90(layer.bg,3)
+            #layer.bg = np.rot90(layer.bg,3)
             layer.rotation += direction
             if layer.rotation >= 3: layer.rotation = -1
             elif layer.rotation <= -3: layer.rotation = 1
@@ -410,7 +410,7 @@ class Mosaic_API:
             layer.img, layer.end = img, end
             layer.matrix = np.rot90(layer.matrix)
             layer.dense = np.rot90(layer.dense)
-            layer.bg = np.rot90(layer.bg)
+            #layer.bg = np.rot90(layer.bg)
             layer.rotation += direction
             if layer.rotation >= 3: layer.rotation = -1
             elif layer.rotation <= -3: layer.rotation = 1
@@ -995,6 +995,7 @@ class Mosaic_API:
                 __self__.cropped = scale_matrix[start_x:end_x,start_y:end_y]
 
             
+            # allocate memory for the new datacube
             __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                     dtype="float32")
             __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
