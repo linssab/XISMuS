@@ -2949,15 +2949,21 @@ class MainGUI:
 
         if os.path.exists(SpecRead.selected_sample_folder):
             if MY_DATACUBE != None:
-                files = [f for f in os.listdir(MY_DATACUBE.path) if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
-                root.mcacount[SpecRead.DIRECTORY] = len(files)
-                __self__.StatusBox.insert(END, 
-                        "\nSpectra files found within current samples folder tree:\n")
-                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.samples_folder))
-                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
-                __self__.StatusBox.insert(END,"{0} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
-                __self__.StatusBox.insert(END, "\nDatacube loaded. With {} spectra packed\n".format(MY_DATACUBE.img_size))
-                __self__.no_sample = False
+                if os.path.exists(MY_DATACUBE.path):
+                    files = [f for f in os.listdir(MY_DATACUBE.path) if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
+                    root.mcacount[SpecRead.DIRECTORY] = len(files)
+                    __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                    __self__.StatusBox.insert(END,"{0}\n".format(MY_DATACUBE.path))
+                    __self__.StatusBox.insert(END,"{0} spectra found!\n".format(root.mcacount[SpecRead.DIRECTORY]))
+                    __self__.StatusBox.insert(END, "\nDatacube loaded with {} spectra packed\n".format(MY_DATACUBE.img_size))
+                    __self__.no_sample = False
+                else:
+                    root.mcacount[SpecRead.DIRECTORY] = MY_DATACUBE.img_size
+                    __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                    __self__.StatusBox.insert(END,"{0}\n".format(MY_DATACUBE.path))
+                    __self__.StatusBox.insert(END,"Path doesn't exist, continuing with datacube information.")
+                    __self__.StatusBox.insert(END, "\nDatacube loaded with {} spectra packed\n".format(MY_DATACUBE.img_size))
+                    __self__.no_sample = False
 
             else: 
                 __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
