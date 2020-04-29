@@ -52,7 +52,11 @@ def load_cube(cube=""):
         "output",cube,"{}.cube".format(cube))
     if os.path.exists(path):
         cube_file = open(path,"rb")
-        cube = pickle.load(cube_file)
+        try: cube = pickle.load(cube_file)
+        except MemoryError as exception:
+            messagebox.showerror("MemoryError",
+                    "Unable to unpickle datacube {}.cube!".format(cube))
+            sys.exit()
         cube_file.close()
         return cube
     else:
