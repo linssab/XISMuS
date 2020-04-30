@@ -164,7 +164,6 @@ def getpeakmap(element_list,datacube):
     #   KA AND KB LINES OF INPUT ELEMENT(S).        #
     #################################################
     
-    if peakmethod == 'PyMcaFit': import SpecFitter
     KaElementsEnergy = EnergyLib.Energies
     KbElementsEnergy = EnergyLib.kbEnergies
     
@@ -280,23 +279,11 @@ def getpeakmap(element_list,datacube):
             RAW = datacube.matrix[currentx][currenty]
             specdata = datacube.matrix[currentx][currenty]
             
-            #######################################
-            #     ATTEMPT TO FIT THE SPECFILE     #
-            # PYMCAFIT DOES NOT USE 2ND DIF CHECK #
-            #######################################
-
-            if peakmethod == 'PyMcaFit': 
-                try:
-                    usedif2 = False
-                    specdata = SpecFitter.fit(specdata)
-                except:
-                    FITFAIL += 1
-                    usedif2 = True
-                    #print("\tCHANNEL COUNT METHOD USED FOR FILE {0}/{1}!\t"\
-                    #        .format(ITERATION,datacube.img_size))
-                    logger.warning("\tFIT FAILED! USING CHANNEL COUNT METHOD FOR {0}/{1}!\t"\
-                            .format(ITERATION,datacube.img_size))
-            elif peakmethod == 'simple_roi': specdata = specdata
+            #############################################
+            #     TO ADD MORE METHODS IN THE FUTURE     #
+            #############################################
+            
+            if peakmethod == 'simple_roi': specdata = specdata
             elif peakmethod == 'auto_roi': specdata = specdata
             else: 
                 raise Exception("peakmethod {0} not recognized.".format(peakmethod))
@@ -320,24 +307,24 @@ def getpeakmap(element_list,datacube):
             # EXPERIMENTAL FOR NRMLIZE #
             ############################
             
-            if normalize == True:
-                ymax = specdata.max()
-                RAW_list = specdata.tolist()
-                ymax_idx = RAW_list.index(ymax)
-                LOCAL_MAX = [ymax, energyaxis[ymax_idx], ymax_idx,ymax_spec]
-                FWHM = 2.3548 * SpecMath.sigma(LOCAL_MAX[1]*1000)
-                current_peak_factor = (ymax-background[ymax_idx])*(2*FWHM)
-                
-                if current_peak_factor > max_peak_factor:
-                    max_peak_factor = current_peak_factor
-                    target = 0
-                    while EnergyLib.Energies[target] <= LOCAL_MAX[1]:
-                        ymax_element = EnergyLib.ElementList[target]
-                        target+=1
-                    ymax_index = EnergyLib.ElementList.index(ymax_element)
-                    ymax_ka = KaElementsEnergy[ymax_index]
-                    ymax_kb = KbElementsEnergy[ymax_index]
-                    if debug == True: ymax_spec = currentspectra
+            #if normalize == True:
+            #    ymax = specdata.max()
+            #    RAW_list = specdata.tolist()
+            #    ymax_idx = RAW_list.index(ymax)
+            #    LOCAL_MAX = [ymax, energyaxis[ymax_idx], ymax_idx,ymax_spec]
+            #    FWHM = 2.3548 * SpecMath.sigma(LOCAL_MAX[1]*1000)
+            #    current_peak_factor = (ymax-background[ymax_idx])*(2*FWHM)
+            #    
+            #    if current_peak_factor > max_peak_factor:
+            #        max_peak_factor = current_peak_factor
+            #        target = 0
+            #        while EnergyLib.Energies[target] <= LOCAL_MAX[1]:
+            #            ymax_element = EnergyLib.ElementList[target]
+            #            target+=1
+            #        ymax_index = EnergyLib.ElementList.index(ymax_element)
+            #        ymax_ka = KaElementsEnergy[ymax_index]
+            #        ymax_kb = KbElementsEnergy[ymax_index]
+            #        if debug == True: ymax_spec = currentspectra
                     
             #############################
 
@@ -351,19 +338,19 @@ def getpeakmap(element_list,datacube):
  
             for Element in range(len(element_list)):
             
-                if peakmethod == 'auto_roi' or peakmethod == 'PyMcaFit':
+                if peakmethod == 'auto_roi':
                    
                     ################################################################
                     #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
-                    # Be aware that PyMcaFit method peaks are returned always True #
                     # Check SpecMath.py This is due to the high noise in the data  #
                     ################################################################
                         
                     ka_info = SpecMath.getpeakarea(kaenergy[Element],specdata,\
                             energyaxis,background,configdict,RAW,usedif2,dif2)
                     ka = ka_info[0]
-                
-                    datacube.ROI[element_list[Element]][ka_info[1][0]:ka_info[1][1]] += \
+                    
+                    if ka > 0:
+                        datacube.ROI[element_list[Element]][ka_info[1][0]:ka_info[1][1]] += \
                             specdata[ka_info[1][0]:ka_info[1][1]]
 
                     if ka == 0: 

@@ -580,8 +580,7 @@ def setROI(lookup,xarray,yarray,localconfig):
     isapeak = True
     TOLERANCE = 1.10
     
-    if localconfig.get('bgstrip') == 'SNIPBG' and\
-    localconfig.get('peakmethod') != 'PyMcaFit': 
+    if localconfig.get('bgstrip') == 'SNIPBG':
         yarray  = savgol_filter(yarray,5,3)
     
     logger.debug("-"*15 + " Setting ROI " + "-"*15)
@@ -675,7 +674,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
             logger.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
             logger.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
                     smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
-            if ROIbg.sum() < ydata.sum(): Area += ydata.sum() - ROIbg.sum()
+            Area += ydata.sum() - ROIbg.sum()
         else: 
             logger.debug("{0} has no peak! Dif2 = {1} and isapeak = {2}\n"\
                     .format(lookup,smooth_dif2[idx[2]],isapeak))
@@ -683,20 +682,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
                 smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
     
     ##########################
-    
-    ####################################################
-    # Isapeak is not invoked for PyMcaFit method       #
-    # this makes it work similar to simple_roi method. #
-    # With low-count datasets this is better to obtain #
-    # images that look better                          #
-    ####################################################
-    
-    # PyMcaFit method does not check for second differential
-    elif localconfig.get('peakmethod') == 'PyMcaFit':
-        logger.info("No dif 2 criteria for {0} method".format(localconfig.get('peakmethod')))
-        smooth_dif2 = np.zeros([len(xdata)])
-        if ROIbg.sum() < ydata.sum(): Area += ydata.sum() - ROIbg.sum()
-               
+                  
     ##############
     # TEST BLOCK #          
     ##############    

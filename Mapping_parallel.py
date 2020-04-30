@@ -122,14 +122,14 @@ def grab_line(cube,lines,iterator,Element):
         ka_info = getpeakarea(lines[0],specdata,\
                 energyaxis,background,cube["config"],RAW,usedif2,dif2)
         ka = ka_info[0]
-        ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
+        if ka>0: ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
         el_dist_map[0][currentx][currenty] = ka
 
         if cube["config"]["ratio"]: 
             kb_info = getpeakarea(lines[1],specdata,\
                     energyaxis,background,cube["config"],RAW,usedif2,dif2)
             kb = kb_info[0]
-            ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
+            if kb>0: ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
             el_dist_map[1][currentx][currenty] = kb
         
         iterator.value = iterator.value + 1
