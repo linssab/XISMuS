@@ -57,8 +57,8 @@ def iteractive_median(img,iterations=1):
     iterations is the amount of times the operation will be performed.
     Returns a smoothed 2D-array """
     shape = np.asarray(img.shape)
-    new_image = cy_funcs.cy_iteractive_median(img, shape, iterations)
-    return new_image 
+    cy_funcs.cy_iteractive_median(img, shape, iterations)
+    return img
 
 def threshold(a_2D_array,t):
     
@@ -68,8 +68,8 @@ def threshold(a_2D_array,t):
     if len(a_2D_array.shape) != 2:
         raise ValueError("Input shape {} is not bi-dimensional")
     shape = np.asarray(a_2D_array.shape)
-    new_array = cy_funcs.cy_threshold(a_2D_array, shape, t)
-    return new_array
+    cy_funcs.cy_threshold(a_2D_array, shape, t)
+    return a_2D_array
 
 def low_pass(a_2D_array,t):
  
@@ -79,8 +79,8 @@ def low_pass(a_2D_array,t):
     if len(a_2D_array.shape) != 2:
         raise ValueError("Input shape {} is not bi-dimensional")
     shape = np.asarray(a_2D_array.shape)
-    new_array = cy_funcs.cy_threshold_low(a_2D_array, shape, t)
-    return new_array
+    cy_funcs.cy_threshold_low(a_2D_array, shape, t)
+    return a_2D_array
 
 def apply_scaling(datacube, scalemode=0):
 
