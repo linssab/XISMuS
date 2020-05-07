@@ -420,7 +420,7 @@ class Mosaic_API:
             elif layer.rotation <= -3: layer.rotation = 1
 
         layers_dict = convert_layers_to_dict(__self__)
-        __self__.build_image(__self__.image.shape)
+        __self__.build_image()
 
     def on_press(__self__,event):
         __self__.press = True
@@ -440,6 +440,8 @@ class Mosaic_API:
             # adjust drag pointer to image click position
             try: name = __self__.read_pixels(__self__.x0,__self__.y0)[1].name
             except: return 0
+            ghost_x = [__self__.layer[name].start[0],__self__.layer[name].end[0]]
+            ghost_y = [__self__.layer[name].start[1],__self__.layer[name].end[1]]
             
             # sets new y start
             new_start_y = __self__.y1 - __self__.y0  + __self__.layer[name].start[1]
@@ -478,8 +480,16 @@ class Mosaic_API:
             else: 
                 __self__.layer[name].end[0] = \
                         __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
-             
-            __self__.build_image(__self__.image.shape)
+            
+            limits_x = [__self__.layer[name].start[0],__self__.layer[name].end[0]]
+            limits_y = [__self__.layer[name].start[1],__self__.layer[name].end[1]]
+            
+            x_up = max(limits_x[0],limits_x[1],ghost_x[0],ghost_x[1])
+            x_down = min(limits_x[0],limits_x[1],ghost_x[0],ghost_x[1])
+            y_up = max(limits_y[0],limits_y[1],ghost_y[0],ghost_y[1])
+            y_down = min(limits_y[0],limits_y[1],ghost_y[0],ghost_y[1])
+
+            __self__.build_image(bound=True, limit=[[x_down,x_up],[y_down,y_up]])
             __self__.x0 = __self__.x1
             __self__.y0 = __self__.y1
 
@@ -534,7 +544,7 @@ class Mosaic_API:
             __self__.layers_list.delete(active_layer)
             __self__.layer.pop(active_layer_name)
             __self__.reorder_layers()
-            __self__.build_image(__self__.image.shape)
+            __self__.build_image()
             __self__.layer_count -= 1
 
     def reorder_layers(__self__):
@@ -591,7 +601,7 @@ class Mosaic_API:
 
             else: return
             __self__.reorder_layers()
-            __self__.build_image(__self__.image.shape)
+            __self__.build_image()
     
     def move_layer_down(__self__):
         active_layer_idx = __self__.layers_list.curselection()
@@ -630,7 +640,7 @@ class Mosaic_API:
 
             else: return
             __self__.reorder_layers()
-            __self__.build_image(__self__.image.shape)
+            __self__.build_image()
 
     def check_calibration(__self__, cube):
         proceed = True
@@ -676,7 +686,7 @@ class Mosaic_API:
         __self__.layer[cube.name] = Layer(cube,layer_no,element)
         __self__.layers_list.insert(END,"{},{},{}".format(cube.name,element,layer_no))
         layers_dict = convert_layers_to_dict(__self__)
-        __self__.build_image(__self__.image.shape)
+        __self__.build_image()
         __self__.maps_window.destroy()
         __self__.refocus()
 
@@ -716,7 +726,7 @@ class Mosaic_API:
                     __self__.layer[cube.name] = Layer(cube,layer_no)
                     __self__.layers_list.insert(END,"{},{}".format(cube.name,layer_no))
                     layers_dict = convert_layers_to_dict(__self__)
-                    __self__.build_image(__self__.image.shape)
+                    __self__.build_image()
                     __self__.maps_window.destroy()
                     __self__.refocus()
 
@@ -732,7 +742,7 @@ class Mosaic_API:
                 __self__.layer[cube.name] = Layer(cube,layer_no)
                 __self__.layers_list.insert(END,"{},{}".format(cube.name,layer_no))
                 layers_dict = convert_layers_to_dict(__self__)
-                __self__.build_image(__self__.image.shape)
+                __self__.build_image()
                 __self__.maps_window.destroy()
                 __self__.refocus()
 
@@ -823,7 +833,7 @@ class Mosaic_API:
             del __self__.layer
             del __self__.layer_numbering
             __self__.layer_count = 0
-            __self__.build_image(__self__.image.shape)
+            __self__.build_image()
             __self__.layers_list.delete(0,END)
             layers_dict = {}
             __self__.layer = {}
@@ -835,7 +845,7 @@ class Mosaic_API:
         
         layers_dict = convert_layers_to_dict(__self__)
         __self__.reorder_layers()
-        __self__.build_image(__self__.image.shape)
+        __self__.build_image()
         __self__.refocus()
 
     def load_layer(__self__,layer):
@@ -896,16 +906,31 @@ class Mosaic_API:
                 return pixel, top_layer
         return pixel, top_layer
     
-    def build_image(__self__, size):
+    def build_image(__self__,bound=False, limit=None):
         global layers_dict
-        __self__.image = cy_funcs.cy_build_image(
-                __self__.image, 
-                np.asarray(__self__.image.shape),
-                layers_dict)
-        __self__.im_plot.set_data(__self__.image)
-        __self__.canvas.draw()
+        if bound == False:
+            limit = np.asarray([[0,__self__.image.shape[0]],[0,__self__.image.shape[1]]],
+                        dtype="int32")
+            cy_funcs.cy_build_image(
+                    __self__.image, 
+                    limit,
+                    layers_dict)
+            __self__.im_plot.set_data(__self__.image)
+            __self__.canvas.draw()
+            return
+        if bound == True:
+            if limit == None:
+                limit = np.asarray([[0,__self__.image.shape[0]],[0,__self__.image.shape[1]]],
+                        dtype="int32")
+            else: limit = np.asarray(limit,dtype="int32")
+            cy_funcs.cy_build_image(
+                    __self__.image,
+                    limit,
+                    layers_dict)
+            __self__.im_plot.set_data(__self__.image)
+            __self__.canvas.draw()
+            return
 
-     
     def pack_spectra(__self__,i,j,void_spectrum):
         front_layer, top_layer, spectrum, bg = 0, 0, void_spectrum, void_spectrum
         for layer in __self__.layer:

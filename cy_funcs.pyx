@@ -206,7 +206,7 @@ def cy_read_pixels(dict layers, int i, int j):
             return pixel
     return pixel
 
-def cy_build_image(int[:,:] image, int[:] size, dict all_layers):
+def cy_build_image(int[:,:] image, int[:,:] boundaries, dict all_layers):
 
     """ Display image constructor.
     Builds the image to be shown at Mosaic screen """
@@ -215,8 +215,8 @@ def cy_build_image(int[:,:] image, int[:] size, dict all_layers):
     cdef int j = 0
     cdef int[:,:] new_image = image
 
-    for i in range(size[0]):
-        for j in range(size[1]):
+    for i in range(boundaries[0][0],boundaries[0][1]):
+        for j in range(boundaries[1][0],boundaries[1][1]):
             new_image[i][j] = cy_read_pixels(all_layers,i,j)
     return new_image
 
