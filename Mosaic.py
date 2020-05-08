@@ -428,6 +428,8 @@ class Mosaic_API:
         except: pass
         try: __self__.y0 = int(event.xdata)
         except: pass
+        try: __self__.selection = __self__.read_pixels(__self__.x0,__self__.y0)[1].name
+        except: __self__.selection = None
         
     def on_drag(__self__,event):
         if __self__.press:
@@ -438,8 +440,8 @@ class Mosaic_API:
             except: pass
             
             # adjust drag pointer to image click position
-            try: name = __self__.read_pixels(__self__.x0,__self__.y0)[1].name
-            except: return 0
+            name = __self__.selection
+            if name == None: return
             ghost_x = [__self__.layer[name].start[0],__self__.layer[name].end[0]]
             ghost_y = [__self__.layer[name].start[1],__self__.layer[name].end[1]]
             
