@@ -963,9 +963,14 @@ class Mosaic_API:
                 messagebox.showerror("Error",
                         "Can't use more than one scaling method. Please select only one from the options box.")
                 return 
+            NAME = __self__.NameVar.get()
+            forbidden_names = os.listdir(os.path.join(SpecRead.__PERSONAL__,"output"))
+            if NAME in forbidden_names: 
+                messagebox.showerror("Folder name error",
+                    "An output folder with name \"{}\" already exists!".format(NAME))
+                return
             proceed = messagebox.askquestion("Cube merge!","You are about to merge datacubes. This procedure may take a while depending on the size of the final image. Are you sure you want to proceed?")
         if proceed == "yes":
-            NAME = __self__.NameVar.get()
             global layers_dict
             layers_dict = convert_layers_to_dict(__self__)
 
