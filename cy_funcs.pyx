@@ -8,7 +8,7 @@
 import cython
 import numpy as np
 cimport numpy as np
-from ProgressBar import Busy, Thinking
+from ProgressBar import Busy
 
 # utils
 

@@ -36,6 +36,7 @@ style.use('ggplot')
 
 # internal imports
 import SpecRead
+import Constants
 from ReadConfig import checkout_config
 from ImgMath import LEVELS, apply_scaling
 from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
@@ -1061,8 +1062,9 @@ class Mosaic_API:
             workaround had to be done. Main attributes are set externally rather than in the
             __init__ method """
             
-            new_cube = Cube(["xrf"],SpecRead.CONFIG,mode="merge",name=NAME)
+            new_cube = Cube(["xrf"],Constants.CONFIG,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
+            new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
             new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
             new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
@@ -1081,7 +1083,8 @@ class Mosaic_API:
                 __self__.thread2.join()
                 new_cube.scalable = True
             new_cube.calibration = __self__.layer[layers[0]].calibration
-            new_cube.config = SpecRead.CONFIG
+            new_cube.config = Constants.CONFIG
+            new_cube.config["gain"] = new_cube.gain
             __self__.progress_bar.updatebar(2)
             __self__.progress_bar.update_text("Digesting...")
             new_cube.digest_merge(bar=__self__.progress_bar)

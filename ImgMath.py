@@ -13,6 +13,7 @@ logger = logging.getLogger("logfile")
 logger.info("Importing module ImgMath.py...")
 import numpy as np
 import SpecRead
+import Constants
 import cy_funcs
 import matplotlib
 import matplotlib.pyplot as plt
@@ -132,7 +133,7 @@ def mask(a_datacube,a_compound,mask_threshold):
     except:
         try: 
             id_element_ratio = SpecRead.output_path + '{1}_ratio_{0}.txt'\
-                .format(id_element,SpecRead.DIRECTORY)
+                .format(id_element,Constants.DIRECTORY)
             id_element_matrix = SpecRead.RatioMatrixReadFile(id_element_ratio)
         except: raise FileNotFoundError("{0} ratio file not found!".format(id_element))
     
@@ -165,7 +166,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     coefficients = compound.lin_att
     
     heightfile = open(SpecRead.output_path + '{0}_heightmap.txt'\
-            .format(SpecRead.DIRECTORY),'w+')
+            .format(Constants.DIRECTORY),'w+')
     heightfile.write("-"*10 + " Thickness Values (um) of {0} "\
             .format(compound.name) + 10*"-" + '\n')
     heightfile.write("row\tcolumn\tthickness\n")
@@ -492,7 +493,7 @@ def split_and_save(datacube,map_array,element_list):
                         large_image,
                         (newY,newX),
                         interpolation=cv2.INTER_NEAREST)
-            save_path = os.path.join(SpecRead.workpath,"output",SpecRead.DIRECTORY,       
+            save_path = os.path.join(SpecRead.workpath,"output",Constants.DIRECTORY,       
             "{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png".format(
                     element_list[Element]+"_"+lines[line],
                     datacube.config.get('bgstrip'),
@@ -507,14 +508,14 @@ def split_and_save(datacube,map_array,element_list):
 
     ##################################################
     
-    fig.savefig(SpecRead.workpath+'/output/'+SpecRead.DIRECTORY+
+    fig.savefig(SpecRead.workpath+'/output/'+Constants.DIRECTORY+
             '/elements_plot_bgtrip={0}_ratio={1}_enhance={2}_peakmethod={3}.png'\
             .format(datacube.config.get('bgstrip'),datacube.config.get('ratio')\
             ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
     
     datacube.save_cube() 
     logger.warning("cube has been saved and {} packed!".format(element_list))
-    IMAGE_PATH = str(SpecRead.workpath+'\output\\'+SpecRead.DIRECTORY+'\\')
+    IMAGE_PATH = str(SpecRead.workpath+'\output\\'+Constants.DIRECTORY+'\\')
     logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0
 

@@ -61,7 +61,41 @@ class Busy:
             time.sleep(1)
         __self__.destroybar()
 
-class Thinking:
+
+class ReadProgress:
+    
+    def __init__(__self__,max_,min_):
+        __self__.master = Toplevel()
+        __self__.master.resizable(False,False)
+        __self__.master.overrideredirect(True)
+        x = __self__.master.winfo_screenwidth()
+        y = __self__.master.winfo_screenheight()
+        win_x = __self__.master.winfo_width()
+        win_y = __self__.master.winfo_height()
+        __self__.master.geometry('{}x{}+{}+{}'.format(166, 71,\
+                int((x/2)-80), int((y/2)-35)))
+        __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
+        __self__.outerframe.grid(row=0, column=0)
+        __self__.master.label = Label(__self__.outerframe, text="Reading spectra...").\
+                grid(row=0,column=0) 
+        __self__.master.body = Frame(__self__.outerframe)        
+        __self__.master.body.grid(row=1,column=0)
+        __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
+        __self__.progress.grid(row=0,column=0)
+        __self__.spec = Label(__self__.master.body, text="")       
+        __self__.spec.grid(row=2,column=0)
+
+    def updatebar(__self__,value):
+        if value == __self__.progress["maximum"]-1: 
+            __self__.master.destroy()
+        else:
+            __self__.progress["value"] = value
+            __self__.progress.update()
+            __self__.spec["text"] = "Spec {0} of {1}".format(value,__self__.progress["maximum"])
+            __self__.spec.update()
+
+
+class ThinkingWheel:
     
     def __init__(__self__,speed,x,y,auto=True,parent=None):
         if parent == None: auto = False

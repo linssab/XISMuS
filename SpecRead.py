@@ -7,6 +7,7 @@
 
 import logging
 logger = logging.getLogger("logfile")
+import Constants
 from ReadConfig import unpack_cfg as CONFIGURE
 from ReadConfig import pop_error, __PERSONAL__, __BIN__ 
 logger.debug("Importing module SpecRead.py...")
@@ -30,17 +31,16 @@ def get_samples_folder(inifile):
     ini.close() 
     return folder
 
-samples_folder = get_samples_folder(os.path.join(__BIN__,"folder.ini"))
-logger.info("Samples path: {0}".format(samples_folder))
-FIRSTFILE_ABSPATH = None
+Constants.SAMPLES_FOLDER = get_samples_folder(os.path.join(__BIN__,"folder.ini"))
+logger.info("Samples path: {0}".format(Constants.SAMPLES_FOLDER))
 
 def getfirstfile():
     
     """ Returns global variable.
     This function is called to get the last updated value of
-    FIRSTFILE_ABSPATH, without importing the whole module """
+    Constants.FIRSTFILE_ABSPATH, without importing the whole module """
     
-    return FIRSTFILE_ABSPATH
+    return Constants.FIRSTFILE_ABSPATH
 
 def setup(prefix, indexing, extension):
     
@@ -48,26 +48,21 @@ def setup(prefix, indexing, extension):
     contained there """
 
     logger.debug("Running setup from Config.cfg") 
-    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list, file_pool
+    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
 
-    CONFIG,CALIB = CONFIGURE()
-    DIRECTORY = CONFIG.get("directory")
+    Constants.CONFIG,Constants.CALIB = CONFIGURE()
+    Constants.DIRECTORY = Constants.CONFIG.get("directory")
     
     # build paths
-    selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
+    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
     workpath = __PERSONAL__
-    cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
-    output_path = os.path.join(workpath,"output",DIRECTORY)
+    cube_path = os.path.join(workpath,"output",
+            Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
+    output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
     dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
     
     # builds path to first spectrum file
-    ### being deprecated, for the direct setup, FIRSTFILE_ABSPATH is built on GUI
-    #FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder,prefix+indexing+"."+extension)
-    file_pool = []
-    global_list =  [CONFIG, CALIB, DIRECTORY, 
-            samples_folder, selected_sample_folder, workpath, 
-            cube_path, output_path, dimension_file, 
-            FIRSTFILE_ABSPATH]
+    Constants.FILE_POOL = []
     return np.nan
 
 def setup_from_datacube(datacube,sample_database):
@@ -76,52 +71,46 @@ def setup_from_datacube(datacube,sample_database):
     configuration parameters accordingly """
 
     logger.debug("Running setup from datacube {}".format(datacube.name)) 
-    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
     
-    CONFIG,CALIB = datacube.config, datacube.calibration
-    DIRECTORY = CONFIG.get("directory")
+    Constants.CONFIG,Constants.CALIB = datacube.config, datacube.calibration
+    Constants.DIRECTORY = Constants.CONFIG.get("directory")
     
     # build sample paths
-    selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
+    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
     workpath = __PERSONAL__
-    cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
-    output_path = os.path.join(workpath,"output",DIRECTORY)
+    cube_path = os.path.join(workpath,"output",
+            Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
+    output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
     dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
     
-    try: FIRSTFILE_ABSPATH = sample_database[DIRECTORY]
-    except: FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
+    try: Constants.FIRSTFILE_ABSPATH = sample_database[Constants.DIRECTORY]
+    except: Constants.FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
     
-    global_list =  [CONFIG, CALIB, DIRECTORY,
-            samples_folder, selected_sample_folder, workpath,
-            cube_path, output_path, dimension_file,
-            FIRSTFILE_ABSPATH]
     return np.nan 
 
 def conditional_setup(name='None'):
 
-    """ Reads Config.cfg file configuration parameters and changes DIRECTORY
+    """ Reads Config.cfg file configuration parameters and changes Constants.DIRECTORY
     parameter to input value. """
     
     logger.debug("Running conditional setup for {}".format(name)) 
-    global CONFIG, CALIB, DIRECTORY, samples_folder, selected_sample_folder, workpath, cube_path, output_path, dimension_file, FIRSTFILE_ABSPATH, global_list
+    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
     
-    CONFIG,CALIB = CONFIGURE()
-    CONFIG['directory'] = name
+    Constants.CONFIG,Constants.CALIB = CONFIGURE()
+    Constants.CONFIG['directory'] = name
     
     # build paths
-    DIRECTORY = CONFIG.get("directory")
-    selected_sample_folder = os.path.join(samples_folder,DIRECTORY)
+    Constants.DIRECTORY = Constants.CONFIG.get("directory")
+    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
     workpath = __PERSONAL__
-    cube_path = os.path.join(workpath,"output",DIRECTORY,"{}.cube".format(DIRECTORY))
-    output_path = os.path.join(workpath,"output",DIRECTORY)
+    cube_path = os.path.join(workpath,"output",
+            Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
+    output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
     dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
     
-    FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder, name)
+    Constants.FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder, name)
 
-    global_list =  [CONFIG, CALIB, DIRECTORY,
-            samples_folder, selected_sample_folder, workpath,
-            cube_path, output_path, dimension_file,
-            FIRSTFILE_ABSPATH]
     return np.nan
 
 def RatioMatrixReadFile(ratiofile):
@@ -194,9 +183,9 @@ def getcalibration():
     if configuration is set to manual, returns the anchors input by
     user via GUI. """
 
-    if CONFIG['calibration'] == 'manual':
-        param = CALIB 
-    elif CONFIG['calibration'] == 'from_source':
+    if Constants.CONFIG['calibration'] == 'manual':
+        param = Constants.CALIB 
+    elif Constants.CONFIG['calibration'] == 'from_source':
         param = []
         mca_file = open(getfirstfile(),'r')
         line = mca_file.readline()
@@ -351,13 +340,10 @@ def updatespectra(specfile,size,from_list=False):
         newfile; string """        
     
     try:
-        global file_pool
-        index = file_pool.index(specfile)
-        newfile = file_pool[index+1]
+        index = Constants.FILE_POOL.index(specfile)
+        newfile = Constants.FILE_POOL[index+1]
     
     except (IndexError, ValueError): 
-
-        global samples_folder
 
         name=str(specfile)
         specfile_name = name.split("\\")[-1]
@@ -371,8 +357,8 @@ def updatespectra(specfile,size,from_list=False):
         
         if int(index) < size: index = str(int(index)+1)
         else: index = str(size)
-        newfile = os.path.join(samples_folder,
-                CONFIG["directory"],
+        newfile = os.path.join(Constants.SAMPLES_FOLDER,
+                Constants.CONFIG["directory"],
                 str(prefix+index+"."+extension))
         
     return newfile
@@ -385,14 +371,14 @@ def getdimension():
         y; int
         user_input; bool """
 
-    global dimension_file, samples_folder, DIRECTORY
+    global dimension_file
     if not os.path.exists(dimension_file):
-        dimension_file = os.path.join(samples_folder,"colonneXrighe.txt")
+        dimension_file = os.path.join(Constants.SAMPLES_FOLDER,"colonneXrighe.txt")
         if not os.path.exists(dimension_file):
             dimension_file = os.path.join(output_path,"colonneXrighe.txt")
             if not os.path.exists(dimension_file):
                 dimension_file = os.path.join(__PERSONAL__,
-                        "Example Data",DIRECTORY,"colonneXrighe.txt") 
+                        "Example Data",Constants.DIRECTORY,"colonneXrighe.txt") 
                 if not os.path.exists(dimension_file):
                     raise IOError("Dimension file not found!") 
     user_input = False
@@ -430,7 +416,7 @@ def dump_ratios(maps_list,element_list):
     
     ratiofiles = ["" for x in range(len(element_list))]
     for Element in range(len(element_list)): 
-        ratiofiles[Element] = str(os.path.join(output_path,"{1}_ratio_{0}.txt".format(element_list[Element],DIRECTORY)))
+        ratiofiles[Element] = str(os.path.join(output_path,"{1}_ratio_{0}.txt".format(element_list[Element],Constants.DIRECTORY)))
         r_file = open(ratiofiles[Element],'w+')
         r_file.readline()
         r_file.truncate()

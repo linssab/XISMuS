@@ -15,9 +15,9 @@ freeze_support()
 import queue
 import pickle
 import time
+import SpecMath
 from SpecRead import dump_ratios, setup, __BIN__, __PERSONAL__
 from matplotlib import pyplot as plt
-from SpecMath import getpeakarea, refresh_position, setROI, getdif2, Busy
 from EnergyLib import ElementList, Energies, kbEnergies
 from ImgMath import interpolate_zeros, split_and_save
 
@@ -100,7 +100,7 @@ def grab_line(cube,lines,iterator,Element):
        
         # low-passes second differential
         if usedif2 == True: 
-            dif2 = getdif2(specdata,energyaxis,1)
+            dif2 = SpecMath.getdif2(specdata,1)
             for i in range(len(dif2)):
                 if dif2[i] < -1: dif2[i] = dif2[i]
                 elif dif2[i] > -1: dif2[i] = 0
@@ -119,14 +119,14 @@ def grab_line(cube,lines,iterator,Element):
         # Check SpecMath.py This is due to the high noise in the data  #
         ################################################################
             
-        ka_info = getpeakarea(lines[0],specdata,\
+        ka_info = SpecMath.getpeakarea(lines[0],specdata,\
                 energyaxis,background,cube["config"],RAW,usedif2,dif2)
         ka = ka_info[0]
         if ka>0: ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
         el_dist_map[0][currentx][currenty] = ka
 
         if cube["config"]["ratio"]: 
-            kb_info = getpeakarea(lines[1],specdata,\
+            kb_info = SpecMath.getpeakarea(lines[1],specdata,\
                     energyaxis,background,cube["config"],RAW,usedif2,dif2)
             kb = kb_info[0]
             if kb>0: ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
@@ -138,7 +138,7 @@ def grab_line(cube,lines,iterator,Element):
         #   UPDATE ELMAP POSITION AND SPECTRA   #
         #########################################        
         
-        scan = refresh_position(scan[0],scan[1],matrix_dimension)
+        scan = SpecMath.refresh_position(scan[0],scan[1],matrix_dimension)
         currentx = scan[0]
         currenty = scan[1]
         
@@ -188,7 +188,8 @@ def sort_results(results,element_list):
                 sorted_results.append(results[packed])
     return sorted_results
 
-def start_reader(cube,Element,iterator,results):
+def start_reader(cube,Element,iterator,results,F,N):
+    SpecMath.FN_set(F,N)
     
     def call_peakmethod(cube,Element,iterator,results):
         '''
@@ -237,7 +238,7 @@ class Cube_reader():
         __self__.cube["img_size"] = __self__.cube["matrix"].shape[0]*\
                 __self__.cube["matrix"].shape[1]
         __self__.bar_max = len(element_list)*__self__.cube["img_size"]
-        __self__.p_bar = Busy(len(element_list),0)
+        __self__.p_bar = SpecMath.Busy(len(element_list),0)
         __self__.p_bar.update_text("Pre-loading data...")
         __self__.results = multiprocessing.Queue()
         __self__.p_bar_iterator = multiprocessing.Value('i',0)
@@ -247,7 +248,7 @@ class Cube_reader():
         __self__.run_count = 0 
         __self__.chunks = break_list(__self__.element_list,instances)
     
-    def start_workers(__self__):
+    def start_workers(__self__,N,F):
         __self__.p_bar.progress["maximum"] = __self__.cube["img_size"]\
                 *len(__self__.element_list)
         __self__.p_bar.update_text("Processing data...")
@@ -267,7 +268,7 @@ class Cube_reader():
             for element in chunk:
                 p = multiprocessing.Process(target=start_reader,
                     name=element,
-                    args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results))
+                    args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results,N,F))
                 __self__.processes.append(p)
                 __self__.process_names.append(p.name)
                 logger.info("Polling process {}".format(p))

@@ -1,7 +1,7 @@
 import cx_Freeze
 import sys, shutil
 import os, opcode
-from CoreGUI import VERSION
+from Constants import VERSION
 from win32com.shell import shell, shellcon
 docs = shell.SHGetFolderPath(0, shellcon.CSIDL_PERSONAL, None, 0)
 __PERSONAL__ = os.path.join(docs,"XISMuS")
@@ -108,14 +108,16 @@ includefiles_list.append((mpl_path,".\\lib\\"))
 for item in includefiles_list:
     print(item)
 
-def load_sqlite3(finder, module):
-
-    """In Windows, the sqlite3 module requires an additional dll sqlite3.dll to
-       be present in the build directory."""
-    if sys.platform == "win32":
-        dll_name = "sqlite3.dll"
-        dll_path = os.path.join(sys.base_prefix, "DLLs", dll_name)
-        finder.IncludeFiles(dll_path, dll_name)
+#def load_sqlite3(finder, module):
+#
+#    """In Windows, the sqlite3 module requires an additional dll sqlite3.dll to
+#       be present in the build directory."""
+#    if sys.platform == "win32":
+#        dll_name = "sqlite3.dll"
+#        dll_path = os.path.join(sys.base_prefix, "DLLs", dll_name)
+#        if os.path.isfile(dll_path):
+#            finder.IncludeFiles(dll_path, dll_name)
+#        else: print("{} not found!".format(dll_path))
 
 """ Creates an executable that opens the prompt (cmd) """
 #executables = [cx_Freeze.Executable("CoreGUI.py", targetName="XISMuS", icon="C:\\Users\\sergi\\github\\xrfscanner\\images\\icons\\icon.ico")]

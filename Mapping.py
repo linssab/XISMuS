@@ -13,7 +13,9 @@ import numpy as np
 import pickle
 import SpecMath
 import SpecRead
+import Constants
 import EnergyLib
+from ProgressBar import ReadProgress
 import ImgMath
 import matplotlib.pyplot as plt
 import time
@@ -24,38 +26,6 @@ logger.debug("Finished Mapping imports.")
 from tkinter import *
 from tkinter import ttk
 
-
-class Busy:
-    
-    def __init__(__self__,max_,min_):
-        __self__.master = Toplevel()
-        __self__.master.resizable(False,False)
-        __self__.master.overrideredirect(True)
-        x = __self__.master.winfo_screenwidth()
-        y = __self__.master.winfo_screenheight()
-        win_x = __self__.master.winfo_width()
-        win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(166, 71,\
-                int((x/2)-80), int((y/2)-35)))
-        __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
-        __self__.outerframe.grid(row=0, column=0)
-        __self__.master.label = Label(__self__.outerframe, text="Reading spectra...").\
-                grid(row=0,column=0) 
-        __self__.master.body = Frame(__self__.outerframe)        
-        __self__.master.body.grid(row=1,column=0)
-        __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
-        __self__.progress.grid(row=0,column=0)
-        __self__.spec = Label(__self__.master.body, text="")       
-        __self__.spec.grid(row=2,column=0)
-
-    def updatebar(__self__,value):
-        if value == __self__.progress["maximum"]-1: 
-            __self__.master.destroy()
-        else:
-            __self__.progress["value"] = value
-            __self__.progress.update()
-            __self__.spec["text"] = "Spec {0} of {1}".format(value,__self__.progress["maximum"])
-            __self__.spec.update()
 
 def select_lines(element,ratio):
     element_idx = EnergyLib.ElementList.index(element)
@@ -105,10 +75,10 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
         ka_map = np.zeros([cube.dimension[0],cube.dimension[1]])
         kb_map = np.zeros([cube.dimension[0],cube.dimension[1]])
         
-        ka_idx = SpecMath.setROI(lines[0],cube.energyaxis,cube.sum,cube.config)
+        ka_idx = SpecMath.setROI(lines[0],cube.energyaxis,cube.mps,cube.config)
         # verifies beta line for the element
         if cube.config["ratio"] == True:
-            kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.sum,cube.config)
+            kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.mps,cube.config)
             if kb_idx[3] == False and ka_idx[3] == False:
                 logger.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
             elif kb_idx[3] == False: 
@@ -139,8 +109,8 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
             b = float(bg_matrix[x][y][indexes[0]:indexes[1]].sum())
             if b > a: c == 0
             else: c = a-b
-            new_image[x,y] = c
-            ROI[indexes[0]:indexes[1]]=ROI[indexes[0]:indexes[1]] + matrix[x][y][indexes[0]:indexes[1]]
+            new_image[x][y] = c
+            ROI[indexes[0]:indexes[1]] = ROI[indexes[0]:indexes[1]] + matrix[x][y][indexes[0]:indexes[1]]
     return new_image
 
 def getpeakmap(element_list,datacube):
@@ -188,7 +158,7 @@ def getpeakmap(element_list,datacube):
         logger.info("Started acquisition of {0} map(s)".format(element_list))
         
         ####### this is for debug mode #######
-        currentspectra = SpecRead.FIRSTFILE_ABSPATH
+        currentspectra = Constants.FIRSTFILE_ABSPATH
         debug = False 
         ####### to register the NAME of the file #######
 
@@ -226,7 +196,7 @@ def getpeakmap(element_list,datacube):
         
             if ratio == True:
                 ratiofiles[Element] = str(os.path.join(SpecRead.output_path,
-                        "{1}_ratio_{0}.txt".format(element_list[Element],SpecRead.DIRECTORY)))
+                        "{1}_ratio_{0}.txt".format(element_list[Element],Constants.DIRECTORY)))
                 r_file = open(ratiofiles[Element],"w+")
                 r_file.readline()
                 r_file.truncate()
@@ -246,14 +216,28 @@ def getpeakmap(element_list,datacube):
         ################################
         stacksum = datacube.sum
         conditional_ratio = np.zeros([len(element_list)])
+
         for Element in range(len(element_list)):
+
             if peakmethod == 'simple_roi':
-                ka_idx[Element] = SpecMath.setROI(kaenergy[Element],energyaxis,stacksum,configdict)
+
+                ka_idx[Element] = SpecMath.setROI(
+                        kaenergy[Element],
+                        energyaxis,
+                        stacksum,
+                        configdict)
                 ka_peakdata[Element] = stacksum[ka_idx[Element][0]:ka_idx[Element][1]]
+
                 if ratio == True:
+
                     conditional_ratio[Element] = True
-                    kb_idx[Element] = SpecMath.setROI(kbenergy[Element],energyaxis,stacksum,configdict)
+                    kb_idx[Element] = SpecMath.setROI(
+                            kbenergy[Element],
+                            energyaxis,
+                            stacksum,
+                            configdict)
                     kb_peakdata[Element] = stacksum[kb_idx[Element][0]:kb_idx[Element][1]]
+                    
                     if kb_idx[Element][3] == False and ka_idx[Element][3] == False:
                         logger.info("No alpha nor beta lines found for {}. Aborting...".\
                                 format(element_list[Element]))
@@ -271,7 +255,7 @@ def getpeakmap(element_list,datacube):
         logger.info("Starting iteration over spectra...\n")
         
         # starts the loading bar
-        progressbar = Busy(datacube.img_size,0) 
+        progressbar = ReadProgress(datacube.img_size,0) 
         
         for ITERATION in range(dimension):
                
@@ -296,7 +280,7 @@ def getpeakmap(element_list,datacube):
             background = datacube.background[currentx][currenty]
             
             if usedif2 == True: 
-                dif2 = SpecMath.getdif2(specdata,energyaxis,1)
+                dif2 = SpecMath.getdif2(specdata,1)
                 for i in range(len(dif2)):
                     if dif2[i] < -1: dif2[i] = dif2[i]
                     elif dif2[i] > -1: dif2[i] = 0
@@ -511,7 +495,7 @@ def getdensitymap(datacube):
 
 if __name__=="__main__":
     SpecRead.setup()
-    cube_name = SpecRead.DIRECTORY
+    cube_name = Constants.DIRECTORY
     cube_path = SpecRead.cube_path
     cube_file = open(cube_path,'rb')
     datacube = pickle.load(cube_file)

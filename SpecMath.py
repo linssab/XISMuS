@@ -26,6 +26,8 @@ updatespectra)
 from EnergyLib import ElementList
 from ImgMath import LEVELS
 from Mapping import getdensitymap
+from ProgressBar import Busy
+import Constants
 import cy_funcs
 
 # import other modules
@@ -43,67 +45,118 @@ logger.info("Finished SpecMath imports.")
 from tkinter import *
 from tkinter import ttk
 
-NOISE = 80
-FANO = 0.114
+def FN_reset():
+    Constants.FANO = 0.114
+    Constants.NOISE = 80
 
+def FN_set(F, N):
+    Constants.FANO = F
+    Constants.NOISE = N
 
-class Busy:
+def digest_psdinv(y,energies):
     
-    """ Progress bar class. """
+    """ y are the calculated FWHM
+    energies are the corresponding energies for the corresponding 
+    FWHM peaks """
+
+    x = [(2.3548**2)*3.85*en for en in energies]
+    Y = np.asarray([i**2 for i in y], dtype="float32")
+    X = np.array([np.ones(len(x)), x], dtype="float32")
+    C = np.dot(Y,np.linalg.pinv(X))
+
+    return abs(C)
+
+def digest_lstsq(y,energies):
     
-    def __init__(__self__,max_,min_):
-        __self__.master = Toplevel()
-        __self__.master.resizable(False,False)
-        __self__.master.overrideredirect(True)
-        x = __self__.master.winfo_screenwidth()
-        y = __self__.master.winfo_screenheight()
-        win_x = __self__.master.winfo_width()
-        win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(166, 49,\
-                int((x/2)-80), int((y/2)-23)))
-        __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
-        __self__.outerframe.grid(row=0,column=0)
-        __self__.master.label = Label(__self__.outerframe, text="Packing spectra...")
-        __self__.master.label.grid(row=0,column=0)       
-        __self__.master.body = Frame(__self__.outerframe)        
-        __self__.master.body.grid(row=1,column=0)
-        __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
-        __self__.progress.grid(row=0,column=0)
-        __self__.master.grab_set()
+    x = [(2.3548**2)*3.85*en for en in energies]
+    Y = np.asarray([i**2 for i in y], dtype="float32")
+    X = np.vstack([np.ones(len(x)), x]).T
+    C = np.linalg.lstsq(X,Y,rcond=None)[0]
 
-    def updatebar(__self__,value):
+    return abs(C)
 
-        """ update bar progress. Value is the progress literal value. The maximum value is 
-        defined according to the amount of spectra to be read. """
+def FN_fit(specdata,gain):
+    F, N = 0, 0
+    i, x = 0, 200
+    avg_F, avg_N = 0,0
+    data = savgol_filter(specdata,5,3)
+    v, w, r = 4,9,4
+    while i < x:
+        F, N = FN_iter(data,gain,v,w,r)
+        if 0.040 <= F <= 0.240: 
+            logger.warning("Fano in between 0.040 and 0.240")
+            logger.warning("Fano and Noise matched: F:{} N:{}".format(F,N))
+            return F, N
+        avg_F += F
+        avg_N += N
+        r += 1
+        if r > 12:
+            r = 4
+            w += 2
+            if w >= 13:
+                w = 2
+                v += 1
+                if v == 7: v=1
+        i += 1
+    N = avg_N/i
+    F = avg_F/i
+    logger.warning("Fano and Noise averaged: F:{} N:{}".format(F,N))
+    return F, N
 
-        __self__.progress["value"] = value
-        __self__.progress.update()
+def FN_iter(data,gain,v,w,r):
+    th, delt, pks = tophat(data,v,w)
+    widths = []
+    energies = []
+    for i in pks:
+        if th[i]>r*delt[i]:
+            try: lw, up, width = fwhm(data,i,r)
+            except: break
+            widths.append(width*gain*1000)
+            energies.append(gain*i*1000)
+    N, F = digest_psdinv(widths,energies)
+    #print(N**.5,F)
+    #if N > 250 or 0.001 <= F <= 1: 
+    #    logger.warning("Fano and Noise probably misfitted. Values obtained: F:{}, N:{}. Using default values".format(F,N**.5))
+    #    return 80, 0.114
+    return F, N**.5
 
-    def update_text(__self__,text):
+def hk_(k,v,w):
+    if -v-(w/2) <= k < -w/2: return -1/(2*v)
+    elif -w/2 <= k <= w/2: return 1/w
+    elif w/2 < k <= v+(w/2): return -1/(2*v)
+    else: return 0
 
-        """ update text displayed on bar """
+def tophat(y,v,w):
+    new_y = np.zeros([y.shape[0]])
+    delta = np.zeros([y.shape[0]])
+    peaks = []
+    for i in range(y.shape[0]-(int(v+w/2))):
+        y_star = 0
+        y_delta = 0
+        for k in range(int(-v-w/2),int(v+w/2)):
+            hk = hk_(k,v,w)
+            y_star += hk*y[i+k]
+            y_delta += abs((hk**2)*y[i+k])
+        new_y[i] = y_star
+        delta[i] = y_delta**.5
+    for j in range(1,y.shape[0]-1):
+        if new_y[j-1] <= new_y[j] and new_y[j] > new_y[j+1]:
+            peaks.append(j)
+    return new_y, delta, peaks
 
-        __self__.master.label["text"] = text
-        __self__.master.update()
-
-    def destroybar(__self__):
-
-        """ Destroys the bar window """
-
-        __self__.master.grab_release()
-        __self__.master.destroy()
-
-    def interrupt(__self__,mca,timeout):
-
-        """ In case of read failure, progress is interrupted """
-
-        __self__.progress["maximum"] = timeout
-        __self__.updatebar(timeout)
-        __self__.update_text("Failed to read mca!")
-        for i in range(timeout):
-            __self__.updatebar(timeout-i)
-            time.sleep(1)
-        __self__.destroybar()
+def fwhm(data,i,win):
+    half = data[i]/2
+    lw, up = 0, 0
+    for j in range(i-win,i):
+        if data[j]>=half: 
+            lw = j-1
+    j=0
+    for j in range(i,i+win):
+        if data[j]<=half: 
+            up = j-1
+            break
+    if lw >= up: return 0,0,0
+    return lw, up, up-lw
 
 
 class datacube:
@@ -127,15 +180,15 @@ class datacube:
             __self__.name = name
             __self__.path = "No path, this cube was merged"
         else:
-            from SpecRead import samples_folder
+            from Constants import SAMPLES_FOLDER
             __self__.name = configuration["directory"]
-            __self__.path = os.path.join(samples_folder,__self__.name)
+            __self__.path = os.path.join(SAMPLES_FOLDER,__self__.name)
         logger.debug("Initializing cube file")
         
         try: specsize = getdata(getfirstfile()) 
         except: specsize = 0
-        __self__.datatypes = \
-                np.array(["{0}".format(dtypes[type]) for type in range(len(dtypes))])
+        __self__.datatypes = np.array(["{0}".format(
+            dtypes[type]) for type in range(len(dtypes))])
         if mode != "merge":
             __self__.dimension = getdimension()
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
@@ -143,7 +196,8 @@ class datacube:
                 specsize.shape[0]],dtype="float32",order='C')
             __self__.config = configuration
             __self__.calibration = getcalibration()
-            __self__.energyaxis = energyaxis()
+            __self__.energyaxis, __self__.gain = calibrate()
+            __self__.config["gain"] = __self__.gain
             __self__.mps = specsize.shape[0]
         __self__.ROI = {}
         __self__.hist = {}
@@ -156,7 +210,7 @@ class datacube:
         MPS stands for Maximum Pixel Spectrum """
         size = int(len(mps))
         shape = np.asarray(__self__.matrix.shape)
-        mps = cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
+        cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
 
     def stacksum(__self__):
 
@@ -168,6 +222,9 @@ class datacube:
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
                 __self__.sum_bg += __self__.background[x,y]
+
+    def fit_fano_and_noise(__self__):
+        __self__.FN = FN_fit(__self__.sum,__self__.gain)
     
     def write_sum(__self__):
 
@@ -246,8 +303,9 @@ class datacube:
         """ Writes (pickle) the datacube object to memory, if the cube already exists, it is
         replaced (updated) """ 
 
-        from SpecRead import output_path, cube_path, samples_folder
-        __self__.root = samples_folder
+        from SpecRead import output_path, cube_path
+        from Constants import SAMPLES_FOLDER
+        __self__.root = SAMPLES_FOLDER
         try: 
             if not os.path.exists(output_path):
                 logger.info("Creating outputh path {0}".forma(output_path))
@@ -262,24 +320,28 @@ class datacube:
 
     def digest_merge(__self__,bar=None):
         if bar != None: 
-            bar.progress["maximum"] = 4
+            bar.progress["maximum"] = 5
             bar.updatebar(1)
-            bar.update_text("1/4 Calculating MPS...")
+            bar.update_text("1/5 Calculating MPS...")
         mps = np.zeros([__self__.matrix.shape[2]],dtype="float32")
         datacube.MPS(__self__,mps)
         __self__.mps = mps
         if bar != None: 
-            bar.update_text("2/4 Calculating Stacksum...")
+            bar.update_text("2/5 Calculating Stacksum...")
             bar.updatebar(2)
         datacube.stacksum(__self__)
         datacube.write_sum(__self__)
         if bar != None:
-            bar.update_text("3/4 Creating densemap...")
+            bar.update_text("3/5 Finding Fano and Noise...")
             bar.updatebar(3)
+        datacube.fit_fano_and_noise(__self__)
+        if bar != None:
+            bar.update_text("4/5 Creating densemap...")
+            bar.updatebar(4)
         datacube.create_densemap(__self__)
         if bar != None:
-            bar.update_text("4/4 Writing to disk...")
-            bar.updatebar(4)
+            bar.update_text("5/5 Writing to disk...")
+            bar.updatebar(5)
         datacube.save_cube(__self__)
 
     def compile_cube(__self__):
@@ -326,6 +388,8 @@ class datacube:
         logger.debug("Calculating sum map...")
         __self__.progressbar.update_text("Calculating sum map...")
         datacube.create_densemap(__self__)
+        __self__.progressbar.update_text("Finding Noise and Fano...")
+        datacube.fit_fano_and_noise(__self__)
         logger.debug("Saving cube file to disk...")
         __self__.progressbar.update_text("Writing to disk...")
         __self__.progressbar.destroybar()
@@ -433,29 +497,20 @@ def refresh_position(a,b,length):
     actual=([currentx,currenty])
     return actual
 
-
-def function(ydata,x):
-    
-    """ Returns x index value of ydata array """
-    
-    return ydata[x]
-
 def dif2(ydata,x,gain):
     
     """ Complementary function to getdif2 """
     
-    value = (function(ydata, x + 2*gain) - 2*function(ydata, x + gain)\
-            + function(ydata, x)) / (gain * gain)
+    value = (ydata[x + 2*gain] - 2*ydata[x + gain] + ydata[x]) / (gain * gain)
     return value
 
-def getdif2(ydata,xdata,gain):
+def getdif2(ydata,gain):
     
     """ Returns the second differential of ydata """
     
-    xinterval = np.pad(xdata,2,'edge')
     yinterval = np.pad(ydata,2,'edge')
     dif2curve = np.zeros([len(yinterval)])
-    for x in range(len(xinterval)-2):
+    for x in range(len(yinterval)-2):
         difvalue = dif2(yinterval,x,1)
         dif2curve[x] = difvalue
     dif2curve = dif2curve[1:-3]
@@ -523,7 +578,7 @@ def sigma(energy):
     OUTPUT:
         float """
 
-    return math.sqrt(((NOISE/2.3548)**2)+(3.85*FANO*energy))
+    return math.sqrt(((Constants.NOISE/2.3548)**2)+(3.85*Constants.FANO*energy))
 
 def gaussianbuilder(channel,energy):
 
@@ -576,16 +631,20 @@ def setROI(lookup,xarray,yarray,localconfig):
     """
     
     lookup = int(lookup)
+    if lookup < 4800: w_tolerance = 2
+    elif lookup > 15000: w_tolerance = 3
+    else: w_tolerance = 1
     peak_corr = 0
+    peak_center = 0
+    shift = [0,0,0]
     isapeak = True
-    TOLERANCE = 1.10
     
     if localconfig.get('bgstrip') == 'SNIPBG':
         yarray  = savgol_filter(yarray,5,3)
     
     logger.debug("-"*15 + " Setting ROI " + "-"*15)
     
-    for peak_corr in range(2):
+    for peak_corr in range(3):
         logger.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
         logger.debug("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
@@ -593,41 +652,61 @@ def setROI(lookup,xarray,yarray,localconfig):
         highx = (lookup + (FWHM))/1000
         logger.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
         
+        # gets ROI indexes
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
-        lowx_idx = idx-3
+        lowx_idx = idx
         logger.debug("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx+3
+        highx_idx = idx
         logger.debug("highx_idx: %d" % highx_idx)
         
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
+        
+        if shift[0]*1000-lookup == 0: 
+            lw,hi = lowx_idx, highx_idx
+            try: peak_center, = np.where((ROIaxis == shift[0]))[0]
+            except: return 0,2,1,False
+            break
+        
         shift = shift_center(ROIaxis,ROIdata)
         logger.debug("Shift: {0}".format(shift))
         
-        if TOLERANCE*(-FWHM/2) < (shift[0]*1000)-lookup < TOLERANCE*(FWHM/2):
-            if (shift[0]*1000)-lookup == 0:
-                logger.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
+        # verify the distance from a higher peak
+        difference = abs((shift[0]*1000)-lookup)
+        if difference < (3+w_tolerance)*localconfig["gain"]*1000:
+            logger.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
+            logger.debug("GAP IS LESSER THAN {0}!".format((
+                3+w_tolerance)*localconfig["gain"]*1000))
+            peak_center = shift[2]
+            peak_corr += 1
             lookup = shift[0]*1000
-            peak_corr = 0
-            logger.debug("GAP IS LESSER THAN {0}!".format(TOLERANCE * FWHM/2))
+            if peak_corr == 2:
+                while xarray[idx] <= lowx:
+                    idx+=1
+                    lowx_idx = idx
+                    logger.debug("lowx_idx: %d" % lowx_idx)
+                while xarray[idx] <= highx:
+                    idx+=1
+                    highx_idx = idx
+                    logger.debug("highx_idx: %d" % highx_idx)
+            lw, hi = lowx_idx, highx_idx
         else: 
             logger.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
-            lookupcenter = int(len(ROIaxis)/2)
-            shift = (0,0,lookupcenter)
-            isapeak = False
+            #if peak_corr = 0 here, shift failed in the first attempt
+            if peak_corr == 0: 
+                isapeak = False
+                lw, hi = lowx_idx, highx_idx
+            return lw,hi,peak_center,isapeak
         
         logger.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     
-    lowx_idx = lowx_idx + 3
-    highx_idx = highx_idx - 3
-    peak_center = shift[2]-3
     logger.debug("peak_center = {0}, channels = {1} {2}, peakwidth= {3}"\
             .format(peak_center,lowx_idx,highx_idx,(highx_idx-lowx_idx))) 
-    return lowx_idx,highx_idx,peak_center,isapeak
+    return lw,hi,peak_center,isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
 
