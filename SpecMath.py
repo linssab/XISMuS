@@ -656,11 +656,11 @@ def setROI(lookup,xarray,yarray,localconfig):
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
-        lowx_idx = idx
+        lowx_idx = idx-1
         logger.debug("lowx_idx: %d" % lowx_idx)
         while xarray[idx] <= highx:
             idx+=1
-        highx_idx = idx
+        highx_idx = idx+1
         logger.debug("highx_idx: %d" % highx_idx)
         
         ROIaxis = xarray[lowx_idx:highx_idx]
@@ -687,12 +687,12 @@ def setROI(lookup,xarray,yarray,localconfig):
             if peak_corr == 2:
                 while xarray[idx] <= lowx:
                     idx+=1
-                    lowx_idx = idx
-                    logger.debug("lowx_idx: %d" % lowx_idx)
+                lowx_idx = idx-1
+                logger.debug("lowx_idx: %d" % lowx_idx)
                 while xarray[idx] <= highx:
                     idx+=1
-                    highx_idx = idx
-                    logger.debug("highx_idx: %d" % highx_idx)
+                highx_idx = idx+1
+                logger.debug("highx_idx: %d" % highx_idx)
             lw, hi = lowx_idx, highx_idx
         else: 
             logger.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
