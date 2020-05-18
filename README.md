@@ -40,7 +40,7 @@ If xraylib is not installed, the program will still run, but chemical mapping wi
 Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
 <br>
 
-[xraylib]: http://lvserver.ugent.be/xraylib/xraylib-3.3.0-win64.exe
-[x64]: https://mega.nz/#!JGwRkDza!sGN7rOzP-bit8-WnHspeWDpNnZgZVrE7zKv7bHt87UE
-[x86]: https://mega.nz/#!QaxSTKrT!IZvNB1ut1TkK0dVtvmoEZL1o42LfXCSDWIGElRhN-to
-[UserGuide]: https://mega.nz/#!UHRUEYYQ!7PeijTr0P63wUXZQJ9U1xAGyFaLE-8mpyvUEKX50EME
+[xraylib]: http://lvserver.ugent.be/xraylib/
+[x64]: https://mega.nz/file/MexBCYDb#rNjMfw1mg-otB9y3pvC7ccIV5re2i3yRtq3gfRM-cg0
+[x86]: https://mega.nz/file/5Gpn1QyY#eGkWrn-qRgqWlikrwZNg6gTp-RK-j6bmySeVyVPHO-0
+[UserGuide]: [UserGuide]: https://mega.nz/file/Ebon0YhS#u6HiWwlbOa4AkEte6UxvEtB18btDiK97Au8xIToAToU
