@@ -2143,7 +2143,22 @@ class Samples:
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
+                                        
+            """ Verify packed cubes """
 
+            output_folder = os.path.join(SpecRead.__PERSONAL__,"output")
+            outputs = [folder for folder in os.listdir(output_folder) \
+                    if os.path.isdir(os.path.join(output_folder,folder))]
+            for folder in outputs:
+                cubes = [cube for cube in os.listdir(os.path.join(output_folder,folder)) \
+                        if cube.lower().endswith('.cube')]
+                if folder not in __self__.samples_database: 
+                    if cubes != []: 
+                        # sampes_database keys hold the mca prefixes
+                        __self__.samples_database[folder] = "---"
+                        __self__.mcacount[folder] = 0
+                        __self__.mca_extension[folder] = "---"
+        
             """ Try looking for training_data """
 
             folder = "Example Data"
@@ -2199,21 +2214,6 @@ class Samples:
                         __self__.mcacount[folder] = len(files)
                         __self__.mca_extension[folder] = mca_extension
                         __self__.mca_indexing[folder] = indexing
-                            
-            """ Verify packed cubes """
-
-            output_folder = os.path.join(SpecRead.__PERSONAL__,"output")
-            outputs = [folder for folder in os.listdir(output_folder) \
-                    if os.path.isdir(os.path.join(output_folder,folder))]
-            for folder in outputs:
-                cubes = [cube for cube in os.listdir(os.path.join(output_folder,folder)) \
-                        if cube.lower().endswith('.cube')]
-                if folder not in __self__.samples_database: 
-                    if cubes != []: 
-                        # sampes_database keys hold the mca prefixes
-                        __self__.samples_database[folder] = "---"
-                        __self__.mcacount[folder] = 0
-                        __self__.mca_extension[folder] = "---"
 
         except IOError as exception:
             __self__.splash_kill()
