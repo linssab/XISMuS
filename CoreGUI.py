@@ -1990,10 +1990,71 @@ class Samples:
         logger.info("Loading sample list...")
         skip_list = []
         indexing = None
+        mca_prefix = None
+        __self__.samples_database = {}
+
         try:
-            mca_prefix = None
-            __self__.samples_database = {}
+        
+            """ Try looking for training_data """
+
+            folder = "Example Data"
+            new_path = os.path.join(SpecRead.__PERSONAL__,folder)
             
+            if os.path.exists(new_path):
+                examples = [folder for folder in os.listdir(new_path) if \
+                        os.path.isdir(os.path.join(new_path,folder))]
+                for folder in examples:
+                    files = [name for name in os.listdir(os.path.join(new_path,folder)) \
+                            if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                    extension = files[:]
+                    for item in range(len(files)): 
+                        # displays file being read on splash screen
+                        __self__.filequeue.set("{}".format(files[item]))
+                        __self__.label2.update()
+                        try: __self__.splash.update_idletasks()
+                        except: __self__.popup.update_idletasks()
+                        finally: 
+                            try:
+                                files[item], extension[item] = \
+                                        files[item].split(".",1)[0],\
+                                        files[item].split(".",1)[1]
+
+                                """ Gets rid of file numbering """
+                                for i in range(len(files[item])):
+                                    if not files[item][-1].isdigit(): break
+                                    if files[item][-i].isdigit() and \
+                                            not files[item][-i-1].isdigit(): 
+                                        if indexing == None:
+                                            indexing = files[item][-i:]
+                                        files[item] = files[item][:-i]
+                                        break
+                            except: pass
+                    files_set = set(files)
+                    extension_set = set(extension)
+                    counter = dict((x,files.count(x)) for x in files_set)
+                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                    mca_prefix_count = 0
+                    mca_extension_count = 0
+                    # counts mca files and stores the prefix string and no. of files
+                    for counts in counter:
+                        if counter[counts] > mca_prefix_count:
+                            mca_prefix = counts
+                            mca_prefix_count = counter[counts]
+                    for ext in counter_ext:
+                        if counter_ext[ext] > mca_extension_count:
+                            mca_extension = ext
+                            mca_extension_count = counter_ext[ext]
+                    # creates a dict key only if the numer of mca's is larger than 20.
+                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                        __self__.samples_database[folder] = mca_prefix
+                        __self__.mcacount[folder] = len(files)
+                        __self__.mca_extension[folder] = mca_extension
+                        __self__.mca_indexing[folder] = indexing
+
+        except: logger.info("Could not locate Training Data.")
+
+        try:
+                        
             """ Lists all possible samples """
             samples = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
                     if os.path.isdir(os.path.join(Constants.SAMPLES_FOLDER,name))]
@@ -2067,6 +2128,17 @@ class Samples:
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
+
+        except IOError as exception:
+            if exception.__class__.__name__ == "FileNotFoundError":
+                logger.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
+            elif exception.__class__.__name__ == "PermissionError":
+                logger.info("Cannot load samples. Error {}.".format(
+                    exception.__class__.__name__))
+                messagebox.showerror(exception.__class__.__name__,
+                        "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(Constants.SAMPLES_FOLDER))
+            else: pass
+        try:
 
             """ After trying to look at every folder under the folder selected, 
             priority is given to the actual selected folder """
@@ -2143,6 +2215,16 @@ class Samples:
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
+        
+        except IOError as exception:
+            if exception.__class__.__name__ == "FileNotFoundError":
+                logger.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
+            elif exception.__class__.__name__ == "PermissionError":
+                logger.info("Cannot load samples. Error {}.".format(
+                    exception.__class__.__name__))
+            else: pass
+
+        try:
                                         
             """ Verify packed cubes """
 
@@ -2159,72 +2241,14 @@ class Samples:
                         __self__.mcacount[folder] = 0
                         __self__.mca_extension[folder] = "---"
         
-            """ Try looking for training_data """
-
-            folder = "Example Data"
-            new_path = os.path.join(SpecRead.__PERSONAL__,folder)
-            
-            if os.path.exists(new_path):
-                examples = [folder for folder in os.listdir(new_path) if \
-                        os.path.isdir(os.path.join(new_path,folder))]
-                for folder in examples:
-                    files = [name for name in os.listdir(os.path.join(new_path,folder)) \
-                            if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
-                    extension = files[:]
-                    for item in range(len(files)): 
-                        # displays file being read on splash screen
-                        __self__.filequeue.set("{}".format(files[item]))
-                        __self__.label2.update()
-                        try: __self__.splash.update_idletasks()
-                        except: __self__.popup.update_idletasks()
-                        finally: 
-                            try:
-                                files[item], extension[item] = \
-                                        files[item].split(".",1)[0],\
-                                        files[item].split(".",1)[1]
-
-                                """ Gets rid of file numbering """
-                                for i in range(len(files[item])):
-                                    if not files[item][-1].isdigit(): break
-                                    if files[item][-i].isdigit() and \
-                                            not files[item][-i-1].isdigit(): 
-                                        if indexing == None:
-                                            indexing = files[item][-i:]
-                                        files[item] = files[item][:-i]
-                                        break
-                            except: pass
-                    files_set = set(files)
-                    extension_set = set(extension)
-                    counter = dict((x,files.count(x)) for x in files_set)
-                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
-                    mca_prefix_count = 0
-                    mca_extension_count = 0
-                    # counts mca files and stores the prefix string and no. of files
-                    for counts in counter:
-                        if counter[counts] > mca_prefix_count:
-                            mca_prefix = counts
-                            mca_prefix_count = counter[counts]
-                    for ext in counter_ext:
-                        if counter_ext[ext] > mca_extension_count:
-                            mca_extension = ext
-                            mca_extension_count = counter_ext[ext]
-                    # creates a dict key only if the numer of mca's is larger than 20.
-                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
-                        __self__.samples_database[folder] = mca_prefix
-                        __self__.mcacount[folder] = len(files)
-                        __self__.mca_extension[folder] = mca_extension
-                        __self__.mca_indexing[folder] = indexing
-
         except IOError as exception:
-            __self__.splash_kill()
             if exception.__class__.__name__ == "FileNotFoundError":
                 logger.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
             elif exception.__class__.__name__ == "PermissionError":
                 logger.info("Cannot load samples. Error {}.".format(
                     exception.__class__.__name__))
-                messagebox.showerror(exception.__class__.__name__,
-                        "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(Constants.SAMPLES_FOLDER))
             else: pass
+
         __self__.splash_kill()
        
 
