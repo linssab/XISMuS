@@ -40,6 +40,8 @@ CompoundList = {
 WeightList = {
 
         'Au24'          :{'Au':0.999,'Ag':0.001},
+        'AuAg23.5'      :{'Au':0.985,'Ag':0.015},
+        'AuCu23.5'      :{'Au':0.985,'Cu':0.015},
         'FibulaGold'    :{'Au':0.88,'Hg':0.12},
         'Tumbaga'       :{'Au':0.12,'Ag':0.16,'Cu':0.72},
         'SardinianCu'   :{'Cu':0.90,'Sn':0.081,'Pb':0.019},
