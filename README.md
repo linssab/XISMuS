@@ -15,7 +15,7 @@ If xraylib is not installed, the program will still run, but chemical mapping wi
 Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
 
 ## From Source
-If you rather run it from the source, straight inside your local Python environment interpreter, simply fork or clone the repository.<br>
+If you rather run it from the source, on your local Python environment interpreter, simply fork or clone the repository.<br>
 <br>
 `git clone https://github.com/linssab/XISMuS`<br>
 <br>
@@ -24,7 +24,7 @@ Be sure to have all the required Python modules installed! They are listed in th
 #### Dependencies
 
 To run it within a Python interpreter, we recommend you have Python 3.7 installed and the following packages:<br>
-The packages whose versions are mentioned are the stable versions working with XISMuS. Numba, for example, has some issues with opencv and may cause JIT funtions to malfunction.<br>
+The packages whose versions are mentioned are the stable versions working with XISMuS. Numba, for example, has versions that may raise  issues with opencv and cause JIT funtions to malfunction.<br>
 * numpy _v 1.18.1_<br>
 * numba _v 0.45.1_<br>
 * llvmlite _v 0.31_<br>
