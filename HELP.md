@@ -18,7 +18,7 @@ This tutorial makes use of the Example Data provided with the distribution packa
 ## Loading Sample <a name="loadingSample"></a>
 
 #### Automatic detection
-XISMuS automatically looks for *.mca and *.txt files inside the **samples folder**. By default, it is "../My Documents/XISMuS/Example Data". When launching it from a fresh start, the Example Data should be automatically identified. If, not, click on the "Toolbox" dropdown menu and select "Change samples folder...", this will change the default lookup folder. There are other ways to load your data, even if XISMuS doesn't recognize the spectra name structure. For that, please refer to the User Manual also available for download separately **[here](https://mega.nz/#!UHRUEYYQ!7PeijTr0P63wUXZQJ9U1xAGyFaLE-8mpyvUEKX50EME)**.<br>
+XISMuS automatically looks for *.mca and *.txt files inside the **samples folder**. By default, it is "../My Documents/XISMuS/Example Data". When launching it from a fresh start, the Example Data should be automatically identified. If, not, click on the "Toolbox" dropdown menu and select "Change samples folder...", this will change the default lookup folder. There are other ways to load your data, even if XISMuS doesn't recognize the spectra name structure. For that, please refer to the User Manual also available for download separately **[here](https://mega.nz/file/Ebon0YhS#u6HiWwlbOa4AkEte6UxvEtB18btDiK97Au8xIToAToU)**.<br>
 
 #### Selecting from list
 To load a sample and compile it (configure and create its *.cube file), click on "Load Sample". The "Sample List" panel below should come up showing the two example data provided.<br>
