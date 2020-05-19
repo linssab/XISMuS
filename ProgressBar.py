@@ -1,3 +1,10 @@
+#################################################################
+#                                                               #
+#          PROGRESS BARS AND LOADING MODULE                     #
+#                        version: 1.0.0                         #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
 from tkinter import *
 from tkinter import ttk
 

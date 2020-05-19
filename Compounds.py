@@ -63,14 +63,11 @@ def ListDatabase():
 
 class compound:
     
-    """ Compound class object. """
-    """ 
-    Methods:
+    """ Methods:
     set_compound(*args, ctype=None, mode="by_atom", name="new_compound")
     set_attenuation(energy)
     mix(proportion, compounds)
-    Attributes: name, mass, chem, density, weight, origin, tot_att, lin_att
-    """
+    Attributes: name, mass, chem, density, weight, origin, tot_att, lin_att """
 
     def __init__(__self__):
         __self__.chem = {}
@@ -84,6 +81,9 @@ class compound:
 
         """ Creates the compound according to input. The compound can be created
         manually or from the database; from a weights fraction list or atom count list.
+        
+        -------------------------------------------------------------------------------
+
         INPUT:
             *args; compound setup, string or 2 same-sized lists
             ctype; string (optional)
@@ -110,6 +110,9 @@ class compound:
     def create_compound(__self__,atoms,elements):
         
         """ Sets the compound attributes with a 2 list input, mode='by_atom'.
+        
+        ---------------------------------------------------------------------
+
         INPUT:
             atoms; 1D int list
             elements; 1D string list """
@@ -124,6 +127,9 @@ class compound:
     def create_compound_by_weight(__self__,ratios,elements):
         
         """ Sets the compound attributes with a 2 list input, mode='by_weight'.
+
+        -----------------------------------------------------------------------
+
         INPUT:
             atoms; 1D float list
             elements; 1D string list """
@@ -202,6 +208,9 @@ class compound:
 
         """ Mixes two compound class objects proportionally. This resets the attributes
         according to the mixing outcomes.
+        
+        -------------------------------------------------------------------------------
+
         INPUT:
             proportion; 1D float list
             compounds; 1D compound class objects list 
@@ -238,6 +247,9 @@ class compound:
         """ Sets the linear and total attenuation coefficients according to input.
         Values are taken from xraylib (Brunetti et al., 2004), which is constantly
         updated.
+
+        --------------------------------------------------------------------------
+
         INPUT:
             energy; int or string """
 

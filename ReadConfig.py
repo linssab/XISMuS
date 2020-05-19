@@ -51,6 +51,9 @@ def check_config():
 def getconfig():
     
     """ Extracts all configuration information in Config.cfg
+
+    --------------------------------------------------------
+
     OUTPUT:
         modesdict; dict
         CalParam; 2D-list """

@@ -36,9 +36,8 @@ logger.info("Samples path: {0}".format(Constants.SAMPLES_FOLDER))
 
 def getfirstfile():
     
-    """ Returns global variable.
-    This function is called to get the last updated value of
-    Constants.FIRSTFILE_ABSPATH, without importing the whole module """
+    """ This function is called to get the last updated value of
+    Constants.FIRSTFILE_ABSPATH """
     
     return Constants.FIRSTFILE_ABSPATH
 
@@ -117,6 +116,9 @@ def RatioMatrixReadFile(ratiofile):
 
     """ Reads a ratio file created by any mapping module and transforms into
     a 2D-array.
+
+    ------------------------------------------------------------------------
+
     INPUT:
         ratiofile; path
     OUTPUT:
@@ -130,7 +132,8 @@ def RatioMatrixReadFile(ratiofile):
             MatrixArray[i] = MatrixArray[i].split()
         for j in range(len(MatrixArray)):
             for k in range(len(MatrixArray[j])):
-                if MatrixArray[j][k].isdigit() == True: MatrixArray[j][k]=int(MatrixArray[j][k])
+                if MatrixArray[j][k].isdigit() == True: 
+                    MatrixArray[j][k]=int(MatrixArray[j][k])
                 else: MatrixArray[j][k]=1
         if len(MatrixArray[-1]) == 0: MatrixArray[-1]=[1, 1, 1, 1]
     MatrixArray = np.asarray(MatrixArray)
@@ -161,6 +164,9 @@ def RatioMatrixReadFile(ratiofile):
 def getheader(mca):
 
     """ Gets PMCA spectra file (*.mca) header
+    
+    -----------------------------------------
+
     INPUT:
         mca; path
     OUTPUT:
@@ -205,7 +211,8 @@ def getcalibration():
             line = mca_file.readline()
         mca_file.close()
         if param == []: 
-            pop_error("Calibration Error","Could not fetch calibration from source! Retry with manual calibration")
+            pop_error("Calibration Error",
+                    "Could not fetch calibration from source! Retry with manual calibration")
             raise ValueError("Couldn't fetch calibration from source!")
         for parameter in param:
             if len(param) <= 1: 
@@ -225,6 +232,9 @@ def getcalibration():
 def getdata(mca):
     
     """ Extract the data contained in spectrum files 
+
+    ------------------------------------------------ 
+        
     INPUT:
         mca; path
     OUTPUT:
@@ -333,6 +343,9 @@ def getgain():
 def updatespectra(specfile,size,from_list=False):
 
     """ Returns the next spectrum file to be read
+
+    ---------------------------------------------
+
     INPUT:
         specfile; string
         size; int
@@ -366,6 +379,10 @@ def updatespectra(specfile,size,from_list=False):
 def getdimension():
 
     """ Gets the sample image dimension
+    from colonneXrighe file
+
+    -----------------------------------
+
     OUTPUT:
         x; int
         y; int
@@ -407,21 +424,25 @@ def getdimension():
 def dump_ratios(maps_list,element_list):
 
     """ Writes all ratio files to disk 
+
+    ----------------------------------
+
     INPUT:
         maps_list; nD-array (element(string), line([0] or [0,1]), 2D-array)
-        element_list; 1D string array 
-    OUTPUT: 0 """
+        element_list; 1D string array """
 
     # this is to work with multiprocessing Mapping mode
     
     ratiofiles = ["" for x in range(len(element_list))]
     for Element in range(len(element_list)): 
-        ratiofiles[Element] = str(os.path.join(output_path,"{1}_ratio_{0}.txt".format(element_list[Element],Constants.DIRECTORY)))
+        ratiofiles[Element] = str(os.path.join(
+            output_path,"{1}_ratio_{0}.txt".format(
+                element_list[Element],Constants.DIRECTORY)))
         r_file = open(ratiofiles[Element],'w+')
         r_file.readline()
         r_file.truncate()
-        r_file.write("-"*10 + " Counts of Element {0} "\
-                .format(element_list[Element]) + 10*"-" + '\n')
+        r_file.write("-"*10 + " Counts of Element {0} ".format(
+            element_list[Element]) + 10*"-" + '\n')
         r_file.write("row\tcolumn\tline1\tline2\tratio\n")
         r_file.close() 
 

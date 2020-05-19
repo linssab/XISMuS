@@ -28,6 +28,10 @@ from tkinter import ttk
 
 
 def select_lines(element,ratio):
+    
+    """ Returns the theoretical peak position (in eV)
+    for the alpha and beta energy macros """
+
     element_idx = EnergyLib.ElementList.index(element)
     kaenergy = EnergyLib.Energies[element_idx]*1000
     kbenergy = EnergyLib.kbEnergies[element_idx]*1000
@@ -44,18 +48,21 @@ def select_lines(element,ratio):
 
 def grab_simple_roi_image(cube,lines,custom_energy=False):
     
-    '''
-    Prepare the variables to pass into the matrix slicer
-    using SpecMath function setROI it calculates the start and
-    end position of the peaks in lines variable
-    The position is read from the stacksum derived spectrum
     
-    idea: verify the existence of the peak in MPS AND stacksum
-    '''
+    """ Prepare the variables to pass into the matrix slicer.
+    Using SpecMath function setROI it calculates the start and
+    end position of the peaks in lines variable
+    The position is read from the MPS spectrum """
+    
     results = []
     ROI = np.zeros(cube.energyaxis.shape[0])
     
     if custom_energy == True:
+        
+        ####################################################
+        # slices the mtrix for a custom energy range input #
+        ####################################################
+
         indexes = [0,0]
         custom_map = np.zeros([cube.dimension[0],cube.dimension[1]])
         idx = 0
@@ -71,12 +78,19 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
         results.append(custom_map)
     
     else:
-        # sets up the indexes to slice
+
+        ################################
+        # sets up the indexes to slice #
+        ################################
+
         ka_map = np.zeros([cube.dimension[0],cube.dimension[1]])
         kb_map = np.zeros([cube.dimension[0],cube.dimension[1]])
-        
         ka_idx = SpecMath.setROI(lines[0],cube.energyaxis,cube.mps,cube.config)
-        # verifies beta line for the element
+        
+        ######################################
+        # verifies beta line for the element #
+        ######################################
+
         if cube.config["ratio"] == True:
             kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.mps,cube.config)
             if kb_idx[3] == False and ka_idx[3] == False:
@@ -86,22 +100,27 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
         else:
             pass
         
-        # follows the execution and slice the data
+        #####################
+        # slices the matrix #
+        #####################
+
         slice_matrix(cube.matrix,cube.background,ka_map,ka_idx,ROI)
         if cube.config["ratio"] == True:
             if kb_idx[3] == True:
                 slice_matrix(cube.matrix,cube.background,kb_map,kb_idx,ROI)
-        
-        # append results
+
+        ##################
+        # append results #
+        ##################
+
         results.append(ka_map)
         results.append(kb_map)
     return results, ROI
 
-#@jit
 def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
-    """
-    Slices the matrix
-    """
+
+    """ Slices the matrix """
+
     c = 0
     for x in range(matrix.shape[0]):
         for y in range(matrix.shape[1]):
@@ -114,6 +133,10 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
     return new_image
 
 def getpeakmap(element_list,datacube):
+
+    """ Iterates the datacube objects and return a matrix with 
+    shape: [X][Y][MACROS][ELEMENT] """
+
     timer = time.time()
     imagsize = datacube.dimension
     imagex = imagsize[0]
@@ -146,21 +169,12 @@ def getpeakmap(element_list,datacube):
     usedif2 = True
     ratiofiles = ['' for x in range(len(element_list))]
 
-    ######################################################
-    # INITIALIZE CONTROL VARIABLES CUMSUM AND CUMSUM_RAW #
-    ######################################################
-    #CUMSUM = np.zeros([len(energyaxis)])
-    #CUMSUM_RAW = np.zeros([len(energyaxis)])
-
-    ######################################################
 
     if element_list[0] in EnergyLib.ElementList:
         logger.info("Started acquisition of {0} map(s)".format(element_list))
         
-        ####### this is for debug mode #######
         currentspectra = Constants.FIRSTFILE_ABSPATH
         debug = False 
-        ####### to register the NAME of the file #######
 
         ##############################
         # INITIALIZE OTHER VARIABLES #
@@ -214,6 +228,7 @@ def getpeakmap(element_list,datacube):
         ################################
         #  SETS SIMPLE ROI PARAMETERS  #
         ################################
+
         stacksum = datacube.sum
         conditional_ratio = np.zeros([len(element_list)])
 
@@ -286,31 +301,6 @@ def getpeakmap(element_list,datacube):
                     elif dif2[i] > -1: dif2[i] = 0
             else: dif2 = np.zeros([specdata.shape[0]])
 
-            ############################
-            #  VERIFIES THE PEAK SIZE  #
-            # EXPERIMENTAL FOR NRMLIZE #
-            ############################
-            
-            #if normalize == True:
-            #    ymax = specdata.max()
-            #    RAW_list = specdata.tolist()
-            #    ymax_idx = RAW_list.index(ymax)
-            #    LOCAL_MAX = [ymax, energyaxis[ymax_idx], ymax_idx,ymax_spec]
-            #    FWHM = 2.3548 * SpecMath.sigma(LOCAL_MAX[1]*1000)
-            #    current_peak_factor = (ymax-background[ymax_idx])*(2*FWHM)
-            #    
-            #    if current_peak_factor > max_peak_factor:
-            #        max_peak_factor = current_peak_factor
-            #        target = 0
-            #        while EnergyLib.Energies[target] <= LOCAL_MAX[1]:
-            #            ymax_element = EnergyLib.ElementList[target]
-            #            target+=1
-            #        ymax_index = EnergyLib.ElementList.index(ymax_element)
-            #        ymax_ka = KaElementsEnergy[ymax_index]
-            #        ymax_kb = KbElementsEnergy[ymax_index]
-            #        if debug == True: ymax_spec = currentspectra
-                    
-            #############################
 
             ###################################
             #  CALCULATE NET PEAKS AREAS AND  #
@@ -474,13 +464,12 @@ def getpeakmap(element_list,datacube):
 
 def getdensitymap(datacube):
     
-    timer = time.time()
     ##########-getdensitymap-############
     #   RETUNRS A 2D-ARRAY WITH TOTAL   #
     #   COUNTS PER PIXEL.               #
     #####################################
 
-    #print("BG mode: {0}".format(datacube.config.get('bgstrip')))
+    timer = time.time()
     logger.info("Started acquisition of density map")
     
     density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]],dtype="int32")

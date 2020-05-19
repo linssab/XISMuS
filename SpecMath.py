@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.0.0                         #
+#                        version: 1.0.0 - May - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -55,9 +55,13 @@ def FN_set(F, N):
 
 def digest_psdinv(y,energies):
     
-    """ y are the calculated FWHM
-    energies are the corresponding energies for the corresponding 
-    FWHM peaks """
+    """ -- y is an array with the measured FWHM.
+    -- energies is an array with the corresponding energies for the corresponding 
+    FWHM peaks
+
+    This function performs a pseudo inverse regression to equation 1 (see OSP article) 
+    with singular value decomposition (numpy.pinv()) to find FANO and NOISE values
+    that satisfies the equation """
 
     x = [(2.3548**2)*3.85*en for en in energies]
     Y = np.asarray([i**2 for i in y], dtype="float32")
@@ -68,6 +72,14 @@ def digest_psdinv(y,energies):
 
 def digest_lstsq(y,energies):
     
+    """ -- y is an array with the measured FWHM.
+    -- energies is an array with the corresponding energies for the corresponding 
+    FWHM peaks
+
+    This function performs a least-squares fitting to equation 1 (see OSP article) 
+    to find FANO and NOISE values that satisfies it """
+
+
     x = [(2.3548**2)*3.85*en for en in energies]
     Y = np.asarray([i**2 for i in y], dtype="float32")
     X = np.vstack([np.ones(len(x)), x]).T
@@ -76,6 +88,23 @@ def digest_lstsq(y,energies):
     return abs(C)
 
 def FN_fit(specdata,gain):
+
+    """ Finds suitable FANO and NOISE factors to the input spectrum
+    INPUT:
+        specdata; 1D-array
+        gain; calibration gain (eV)
+    OUTPUT:
+        1D-tuple (F, N) 
+        
+        --------------------------------------------------------
+
+    The fit is performed by changing the tophat filter parameters
+    (window and tolerance to the variance) iteratively. This is 
+    performed to automate the function to any input spectrum, since 
+    different parameters work differently for each spectrum profile.
+    The output is the averaged value, unless a reasonable value
+    (between 0.040 and 0.240) is found for the FANO factor. """
+
     F, N = 0, 0
     i, x = 0, 200
     avg_F, avg_N = 0,0
@@ -104,6 +133,10 @@ def FN_fit(specdata,gain):
     return F, N
 
 def FN_iter(data,gain,v,w,r):
+
+    """ Verifies if the peak detected is greater than the 
+    variance. r is a tolerance factor that multiplies the variance coef. """
+
     th, delt, pks = tophat(data,v,w)
     widths = []
     energies = []
@@ -114,19 +147,36 @@ def FN_iter(data,gain,v,w,r):
             widths.append(width*gain*1000)
             energies.append(gain*i*1000)
     N, F = digest_psdinv(widths,energies)
-    #print(N**.5,F)
-    #if N > 250 or 0.001 <= F <= 1: 
-    #    logger.warning("Fano and Noise probably misfitted. Values obtained: F:{}, N:{}. Using default values".format(F,N**.5))
-    #    return 80, 0.114
     return F, N**.5
 
-def hk_(k,v,w):
-    if -v-(w/2) <= k < -w/2: return -1/(2*v)
-    elif -w/2 <= k <= w/2: return 1/w
-    elif w/2 < k <= v+(w/2): return -1/(2*v)
-    else: return 0
 
 def tophat(y,v,w):
+
+
+    """ Applies a tophat filter to a 1D-array following the recipe
+    given reference below:
+    [1] Van Grieken, R.E.; Markowicz, A.A. Handbook of X-ray spectrometry, 
+    Marcel Dekker, Inc., 2002.
+    
+    --------------------------------------------------------------------
+
+    INPUT:
+        y; 1D-array
+        v; side window width (int)
+        w; central window width (int)
+    OUTPUT:
+        new_y; filtered pectrum (1D-array)
+        delta; variance (1D-array)
+        peaks; identified peaks indexes (1D-list)
+    """
+    
+    def hk_(k,v,w):
+
+        if -v-(w/2) <= k < -w/2: return -1/(2*v)
+        elif -w/2 <= k <= w/2: return 1/w
+        elif w/2 < k <= v+(w/2): return -1/(2*v)
+        else: return 0
+
     new_y = np.zeros([y.shape[0]])
     delta = np.zeros([y.shape[0]])
     peaks = []
@@ -145,6 +195,19 @@ def tophat(y,v,w):
     return new_y, delta, peaks
 
 def fwhm(data,i,win):
+
+    """ Finds the indexes where half the peaks' height is
+    found for peak located at index i 
+    
+    INPUT:
+        data; 1D-array
+        i; peak index
+        win; tolearnce window
+    OUTPUT:
+        lw; lower index
+        up; upper index
+        up-lw; peak width """
+
     half = data[i]/2
     lw, up = 0, 0
     for j in range(i-win,i):
@@ -164,14 +227,6 @@ class datacube:
     """ Cube class. Comprises all data read from spectra, elemental maps created,
     background extracted (as a separate xy matrix), derived spectra, image size, image
     dimension, datacube configuration, calibrated energy axis """
-    
-    """
-    Methods:
-    compile_cube()
-    pack_element(image, element_name, line)
-    unpack_element(element_name, line)
-    check_packed_elements()
-    """
 
     ndim = 0
     
@@ -208,6 +263,7 @@ class datacube:
         """ Read all data in datacube.matrix and returns a spectrum where each index
         is the maximum value found in the matrix for that same index.
         MPS stands for Maximum Pixel Spectrum """
+
         size = int(len(mps))
         shape = np.asarray(__self__.matrix.shape)
         cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
@@ -519,13 +575,14 @@ def getdif2(ydata,gain):
 def savgol_filter(y, window_size, order, deriv=0, rate=1):
    
     """ This function was taken from https://gist.github.com/krvajal 
-    and compared to scipy.signal package, an affidable and renown package
-    for signal analysis. """
-    """ References
-    .. [1] A. Savitzky, M. J. E. Golay, Smoothing and Differentiation of
+    and compared to scipy.signal package, a reliable widely known package
+    for signal analysis.
+
+    References
+    [1] A. Savitzky, M. J. E. Golay, Smoothing and Differentiation of
        Data by Simplified Least Squares Procedures. Analytical
        Chemistry, 1964, 36 (8), pp 1627-1639.
-    .. [2] Numerical Recipes 3rd Edition: The Art of Scientific Computing
+    [2] Numerical Recipes 3rd Edition: The Art of Scientific Computing
        W.H. Press, S.A. Teukolsky, W.T. Vetterling, B.P. Flannery
        Cambridge University Press ISBN-13: 9780521880688 """
 
@@ -572,7 +629,14 @@ def getstackplot(datacube,mode=None):
 
 def sigma(energy):
 
-    """ Calculates sigma value based on energy input (Sole et al., 2007) 
+    """ Calculates sigma value based on energy input 
+    Reference:
+    [1] V.A. Solé, E. Papillon, M. Cotte, Ph. Walter, J. Susini, A multiplatform 
+    code for the analysis of energy-dispersive X-ray fluorescence spectra, 
+    Spectrochim. Acta Part B 62 (2007) 63-68. 
+    
+    ---------------------------------------------------------------------
+
     INPUT:
         energy; electronvolts - eV (int)
     OUTPUT:
@@ -582,12 +646,7 @@ def sigma(energy):
 
 def gaussianbuilder(channel,energy):
 
-    """ Calculates point in gaussian (Sole et al., 2007) 
-    INPUT:
-        channel; int
-        energy electronvolts - eV (int) 
-    OUTPUT:
-        float """
+    """ Deprecated, to be removed in future updates """
 
     sigma = sigma(energy)
     chEnergy = (channel*GAIN + B)*1000
@@ -595,13 +654,8 @@ def gaussianbuilder(channel,energy):
     return A*(math.exp(-(((energy-chEnergy)**2)/(2*(sigma**2)))))
 
 def creategaussian(channels,energy):
-
-    """ Creates a gaussian distribution according to input channel list.
-    INPUT:
-        channels; 1D-list or int
-        energy; electronvolts - eV (int)
-    OUTPUT:
-        Gaussian; 1D-list """
+    
+    """ Deprecated, to be removed in future updates """
 
     gaussian = np.zeros([channels])
     if isinstance(energy,int):
@@ -626,8 +680,9 @@ def setROI(lookup,xarray,yarray,localconfig):
         high_idx; int
         peak_center; int
         isapeak; bool
-        - indexes corresponding to 2*FWHM of a gaussian centered
-        at eV energy position (int, int, int, bool) 
+    
+    - indexes correspond to 2*FWHM of a gaussian centered
+    at eV energy position (int, int, int, bool) 
     """
     
     lookup = int(lookup)
@@ -651,8 +706,11 @@ def setROI(lookup,xarray,yarray,localconfig):
         lowx = (lookup - (FWHM))/1000
         highx = (lookup + (FWHM))/1000
         logger.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
-        
-        # gets ROI indexes
+
+        #################### 
+        # gets ROI indexes #
+        #################### 
+
         idx = 0
         while xarray[idx] <= lowx:
             idx+=1
@@ -674,8 +732,11 @@ def setROI(lookup,xarray,yarray,localconfig):
         
         shift = shift_center(ROIaxis,ROIdata)
         logger.debug("Shift: {0}".format(shift))
-        
-        # verify the distance from a higher peak
+       
+        ##########################################
+        # verify the distance from a higher peak #
+        ##########################################
+
         difference = abs((shift[0]*1000)-lookup)
         if difference < (3+w_tolerance)*localconfig["gain"]*1000:
             logger.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
@@ -696,7 +757,11 @@ def setROI(lookup,xarray,yarray,localconfig):
             lw, hi = lowx_idx, highx_idx
         else: 
             logger.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
-            #if peak_corr = 0 here, shift failed in the first attempt
+            
+            ############################################################
+            # if peak_corr = 0 here, shift failed in the first attempt #
+            ############################################################
+
             if peak_corr == 0: 
                 isapeak = False
                 lw, hi = lowx_idx, highx_idx
@@ -710,8 +775,10 @@ def setROI(lookup,xarray,yarray,localconfig):
 
 def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
 
-    """
-    Calculates the netpeak area of a given lookup energy.
+    """ Calculates the netpeak area of a given lookup energy.
+
+    ---------------------------------------------------------
+
     INPUT:
         lookup; int (theoretical peak center eV energy)
         data; np.array (counts)
@@ -723,8 +790,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
         dif2; np.array (second differential of counts)
     OUTPUT:
         area; float
-        idx; list (containing setROI function outputs)
-    """
+        idx; list (containing setROI function outputs) """
 
     Area = 0
    
@@ -745,6 +811,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     ##########################
     # 2ND DIFFERENTIAL CHECK #
     ##########################
+
     if usedif2 == True and isapeak == True:
         smooth_dif2 = dif2[idx[0]:idx[1]]
     
@@ -801,7 +868,15 @@ def strip(an_array,cycles,width):
 
     """
     Strips the peaks contained in the input array following an
-    iteractive peak clipping method (van Espen, Chapter 4 in Van Grieken, 2002)
+    iteractive peak clipping method.
+
+    Reference: 
+    [1] van Grieken, R.E.; Markowicz, A.A. Handbook of X-ray spectrometry,
+    Marcel Dekker, Inc., 2002.
+    [2] Clayton CA, Hines JW, Elkins PD. Anal Chem 59:2506, 1987.
+
+    ----------------------------------------------------------------------
+
     INPUT:
         an_array; np.array
         cycles; int
@@ -835,7 +910,14 @@ def peakstrip(an_array,cycles,width,*args):
     
     """
     Calculates the continuum/background contribution of the input spectrum following
-    the SNIPBG method described in van Espen, Chapter 4 in Van Grieken, 2002.
+    the SNIPBG method.
+
+    Reference:
+    [1] van Grieken, R.E.; Markowicz, A.A. Handbook of X-ray spectrometry,
+    Marcel Dekker, Inc., 2002.
+
+    --------------------------------------------------------------------------------
+
     INPUT:
         an_array; np.array
         cycles; int
@@ -848,13 +930,22 @@ def peakstrip(an_array,cycles,width,*args):
 
     TEST = False
 
-    #initialize snip_bg array
-    snip_bg = np.zeros(an_array.shape[0])
+    ############################
+    # initialize snip_bg array #
+    ############################
 
-    #square root the data
+    snip_bg = np.zeros(an_array.shape[0])
+    
+    ########################
+    # square root the data #
+    ########################
+
     sqr_data = an_array**0.5
 
-    #apply savgol filter to the square root data
+    ###############################################
+    # apply savgol filter to the square root data #
+    ###############################################
+
     if len(args) > 0:
         savgol_window,order = args[0],args[1]
         try: 
@@ -867,19 +958,24 @@ def peakstrip(an_array,cycles,width,*args):
     for i in range(smooth_sqr.shape[0]): 
         if smooth_sqr[i] < 0: smooth_sqr[i] = 0
     
-    ######### NUMBA PRESENTS SERIOUS ISSUES DEPENDING ON VERSION ########
-    ######### THIS SNIPPET WORKS WITH NUMBA 0.42.1 (win10 only) and 0.45.1 (win7 and win10)!!!
-    # strip peaks
-    # numba functions do not return an output, the output must be passed as an argument.
-    # in this case, smooth_sqr is CHANGED.
-    
+    ################## NUMBA PRESENTS SERIOUS ISSUES DEPENDING ON VERSION ################
+    # THIS SNIPPET WORKS WITH NUMBA 0.42.1 (win10 only) and 0.45.1 (win7 AND win10)      #
+    # numba functions do not return an output, the output must be passed as an argument. #
+    # in this case, smooth_sqr is CHANGED.                                               #
+    ######################################################################################
+     
     strip(smooth_sqr,cycles,width)
-    
-    # points snip_bg to the 
-    # transformed smooth_sqr after applying the strip function
+
+    ##################################################################################
+    # change snip_bg to the transformed smooth_sqr after applying the strip function #
+    ##################################################################################
+
     snip_bg = smooth_sqr[:] 
 
-    #transform back
+    ##################
+    # transform back #
+    ##################
+
     snip_bg **= 2
        
     if TEST == True:

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: 1.0.0                         #
+#                        version: 1.0.0 - May - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -49,6 +49,7 @@ def colorbar(mappable):
 def median_filter(array,x,y):
 
     """ Returns the average value of pixel x,y. Includes edges """
+
     average = cy_funcs.cy_average(array,x,y)
     return average
 
@@ -57,6 +58,7 @@ def iteractive_median(img,iterations=1):
     """ Applies the median_filter funtion to all pixels within a 2D-array.
     iterations is the amount of times the operation will be performed.
     Returns a smoothed 2D-array """
+
     shape = np.asarray(img.shape)
     cy_funcs.cy_iteractive_median(img, shape, iterations)
     return img
@@ -107,6 +109,9 @@ def apply_scaling(datacube, scalemode=0):
 def mask(a_datacube,a_compound,mask_threshold):
 
     """ Creates a mask to limit the heightmap calculation.
+    
+    ------------------------------------------------------
+
     INPUT:
         a_datacube; cube class object
         a_compound; compound class object
@@ -115,8 +120,12 @@ def mask(a_datacube,a_compound,mask_threshold):
         id_element_matrix; a 2D-array """
 
     try: 
-        # tries to get identity element from compound
-        # if compound has no identity, tries to create it
+
+        #####################################################
+        # tries to get identity element from compound       #
+        # if compound has no identity, tries to create it   #
+        #####################################################
+
         id_element = a_compound.identity
     except: 
         unpacked = []
@@ -127,8 +136,12 @@ def mask(a_datacube,a_compound,mask_threshold):
                 id_element, abundance = key, a_compound.weight[key]
     
     try: 
-        # tries to unpack an element map from cube class object
-        # if it fails, looks for a ratio txt file under the cube file folder
+
+        ######################################################################
+        # tries to unpack an element map from cube class object              #
+        # if it fails, looks for a ratio txt file under the cube file folder #
+        ######################################################################
+
         id_element_matrix = a_datacube.unpack_element(id_element,"a")
     except:
         try: 
@@ -137,7 +150,6 @@ def mask(a_datacube,a_compound,mask_threshold):
             id_element_matrix = SpecRead.RatioMatrixReadFile(id_element_ratio)
         except: raise FileNotFoundError("{0} ratio file not found!".format(id_element))
     
-    #mask_threshold = id_element_matrix.max()/3
     id_element_matrix = threshold(id_element_matrix,mask_threshold)
 
     return id_element_matrix
@@ -146,8 +158,24 @@ def mask(a_datacube,a_compound,mask_threshold):
 def getheightmap(depth_matrix,mask,thickratio,compound):
 
     """ Creates a heightmap of a given layer on top of the samples substrate through
-    the differential attenuation method (Cesareo et al., 2009; Lins et al., 2020).
+    the differential attenuation method.
     The function writes the thickness values to a txt file.
+    
+    References:
+    [1] Cesareo, R.; Rizzutto, M.A.; Brunetti, A.; Rao, D. v. Metal location and 
+        thickness in a multilayered sheet by measuring Kα/Kβ, Lα/Lβ and 
+        Lα/Lγ X-ray ratios. Nucl Instrum Methods Phys Res B 2009; 267, 2890-2896
+    [2] Barcellos Lins, S.A.; Ridolfi, S.; Gigante, G.E.; Cesareo, R.; Albini, M.; 
+        Riccucci C.; di Carlo, G.; Fabbri, A.; 401 Branchini, P.; Tortora, L. 
+        Differential X-Ray Attenuation in MA-XRF Analysis for a Non-invasive 
+        Determination of Gilding Thickness. Front. Chem 2020, 8, 1-9
+    [3] Nardes, R. C., Silva, M. S., Rezier, A. N. S., Sanches, F. A. C. R. A., 
+        Filho, H. S. G., and Santos, R. S. (2019). Study on Brazilian 18th century 
+        imperial carriage using x-ray nondestructive techniques. Radiat. Phys. 
+        Chem. 154, 74–78.
+
+    --------------------------------------------------------------------------------
+
     INPUT:
         depth_matrix; a 2D-array
         mask; a 2D-array
@@ -175,8 +203,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     mu2 = coefficients[1]
     logger.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
     
-    ANGLE = 73  # IN DEGREES # - effective angle, used for fibbia2
-    #ANGLE = 27  # IN DEGREES #
+    ANGLE = 73
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0.001:
@@ -216,6 +243,8 @@ def set_axes_equal(ax,z_lim):
     cubes as cubes, etc..  This is one possible solution to Matplotlib's
     ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
 
+    ----------------------------------------------------------------------------
+
     INPUT:
       ax; a matplotlib axis, e.g., as output from plt.gca() """
 
@@ -248,6 +277,9 @@ def set_axes_equal(ax,z_lim):
 def plot3D(depth_matrix,z_lim=None):
     
     """ Displays a 3D-plot of a heightmap.
+
+    --------------------------------------
+
     INPUT:
         depth_matrix; a 2D-array
         z_lim (optional); int
@@ -278,6 +310,9 @@ def colorize(elementmap,color=None):
 
     """ Adds a third dimension to a 2D-array image. Pixels becomes a 4 element list
     instead of being a single value.
+
+    -------------------------------------------------------------------------------
+
     INPUT:
         elementmap; 2D-array
         color (optional); string
@@ -344,6 +379,9 @@ def colorize(elementmap,color=None):
 def createcmap(color):
     
     """ Creates a mappable colormap to be used with matplotlib.
+
+    -----------------------------------------------------------
+
     INPUT:
         color; int
     OUTPUT:
@@ -378,6 +416,9 @@ def interpolate_zeros(map_array):
     """ Fills few dead pixels present in auto_roi elemental maps caused by low
     counts, peak identification failure or other issues while generating the map.
     The pixel is filled if any of its right and left neighbors is different than 0.
+
+    -------------------------------------------------------------------------------
+
     INPUT:
         map_array; 4D-array of maps [x, y, lines ([0] or [0,1]), elements]
         or a 3D-array of maps [lines ([0] or [0,1]), x, y]
@@ -403,8 +444,12 @@ def interpolate_zeros(map_array):
                             newvalue = median_filter(map_array[:,:,line,Element],x,y)
                             new_map[x,y,line,Element] = newvalue
     except:
-    # to work with multiprocess images were the input objects shape is different
-    # in multiprocessing each map is digested individually
+        
+        ##############################################################################
+        # to work with multiprocess images were the input objects shape is different #
+        # in multiprocessing each map is digested individually                       #
+        ##############################################################################
+
         for line in range(map_array.shape[0]):
             for x in range(1,map_array.shape[1]-1,1):
                 for y in range(1,map_array.shape[2]-1,1):
@@ -435,12 +480,13 @@ def split_and_save(datacube,map_array,element_list):
     """ Sorts the element maps contained in map_array and packs them into the
     datacube cube class object prior pickling to disk. Saves each map as a grayscale png
     image, enlarged if the map dimension is smaller than target_size.
+
+    ------------------------------------------------------------------------------------
+
     INPUT:
         datacube; cube class object
         map_array; 4D-array
-        element_list; list
-    OUTPUT:
-        0 """
+        element_list; list """
 
     if datacube.config["ratio"] == True:
         lines = np.asarray(["a","b"])
@@ -522,13 +568,14 @@ def split_and_save(datacube,map_array,element_list):
 def write_image(image,size,path,enhance=False):
 
     """ Writes a 2D-array image to disk. Similar to split_and_save function.
+    
+    ------------------------------------------------------------------------
+
     INPUT:
         image; 2D-array
         size; desired output target (int)
         path; string
-        enhance (optional); bool (default: false)
-    OUTPUT: 
-        0 """
+        enhance (optional); bool (default: false) """
 
     imagsize = image.shape
     imagex = image.shape[0]
@@ -553,6 +600,9 @@ def write_image(image,size,path,enhance=False):
 def stackimages(*args):
 
     """ Stack a series of images together with different colors.
+    
+    ------------------------------------------------------------
+
     INPUT: At least 2 2D-arrays
     OUTPUT: 2D-array """
     
@@ -576,6 +626,9 @@ def stackimages(*args):
 def binary_thresh(image,thresh):
     
     """ Thresholds image into a binary image.
+    
+    -----------------------------------------
+
     INPUT:
         image; 2D-array
         thresh; int
@@ -591,16 +644,6 @@ def binary_thresh(image,thresh):
                 counts += 1
             else: image[x][y] = 0
         return image, counts
-
-def blacks_(image,thresh):
-
-    """ test """
-
-    print(image)
-    img = cv2.imread("{}".format(image), cv2.IMREAD_GRAYSCALE)
-    img,counts = binary_thresh(img,thresh)
-    print(counts/len(img))
-    return img
 
 def large_pixel_smoother(image,iterations):
     
@@ -625,16 +668,3 @@ def large_pixel_smoother(image,iterations):
             except: pass
     return image
 
-#if __name__ == "__main__":
-    #import os
-    #image1 = os.getcwd()+"\\mumble.png"
-    #image2 = os.getcwd()+"\\image2.png"
-    #queue = [image1,image2]
-    #img = blacks_(image1,125)
-    #img2 = blacks_(image2,125)
-    #cv2.imshow("mammamia",img)
-    #img = cv2.imread(r"C:\Users\sergi\Desktop\maps to smooth\fe.png",cv2.IMREAD_GRAYSCALE)
-    #img = iteractive_median(img,iterations=5)
-    #cv2.imshow("mammamia2",img)
-    #cv2.imwrite(r"C:\Users\sergi\Desktop\maps to smooth\smooth.png", img)
-    #cv2.waitKey(0)

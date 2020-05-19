@@ -22,9 +22,8 @@ from EnergyLib import ElementList, Energies, kbEnergies
 from ImgMath import interpolate_zeros, split_and_save
 
 def convert_bytes(num):
-    """
-    Obtained from https://stackoverflow.com/questions/210408
-    """
+
+    """ Obtained from https://stackoverflow.com/questions/210408 """
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
@@ -58,11 +57,10 @@ def break_list(element_list,max_instances):
     return chunks
 
 def grab_line(cube,lines,iterator,Element):
-    """
-    Uses SpecMath library to get the net area of the energies passed as
+
+    """ Uses SpecMath library to get the net area of the energies passed as
     arguments to this funcion
-    This funcion is called by call_peakmethod inside start_reader function 
-    """
+    This funcion is called by call_peakmethod inside start_reader function  """
     
     start_time = time.time()
     energyaxis = cube["energyaxis"]
@@ -81,11 +79,6 @@ def grab_line(cube,lines,iterator,Element):
         RAW = matrix[currentx][currenty]
         specdata = matrix[currentx][currenty]
         
-        #######################################
-        #     ATTEMPT TO FIT THE SPECFILE     #
-        # PYMCAFIT DOES NOT USE 2ND DIF CHECK #
-        #######################################
-
         if cube["config"]["peakmethod"] == 'auto_roi': specdata = specdata
         else: 
             raise Exception("peakmethod {0} not recognized.".\
@@ -115,8 +108,6 @@ def grab_line(cube,lines,iterator,Element):
 
         ################################################################
         #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
-        # Be aware that PyMcaFit method peaks are returned always True #
-        # Check SpecMath.py This is due to the high noise in the data  #
         ################################################################
             
         ka_info = SpecMath.getpeakarea(lines[0],specdata,\
@@ -192,20 +183,21 @@ def start_reader(cube,Element,iterator,results,F,N):
     SpecMath.FN_set(F,N)
     
     def call_peakmethod(cube,Element,iterator,results):
-        '''
-        verifies the peakmethod and lines and calls
+        
+        """ verifies the peakmethod and lines and calls
         a function to calculate the peak area throughout
-        the spectra matrix
-        '''
+        the spectra matrix """
      
-        # sets the element energies
+        #############################
+        # sets the element energies #
+        #############################
+
         element_idx = ElementList.index(Element)
         kaenergy = Energies[element_idx]*1000
         kbenergy = kbEnergies[element_idx]*1000
-        logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
-                format(Element,kaenergy,kbenergy))
+        logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".format(
+            Element,kaenergy,kbenergy))
 
-        # other function
         if  cube["config"]["ratio"] == True:
             elmap = np.zeros([2,cube["dimension"][0],cube["dimension"][1]],dtype="float32")
             max_counts = [0,0]
@@ -275,11 +267,6 @@ class Cube_reader():
             
         
             for p in __self__.processes:
-                """
-                This has been modified to fit an iterative pooling process
-                The commented lines were used to update the bar with the name of the processed 
-                being pooled at the moment. This is deprecated.
-                """
                 i = i + 1
                 __self__.p_bar.update_text("Polling "+p.name)
                 __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
@@ -295,8 +282,6 @@ class Cube_reader():
             for p in __self__.processes:
                 if p.exitcode != 0:
                     p.join()
-
-        #__self__.p_bar.destroybar()
 
         return partial_ 
     

@@ -1,6 +1,6 @@
 #################################################################
 #                                                               #
-#          Cython Functions                                     #
+#          CYTHON FUNCTIONS                                     #
 #                        version: 1.0.0 - Mar - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
@@ -50,8 +50,6 @@ def cy_img_linear_contrast_expansion(int[:,:] grayimg, int a, int b,
         for j in range(shape[1]):
             grayimg[i][j] = cy_stretch(grayimg[i][j],a,b,c,d)
     return 0
-
-# from ImgMath:
 
 def cy_threshold(float[:,:] a_2D_array, int[:] shape, int t):
     
@@ -125,8 +123,6 @@ def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
                 new_image[x][y] = cy_simple_median(current_image,x,y)
         current_img = new_image
     return new_image 
-
-# from Mosaic
 
 def cy_read_densemap_pixels(dict layers, int i, int j):
 
@@ -391,8 +387,6 @@ def cy_get_sum_scaling(dict layers, int i, int j, int gross):
         except:
             return scaling
     return scaling
-
-# from SpecMath
 
 def cy_MPS(float[:,:,:] matrix, int[:] m_size, float[:] mps_spec, int spec_size):
     cdef int c = 0

@@ -84,6 +84,7 @@ def place_center(window1,window2):
     window2.focus_force()
 
 def convert_layers_to_dict(MosaicAPI_obj):
+
     new_dict = {}
     for layer in MosaicAPI_obj.layer:
         new_dict[MosaicAPI_obj.layer[layer].name] = {
@@ -95,12 +96,11 @@ def convert_layers_to_dict(MosaicAPI_obj):
                 "min":MosaicAPI_obj.layer[layer].dense.min(),
                 "layer":MosaicAPI_obj.layer[layer].layer,
                 "matrix":MosaicAPI_obj.layer[layer].matrix,
-                #"bg":MosaicAPI_obj.layer[layer].bg,
                 }
     return new_dict
 
 class NavigationToolbar(NavigationToolbar2Tk):
-    # only display the buttons we need
+
     toolitems = [t for t in NavigationToolbar2Tk.toolitems if
                  t[0] in ('Home', 'Pan', 'Zoom')]
 
@@ -114,14 +114,9 @@ class Layer:
         __self__.rotation = 0
         __self__.matrix = np.zeros([cube.dimension[0],cube.dimension[1],\
                 cube.energyaxis.shape[0]],dtype='float32',order='C')
-        #__self__.bg = np.zeros([cube.dimension[0],cube.dimension[1],\
-        #        cube.energyaxis.shape[0]],dtype='float32',order='C')
         __self__.gross = int(cube.densitymap.sum()/cube.img_size)
         __self__.dense = cube.densitymap
-        #for i in range(__self__.matrix.shape[0]):
-        #    for j in range(__self__.matrix.shape[1]):
         __self__.matrix = cube.matrix
-                #__self__.bg[i,j] = cube.background[i,j]
         __self__.calibration = cube.calibration
         __self__.energyaxis = cube.energyaxis
         __self__.config = cube.config
@@ -155,7 +150,6 @@ class Layer:
         """ Gives a layer number """
 
         __self__.layer = layer
-        
         
 
 class Mosaic_API:
@@ -278,6 +272,7 @@ class Mosaic_API:
         
         # container for buttons
         __self__.container = Frame(__self__.RightPane,width=64,height=64)
+
         # container for options
         __self__.options = LabelFrame(__self__.RightPane,text="Options ",
                 width=1024-768-2*pad,
@@ -380,6 +375,7 @@ class Mosaic_API:
         __self__.canvas.draw()
 
     def rotate(__self__,direction,active_layer="",e=""):
+
         global layers_dict
         if active_layer == "":
             active_layer = __self__.layers_list.curselection()
@@ -389,8 +385,6 @@ class Mosaic_API:
                 active_layer = active_layer.split("_")[0]
         layer = __self__.layer[active_layer]
         if direction == 1:
-            #cv2.rotate(layer.matrix, cv2.ROTATE_90_CLOCKWISE)
-            #cv2.rotate(layer.bg, cv2.ROTATE_90_CLOCKWISE)
             img = layer.img[:]
             img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
@@ -400,7 +394,6 @@ class Mosaic_API:
             layer.img, layer.end = img, end
             layer.matrix = np.rot90(layer.matrix,3)
             layer.dense = np.rot90(layer.dense,3)
-            #layer.bg = np.rot90(layer.bg,3)
             layer.rotation += direction
             if layer.rotation >= 3: layer.rotation = -1
             elif layer.rotation <= -3: layer.rotation = 1
@@ -415,7 +408,6 @@ class Mosaic_API:
             layer.img, layer.end = img, end
             layer.matrix = np.rot90(layer.matrix)
             layer.dense = np.rot90(layer.dense)
-            #layer.bg = np.rot90(layer.bg)
             layer.rotation += direction
             if layer.rotation >= 3: layer.rotation = -1
             elif layer.rotation <= -3: layer.rotation = 1
@@ -572,7 +564,8 @@ class Mosaic_API:
         if active_layer_idx == (): return
         else:
             active_layer_idx = active_layer_idx[0]
-            active_layer_name, active_el = __self__.layers_list.get(active_layer_idx).split(",",1)
+            active_layer_name, active_el = __self__.layers_list.get(
+                    active_layer_idx).split(",",1)
             if active_layer_idx > 0:
                 previous_layer = __self__.layers_list.get(active_layer_idx-1)
                 previous_layer_idx = active_layer_idx-1
@@ -611,7 +604,8 @@ class Mosaic_API:
         if active_layer_idx == (): return
         else:
             active_layer_idx = active_layer_idx[0]
-            active_layer_name, active_el = __self__.layers_list.get(active_layer_idx).split(",",1)
+            active_layer_name, active_el = __self__.layers_list.get(
+                    active_layer_idx).split(",",1)
             if active_layer_idx+1 < __self__.layers_list.size():
                 next_layer = __self__.layers_list.get(active_layer_idx+1)
                 next_layer_idx = active_layer_idx+1
@@ -765,7 +759,8 @@ class Mosaic_API:
     
     def save_mosaic(__self__,savefile):
         savefile = open(savefile,"+w")
-        savefile.write("## MOSAIC SAVEFILE ## shape:{}x{}\n".format(__self__.image.shape[0],__self__.image.shape[1]))
+        savefile.write("## MOSAIC SAVEFILE ## shape:{}x{}\n".format(
+            __self__.image.shape[0],__self__.image.shape[1]))
         savefile.write("name\telement mirror\tlayer pos\tcoords\trotate factor\n")
         for layer in __self__.layer:
             string = "{}\t{}\t{}\t{};{}\t{}\n".format(
@@ -853,22 +848,30 @@ class Mosaic_API:
 
     def load_layer(__self__,layer):
         global layers_dict
+
         # first, verify if layer was an element image
+        
         element = ""
         if layer["element"] != "None":
             element = layer["element"]
         layer_no = layer["layer_no"]
        
         # loads cube to extract the matrix and all metadata
+
         cube = load_cube(layer["name"])
         if cube == None: 
             messagebox.showerror("Cube not found!",
                     "Cannot find cube {}! Aborting operation.".format(layer["name"]))
             return 0
         
-        __self__.layer_count += 1 #increase layer counter
-        __self__.layer_numbering[layer_no] = layer["name"] #load data cube
-        __self__.layer[layer["name"]] = Layer(cube,layer_no,element,layer["coords"]) #create layer object
+        #increase layer counter
+        __self__.layer_count += 1 
+        
+        #load data cube
+        __self__.layer_numbering[layer_no] = layer["name"] 
+        
+        #create layer object
+        __self__.layer[layer["name"]] = Layer(cube,layer_no,element,layer["coords"]) 
 
         # must rotate cube accordingly
         rotate_factor = layer["rotate"] 
@@ -877,23 +880,29 @@ class Mosaic_API:
             __self__.rotate(1,active_layer=layer["name"])
         else: __self__.rotate(rotate_factor,active_layer=layer["name"])
 
-        if element != "": __self__.layers_list.insert(layer_no,"{},{},{}".format(cube.name,element,layer_no))
+        if element != "": __self__.layers_list.insert(
+                layer_no,"{},{},{}".format(cube.name,element,layer_no))
         else: __self__.layers_list.insert(layer_no,"{},{}".format(cube.name,layer_no))
         return 1
     
     ########### END OF LOAD SECTION ############
 
     def get_toplayer(__self__,i,j):
+
         layer = __self__.layer_numbering[__self__.layer_count]
+
         # convert canvas coordinates to datacube coordinates
         x, y = __self__.layer[layer].start
         x_, y_ = __self__.layer[layer].end
         conv_x, conv_y = i-x, j-y
-        if x <= i < x_ and y <= j < y_: #verifies if pixels belongs to the datacube
+        
+        #verifies if pixels belongs to the datacube
+        if x <= i < x_ and y <= j < y_: 
             return  __self__.layer[layer].name
         else: return ""
 
     def read_pixels(__self__,i,j):
+
         front_layer, top_layer, pixel = -1, 0, 59
         for layer in __self__.layer:
             try:
@@ -910,6 +919,7 @@ class Mosaic_API:
         return pixel, top_layer
     
     def build_image(__self__,bound=False, limit=None):
+
         global layers_dict
         if bound == False:
             limit = np.asarray([[0,__self__.image.shape[0]],[0,__self__.image.shape[1]]],
@@ -952,8 +962,10 @@ class Mosaic_API:
     
     def build_cube(__self__):
         
-        """ Before proceeding, checks if any layers are loaded and if 
-        only one scaling mode was selected """
+        #############################################################
+        # Before proceeding, checks if any layers are loaded and if #
+        # only one scaling mode was selected                        #
+        #############################################################
         
         if __self__.layer == {}:
             messagebox.showerror("No Layers!",
@@ -975,14 +987,14 @@ class Mosaic_API:
             global layers_dict
             layers_dict = convert_layers_to_dict(__self__)
 
-           
-            """ Calculates the global densemap """
-            """ gets the global maximum and minimum """
+            #########################################
+            # Calculates the global densemap        #
+            # Gets the global maximum and minimum   #
+            #########################################
+
             total_densemap = np.zeros([__self__.image.shape[0],__self__.image.shape[1]],
                     dtype="int32")
             TARGET = np.zeros([2],dtype="int32")
-            # target[0] = minimum
-            # target[1] = maximum
             cy_funcs.cy_build_densemap(
                     total_densemap, 
                     np.asarray(__self__.image.shape,dtype="int32"),
@@ -998,7 +1010,10 @@ class Mosaic_API:
                 if inst_gross > gross:
                     gross = int(inst_gross)
 
-            """ Builds the scaling matrix with a linear contrast stretching method """
+            ######################################################################
+            # Builds the scaling matrix with a linear contrast stretching method #
+            ######################################################################
+
             if __self__.ScaleVarLinStr.get() == True:
                 mode = 1
             elif __self__.ScaleVarSum.get() == True:
@@ -1027,12 +1042,17 @@ class Mosaic_API:
                 if __self__.layer[layer].end[1] >= end_y:
                     end_y = __self__.layer[layer].end[1]
             
-            # cuts down the scale_matrix image (it is calculated for the entire canvas size
+            #############################################################################
+            # cuts the scale_matrix image (it is calculated for the entire canvas size) #
+            #############################################################################
+
             if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
                 __self__.cropped = scale_matrix[start_x:end_x,start_y:end_y]
 
-            
-            # allocate memory for the new datacube
+            ######################################## 
+            # allocate memory for the new datacube #
+            ######################################## 
+
             __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                     dtype="float32")
             __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
@@ -1041,9 +1061,12 @@ class Mosaic_API:
             x_bounds = [start_x,end_x]
             y_bounds = [start_y,end_y]
             
-            """ to avoid defining a new array inside cython, a zero np array
-            is passed as memoryview object, so it is mutated inside cy_funcs and attributed
-            to the proper merge_matrix indexes """
+            #########################################################################
+            # to avoid defining a new array inside cython, a zero np array          #
+            # is passed as memoryview object, so it is mutated inside cy_funcs and  #
+            # attributed to the proper merge_matrix indexes                         #
+            #########################################################################
+
             void_array = np.zeros([specsize],dtype="float32")
             cy_funcs.cy_build_merge_cube(layers_dict,
                     np.asarray(x_bounds,dtype="int32"),
@@ -1053,14 +1076,18 @@ class Mosaic_API:
                     specsize)
 
             layers = list(__self__.layer.keys())
-
-            """ Setup configuration dictionary according to the first loaded layer """
+            
+            ######################################################################
+            # Setup configuration dictionary according to the first loaded layer #
+            ######################################################################
 
             SpecRead.conditional_setup(name=NAME)
-
-            """ Datacube object was not created with merging in mind, therefore some
-            workaround had to be done. Main attributes are set externally rather than in the
-            __init__ method """
+            
+            #########################################################################
+            # Datacube object was not created with merging in mind, therefore some  #
+            # workaround had to be done. Main attributes are set externally rather  #
+            # than in the __init__ method                                           #
+            #########################################################################
             
             new_cube = Cube(["xrf"],Constants.CONFIG,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis

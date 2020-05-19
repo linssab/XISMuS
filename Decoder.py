@@ -1,3 +1,13 @@
+#################################################################
+#                                                               #
+#          DECODER                                              #
+#                        version: 1.0.0                         #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
+""" This module reads *.tz files to extract icons and images used
+in the GUI """
+
 import base64
 import numpy as np
 import cv2
