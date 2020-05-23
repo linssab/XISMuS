@@ -1275,6 +1275,12 @@ class ImageAnalyzer:
             __self__.ElementalMap1 = np.zeros([1,1])
             __self__.ElementalMap2 = np.zeros([1,1])
         
+        # popup commands
+        __self__.popup = Menu(__self__.master, tearoff=0)
+        __self__.popup.add_command(
+                label="Export as...",
+                command=__self__.export_maps)
+
         # map 1
         __self__.Map1Label = Label(
                 __self__.sampler, 
@@ -1312,6 +1318,7 @@ class ImageAnalyzer:
         __self__.plot1.grid(b=None)
         __self__.canvas1 = FigureCanvasTkAgg(__self__.figure1,__self__.LeftCanvas)
         __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
+        __self__.canvas1.mpl_connect("button_press_event",__self__.pop)
         
         __self__.figure2 = Figure(figsize=(5,4), dpi=75)
         __self__.plot2 = __self__.figure2.add_subplot(111)
@@ -1319,6 +1326,7 @@ class ImageAnalyzer:
         __self__.plot2.grid(b=None)
         __self__.canvas2 = FigureCanvasTkAgg(__self__.figure2,__self__.RightCanvas)
         __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
+        __self__.canvas2.mpl_connect("button_press_event",__self__.pop)
 
         # image controls Threshold, LowPass and Smooth
         __self__.T1check = BooleanVar()
@@ -1483,6 +1491,18 @@ class ImageAnalyzer:
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
     
+    def pop(__self__,event):
+        if event.button == 3:
+            root.master.update_idletasks()
+            x = root.master.winfo_pointerx()
+            y = root.master.winfo_pointery()
+            abs_coord_x = root.master.winfo_pointerx() - root.master.winfo_vrootx()
+            abs_coord_y = root.master.winfo_pointery() - root.master.winfo_vrooty()
+            try: __self__.popup.tk_popup(int(abs_coord_x), int(abs_coord_y), entry="")
+            finally: __self__.popup.grab_release()
+        else: return
+    
+
     def resize(__self__, event):
         wi = __self__.LeftCanvas.winfo_width()
         hi = __self__.LeftCanvas.winfo_height()
@@ -1993,66 +2013,7 @@ class Samples:
         mca_prefix = None
         __self__.samples_database = {}
 
-        try:
         
-            """ Try looking for training_data """
-
-            folder = "Example Data"
-            new_path = os.path.join(SpecRead.__PERSONAL__,folder)
-            
-            if os.path.exists(new_path):
-                examples = [folder for folder in os.listdir(new_path) if \
-                        os.path.isdir(os.path.join(new_path,folder))]
-                for folder in examples:
-                    files = [name for name in os.listdir(os.path.join(new_path,folder)) \
-                            if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
-                    extension = files[:]
-                    for item in range(len(files)): 
-                        # displays file being read on splash screen
-                        __self__.filequeue.set("{}".format(files[item]))
-                        __self__.label2.update()
-                        try: __self__.splash.update_idletasks()
-                        except: __self__.popup.update_idletasks()
-                        finally: 
-                            try:
-                                files[item], extension[item] = \
-                                        files[item].split(".",1)[0],\
-                                        files[item].split(".",1)[1]
-
-                                """ Gets rid of file numbering """
-                                for i in range(len(files[item])):
-                                    if not files[item][-1].isdigit(): break
-                                    if files[item][-i].isdigit() and \
-                                            not files[item][-i-1].isdigit(): 
-                                        if indexing == None:
-                                            indexing = files[item][-i:]
-                                        files[item] = files[item][:-i]
-                                        break
-                            except: pass
-                    files_set = set(files)
-                    extension_set = set(extension)
-                    counter = dict((x,files.count(x)) for x in files_set)
-                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
-                    mca_prefix_count = 0
-                    mca_extension_count = 0
-                    # counts mca files and stores the prefix string and no. of files
-                    for counts in counter:
-                        if counter[counts] > mca_prefix_count:
-                            mca_prefix = counts
-                            mca_prefix_count = counter[counts]
-                    for ext in counter_ext:
-                        if counter_ext[ext] > mca_extension_count:
-                            mca_extension = ext
-                            mca_extension_count = counter_ext[ext]
-                    # creates a dict key only if the numer of mca's is larger than 20.
-                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
-                        __self__.samples_database[folder] = mca_prefix
-                        __self__.mcacount[folder] = len(files)
-                        __self__.mca_extension[folder] = mca_extension
-                        __self__.mca_indexing[folder] = indexing
-
-        except: logger.info("Could not locate Training Data.")
-
         try:
                         
             """ Lists all possible samples """
@@ -2068,6 +2029,7 @@ class Samples:
                             __self__.filequeue.set(
                                     "Cube for {} already compiled, skipping mca\'s".format(
                                         folder))
+                            logger.info("Cube {} already compiled".format(folder))
                             __self__.label2.update()
                             try: __self__.splash.update_idletasks()
                             except: __self__.popup.update_idletasks()
@@ -2223,6 +2185,66 @@ class Samples:
                 logger.info("Cannot load samples. Error {}.".format(
                     exception.__class__.__name__))
             else: pass
+        
+        try:
+        
+            """ Try looking for training_data """
+
+            folder = "Example Data"
+            new_path = os.path.join(SpecRead.__PERSONAL__,folder)
+            
+            if os.path.exists(new_path):
+                examples = [folder for folder in os.listdir(new_path) if \
+                        os.path.isdir(os.path.join(new_path,folder))]
+                for folder in examples:
+                    files = [name for name in os.listdir(os.path.join(new_path,folder)) \
+                            if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                    extension = files[:]
+                    for item in range(len(files)): 
+                        # displays file being read on splash screen
+                        __self__.filequeue.set("{}".format(files[item]))
+                        __self__.label2.update()
+                        try: __self__.splash.update_idletasks()
+                        except: __self__.popup.update_idletasks()
+                        finally: 
+                            try:
+                                files[item], extension[item] = \
+                                        files[item].split(".",1)[0],\
+                                        files[item].split(".",1)[1]
+
+                                """ Gets rid of file numbering """
+                                for i in range(len(files[item])):
+                                    if not files[item][-1].isdigit(): break
+                                    if files[item][-i].isdigit() and \
+                                            not files[item][-i-1].isdigit(): 
+                                        if indexing == None:
+                                            indexing = files[item][-i:]
+                                        files[item] = files[item][:-i]
+                                        break
+                            except: pass
+                    files_set = set(files)
+                    extension_set = set(extension)
+                    counter = dict((x,files.count(x)) for x in files_set)
+                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                    mca_prefix_count = 0
+                    mca_extension_count = 0
+                    # counts mca files and stores the prefix string and no. of files
+                    for counts in counter:
+                        if counter[counts] > mca_prefix_count:
+                            mca_prefix = counts
+                            mca_prefix_count = counter[counts]
+                    for ext in counter_ext:
+                        if counter_ext[ext] > mca_extension_count:
+                            mca_extension = ext
+                            mca_extension_count = counter_ext[ext]
+                    # creates a dict key only if the numer of mca's is larger than 20.
+                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                        __self__.samples_database[folder] = mca_prefix
+                        __self__.mcacount[folder] = len(files)
+                        __self__.mca_extension[folder] = mca_extension
+                        __self__.mca_indexing[folder] = indexing
+
+        except: logger.info("Could not locate Training Data.")
 
         try:
                                         
@@ -2240,6 +2262,7 @@ class Samples:
                         __self__.samples_database[folder] = "---"
                         __self__.mcacount[folder] = 0
                         __self__.mca_extension[folder] = "---"
+                        logger.info("Datacube {} located. Ignoring mca files".format(folder))
         
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
@@ -2437,6 +2460,7 @@ class MainGUI:
         if __self__.PlotMode == "Linear": __self__.plot_display = None
         
         __self__.build_widgets()
+        __self__.plot_canvas.mpl_connect("button_press_event",__self__.pop)
         
         # Spawn splash scree and look for samples under the search folder
         # from folder.ini
@@ -2448,7 +2472,18 @@ class MainGUI:
         __self__.mcacount = __self__.SampleLoader.mcacount
         __self__.mca_indexing = __self__.SampleLoader.mca_indexing
         __self__.mca_extension = __self__.SampleLoader.mca_extension
-        
+
+        __self__.plot_canvas_popup = Menu(__self__.master, tearoff=0)
+        __self__.plot_canvas_popup.add_command(
+                label="Save density map ...",
+                command=__self__.export_density_map)
+        __self__.plot_canvas_popup.add_command(
+                label="Open files location",
+                command=__self__.open_files_location)
+        __self__.plot_canvas_popup.add_command(
+                label="Open output folder",
+                command=__self__.open_output_folder)
+
         time.sleep(0.1)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
         __self__.master.deiconify()
@@ -2500,6 +2535,18 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=DISABLED)
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.re_configure.config(state=DISABLED)
+    
+    def pop(__self__,event):
+        if event.button == 3:
+            __self__.master.update_idletasks()
+            x = __self__.master.winfo_pointerx()
+            y = __self__.master.winfo_pointery()
+            abs_coord_x = __self__.master.winfo_pointerx() - __self__.master.winfo_vrootx()
+            abs_coord_y = __self__.master.winfo_pointery() - __self__.master.winfo_vrooty()
+            try: __self__.plot_canvas_popup.tk_popup(
+                    int(abs_coord_x), int(abs_coord_y), entry="")
+            finally: __self__.plot_canvas_popup.grab_release()
+        else: return
 
     def refresh_samples(__self__):
         __self__.SampleLoader.pop_loader()
@@ -2527,7 +2574,9 @@ class MainGUI:
         
     def call_listsamples(__self__):
 
-        """ Draws the sample list window """
+        """ Draws the sample list window.
+        This is not a window class, but still a child of root """
+
 
         __self__.SamplesWindow = Toplevel(master=__self__.master, name="samples list")
         __self__.SamplesWindow.tagged = False
@@ -2831,7 +2880,14 @@ class MainGUI:
             __self__.plot_canvas.draw()
     
     def open_files_location(__self__, event=""):
-        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        try:
+            value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        except:
+            try:
+                value = Constants.MY_DATACUBE.name
+            except:
+                messagebox.showerror("No datacube!","Please load a datacube first.")
+                return
         path = os.path.join(Constants.SAMPLES_FOLDER,value)
         local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
         if os.path.exists(local_cube_path):
@@ -2849,7 +2905,14 @@ class MainGUI:
                     "Sample files not found! Path {} couldn't be located.".format(path))
 
     def open_output_folder(__self__, event=""):
-        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        try: 
+            value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        except: 
+            try:
+                value = Constants.MY_DATACUBE.name
+            except: 
+                messagebox.showerror("No datacube!","Please load a datacube first.")
+                return
         path = os.path.join(SpecRead.__PERSONAL__,"output",value)
         if os.path.exists(path):
             path = os.path.realpath(path)
@@ -2859,7 +2922,12 @@ class MainGUI:
                     "Sample may be uncompiled. Output directory for sample {} not found.".format(value))
 
     def export_density_map(__self__,event=""):
-        __self__.sample_select(event)
+        try: 
+            __self__.sample_select(event)
+        except: 
+            if Constants.MY_DATACUBE == None:
+                messagebox.showerror("No datacube!","Please load a datacube first.")
+                return
         if os.path.exists(SpecRead.cube_path): 
             f = filedialog.asksaveasfile(mode='w', 
                     defaultextension=".png",

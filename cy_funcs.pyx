@@ -124,6 +124,21 @@ def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
         current_img = new_image
     return new_image 
 
+def cy_subtract(float[:,:] map1, 
+        float[:,:] map2, 
+        int[:] shape,
+        float[:,:] output):
+
+    cdef int i = 0
+    cdef int j = 0
+
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            output[i][j] = map1[i][j] - map2[i][j]
+            if output[i][j] < 0: output[i][j] = 0
+    return output
+
+
 def cy_read_densemap_pixels(dict layers, int i, int j):
 
     """ Operates over single pixels at a time.

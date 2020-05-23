@@ -124,41 +124,40 @@ def RatioMatrixReadFile(ratiofile):
     OUTPUT:
         RatesMatrix; 2D-array """
 
-    MatrixArray = []
+    reader = []
     with open (ratiofile,'rt') as in_file:
         for line in in_file:
-            MatrixArray.append(line.strip("\n"))
-        for i in range(len(MatrixArray)): 
-            MatrixArray[i] = MatrixArray[i].split()
-        for j in range(len(MatrixArray)):
-            for k in range(len(MatrixArray[j])):
-                if MatrixArray[j][k].isdigit() == True: 
-                    MatrixArray[j][k]=int(MatrixArray[j][k])
-                else: MatrixArray[j][k]=1
-        if len(MatrixArray[-1]) == 0: MatrixArray[-1]=[1, 1, 1, 1]
-    MatrixArray = np.asarray(MatrixArray)
+            reader.append(line.strip("\n"))
+        for i in range(len(reader)): 
+            reader[i] = MatrixArray[i].split()
+        for j in range(len(reader)):
+            for k in range(len(reader[j])):
+                if reader[j][k].isdigit() == True: 
+                    reader[j][k]=int(MatrixArray[j][k])
+                else: reader[j][k]=1
+        if len(reader[-1]) == 0: MatrixArray[-1]=[1, 1, 1, 1]
+    reader = np.asarray(MatrixArray)
     iterx=0
     itery=0
     
-    for i in range(len(MatrixArray)):
-        if len(MatrixArray[i]) > 1:
-            if MatrixArray[i][0] > 0\
-                    and MatrixArray[i][0] > MatrixArray[i-1][0]\
-                    and MatrixArray[i][0] > iterx: iterx=int(MatrixArray[i][0])
-        if len(MatrixArray[i]) > 1:
-            if MatrixArray[i][1] > 0\
-                    and MatrixArray[i][1] > MatrixArray[i-1][1]\
-                    and MatrixArray[i][1] > itery: itery=int(MatrixArray[i][1])
+    for i in range(len(reader)):
+        if len(reader[i]) > 1:
+            if reader[i][0] > 0\
+                    and reader[i][0] > MatrixArray[i-1][0]\
+                    and reader[i][0] > iterx: iterx=int(MatrixArray[i][0])
+        if len(reader[i]) > 1:
+            if reader[i][1] > 0\
+                    and reader[i][1] > MatrixArray[i-1][1]\
+                    and reader[i][1] > itery: itery=int(MatrixArray[i][1])
 
     RatesMatrix=np.zeros((iterx+1,itery+1))
-    for i in range(len(MatrixArray)):
-        x=int(MatrixArray[i][0])
-        y=int(MatrixArray[i][1])
-        ka=int(MatrixArray[i][2])
-        kb=int(MatrixArray[i][3])
+    for i in range(len(reader)):
+        x=int(reader[i][0])
+        y=int(reader[i][1])
+        ka=int(reader[i][2])
+        kb=int(reader[i][3])
         if kb == 0: ka,kb = 0,1
         RatesMatrix[x,y] = ka/kb
-        if ka/kb > 15: RatesMatrix[x,y] = 0  # CUTOFF FILTER FOR PEAK ERRORS #
     return RatesMatrix
 
 def getheader(mca):
