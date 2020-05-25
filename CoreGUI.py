@@ -603,6 +603,7 @@ class Welcome:
         __self__.master.iconbitmap(icon)  
         __self__.master.bind("<Return>",__self__.checkout)
         __self__.master.bind("<Escape>",__self__.checkout)
+        __self__.font = tkFont.Font(family="Arial", size=8)
 
         __self__.master.resizable(False,False)
         __self__.master.title("Welcome!")
@@ -610,7 +611,11 @@ class Welcome:
         __self__.tag = BooleanVar()
         __self__.infotext = StringVar()
         __self__.messages = ["Welcome to XISMuS {}\n\nClick the left or right arrows to navigate through this menu.".format(Constants.VERSION),\
-                "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, XISMuS looks for mca files under C:\\Samples\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nXISMuS also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
+                "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, XISMuS looks for mca files under C:\\Users\\user\\Documents\\XISMuS\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nXISMuS also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
+        change = __self__.read_log() 
+        if change:
+            for i in range(len(change)):
+                __self__.messages.insert(0,change[len(change)-1-i])
         __self__.current_page = 1
         __self__.page.set("Page {}/{}".format(__self__.current_page,len(__self__.messages)))
         __self__.tag.set(False)
@@ -623,7 +628,9 @@ class Welcome:
                 textvariable=__self__.page, 
                 relief=RIDGE)
         __self__.page_counter.grid(row=0, column=0, sticky=W+E, columnspan=2, pady=3)
-        __self__.text_frame = Frame(__self__.master, width=320, height=150)
+        __self__.text_frame = Frame(
+                __self__.master,
+                width=320, height=150)
         __self__.text_frame.grid(row=1, column=0, sticky=W+E, columnspan=2)
         __self__.info = Label(__self__.text_frame,
                 textvariable=__self__.infotext,
@@ -632,7 +639,11 @@ class Welcome:
                 wraplength=400,
                 width=70,
                 height=7,
-                padx=5)
+                padx=5,
+                bg=Constants.DEFAULTBTN_COLOR, 
+                cursor="arrow",
+                relief=FLAT)
+        __self__.info["font"] = __self__.font
         __self__.info.grid(row=0, column=1, sticky=W+E)
         icon_fw = PhotoImage(data=ICO_NEXT)
         __self__.icon_fw = icon_fw.subsample(1,1)
@@ -670,11 +681,40 @@ class Welcome:
             __self__.master.columnconfigure(i, weight=0)
             __self__.master.rowconfigure(i, weight=0)
         __self__.master.columnconfigure(1, weight=1)
+
+    def read_log(__self__):
+        changelog = os.path.join(os.getcwd(),"changelog.log")
+        try: f = open(changelog, "r")
+        except:
+            return 
+        lines = f.readlines()
+        tot = int(len(lines)/6)
+        message,counter,page = [""],0,1
+        for i in range(len(lines)):
+            line = lines[i]
+            counter += 1
+            if counter >= 6:
+                counter = 0
+                message[page-1] += "Log {} of {}".format(page,tot+1)
+                message.append("")
+                page += 1
+            message[page-1] += line
+            if i == len(lines)-1: message[page-1] += "\nLog {} of {}".format(page,tot+1)
+        f.close()
+        #for i in message: print(i)
+        return message
         
     def next_page(__self__):
         if __self__.current_page+1 <= len(__self__.messages):
             __self__.current_page +=1
             text = __self__.current_page-1
+            __self__.infotext.set(__self__.messages[text])
+            __self__.page.set("Page {}/{}".format(
+                __self__.current_page,len(__self__.messages)))
+            __self__.info.update()
+        elif __self__.current_page+1 > len(__self__.messages):
+            __self__.current_page = 1
+            text = 0
             __self__.infotext.set(__self__.messages[text])
             __self__.page.set("Page {}/{}".format(
                 __self__.current_page,len(__self__.messages)))
@@ -689,8 +729,15 @@ class Welcome:
             __self__.page.set("Page {}/{}".format(
                 __self__.current_page,len(__self__.messages)))
             __self__.info.update()
+        elif __self__.current_page-1 < 1:
+            __self__.current_page = len(__self__.messages)
+            text = len(__self__.messages)
+            __self__.infotext.set(__self__.messages[text-1])
+            __self__.page.set("Page {}/{}".format(
+                __self__.current_page,len(__self__.messages)))
+            __self__.info.update()
         else: pass
-
+        
     def checkout(__self__,e=""):
 
         """ Writes the welcome setting (spawn or not at startup) to settings.tag file """
@@ -4403,11 +4450,13 @@ if __name__.endswith('__main__'):
         from tkinter import ttk
         from tkinter import messagebox
         from tkinter import filedialog
+        from tkinter import font as tkFont
     except:
         from Tkinter import *
         from Tkinter import ttk
         from Tkinter import messagebox
         from Tkinter import filedialog
+        import tkFont
 
     # general utilities
     import numpy as np
