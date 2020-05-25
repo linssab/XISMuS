@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mapping module for multi-core processing             #
-#                        version: 1.0 - Nov - 2019              #
+#                        version: 1.0.1 - May - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 

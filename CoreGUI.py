@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.0.0                         #
+#                        version: 1.0.1                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -21,6 +21,20 @@ def start_up():
     except: pass
     logger.info("Done.")
     Constants.FIND_ELEMENT_LIST = []
+
+def refresh_all_plots():
+    try:
+        root.draw_map()
+    except: pass
+    try:
+        for API in root.ImageAnalyzers: 
+            try:
+                API.draw_image1(0)
+                API.draw_image2(0)
+            except: pass
+    except:
+        pass
+    return
 
 def wipe_list():
     
@@ -683,14 +697,15 @@ class Welcome:
 
         checker = True
         if __self__.tag.get() == True:
-            root.checker = False
+            Constants.WELCOME = False
             checker = False
         inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
         ini = open(inipath,'w+')
         ini.write("{}\n".format(Constants.SAMPLES_FOLDER))
-        ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
-        ini.write("<PlotMode>\t{}\n".format(root.PlotMode))
-        ini.write("<RAMLimit>\t{}\n".format(root.RAM_limit))
+        ini.write("<ColorMap>\t{}\n".format(Constants.COLORMAP))
+        ini.write("<MultiCore>\t{}\n".format(Constants.MULTICORE))
+        ini.write("<PlotMode>\t{}\n".format(Constants.PLOTMODE))
+        ini.write("<RAMLimit>\t{}\n".format(Constants.RAM_LIMIT))
         ini.write("<welcome>\t{}".format(checker))
         ini.close()
         root.master.focus_set()
@@ -1021,7 +1036,7 @@ class PeakClipper:
             label = root.samples[folder]+"{0}.{1}".format(
                         __self__.sample,root.mca_extension[folder])
 
-        if root.PlotMode == "Linear":
+        if Constants.PLOTMODE == "Linear":
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
             __self__.plot.plot(__self__.spectrum,
@@ -1245,7 +1260,7 @@ class ImageAnalyzer:
         __self__.master = Toplevel(master=parent)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
-        __self__.master.title("Image Analyzer v1.0.2")
+        __self__.master.title("Image Analyzer")
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP,anchor=CENTER)
         __self__.SampleFrame = Frame(__self__.master)
@@ -1346,7 +1361,8 @@ class ImageAnalyzer:
         __self__.S1check.set(False)
         __self__.S1 = Checkbutton(
                 __self__.sliders, 
-                variable=__self__.S1check).grid(row=2,column=2)
+                variable=__self__.S1check,
+                command=lambda:__self__.draw_image1(0)).grid(row=2,column=2)
        
         __self__.T1Label = Label(__self__.sliders, text="Threshold ")
         __self__.T1Label.grid(row=0,column=3)
@@ -1380,7 +1396,7 @@ class ImageAnalyzer:
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
-                to=7,
+                to=2,
                 command=__self__.draw_image1)
         __self__.S1Slider.grid(row=2,column=4)
 
@@ -1403,7 +1419,8 @@ class ImageAnalyzer:
         __self__.S2check.set(0)
         __self__.S2 = Checkbutton(
                 __self__.sliders, 
-                variable=__self__.S2check).grid(row=2,column=6)
+                variable=__self__.S2check,
+                command=lambda:__self__.draw_image2(0)).grid(row=2,column=6)
                
         # sliders for image 2
         __self__.T2Slider = Scale(
@@ -1424,7 +1441,7 @@ class ImageAnalyzer:
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
-                to=7,
+                to=2,
                 command=__self__.draw_image2)
         __self__.S2Slider.grid(row=2,column=8)
     
@@ -1573,6 +1590,7 @@ class ImageAnalyzer:
         if __self__.T1check.get() == True: 
             __self__.T1check.set(False)
             __self__.T1Slider.config(state=DISABLED)
+        __self__.draw_image1(0)
 
     def switchLP1T1(__self__):
         if __self__.T1check.get() == True: __self__.T1Slider.config(state=NORMAL)
@@ -1580,6 +1598,7 @@ class ImageAnalyzer:
         if __self__.LP1check.get() == True: 
             __self__.LP1check.set(False)
             __self__.LP1Slider.config(state=DISABLED)
+        __self__.draw_image1(0)
 
     def switchT2LP2(__self__):
         if __self__.LP2check.get() == True: __self__.LP2Slider.config(state=NORMAL)
@@ -1587,6 +1606,7 @@ class ImageAnalyzer:
         if __self__.T2check.get() == True: 
             __self__.T2check.set(False)
             __self__.T2Slider.config(state=DISABLED)
+        __self__.draw_image2(0)
     
     def switchLP2T2(__self__):
         if __self__.T2check.get() == True: __self__.T2Slider.config(state=NORMAL)
@@ -1594,6 +1614,7 @@ class ImageAnalyzer:
         if __self__.LP2check.get() == True: 
             __self__.LP2check.set(False)
             __self__.LP2Slider.config(state=DISABLED)
+        __self__.draw_image2(0)
 
     def transform1(__self__,image):
         if __self__.T1check.get() == True:
@@ -1654,7 +1675,7 @@ class ImageAnalyzer:
         __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
         del __self__.CACHEMAP1
         __self__.plot1.clear()
-        __self__.plot1.imshow(__self__.newimage1, cmap='gray')
+        __self__.plot1.imshow(__self__.newimage1, cmap=Constants.COLORMAP)
         __self__.plot1.grid(b=None)
         __self__.canvas1.draw()
     
@@ -1663,7 +1684,7 @@ class ImageAnalyzer:
         __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
         del __self__.CACHEMAP2
         __self__.plot2.clear()
-        __self__.plot2.imshow(__self__.newimage2, cmap='gray')
+        __self__.plot2.imshow(__self__.newimage2, cmap=Constants.COLORMAP)
         __self__.plot2.grid(b=None)
         __self__.canvas2.draw()
 
@@ -2298,19 +2319,21 @@ class Settings:
 
     def build_widgets(__self__):
         __self__.PlotMode = StringVar()
+        __self__.ColorMapMode = StringVar()
         __self__.CoreMode = BooleanVar()
         __self__.RAMMode = BooleanVar()
         __self__.RAMEntry = DoubleVar()
         __self__.RAMUnit = StringVar()
         __self__.WlcmMode = BooleanVar()
         
-        __self__.PlotMode.set(root.PlotMode)
-        __self__.CoreMode.set(root.MultiCore)
-        __self__.RAMMode.set(root.RAM_limit)
+        __self__.PlotMode.set(Constants.PLOTMODE)
+        __self__.ColorMapMode.set(Constants.COLORMAP)
+        __self__.CoreMode.set(Constants.MULTICORE)
+        __self__.RAMMode.set(Constants.RAM_LIMIT)
         __self__.RAMEntry.set(
                 "%.2f"%(float(convert_bytes(root.RAM_limit_value).split(" ")[0])))
         __self__.RAMUnit.set(convert_bytes(root.RAM_limit_value).split(" ")[1])
-        __self__.WlcmMode.set(root.checker)
+        __self__.WlcmMode.set(Constants.WELCOME)
         
         PlotLabel = Label(__self__.TextFrame,text="Plot mode: ")
         PlotLabel.grid(row=0,column=0,sticky=W)
@@ -2322,75 +2345,87 @@ class Settings:
                 state="readonly")
         PlotOption.grid(row=0,column=0,columnspan=3,sticky=E)
         
+        ColorMapLabel = Label(__self__.TextFrame,text="Color scale: ")
+        ColorMapLabel.grid(row=1,column=0,sticky=W)
+        ColorMapOption = ttk.Combobox(
+                __self__.ScreenFrame, 
+                textvariable=__self__.ColorMapMode, 
+                values=("gray","jet","hot"),
+                width=13,
+                state="readonly")
+        ColorMapOption.grid(row=1,column=0,columnspan=3,sticky=E)
+        
+
         CoreLabel = Label(__self__.TextFrame,text="Enable multi-core processing? ")
-        CoreLabel.grid(row=1,column=0,sticky=W)
+        CoreLabel.grid(row=2,column=0,sticky=W)
         CoreOption = Checkbutton(__self__.ScreenFrame, variable=__self__.CoreMode,pady=3)
-        CoreOption.grid(row=1,rowspan=2,column=0,columnspan=2,sticky=E)
+        CoreOption.grid(row=2,rowspan=2,column=0,columnspan=2,sticky=E)
         CoreOptionText = Label(__self__.ScreenFrame, text="Yes",pady=3)
-        CoreOptionText.grid(row=1,rowspan=2,column=2,sticky=E)
+        CoreOptionText.grid(row=2,rowspan=2,column=2,sticky=E)
         CoreCountLabel = Label(
                 __self__.TextFrame,
                 text="Total number of cores: "+str(__self__.CoreCount))
-        CoreCountLabel.grid(row=2,column=0,sticky=W)
+        CoreCountLabel.grid(row=3,column=0,sticky=W)
         
         RAMLabel = Label(__self__.TextFrame,text="Limit RAM usage for multi-core? ")
-        RAMLabel.grid(row=3,column=0,sticky=W)
+        RAMLabel.grid(row=4,column=0,sticky=W)
         RAMUnit = Label(__self__.ScreenFrame, text=__self__.RAMUnit.get())
-        RAMUnit.grid(row=4,column=2,sticky=E)
+        RAMUnit.grid(row=5,column=2,sticky=E)
         RAMOption = Checkbutton(__self__.ScreenFrame, variable=__self__.RAMMode)
-        RAMOption.grid(row=3,column=0,columnspan=2,sticky=E)
+        RAMOption.grid(row=4,column=0,columnspan=2,sticky=E)
         RAMOptionText = Label(__self__.ScreenFrame, text="Yes")
-        RAMOptionText.grid(row=3,column=2,sticky=E)
+        RAMOptionText.grid(row=4,column=2,sticky=E)
         __self__.RAMEntryBox = Entry(
                 __self__.ScreenFrame, 
                 textvariable=__self__.RAMEntry,
                 width=13-RAMUnit.winfo_width())
-        __self__.RAMEntryBox.grid(row=4,column=0,columnspan=2,sticky=E)
+        __self__.RAMEntryBox.grid(row=5,column=0,columnspan=2,sticky=E)
         RAMCountLabel = Label(
                 __self__.TextFrame,
                 text="Available RAM: "+str(__self__.RAM_free))
-        RAMCountLabel.grid(row=4,column=0,sticky=W)
+        RAMCountLabel.grid(row=5,column=0,sticky=W)
 
 
         WlcmLabel = Label(__self__.TextFrame,text="Display welcome message at startup? ")
-        WlcmLabel.grid(row=5,column=0,sticky=W)
+        WlcmLabel.grid(row=6,column=0,sticky=W)
         WlcmOption = Checkbutton(__self__.ScreenFrame, variable=__self__.WlcmMode)
-        WlcmOption.grid(row=5,column=0,columnspan=2,sticky=E)
+        WlcmOption.grid(row=6,column=0,columnspan=2,sticky=E)
         WlcmOptionText = Label(__self__.ScreenFrame, text="Yes")
-        WlcmOptionText.grid(row=5,column=2,sticky=E)
+        WlcmOptionText.grid(row=6,column=2,sticky=E)
         
         __self__.ScreenFrame.grid_columnconfigure(1,pad=8)
         
         ButtonsFrame = Frame(__self__.Settings, padx=10, pady=10)
-        ButtonsFrame.grid(row=3,column=0,columnspan=2)
+        ButtonsFrame.grid(row=4,column=0,columnspan=2)
         OKButton = Button(
                 ButtonsFrame, 
                 text="OK", 
                 justify=CENTER,
                 width=10,
                 command=__self__.save_settings)
-        OKButton.grid(row=3,column=0)
+        OKButton.grid(row=4,column=0)
         CancelButton = Button(
                 ButtonsFrame, 
                 text="Cancel", 
                 justify=CENTER,
                 width=10,
                 command=__self__.kill_window)
-        CancelButton.grid(row=3,column=1)
+        CancelButton.grid(row=4,column=1)
     
     def write_to_ini(__self__):
         try: 
             inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
             ini = open(inipath,'w+')
             ini.write("{}\n".format(Constants.SAMPLES_FOLDER))
-            ini.write("<MultiCore>\t{}\n".format(root.MultiCore))
-            ini.write("<PlotMode>\t{}\n".format(root.PlotMode))
-            ini.write("<RAMLimit>\t{}\n".format(root.RAM_limit))
-            ini.write("<welcome>\t{}".format(root.checker))
+            ini.write("<ColorMap>\t{}\n".format(__self__.ColorMapMode.get()))
+            ini.write("<MultiCore>\t{}\n".format(__self__.CoreMode.get()))
+            ini.write("<PlotMode>\t{}\n".format(__self__.PlotMode.get()))
+            ini.write("<RAMLimit>\t{}\n".format(__self__.RAMMode.get()))
+            ini.write("<welcome>\t{}".format(__self__.WlcmMode.get()))
             ini.close()
             __self__.kill_window()
         except: 
-            messagebox.showerror("Error","File inifile.ini not found.")
+            messagebox.showerror("Error","File settings.tag not found.")
             root.master.destroy()
 
     def kill_window(__self__):
@@ -2401,20 +2436,22 @@ class Settings:
         except: pass
 
     def save_settings(__self__):
-        root.RAM_limit = __self__.RAMMode.get()
+        Constants.RAM_LIMIT = __self__.RAMMode.get()
         root.RAM_limit_value = restore_bytes(
                 float(__self__.RAMEntry.get()),
                 __self__.RAMUnit.get())
-        root.MultiCore = __self__.CoreMode.get()
-        root.PlotMode = __self__.PlotMode.get()
-        root.checker = __self__.WlcmMode.get()
-        if root.PlotMode == "Logarithmic": root.plot_display = "-semilog"
-        if root.PlotMode == "Linear": root.plot_display = None
+        Constants.COLORMAP = __self__.ColorMapMode.get()
+        Constants.MULTICORE = __self__.CoreMode.get()
+        Constants.PLOTMODE = __self__.PlotMode.get()
+        Constants.WELCOME = __self__.WlcmMode.get()
+        if Constants.PLOTMODE == "Logarithmic": root.plot_display = "-semilog"
+        if Constants.PLOTMODE == "Linear": root.plot_display = None
 
         refresh_plots()
         try: root.clipper.refresh_plot() 
         except: pass
         __self__.write_to_ini()
+        refresh_all_plots()
 
 
 class MainGUI:
@@ -2453,11 +2490,10 @@ class MainGUI:
 
         sys_mem = dict(virtual_memory()._asdict())
         inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
-        __self__.MultiCore, __self__.PlotMode, __self__.RAM_limit = \
-                __self__.grab_GUI_config(inipath)
+        set_settings(inipath)
         __self__.RAM_limit_value = sys_mem["available"]
-        if __self__.PlotMode == "Logarithmic": __self__.plot_display = "-semilog"
-        if __self__.PlotMode == "Linear": __self__.plot_display = None
+        if Constants.PLOTMODE == "Logarithmic": __self__.plot_display = "-semilog"
+        if Constants.PLOTMODE == "Linear": __self__.plot_display = None
         
         __self__.build_widgets()
         __self__.plot_canvas.mpl_connect("button_press_event",__self__.pop)
@@ -2499,18 +2535,7 @@ class MainGUI:
         __self__.master.destroy()
         sys.exit()
     
-    def grab_GUI_config(__self__,inifile):
-        CoreMode,PlotMode,RAMMode = None, None, None
-        ini = open(inifile,"r")
-        for line in ini:
-            line = line.replace("\n","")
-            line = line.replace("\r","")
-            if line.split("\t")[0] == "<MultiCore>": CoreMode = bool(line.split("\t")[1])
-            if line.split("\t")[0] == "<PlotMode>": PlotMode = str(line.split("\t")[1])
-            if line.split("\t")[0] == "<RAMLimit>": RAMMode = bool(line.split("\t")[1])
-            if line.split("\t")[0] == "<welcome>": WlcmMode = bool(line.split("\t")[1])
-        ini.close() 
-        return CoreMode, PlotMode, RAMMode
+    
     
     def toggle_(__self__,toggle='on'):
         if toggle == 'on':
@@ -2872,11 +2897,12 @@ class MainGUI:
     
     def draw_map(__self__):
         try: 
-            __self__.sample_plot.imshow(Constants.MY_DATACUBE.densitymap, cmap='jet')
+            __self__.sample_plot.imshow(Constants.MY_DATACUBE.densitymap, 
+                    cmap=Constants.COLORMAP)
             __self__.plot_canvas.draw()
         except: 
             blank = np.zeros([20,20])
-            __self__.sample_plot.imshow(blank, cmap='jet')
+            __self__.sample_plot.imshow(blank, cmap=Constants.COLORMAP)
             __self__.plot_canvas.draw()
     
     def open_files_location(__self__, event=""):
@@ -2959,7 +2985,9 @@ class MainGUI:
         
     def refresh_ImageCanvas(__self__,i):
         try: 
-            __self__.sample_plot.imshow(__self__.densitymap,cmap='jet',label='Counts Map')
+            __self__.sample_plot.imshow(__self__.densitymap,
+                    cmap=Constants.COLORMAP,
+                    label='Counts Map')
         except: 
             __self__.sample_plot.imshow(np.zeros([20,20]))
     
@@ -4074,8 +4102,9 @@ class PeriodicTable:
                     results.append((elmap, ROI, "custom"))
                     digest_results(Constants.MY_DATACUBE,results,["custom"])
 
-                if len(Constants.FIND_ELEMENT_LIST) > 2 and Constants.MY_DATACUBE.img_size > 999\
-                        and root.MultiCore == True:
+                if len(Constants.FIND_ELEMENT_LIST) > 2 \
+                        and Constants.MY_DATACUBE.img_size > 999\
+                        and Constants.MULTICORE == True:
                     
                     max_copies = 0 #as many copies as cores available
                     if needed_memory > root.RAM_limit_value:
@@ -4444,7 +4473,7 @@ if __name__.endswith('__main__'):
     from Mosaic import Mosaic_API
     open_log()
     logger = logging.getLogger("logfile")
-    from ReadConfig import checkout_config
+    from ReadConfig import checkout_config, set_settings 
     from ImgMath import LEVELS, apply_scaling
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from Decoder import *

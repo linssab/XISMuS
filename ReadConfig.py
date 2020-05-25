@@ -1,11 +1,12 @@
 #################################################################
 #                                                               #
 #          CONFIGURATION PARSER                                 #
-#                        version: 1.0.0                         #
+#                        version: 1.0.1                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import logging, os
+import Constants
 from win32com.shell import shell, shellcon
 
 def pop_error(title,message):
@@ -200,6 +201,26 @@ def unpack_cfg():
     CONFIG = all_parameters[0]
     CALIB = all_parameters[1]
     return CONFIG, CALIB
+
+def set_settings(inifile):
+        ini = open(inifile,"r")
+        for line in ini:
+            line = line.replace("\n","")
+            line = line.replace("\r","")
+            if line.split("\t")[0] == "<ColorMap>": 
+                ColorMapMode = str(line.split("\t")[1])
+                ColorMapMode = ColorMapMode.replace("\n","")
+            if line.split("\t")[0] == "<MultiCore>": CoreMode = bool(line.split("\t")[1])
+            if line.split("\t")[0] == "<PlotMode>": PlotMode = str(line.split("\t")[1])
+            if line.split("\t")[0] == "<RAMLimit>": RAMMode = bool(line.split("\t")[1])
+            if line.split("\t")[0] == "<welcome>": WlcmMode = bool(line.split("\t")[1])
+        ini.close() 
+        Constants.COLORMAP = ColorMapMode
+        Constants.MULTICORE = CoreMode
+        Constants.PLOTMODE = PlotMode
+        Constants.RAM_LIMIT = RAMMode
+        Constants.WELCOME = WlcmMode
+        return
 
 if __name__ == "__main__":
     logger.info("This is ReadConfig")

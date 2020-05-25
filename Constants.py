@@ -1,4 +1,4 @@
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None
 DEFAULTBTN_COLOR = "#000000"
@@ -11,6 +11,11 @@ CONFIG = {}
 CALIB = []
 DIRECTORY = None
 SAMPLES_FOLDER = ""
+COLORMAP = "Jet"
+MULTICORE = True
+PLOTMODE = "Logarithmic"
+RAM_LIMIT = None
+WELCOME = False
 
 def list_all():
     return {"version":VERSION,

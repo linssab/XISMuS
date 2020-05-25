@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          DATABASE FOR ELEMENTS (XRAYLIB BASED)                #
-#                        version: 2.0 - Mar - 2020              #
+#                        version: 1.0.0 - May - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 

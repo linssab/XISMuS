@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: 1.0.0 - May - 2020            #
+#                        version: 1.0.1 - May - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -660,8 +660,10 @@ def subtract(image1, image2):
     lo2 = image2.min()
     if hi1 > hi2:
         image2 = (image2/hi2)*hi1
-    else:
+    elif hi2 > hi1:
         image1 = (image1/hi1)*hi2
+    else:
+        pass
     shape = [image1.shape[0], image1.shape[1]]
     shape = np.asarray(shape,dtype="int32")
             
