@@ -1,11 +1,11 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 1.2.0 - Apr - 2020            #
+#                        version: 1.1.0 - May - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-VERSION = "1.2.0"
+VERSION = "1.0.1"
 global layers_dict
 layers_dict = {}
 

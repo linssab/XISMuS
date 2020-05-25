@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          PROGRESS BARS AND LOADING MODULE                     #
-#                        version: 1.0.0                         #
+#                        version: 1.0.1                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 

@@ -85,14 +85,40 @@ def cy_threshold_low(float[:,:] a_2D_array, int[:] shape, int t):
                 new_array[x][y] = a_2D_array[x][y]
     return new_array
 
-cdef float cy_simple_median(float[:,:] a_2D_array, int x, int y):
+cdef float cy_simple_median(float[:,:] m, int x, int y, list shape):
 
-    """ Returns the average value of pixel x,y. Ignores edges """
+    """ Returns the average value of pixel x,y. """
     """ For use with Cython exclusively """
+
     cdef float average = 0.0
-    return (2*a_2D_array[x][y] + a_2D_array[x-1][y] + a_2D_array[x+1][y] +\
-            a_2D_array[x][y-1] + a_2D_array[x-1][y-1] + a_2D_array[x+1][y-1] +\
-            a_2D_array[x][y+1] + a_2D_array[x-1][y+1] + a_2D_array[x+1][y+1])/10
+    if x == 0:
+        if y == 0: 
+            return (2*m[x][y] + m[x+1][y] + m[x][y+1] + m[x+1][y+1])/5 #upper-left corner
+        elif y == shape[1]-1:
+            return (2*m[x][y] + m[x+1][y] + m[x][y-1] + m[x+1][y-1])/5 #upper-right corner
+        else:
+            return (2*m[x][y] + m[x+1][y] +\
+            m[x][y-1] + m[x+1][y-1] +\
+            m[x][y+1] + m[x+1][y+1])/7
+    elif x == shape[0]-1:
+        if y == 0: 
+            return (2*m[x][y] + m[x-1][y] + m[x][y+1] + m[x-1][y+1])/5 #bottom-left corner
+        elif y == shape[1]-1: 
+            return (2*m[x][y] + m[x-1][y] + m[x][y-1] + m[x-1][y-1])/5 #bottom-right corner
+        else: 
+            return (2*m[x][y]  + m[x-1][y] +\
+            m[x][y-1] + m[x-1][y-1] +\
+            m[x][y+1] + m[x-1][y+1])/7
+    elif y == 0:
+        return (2*m[x][y] + m[x-1][y] + m[x+1][y] +\
+            m[x][y+1] + m[x-1][y+1] + m[x+1][y+1])/7
+    elif y == shape[1]-1:
+        return (2*m[x][y] + m[x-1][y] + m[x+1][y] +\
+            m[x][y-1] + m[x-1][y-1] + m[x+1][y-1])/7
+    else:
+        return (2*m[x][y] + m[x-1][y] + m[x+1][y] +\
+            m[x][y-1] + m[x-1][y-1] + m[x+1][y-1] +\
+            m[x][y+1] + m[x-1][y+1] + m[x+1][y+1])/10
 
 def cy_average(float[:,:] a_2D_array, int x, int y):
 
@@ -118,11 +144,26 @@ def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
     cdef int x = 0
     cdef int y = 0
     for i in range(iterations):
-        for x in range(1,shape[0]-1,1):
-            for y in range(1,shape[1]-1,1):
-                new_image[x][y] = cy_simple_median(current_image,x,y)
+        for x in range(shape[0]):
+            for y in range(shape[1]):
+                new_image[x][y] = cy_simple_median(current_image,x,y,[shape[0],shape[1]])
         current_img = new_image
     return new_image 
+
+def cy_subtract(float[:,:] map1, 
+        float[:,:] map2, 
+        int[:] shape,
+        float[:,:] output):
+
+    cdef int i = 0
+    cdef int j = 0
+
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            output[i][j] = map1[i][j] - map2[i][j]
+            if output[i][j] < 0: output[i][j] = 0
+    return output
+
 
 def cy_read_densemap_pixels(dict layers, int i, int j):
 

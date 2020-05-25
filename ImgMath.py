@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: 1.0.0 - May - 2020            #
+#                        version: 1.0.1 - May - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -565,7 +565,7 @@ def split_and_save(datacube,map_array,element_list):
     logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0
 
-def write_image(image,size,path,enhance=False):
+def write_image(image,resize,path,enhance=False):
 
     """ Writes a 2D-array image to disk. Similar to split_and_save function.
     
@@ -580,10 +580,14 @@ def write_image(image,size,path,enhance=False):
     imagsize = image.shape
     imagex = image.shape[0]
     imagey = image.shape[1]
-    factor = size/max(imagsize)
+    if resize == 0:
+        factor = 1
+    elif resize > 0:
+        factor = resize/max(imagsize)
+    else: raise ValueError("Can't have negative resize shape")
     newX,newY = int(factor*imagex),int(factor*imagey)
     
-    if imagex > size or imagey > size: 
+    if imagex > resize or imagey > resize: 
         large_image = image/image.max()*255
     else: 
         if image.max() > 0: 
@@ -644,6 +648,28 @@ def binary_thresh(image,thresh):
                 counts += 1
             else: image[x][y] = 0
         return image, counts
+
+def subtract(image1, image2):
+
+    """ Subtracts image2 from image1 """
+
+    output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
+    hi1 = image1.max()
+    hi2 = image2.max()
+    lo1 = image1.min()
+    lo2 = image2.min()
+    if hi1 > hi2:
+        image2 = (image2/hi2)*hi1
+    elif hi2 > hi1:
+        image1 = (image1/hi1)*hi2
+    else:
+        pass
+    shape = [image1.shape[0], image1.shape[1]]
+    shape = np.asarray(shape,dtype="int32")
+            
+    cy_funcs.cy_subtract(image1,image2,shape,output)
+    return output
+    
 
 def large_pixel_smoother(image,iterations):
     
