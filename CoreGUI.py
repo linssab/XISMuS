@@ -1769,6 +1769,9 @@ class ImageAnalyzer:
             Map2 = Map2[y[0]:y[1],x[0]:x[1]]
 
         corr = correlate(Map1,Map2)
+        if not corr: 
+            messagebox.showerror("Error","Cannot correlate an empty image!")
+            return
         corr_plot = PlotWin(__self__.master)
         corr_plot.draw_correlation(corr,labels)
 
@@ -1944,8 +1947,6 @@ class PlotWin:
         __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**plot_font)
         __self__.plot.set_xlabel(labels[0])
         __self__.plot.set_ylabel(labels[1])
-        #__self__.plot.set_ylim(bottom=1,top=corr[1].max()*1.20)
-        #__self__.plot.set_xlim(left=1,right=corr[0].max()*1.20)
         __self__.plot.scatter(corr[0],corr[1])
         for i in range(int(corr[0].max())):
             value = A*i+B

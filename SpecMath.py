@@ -994,8 +994,11 @@ def correlate(map1,map2):
     corr_x, corr_y = [],[]
     for x in range(map1.shape[0]):
         for y in range(map2.shape[1]):
-            corr_x.append(map1[x,y])
-            corr_y.append(map2[x,y])
+            if map1[x][y] > 0 and map2[x][y] > 0:
+                corr_x.append(map1[x][y])
+                corr_y.append(map2[x][y])
+    if corr_x == [] or corr_y == []:
+        return
     corr_x, corr_y = np.asarray(corr_x), np.asarray(corr_y)
     return corr_x, corr_y
 
