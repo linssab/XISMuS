@@ -11,6 +11,7 @@ import os
 import sys
 import numpy as np
 import math
+<<<<<<< Updated upstream
 import scipy.signal
 import matplotlib.pyplot as plt
 import pickle
@@ -19,6 +20,70 @@ import EnergyLib
 from numba import guvectorize, float64, int64
 from numba import cuda
 from numba import jit
+=======
+from math import factorial
+logger.info("Finished SpecMath imports.")
+
+from tkinter import *
+from tkinter import ttk
+
+def FN_reset():
+    Constants.FANO = 0.114
+    Constants.NOISE = 80
+
+def FN_set(F, N):
+    Constants.FANO = F
+    Constants.NOISE = N
+
+def build_pool(size):
+    Constants.FILE_POOL = []
+    spec = getfirstfile()
+    
+    name=str(spec)
+    specfile_name = name.split("\\")[-1]
+    name = specfile_name.split(".")[0]
+    extension = specfile_name.split(".")[-1]
+    for i in range(len(name)):
+        if not name[-i-1].isdigit(): 
+            prefix = name[:-i]
+            index = name[-i:]
+            break
+    index = int(index)+1
+
+    Constants.FILE_POOL.append(spec)
+    for idx in range(index,size+index-1,1):
+        spec = os.path.join(Constants.SAMPLES_FOLDER,
+                Constants.CONFIG["directory"],
+                str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
+        Constants.FILE_POOL.append(spec)
+
+def digest_psdinv(y,energies):
+    
+    """ -- y is an array with the measured FWHM.
+    -- energies is an array with the corresponding energies for the corresponding 
+    FWHM peaks
+
+    This function performs a pseudo inverse regression to equation 1 (see OSP article) 
+    with singular value decomposition (numpy.pinv()) to find FANO and NOISE values
+    that satisfies the equation """
+
+    x = [(2.3548**2)*3.85*en for en in energies]
+    Y = np.asarray([i**2 for i in y], dtype="float32")
+    X = np.array([np.ones(len(x)), x], dtype="float32")
+    C = np.dot(Y,np.linalg.pinv(X))
+
+    return abs(C)
+
+def digest_lstsq(y,energies):
+    
+    """ -- y is an array with the measured FWHM.
+    -- energies is an array with the corresponding energies for the corresponding 
+    FWHM peaks
+
+    This function performs a least-squares fitting to equation 1 (see OSP article) 
+    to find FANO and NOISE values that satisfies it """
+
+>>>>>>> Stashed changes
 
 os.environ['NUMBAPRO_NVVM']      =\
         r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\nvvm\bin\nvvm64_33_0.dll'
@@ -35,6 +100,7 @@ FANO = 0.114
 
 class datacube:
     
+<<<<<<< Updated upstream
     ndim = 0
     specsize = SpecRead.getdata(SpecRead.getfirstfile()) 
 
@@ -57,6 +123,52 @@ class datacube:
 
     def stacksum(__self__):
         __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype='float64')
+=======
+    def __init__(__self__,dtypes,configuration,mode="",name=""):
+        if mode == "merge": 
+            __self__.name = name
+            __self__.path = "No path, this cube was merged"
+        else:
+            from Constants import SAMPLES_FOLDER
+            __self__.name = configuration["directory"]
+            __self__.path = os.path.join(SAMPLES_FOLDER,__self__.name)
+        logger.debug("Initializing cube file")
+        
+        try: specsize = getdata(getfirstfile()) 
+        except: specsize = 0
+        __self__.datatypes = np.array(["{0}".format(
+            dtypes[type]) for type in range(len(dtypes))])
+        if mode != "merge":
+            __self__.dimension = getdimension()
+            __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+            __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
+                specsize.shape[0]],dtype="int32",order='C')
+            __self__.config = configuration
+            __self__.calibration = getcalibration()
+            __self__.energyaxis, __self__.gain = calibrate()
+            __self__.config["gain"] = __self__.gain
+            __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
+        __self__.ROI = {}
+        __self__.hist = {}
+        __self__.max_counts = {}
+
+    def MPS(__self__,mps):
+
+        """ Read all data in datacube.matrix and returns a spectrum where each index
+        is the maximum value found in the matrix for that same index.
+        MPS stands for Maximum Pixel Spectrum """
+
+        size = int(len(mps))
+        shape = np.asarray(__self__.matrix.shape)
+        cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
+
+    def stacksum(__self__):
+
+        """ Reall all data in datacube.matrix and return the summation derived spectrum """
+
+        __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype="int32")
+        __self__.sum_bg = np.zeros([__self__.matrix.shape[2]],dtype="float32")
+>>>>>>> Stashed changes
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
@@ -104,6 +216,7 @@ class datacube:
         p_output = open(SpecRead.cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
+<<<<<<< Updated upstream
         print("File {0}.cube sucessfully compiled.".format(SpecRead.DIRECTORY))
 
     def compile_cube(__self__):
@@ -125,6 +238,76 @@ class datacube:
         print("\nCalculating Summation and Maximum Pixel Spectrum and stripping background.")
         sys.stdout.flush()
         datacube.MPS(__self__)
+=======
+
+    def digest_merge(__self__,bar=None):
+        if bar != None: 
+            bar.progress["maximum"] = 5
+            bar.updatebar(1)
+            bar.update_text("1/5 Calculating MPS...")
+        mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
+        datacube.MPS(__self__,mps)
+        __self__.mps = mps
+        if bar != None: 
+            bar.update_text("2/5 Calculating Stacksum...")
+            bar.updatebar(2)
+        datacube.stacksum(__self__)
+        datacube.write_sum(__self__)
+        if bar != None:
+            bar.update_text("3/5 Finding Fano and Noise...")
+            bar.updatebar(3)
+        datacube.fit_fano_and_noise(__self__)
+        if bar != None:
+            bar.update_text("4/5 Creating densemap...")
+            bar.updatebar(4)
+        datacube.create_densemap(__self__)
+        if bar != None:
+            bar.update_text("5/5 Writing to disk...")
+            bar.updatebar(5)
+        datacube.save_cube(__self__)
+
+    def compile_cube(__self__):
+
+        """ Iterate over the spectra dataset, reading each spectrum file saving it to the 
+        proper xy matrix indexes and calculating the background contribution as well. 
+        This method saves all derived spectra, writes summation mca to disk and calculates
+        the density map. """
+
+        logger.debug("Started mca compilation")
+        timer = time.time()
+        __self__.progressbar = Busy(__self__.img_size,0)
+        x,y,scan = 0,0,(0,0)
+        if not isinstance(Constants.FILE_POOL,tuple):
+            build_pool(__self__.img_size)
+        else: pass
+        iteration = 0
+        for spec in Constants.FILE_POOL:
+            try: specdata = getdata(spec)
+            except: 
+                __self__.progressbar.destroybar()
+                return 1, spec
+            if isinstance(specdata,np.ndarray) == False: 
+                __self__.progressbar.interrupt(specdata,5)
+                __self__.progressbar.destroybar()
+                return 1,specdata
+            __self__.matrix[x][y] = specdata
+            scan = refresh_position(scan[0],scan[1],__self__.dimension)
+            x,y = scan[0],scan[1]
+            __self__.progressbar.updatebar(iteration)
+            iteration += 1
+        logger.info("Packed spectra in {} seconds".format(time.time()-timer))
+
+        logger.debug("Calculating MPS...")
+        __self__.progressbar.update_text("Calculating MPS...")
+        mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
+        datacube.MPS(__self__,mps)
+        __self__.mps = mps
+        logger.debug("Stripping background...")
+        __self__.progressbar.update_text("Stripping background...")
+        datacube.strip_background(__self__)
+        logger.debug("Calculating summation spectrum...")
+        __self__.progressbar.update_text("Calculating sum spec...")
+>>>>>>> Stashed changes
         datacube.stacksum(__self__)
         datacube.strip_background(__self__)
         datacube.save_cube(__self__)
@@ -289,6 +472,7 @@ def setROI(lookup,xarray,yarray,localconfig):
         
         logging.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     
+<<<<<<< Updated upstream
     lowx_idx = lowx_idx + 3
     highx_idx = highx_idx - 3
     peak_center = shift[2]-3
@@ -296,13 +480,36 @@ def setROI(lookup,xarray,yarray,localconfig):
     return lowx_idx,highx_idx,peak_center,isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
+=======
+    logger.debug("peak_center = {0}, channels = {1} {2}, peakwidth= {3}".format(
+        peak_center,lowx_idx,highx_idx,(highx_idx-lowx_idx))) 
+    return lw,hi,peak_center,isapeak
+
+def getpeakarea(lookup,data,energyaxis,continuum,localconfig,usedif2,dif2):
+
+    """ Calculates the netpeak area of a given lookup energy.
+
+    ---------------------------------------------------------
+
+    INPUT:
+        lookup; int (theoretical peak center eV energy)
+        data; np.array (counts)
+        energyaxis; np.array (calibrated energy axis KeV)
+        continuum; np.array (background counts)
+        localconfig; dict (condiguration)
+        usedif2; bool
+        dif2; np.array (second differential of counts)
+    OUTPUT:
+        area; float
+        idx; list (containing setROI function outputs) """
+
+>>>>>>> Stashed changes
     Area = 0
    
     idx = setROI(lookup,energyaxis,data,localconfig)
     isapeak = idx[3]
     xdata = energyaxis[idx[0]:idx[1]]
     ydata = data[idx[0]:idx[1]]
-    original_data = RAW[idx[0]:idx[1]] 
     ROIbg = continuum[idx[0]:idx[1]]
     
     ######################################
@@ -310,7 +517,11 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     ######################################
 
     if isapeak == True: 
+<<<<<<< Updated upstream
         if original_data.sum() - ROIbg.sum() < 3*math.sqrt(ROIbg.sum()): isapeak = False
+=======
+        if ydata.sum() - ROIbg.sum() < 3*math.sqrt(abs(ROIbg.sum())): isapeak = False
+>>>>>>> Stashed changes
     
     ##########################
     # 2ND DIFFERENTIAL CHECK #
@@ -355,6 +566,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
     if TESTFNC == True:
  
         print(5*"*" + " IS A PEAK? " + 5*"*" + "\n\t{0}\t".format(isapeak))
+<<<<<<< Updated upstream
         print("RAW peak: {0}\t bg: {1}\nyDATA peak: {2}"\
                .format(original_data.sum(),(3*ROIbg.sum()),ydata.sum()))
         chi2 = 0
@@ -364,6 +576,8 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
         chi2 = chi2/len(original_data)
         print("chi2 = {0:.2f}".format(chi2))
 
+=======
+>>>>>>> Stashed changes
         print("ydata = {0}".format(ydata))
         print("len(ydata) = {0}".format(len(ydata)))
         try: print("ydata[idx[2]] = {0}, smooth_dif2[idx[2]] = {1}".format(\
@@ -373,7 +587,6 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,RAW,usedif2,dif2):
         print("Lookup: {0} Area: {1}\n".format(lookup,Area))
     
         plt.plot(xdata,ydata, label='data')
-        plt.plot(xdata,original_data, label='RAW data')
         try: plt.plot(xdata,smooth_dif2, label='2nd Differential')
         except: pass
         plt.plot(xdata,ROIbg, label='BG estimation')

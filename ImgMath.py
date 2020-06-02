@@ -225,8 +225,8 @@ def colorize(elementmap,color=None):
     for line in range(imagex):    
         for i in range(imagey):
             if elmap[line][i] > 0:
-                pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],\
-                        dtype='float32'))
+                pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],
+                    dtype='float32'))
             else: pixel.append(np.array([0,0,0,A[line][i]],dtype='float32'))
             myimage[line]=np.asarray(pixel,dtype='uint8')
         pixel = []
@@ -331,6 +331,7 @@ def split_and_save(datacube,map_array,element_list,ratio):
 
 def stackimages(*args):
     imagelist = args
+<<<<<<< Updated upstream
     colorlist = ['red','green','blue']
     color = 0
     stackedimage = ImgMath.colorize(np.zeros([imagex,imagey]),'none')
@@ -338,5 +339,15 @@ def stackimages(*args):
         color += 1
         image = ImgMath.colorize(image,colorlist[color])
         stackedimage = cv2.addWeighted(stackedimage,1,image,1,0)
+=======
+    imagea = args[0]
+    imageb = args[1]
+    imagea = np.asarray(imagea,dtype="int32")
+    imageb = np.asarray(imageb,dtype="int32")
+    stackedimage = np.zeros([imagex,imagey,3],dtype="int32")
+     
+    cy_funcs.cy_stack(stackedimage,imagea,imageb,np.asarray([imagex,imagey],dtype="int32"))
+
+>>>>>>> Stashed changes
     return stackedimage
 

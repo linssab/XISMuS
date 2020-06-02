@@ -147,7 +147,6 @@ def getpeakmap(element_list,datacube):
         for ITERATION in range(dimension):
                
             spec = currentspectra  #updates the current file name / debug mode only
-            RAW = datacube.matrix[currentx][currenty]
             specdata = datacube.matrix[currentx][currenty]
             
             #######################################
@@ -183,7 +182,7 @@ def getpeakmap(element_list,datacube):
                 for i in range(len(dif2)):
                     if dif2[i] < -1: dif2[i] = dif2[i]
                     elif dif2[i] > -1: dif2[i] = 0
-            else: dif2 = np.zeros([specdata.shape[0]])
+            else: dif2 = 0
 
             ############################
             #  VERIFIES THE PEAK SIZE  #
@@ -229,8 +228,14 @@ def getpeakmap(element_list,datacube):
                     # Check SpecMath.py This is due to the high noise in the data  #
                     ################################################################
                         
-                    ka_info = SpecMath.getpeakarea(kaenergy[Element],specdata,\
-                            energyaxis,background,configdict,RAW,usedif2,dif2)
+                    ka_info = SpecMath.getpeakarea(
+                            kaenergy[Element],
+                            specdata,
+                            energyaxis,
+                            background,
+                            configdict,
+                            usedif2,
+                            dif2)
                     ka = ka_info[0]
                 
                     for channel in range(len(specdata)):
@@ -246,8 +251,14 @@ def getpeakmap(element_list,datacube):
                     elif ka > 0 and ratio == False: kb = 0
                     
                     elif ka > 0 and ratio == True:
-                        kb_info = SpecMath.getpeakarea(kbenergy[Element],specdata,\
-                                energyaxis,background,configdict,RAW,usedif2,dif2)
+                        kb_info = SpecMath.getpeakarea(
+                                kbenergy[Element],
+                                specdata,
+                                energyaxis,
+                                background,
+                                configdict,
+                                usedif2,
+                                dif2)
                         kb = kb_info[0]
 
                         for channel in range(len(specdata)):
@@ -271,12 +282,21 @@ def getpeakmap(element_list,datacube):
                     
                     # KA AND KB ARE 0 BY DEFAULT
                     ka, kb = 0, 0
+<<<<<<< Updated upstream
                     ka_ROI = RAW[ka_idx[0]:ka_idx[1]]
                     ka_bg = background[ka_idx[0]:ka_idx[1]]
                     
                     if ratio == True:
                         kb_ROI = RAW[kb_idx[0]:kb_idx[1]]
                         kb_bg = background[kb_idx[0]:kb_idx[1]]
+=======
+                    ka_ROI = specdata[ka_idx[Element][0]:ka_idx[Element][1]]
+                    ka_bg = background[ka_idx[Element][0]:ka_idx[Element][1]]
+                    
+                    if conditional_ratio[Element] == True:
+                        kb_ROI = specdata[kb_idx[Element][0]:kb_idx[Element][1]]
+                        kb_bg = background[kb_idx[Element][0]:kb_idx[Element][1]]
+>>>>>>> Stashed changes
                
                     # CALCULATES KA
                     if ka_idx[3] == True:

@@ -37,11 +37,66 @@ def findprefix():
     return firstfile_path
 
 def getfirstfile():
+<<<<<<< Updated upstream
     return FIRSTFILE_ABSPATH
 
     ######################
     # DIRECTORIES SETUP! #
     ######################
+=======
+    
+    """ This function is called to get the last updated value of
+    Constants.FIRSTFILE_ABSPATH """
+    
+    return Constants.FIRSTFILE_ABSPATH
+
+
+def setup(prefix, indexing, extension):
+    
+    """ Reads config.cfg file and sets up the configuration according to what is
+    contained there """
+
+    logger.debug("Running setup from Config.cfg") 
+    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
+
+    Constants.CONFIG,Constants.CALIB = CONFIGURE()
+    Constants.DIRECTORY = Constants.CONFIG.get("directory")
+    
+    # build paths
+    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
+    workpath = __PERSONAL__
+    cube_path = os.path.join(workpath,"output",
+            Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
+    output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
+    dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
+
+    Constants.NAME_STRUCT = [prefix,indexing,extension]
+    
+    return np.nan
+
+def setup_from_datacube(datacube,sample_database):
+    
+    """ Read Cube class object configuration and sets up the application
+    configuration parameters accordingly """
+
+    logger.debug("Running setup from datacube {}".format(datacube.name)) 
+    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
+    
+    Constants.CONFIG,Constants.CALIB = datacube.config, datacube.calibration
+    Constants.DIRECTORY = Constants.CONFIG.get("directory")
+    
+    # build sample paths
+    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
+    workpath = __PERSONAL__
+    cube_path = os.path.join(workpath,"output",
+            Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
+    output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
+    dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
+    
+    Constants.FIRSTFILE_ABSPATH = sample_database[Constants.DIRECTORY]
+    
+    return np.nan 
+>>>>>>> Stashed changes
 
 DIRECTORY = CONFIG.get('directory')
 samples_folder = 'C:\samples\\'
@@ -138,9 +193,15 @@ def getcalibration():
 def getdata(mca):
     name = str(mca)
     name = name.replace('_',' ')
+<<<<<<< Updated upstream
     name = name.replace('\\',' ')
     name = name.split()
     if 'test' in name or 'obj' in name or 'newtest' in name:
+=======
+    
+    # custom MC generated files
+    if '#XRMC#' in name:
+>>>>>>> Stashed changes
         Data = []
         datafile = open(mca)
         lines = datafile.readlines()
@@ -152,6 +213,7 @@ def getdata(mca):
         Data = np.asarray(Data)
     else:
         ObjectData=[]
+<<<<<<< Updated upstream
         datafile = open(mca)
         line = datafile.readline()
         while "<<DATA>>" not in line:
@@ -160,8 +222,46 @@ def getdata(mca):
         while "<<END>>" not in line:
             ObjectData.append(int(line))
             line = datafile.readline()
+=======
+        with open(mca) as datafile:
+            line = datafile.readline()
+            line = line.replace("\r","")
+            line = line.replace("\n","")
+
+            # AMPTEK files start with this tag
+            if "<<PMCA SPECTRUM>>" in line:
+                while "<<DATA>>" not in line:
+                    line = datafile.readline()
+                    if line == "": break
+                line = datafile.readline()
+                while "<<END>>" not in line:
+                    try: ObjectData.append(int(line))
+                    except ValueError as exception:
+                        datafile.close()
+                        raise exception.__class__.__name__
+                    line = datafile.readline()
+                    if line == "": break
+
+            # Works if file is just counts per line
+            elif line.isdigit():
+                while "<<END>>" not in line:
+                    ObjectData.append(int(line))
+                    line = datafile.readline()
+                    if line == "": break
+            
+            # if file has two columns separated by space or tab
+            elif "\t" in line or " " in line: 
+                while "<<END>>" not in line:
+                    counts = line.split("\t")[-1]
+                    if counts.isdigit(): ObjectData.append(int(counts))
+                    else:
+                        counts = line.split(" ")[-1]
+                        ObjectData.append(int(counts))
+                    line = datafile.readline()
+                    if line == "": break
+            del datafile
+>>>>>>> Stashed changes
         Data = np.asarray(ObjectData)
-    datafile.close()
     return Data
 
 def calibrate():
@@ -202,6 +302,7 @@ def getgain():
         GAIN+=curve[i+1]-curve[i]
     return GAIN/n
 
+<<<<<<< Updated upstream
 def getsum(mca):
     DATA = getdata(mca)
     SUM = 0
@@ -231,6 +332,40 @@ def updatespectra(specfile,size):
     if index < size: index = str(index+1)
     else: index = str(size)
     newfile = str(prefix+'_'+index+'.'+extension)
+=======
+    """ Returns the next spectrum file to be read
+
+    ---------------------------------------------
+
+    INPUT:
+        specfile; string
+        size; int
+    OUTPUT:
+        newfile; string """        
+    
+    try:
+        index = Constants.FILE_POOL.index(specfile)
+        return Constants.FILE_POOL[index+1]
+    
+    except (IndexError, ValueError): 
+
+        name=str(specfile)
+        specfile_name = name.split("\\")[-1]
+        name = specfile_name.split(".")[0]
+        extension = specfile_name.split(".")[-1]
+        for i in range(len(name)):
+            if not name[-i-1].isdigit(): 
+                prefix = name[:-i]
+                index = name[-i:]
+                break
+        
+        if int(index) < size: index = str(int(index)+1)
+        else: index = str(size)
+        newfile = os.path.join(Constants.SAMPLES_FOLDER,
+                Constants.CONFIG["directory"],
+                str(prefix+index+"."+extension))
+        
+>>>>>>> Stashed changes
     return newfile
 
 def getdimension():

@@ -1,0 +1,14 @@
+Version v1.0.1
+
+- Added right-click menus for canvases in Image Analyzer and front panel
+- Added color map option to "Settings" menu
+
+Image Analyzer
+- Fixed issues with sliders in Image Analyzer
+- Fixed issue with image smoothing
+- Color map support added
+
+Version v1.x.x
+
+- Fixed Spectrum name converter when inputting dimension
+- Performance improvements in datacube packing
