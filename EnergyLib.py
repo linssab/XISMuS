@@ -1,20 +1,39 @@
-import xraylib as xlib
+#################################################################
+#                                                               #
+#          DATABASE FOR ELEMENTS (XRAYLIB BASED)                #
+#                        version: 1.0.0 - May - 2020            #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
 import numpy as np
+import logging
+import random, os
+logger = logging.getLogger("logfile")
+logger.debug("Importing module EnergyLib.py...")
+try: 
+    import xraylib as xlib
+    USEXLIB = True
+    xlib.SetErrorMessages(0)
+except: 
+    logger.warning("xraylib module not found!")
+    print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.")
+    USEXLIB = False
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
 
 ElementsInfo = [
+   ["Custom", 0.0001, 1.01,   0,      0,     0,      0,      0,      0,      0], 
    ["H",    0.0007, 1.01,   0,          0,          0.3695, 0.384,  0.3803, 0.3912, 0.3883],
    ["He",   0.0002, 4.00,   0,          0,          0,      0,      0,      0,      0,],
    ["Li",   0.53,   6.94,   0,          0,          0,      0,      0,      0,      0],
-   ["Be",   1.85,   9.01,   0,          0,          0,      0,      0,      0,      0],
-   ["B",    2.34,   10.81,  0,          0,          0,      0,      0,      0,      0],
-   ["C",    2.27,   12.01,  0,          0,          0.442,  2.037,  1.248,  4.496,  3.328],
-   ["N",    0.001,  14.01,  0,          0,          0,      0,      0,      0,      0],
-   ["O",    0.001,  16.00,  0,          0,          0.8653, 5.077,  3.003,  11.43,  8.427],
-   ["F",    0.001,  19.00,  0,          0,          0,      0,      0,      0,      0],
-   ["Ne",   0.0009, 20.18,  0,          0,          0,      0,      0,      0,      0],
-   ["Na",   0.97,   22.99,  1.04,       1.06700003, 0,      0,      0,      0,      0],
+   ["Be",   1.85,   9.01,   0.108,      0,          0,      0,      0,      0,      0],
+   ["B",    2.34,   10.81,  0.183,      0,          0,      0,      0,      0,      0],
+   ["C",    2.27,   12.01,  0.277,      0,          0.442,  2.037,  1.248,  4.496,  3.328],
+   ["N",    0.001,  14.01,  0.392,      0,          0,      0,      0,      0,      0],
+   ["O",    0.001,  16.00,  0.525,      0,          0.8653, 5.077,  3.003,  11.43,  8.427],
+   ["F",    0.001,  19.00,  0.677,      0,          0,      0,      0,      0,      0],
+   ["Ne",   0.0009, 20.18,  0.849,      0,          0,      0,      0,      0,      0],
+   ["Na",   0.97,   22.99,  1.040,      1.06700003, 0,      0,      0,      0,      0],
    ["Mg",   1.74,   24.31,  1.25399995, 1.29700005, 0,      0,      0,      0,      0],
    ["Al",   2.70,   26.98,  1.48699999, 1.55299997, 3.442,  22.41,  13.24,  49.47,  36.83],
    ["Si",   2.33,   28.09,  1.74000001, 1.83200002, 0,      0,      0,      0,      0],
@@ -67,41 +86,41 @@ ElementsInfo = [
    ["Ce",   6.77,   140.12, 4.84000015, 5.26200008, 0,      0,      0,      0,      0],
    ["Pr",   6.77,   140.91, 5.03399992, 5.48899984, 0,      0,      0,      0,      0],
    ["Nd",   7.01,   144.24, 5.43100023, 5.95599985, 0,      0,      0,      0,      0],
-   ["Pm",   7.26,   145.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Sm",   7.52,   150.36, 0,  0,  0,  0,  0,  0,  0],
+   ["Pm",   7.26,   145.00, 5.432,      5.961,      0,      0,      0,      0,      0],
+   ["Sm",   7.52,   150.36, 5.633,      6.201,      0,      0,      0,      0,      0],
    ["Eu",   5.24,   151.96, 6.05900002, 6.71400023, 0,      0,      0,      0,      0],
    ["Gd",   7.90,   157.25, 6.2750001,  6.97900009, 0,      0,      0,      0,      0],
    ["Tb",   8.23,   158.93, 6.49499989, 7.24900007, 0,      0,      0,      0,      0],
    ["Dy",   8.55,   162.50, 6.71999979, 7.52799988, 0,      0,      0,      0,      0],
-   ["Ho",   8.80,   164.93, 0,  0,  0,  0,  0,  0,  0],
-   ["Er",   9.07,   167.26, 0,  0,  0,  0,  0,  0,  0],
-   ["Tm",   9.32,   168.93, 0,  0,  0,  0,  0,  0,  0],
-   ["Yb",   6.97,   173.04, 0,  0,  0,  0,  0,  0,  0],
-   ["Lu",   9.84,   174.47, 0,  0,  0,  0,  0,  0,  0], 
-   ["Hf",   13.31,  178.49, 0,  0,  0,  0,  0,  0,  0],
+   ["Ho",   8.80,   164.93, 6.720,      7.526,      0,      0,      0,      0,      0],
+   ["Er",   9.07,   167.26, 6.949,      7.811,      0,      0,      0,      0,      0],
+   ["Tm",   9.32,   168.93, 7.180,      8.102,      0,      0,      0,      0,      0],
+   ["Yb",   6.97,   173.04, 7.416,      8.402,      0,      0,      0,      0,      0],
+   ["Lu",   9.84,   174.47, 7.655,      8.710,      0,      0,      0,      0,      0], 
+   ["Hf",   13.31,  178.49, 7.899,      9.023,      0,      0,      0,      0,      0],
    ["Ta",   16.65,  180.95, 8.146,      9.343,      0,      0,      0,      0,      0],
    ["W",    19.25,  183.84, 8.398,      9.672,      0,      0,      0,      0,      0],
-   ["Re",   21.02,  186.21, 0,  0,  0,  0,  0,  0,  0],
-   ["Os",   22.61,  190.23, 0,  0,  0,  0,  0,  0,  0],
-   ["Ir",   22.65,  192.22, 0,  0,  0,  0,  0,  0,  0],
-   ["Pt",   21.46,  195.08, 0,  0,  0,  0,  0,  0,  0],
+   ["Re",   21.02,  186.21, 8.652,      10.010,     0,      0,      0,      0,      0],
+   ["Os",   22.61,  190.23, 8.911,      10.354,     0,      0,      0,      0,      0],
+   ["Ir",   22.65,  192.22, 9.175,      10.708,     0,      0,      0,      0,      0],
+   ["Pt",   21.46,  195.08, 9.442,      11.071,     0,      0,      0,      0,      0],
    ["Au",   19.28,  196.97, 9.71100044, 11.4390001, 78.81,  103.1,  160.8,  204.1,  159.2],
    ["Hg",   13.53,  200.59, 9.98700047, 11.823,     0,      0,      0,      0,      0],
    ["Tl",   11.85,  204.37, 10.2659998, 12.21,      0,      0,      0,      0,      0],
    ["Pb",   11.34,  207.20, 10.5489998, 12.614,     86.37,  114.1,  72.75,  225.3,  174.7],
    ["Bi",   9.81,   208.98, 10.8360004, 13.0209999, 0,      0,      0,      0,      0],
-   ["Po",   9.32,   209.00, 0,  0,  0,  0,  0,  0,  0],
-   ["At",   7.00,   210.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Rn",   0.01,   222.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Fr",   1.87,   223.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Ra",   5.50,   226.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Ac",   10.07,  227.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Th",   11.72,  232.04, 0,  0,  0,  0,  0,  0,  0],
-   ["Pa",   15.37,  231.04, 0,  0,  0,  0,  0,  0,  0],
-   ["U",    18.95,  238.03, 0,  0,  0,  0,  0,  0,  0],
-   ["Np",   20.45,  237.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Pu",   19.84,  244.00, 0,  0,  0,  0,  0,  0,  0],
-   ["Am",   13.69,  243.00, 0,  0,  0,  0,  0,  0,  0],
+   ["Po",   9.32,   209.00, 11.131,     13.446,     0,      0,      0,      0,      0],
+   ["At",   7.00,   210.00, 11.427,     13.876,     0,      0,      0,      0,      0],
+   ["Rn",   0.01,   222.00, 11.727,     14.315,     0,      0,      0,      0,      0],
+   ["Fr",   1.87,   223.00, 12.031,     14.771,     0,      0,      0,      0,      0],
+   ["Ra",   5.50,   226.00, 12.339,     15.236,     0,      0,      0,      0,      0],
+   ["Ac",   10.07,  227.00, 12.652,     15.713,     0,      0,      0,      0,      0],
+   ["Th",   11.72,  232.04, 12.968,     16.202,     0,      0,      0,      0,      0],
+   ["Pa",   15.37,  231.04, 13.291,     16.702,     0,      0,      0,      0,      0],
+   ["U",    18.95,  238.03, 13.614,     17.220,     0,      0,      0,      0,      0],
+   ["Np",   20.45,  237.00, 13.946,     17.751,     0,      0,      0,      0,      0],
+   ["Pu",   19.84,  244.00, 14.282,     18.296,     0,      0,      0,      0,      0],
+   ["Am",   13.69,  243.00, 14.620,     18.856,     0,      0,      0,      0,      0],
    ["Cm",   13.51,  247.00, 0,  0,  0,  0,  0,  0,  0],
    ["Bk",   14.79,  247.00, 0,  0,  0,  0,  0,  0,  0],
    ["Cf",   15.10,  251.00, 0,  0,  0,  0,  0,  0,  0],
@@ -119,14 +138,6 @@ ElementsInfo = [
 ]
 
 ElementList = [index[0] for index in ElementsInfo]
-Energies = [index[3] for index in ElementsInfo]
-kbEnergies = [index[4] for index in ElementsInfo]
-AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
-Element_No = {"{0}".format(index[0]):ElementList.index(index[0])+1 for index in ElementsInfo}
-muPb = {"{0}".format(index[0]):(index[6],index[7]) for index in ElementsInfo}
-muE0 = {"{0}".format(index[0]):(index[5]) for index in ElementsInfo} 
-muCu = {"{0}".format(index[0]):(index[8],index[9]) for index in ElementsInfo}
-
 banlist = []
 for i in range(len(ElementsInfo)):
     if i < 10: banlist.append(ElementsInfo[i][0])
@@ -152,11 +163,6 @@ def SetPeakLines():
     return PeakConfigDict
 
 def set_energies_from_xlib():
-<<<<<<< Updated upstream
-    for index in range(len(ElementList)):
-        print(xlib.LineEnergy(index,0))
-    return 0
-=======
     cutoff = 0.25
     cutoff_K = 0.05
     EnergyList, EnergyListKb, plottables_, plottables_dict = [],[],[],{}
@@ -252,7 +258,6 @@ def set_energies_from_xlib():
             if emission == 0: plottables_dict[element] = None
         if plottables_dict[element] == []: plottables_dict[element] = None
     return EnergyList, EnergyListKb, plottables_dict
->>>>>>> Stashed changes
 
 def set_densities_from_xlib():
     DensityDict = {}
@@ -260,11 +265,48 @@ def set_densities_from_xlib():
         loc_element = ElementsInfo[i][0]
         try: 
             if ElementList.index(loc_element)+1 < 95: 
-                DensityDict["{0}".format(loc_element)] = xlib.ElementDensity(ElementList.index(loc_element)+1)
+                DensityDict["{0}".format(loc_element)] = xlib.ElementDensity(ElementList.index(loc_element))
             else:
                 DensityDict["{0}".format(loc_element)] = 0.0 
         except: DensityDict["{0}".format(loc_element)] = np.nan
     return DensityDict
 
-DensityDict = set_densities_from_xlib()
+# Lists below uses the definition written manually in this file
+if USEXLIB == False:
+    DensityDict = {index[0]:index[1] for index in ElementsInfo}
+    Energies = [index[3] for index in ElementsInfo]
+    kbEnergies = [index[4] for index in ElementsInfo]
+    plottables_dict = {}
+    for elt in ElementList:
+        plottables_dict[elt] = [Energies[ElementList.index(elt)], 
+            kbEnergies[ElementList.index(elt)]]
 
+# Energy lists where updated to use xraylib values:
+if USEXLIB == True: Energies, kbEnergies, plottables_dict = set_energies_from_xlib()
+if USEXLIB == True: DensityDict = set_densities_from_xlib()
+
+AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
+Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
+ElementColors = {}
+try: 
+    f = open(os.path.join(os.getcwd(),"images","colours.txt"),"r")
+    for element in ElementList:
+        line = f.readline()
+        line = line.replace("\r","")
+        line = line.replace("\n","")
+        ElementColors[element] = line.split("\t")[-1]
+    f.close()
+except: 
+    ElementColors = {element:"#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)]) for element in ElementList}
+
+if __name__ == "__main__":
+    """
+    import os
+    print(DensityDict)
+    print(DensityDict["Au"])
+    print(ElementColors)
+    f_colour = open(os.path.join(os.getcwd(),"images","colours.txt"),"w")
+    for element in ElementColors:
+        f_colour.write("{}\t{}\r".format(element,ElementColors[element]))
+    f_colour.close()
+    """

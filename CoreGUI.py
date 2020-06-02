@@ -1,28 +1,9 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.0a                          #
+#                        version: 1.0.1                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
-
-<<<<<<< Updated upstream
-from tkinter import *
-from tkinter import ttk
-from tkinter import simpledialog
-import numpy as np
-import SpecRead
-SpecRead.conditional_setup()
-import SpecMath
-import Mapping
-import ImgMath
-import sys, os, pickle
-import logging
-from matplotlib import pyplot as plt
-
-global MY_DATACUBE
-MY_DATACUBE = None
-try: load_cube()
-except: pass
 
 """ Global variables: 
 Constants.MY_DATACUBE is the last loaded cube into memory. It is used for almost
@@ -2388,7 +2369,7 @@ class Settings:
     def __init__(__self__,parent):
         __self__.Settings = Toplevel(master=parent.master)
         __self__.Settings.resizable(False,False)
-        __self__.CoreCount = cpu_count()
+        __self__.CoreCount = Constants.CPUS
         __self__.ScreenFrame = Frame(__self__.Settings,padx=15,pady=15)
         __self__.ScreenFrame.grid(row=0,column=1)
         __self__.TextFrame = Frame(__self__.Settings,padx=15,pady=15)
@@ -2982,689 +2963,272 @@ class MainGUI:
         try: __self__.SamplesWindow.popup.tk_popup(event.x_root, event.y_root, entry="")
         finally: __self__.SamplesWindow.popup.grab_release()
     
-    def __init__(__self__, parent, name):
-        ''' Init progress window '''
-        Toplevel.__init__(__self__, master=parent)
-        __self__.name = name
-        __self__.length = 400
-        #
-        __self__.create_window()
-        __self__.create_widgets()
-
-    def create_window(__self__):
-        ''' Create progress window '''
-        __self__.focus_set()  # set focus on the ProgressWindow
-        __self__.grab_set()  # make a modal window, so all events go to the ProgressWindow
-        #__self__.transient(self.master)  # show only one window in the task bar
-        #
-        __self__.title("Busy...")
-        __self__.resizable(False, False)  # window is not resizable
-        # self.close gets fired when the window is destroyed
-        __self__.protocol('WM_DELETE_WINDOW', __self__.close)
-        # Set proper position over the parent window
-        dx = (__self__.master.winfo_width() >> 1) - (__self__.length >> 1)
-        dy = (__self__.master.winfo_height() >> 1) - 50
-        __self__.geometry('+{x}+{y}'.format(x = __self__.master.winfo_rootx() + dx,
-                                         y = __self__.master.winfo_rooty() + dy))
-
-    def create_widgets(__self__):
-        ''' Widgets for progress window are created here '''
-        __self__.num = IntVar()
-        progress_maximum = SpecRead.getdimension()
-        progress_maximum = progress_maximum[0]*progress_maximum[1]
-        __self__.maximum = progress_maximum
-        __self__.progress = ttk.Progressbar(__self__, maximum=__self__.maximum, orient='horizontal', \
-                length=__self__.length, variable=__self__.num, mode='determinate')
-        __self__.progress.pack(padx=2, pady=2)
-        __self__.next()
-
-    def next(__self__):
-        ''' Take next file from the list and do something with it '''
-        n = __self__.num.get()
-        n += 1
-        __self__.num.set(n)
-        if n < __self__.maximum:
-            __self__.after(1, __self__.next)  # call itself after some time
-        else:
-            __self__.close()  # close window
-
-    def close(__self__, event=None):
-        ''' Close progress window '''
-        if __self__.progress['value'] == __self__.maximum:
-            print('Ok: process finished successfully')
-        else:
-            print('Cancel: process is cancelled')
-        __self__.master.focus_set()  # put focus back to the parent window
-        __self__.destroy()  # destroy progress window
-
-def plot(image,color):
-    image_color = ImgMath.colorize(image,color)
-    fig, ax = plt.subplots()
-    plt.imshow(image_color)
-    plt.show()
-    return 0
-
-def convert_bytes(num):
-    """
-    Obtained from https://stackoverflow.com/questions/210408
-    """
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
-        if num < 1024.0:
-            return "%3.1f %s" % (num, x)
-        num /= 1024.0
-
-def ErrorMessage(message):
-    
-    ErrorWindow = Toplevel(master=root)
-    ErrorWindow.title("Error")
-    ErrorWindow.resizable(False,False)
-    WindowFrame = Frame(ErrorWindow, bd=3)
-    WindowFrame.pack()
-    ErrorLabel = Label(WindowFrame, text=message,padx=16)
-    ErrorLabel.pack_propagate(0)
-    ErrorLabel.pack(fill=X)
-    OkButton = Button(WindowFrame, text="OK", justify=CENTER, \
-            command=ErrorWindow.destroy, width=10, bd=3)
-    OkButton.pack_propagate(0)
-    OkButton.pack()
-
-def sample_select(event):
-    index = int(event.widget.curselection()[0])
-    value = event.widget.get(index)
-    
-    # to avoid unecessarily changing the global variable cube_path, a local version
-    # is created to check the existance of a cube file for the selected sample. If it exists,
-    # then the global variable is changed, the cube is loaded to memory and the aplication load
-    # the configuration embedded in the cube file. Config.cfg remains unchanged.
-    # If the cube does not exists, the user is promped to config the sample and click ok to compile it.
-    # Let the user cancel the cofiguration dialogue, the global variable cube_path is unchanged.
-    
-    local_cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
-    if os.path.exists(local_cube_path): 
-        global MY_DATACUBE
-        SpecRead.cube_path = SpecRead.workpath+'\output\\'+value+'\\'+value+'.cube'
-        load_cube()
-        print(MY_DATACUBE.calibration)
-        SpecRead.setup_from_datacube(MY_DATACUBE)
-        SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
-        
-        try:
-           if StatWindow.winfo_exists():
-                StatWindow.destroy()
-                call_stat()
-                root.focus_force()
-           else: 
-                call_stat()
-                root.focus_force()
-        except:
-            call_stat()
-            root.focus_force()
-    else: 
-        SpecRead.conditional_setup(name=value)
-        call_configure()
-
-
-def call_help():
-    HelpWindow = Toplevel(master=root)
-    HelpWindow.title("Help")
-    HelpWindow.resizable(False,False)
-    HelpText= "I will write something here. I promise."
-    HelpLabel = Label(HelpWindow, text=HelpText, wraplength=640, anchor=W, justify=LEFT)
-    HelpLabel.grid(sticky=W)
-    HelpWindow.mainloop()
-    return np.nan
-
-
-class StatWindow:
-
-    def __init__(__self__,master):
-        __self__.master = Toplevel(master=master)
-        __self__.master.title("Status")
-        __self__.master.resizable(False,False)
-        __self__.place_widgets()
-        __self__.write_stat()
-
-    def place_widgets(__self__):
-        __self__.databox = Listbox(__self__.master)
-        __self__.databox.pack(side=TOP, fill=BOTH, expand=1)
-        __self__.dataframe = Frame(__self__.master, padx=5,pady=5,relief=SUNKEN)
-        __self__.dataframe.pack(side=BOTTOM, fill=BOTH)
-        
-        if os.path.exists(SpecRead.cube_path):
-            __self__.TableLabel1 = Label(\
-                    __self__.dataframe,text="Configuration embedded:",justify=CENTER)
-            __self__.TableLabel2 = Label(__self__.dataframe,text="KEY")
-            __self__.TableLabel3 = Label(__self__.dataframe,text="PACKED IN CUBE")
-            __self__.TableLabel4 = Label(__self__.dataframe,text="IN CONFIG.CFG")
-            __self__.TableLabel1.grid(row=0, columnspan=3)
-            __self__.TableLabel2.grid(row=1, column=0)
-            __self__.TableLabel3.grid(row=1, column=1)
-            __self__.TableLabel4.grid(row=1, column=2)
-
-            __self__.TableLeft = Listbox(__self__.dataframe)
-            __self__.TableMiddle = Listbox(__self__.dataframe)
-            __self__.TableRight = Listbox(__self__.dataframe)
-            __self__.TableLeft.grid(pady=5,row=2, column=0)
-            __self__.TableMiddle.grid(pady=5, row=2, column=1)
-            __self__.TableRight.grid(pady=5, row=2, column=2)
-        else:
-            __self__.TableLeft = Listbox(__self__.dataframe)
-            __self__.TableRight = Listbox(__self__.dataframe)
-            __self__.TableLeft.grid(pady=5, row=2,column=0)
-            __self__.TableRight.grid(pady=5, row=2,column=1)
-
-    def write_stat(__self__):
-        
-        if os.path.exists(SpecRead.selected_sample_folder):
-            __self__.databox.insert(\
-                    END, "\nSample files location: {0}\n".format(SpecRead.selected_sample_folder))
-            __self__.no_sample = False
-        else: 
-            __self__.databox.insert(END, "\nSample {} not found!\n".format(SpecRead.DIRECTORY))
-            __self__.no_sample = True
-
-        if os.path.exists(SpecRead.cube_path):
-            cube_stats = os.stat(SpecRead.cube_path)
-            cube_size = convert_bytes(cube_stats.st_size)
-            __self__.databox.insert(END,"Datacube is compiled. Cube size: {0}".format(cube_size))
-            __self__.databox.insert(END,"Verifying packed elements...")
-            
-            packed_elements = MY_DATACUBE.check_packed_elements()
-            if len(packed_elements) == 0: __self__.databox.insert(END,"None found.")
-            else: 
-                for element in packed_elements:
-                    __self__.databox.insert(END,"Found a map for {0}".format(element))
-            __self__.databox.insert(END,"Done.")
-            values_cube, values_cfg, values_keys = [],[],[]
-            for key in MY_DATACUBE.config:
-                values_cube.append(str(MY_DATACUBE.config[key]))
-                values_cfg.append(str(SpecRead.CONFIG[key]))
-                values_keys.append(str(key))
-            for item in range(len(values_cube)):
-                __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
-                __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
-                __self__.TableRight.insert(END, "{}".format(values_cfg[item]))
-        
-        elif __self__.no_sample == True:
-            __self__.databox.insert(END, "No sample configured!") 
-            for key in SpecRead.CONFIG:
-                __self__.TableLeft.insert(END,key)
-                __self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
-
-        else: 
-            __self__.databox.insert(END, "Datacube not compiled.") 
-            __self__.databox.insert(END, "Please compile the cube first.")
-            for key in SpecRead.CONFIG:
-                __self__.TableLeft.insert(END,key)
-                __self__.TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
-
-def call_stat():
-    
-    sample_status = StatWindow(root)
-    """ 
-    global StatWindow, TableRight
-    load_cube()
-
-    StatWindow = Toplevel(master=root)
-    StatWindow.title("Status")
-    StatWindow.resizable(False,False)
-    DataBox = Listbox(StatWindow)
-    DataBox.pack(side=TOP, fill=BOTH, expand=1)
-    
-    if os.path.exists(SpecRead.selected_sample_folder):
-        DataBox.insert(END, "\nSample files location: {0}\n".format(SpecRead.selected_sample_folder))
-        no_sample = False
-    else: 
-        DataBox.insert(END, "\nSample {} not found!\n".format(SpecRead.DIRECTORY))
-        no_sample = True
-    
-    DataFrame1 = Frame(StatWindow,padx=5,pady=5,relief=SUNKEN)
-    DataFrame1.pack(side=BOTTOM, fill=BOTH)
-     
-    if os.path.exists(SpecRead.cube_path):
-        TableLabel1 = Label(DataFrame1,text="Configuration embedded:",justify=CENTER)
-        TableLabel2 = Label(DataFrame1,text="KEY")
-        TableLabel3 = Label(DataFrame1,text="PACKED IN CUBE")
-        TableLabel4 = Label(DataFrame1,text="IN CONFIG.CFG")
-        TableLabel1.grid(row=0, columnspan=3)
-        TableLabel2.grid(row=1, column=0)
-        TableLabel3.grid(row=1, column=1)
-        TableLabel4.grid(row=1, column=2)
-
-        TableLeft = Listbox(DataFrame1)
-        TableMiddle = Listbox(DataFrame1)
-        TableRight = Listbox(DataFrame1)
-        TableLeft.grid(pady=5,row=2, column=0)
-        TableMiddle.grid(pady=5, row=2, column=1)
-        TableRight.grid(pady=5, row=2, column=2)
-    else:
-        TableLeft = Listbox(DataFrame1)
-        TableRight = Listbox(DataFrame1)
-        TableLeft.grid(pady=5, row=2,column=0)
-        TableRight.grid(pady=5, row=2,column=1)
-
-    if os.path.exists(SpecRead.cube_path):
-        cube_stats = os.stat(SpecRead.cube_path)
-        cube_size = convert_bytes(cube_stats.st_size)
-        DataBox.insert(END,"Datacube is compiled. Cube size: {0}".format(cube_size))
-        DataBox.insert(END,"Verifying packed elements...")
-        
-        packed_elements = MY_DATACUBE.check_packed_elements()
-        if len(packed_elements) == 0: DataBox.insert(END,"None found.")
-        else: 
-            for element in packed_elements:
-                DataBox.insert(END,"Found a map for {0}".format(element))
-        DataBox.insert(END,"Done.")
-        values_cube, values_cfg, values_keys = [],[],[]
-        for key in MY_DATACUBE.config:
-            values_cube.append(str(MY_DATACUBE.config[key]))
-            values_cfg.append(str(SpecRead.CONFIG[key]))
-            values_keys.append(str(key))
-        for item in range(len(values_cube)):
-            TableLeft.insert(END, "{}".format(values_keys[item]))
-            TableMiddle.insert(END, "{}".format(values_cube[item]))
-            TableRight.insert(END, "{}".format(values_cfg[item]))
-    
-    elif no_sample == True:
-        DataBox.insert(END, "No sample configured!") 
-        for key in SpecRead.CONFIG:
-            TableLeft.insert(END,key)
-            TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
-
-    else: 
-        DataBox.insert(END, "Datacube not compiled.") 
-        DataBox.insert(END, "Please compile the cube first.")
-        for key in SpecRead.CONFIG:
-            TableLeft.insert(END,key)
-            TableRight.insert(END, "{}".format(SpecRead.CONFIG[key]))
-    StatWindow.mainloop()
-"""
-def refresh_stat():
-    try: 
-        if StatWindow.winfo_exists():
-            StatWindow.destroy()
-            call_stat()
-    except: 
-        load_cube()
-        pass
-
-def call_listsamples():
-    SamplesWindow = Toplevel(master=root)
-    SamplesWindow.title("Sample List")
-    SamplesWindow.resizable(False,False) 
-    LabelLeft = Label(SamplesWindow, text="FOLDER")
-    LabelRight = Label(SamplesWindow, text="MCA PREFIX")
-    TableLeft = Listbox(SamplesWindow, height=40)
-    TableLeft.bind('<Double-Button-1>', sample_select)
-    TableRight = Listbox(SamplesWindow, height=40)
-    
-    LabelLeft.grid(row=0,column=0)
-    LabelRight.grid(row=0,column=1)
-    TableLeft.grid(pady=5, row=1,column=0)
-    TableRight.grid(pady=5, row=1,column=1)
-    
-    samples = [name for name in os.listdir(SpecRead.samples_folder) \
-            if os.path.isdir(SpecRead.samples_folder+name)]
-    samples_database = {}
-    for folder in samples:
-        TableLeft.insert(END,"{}".format(folder))
-        files = [name for name in os.listdir(SpecRead.samples_folder+folder)]
-        for item in range(len(files)): 
-            try:
-                files[item] = files[item].split("_",1)[0]
-            except: pass
-        counter = dict((x,files.count(x)) for x in files)
-        mca_prefix_count = 0
-        for counts in counter:
-            if counter[counts] > mca_prefix_count:
-                mca_prefix = counts
-                mca_prefix_count = counter[counts]
-        samples_database[folder] = mca_prefix
-        TableRight.insert(END,"{}".format(mca_prefix))
-    SamplesWindow.mainloop()
-
-def reset_sample():
-    
-    def repack():
-        import shutil
-        shutil.rmtree(SpecRead.output_path)
-        call_compilecube()
-        LocalWindow.destroy()
-        refresh_stat()   
-
-    if os.path.exists(SpecRead.cube_path):
-        
-        # creates dialogue to warn cube exists and promp to repack data
-        LocalWindow = Toplevel(master=root)
-        LocalWindow.title("Attention!")
-        LocalWindow.resizable(False,False)
-        LocalLabel = Label(LocalWindow, text="Resetting the sample will erase all files in the OUTPUT folder of sample {}! Are you sure you want to proceed?".format(SpecRead.DIRECTORY),\
-                padx=10, pady=4, wraplength=root_tuple_size[0])
-        LocalLabel.pack()
-        Erase_ico = PhotoImage(file = os.getcwd()+'\images\icons\erase.png')
-        Erase_ico = Erase_ico.zoom(2, 2)
-        EraseLabel = Label(LocalWindow, image = Erase_ico).pack(side=LEFT, pady=8, padx=16)
-        YesButton = Button(LocalWindow, text="Yes", justify=CENTER,\
-                command=repack, width=10, bd=3).pack(side=TOP,pady=5)
-        NoButton = Button(LocalWindow, text="No", justify=CENTER,\
-                command=LocalWindow.destroy, width=10, bd=3).pack(side=TOP, pady=5)
-        LocalWindow.mainloop()
-    else:
-        ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
-
-def call_compilecube():
-    
-    try: os.mkdir(SpecRead.output_path)
-    except: pass
-    if os.path.exists(SpecRead.cube_path): pass
-    else:
-        #try: 
-        
-        specbatch = SpecMath.datacube(['xrf'],SpecRead.CONFIG)
-        specbatch.compile_cube()
-
-        Progress = ProgressWindow(root,"Loading...")
-        root.wait_window(Progress)
-    
-        #except:
-        #    ErrorMessage("Can't find sample {}!".format(SpecRead.DIRECTORY))
-
-def call_configure():
-    
-    global ConfigDiag
-    global ManualParam
-    ManualParam = []
-
-    def manual_calib():
-        
-        global CalibDiag
-        
-        def save_param():
-            EntryParam = [\
-                    [ch1.get(),en1.get()],\
-                    [ch2.get(),en2.get()],\
-                    [ch3.get(),en3.get()],\
-                    [ch4.get(),en4.get()]]
-            for index in range(len(EntryParam)):
-                if EntryParam[index][0] or EntryParam[index][1] > 0:
-                    ManualParam.append(EntryParam[index])
-            save_config()
-            return ManualParam
-
-        CalibDiag = Toplevel(master=ConfigDiag)
-        CalibDiag.title("Manual configuration")
-        CalibDiag.resizable(False,False)
-        ParamFrame = Frame(CalibDiag)
-        ParamFrame.pack()
-        ButtonFrame = Frame(CalibDiag)
-        ButtonFrame.pack()
-        
-        ch1 = IntVar()
-        ch2 = IntVar()
-        ch3 = IntVar()
-        ch4 = IntVar()
-        
-        en1 = DoubleVar()
-        en2 = DoubleVar()
-        en3 = DoubleVar()
-        en4 = DoubleVar()
-        
+    def draw_map(__self__):
         try: 
-            SpecRead.CONFIG['calibration'] = 'manual'
-            calibparam = SpecRead.getcalibration()
-            ch1.set(calibparam[0][0])
-            en1.set(calibparam[0][1])
-            ch2.set(calibparam[1][0])
-            en2.set(calibparam[1][1])
-            ch3.set(calibparam[2][0])
-            en3.set(calibparam[2][1])
-            ch4.set(calibparam[3][0])
-            en4.set(calibparam[3][1])
+            __self__.sample_plot.imshow(Constants.MY_DATACUBE.densitymap, 
+                    cmap=Constants.COLORMAP)
+            __self__.plot_canvas.draw()
         except: 
-            pass
-        
-        ConfigDiag_header = Label(ParamFrame, text="Channel\tEnergy").grid(\
-                row=0,columnspan=2,sticky=W+E)
-        Channel1 = Entry(ParamFrame,textvariable=ch1).grid(row=1,column=0)
-        Channel2 = Entry(ParamFrame,textvariable=ch2).grid(row=2,column=0)
-        Channel3 = Entry(ParamFrame,textvariable=ch3).grid(row=3,column=0)
-        Channel4 = Entry(ParamFrame,textvariable=ch4).grid(row=4,column=0)
-        EnergyBox1 = Entry(ParamFrame,textvariable=en1).grid(row=1,column=1)
-        EnergyBox2 = Entry(ParamFrame,textvariable=en2).grid(row=2,column=1)
-        EnergyBox3 = Entry(ParamFrame,textvariable=en3).grid(row=3,column=1)
-        EnergyBox4 = Entry(ParamFrame,textvariable=en4).grid(row=4,column=1)
-        
-        OkButton = Button(ButtonFrame,text="SAVE",command=save_param).grid(row=5,columnspan=2)
-
-        CalibDiag.mainloop()
+            blank = np.zeros([20,20])
+            __self__.sample_plot.imshow(blank, cmap=Constants.COLORMAP)
+            __self__.plot_canvas.draw()
     
-    def check_method_and_save():
-        if CalibVar.get() == 'manual':
-            manual_calib()
-        else: save_config()
-
-    def save_config():
-        configdict = {'directory':DirectoryVar.get(),'bgstrip':BgstripVar.get(),\
-                'ratio':RatioVar.get(),'thickratio':ThickVar.get(),'calibration':CalibVar.get(),\
-                'enhance':EnhanceVar.get(),'peakmethod':MethodVar.get()}
-        
-        if os.path.exists(SpecRead.samples_folder + configdict['directory'] + '\\'):
-            cfgpath = os.getcwd() + '\config.cfg'
-            cfgfile = open(cfgpath,'w+')
-            cfgfile.write("<<CONFIG_START>>\r")
-            for key in configdict:
-                cfgfile.write("{} = {}\r".format(key,configdict[key]))
-            cfgfile.write("<<CALIBRATION>>\r")
-            
-            SpecRead.DIRECTORY = configdict['directory'] + '\\'
-            SpecRead.selected_sample_folder = SpecRead.samples_folder + SpecRead.DIRECTORY+'\\'
-            SpecRead.FIRSTFILE_ABSPATH = SpecRead.findprefix()
-            
-            if configdict['calibration'] == 'manual': 
-                calibparam = ManualParam
-            else: 
-                SpecRead.CONFIG['calibration'] = 'from_source'
-                calibparam = SpecRead.getcalibration()
-
-            for pair in calibparam:
-                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
-            cfgfile.write("<<END>>\r")
-            cfgfile.close()
-            
-            SpecRead.setup()
-            ConfigDiag.destroy()
-            try: CalibDiag.destroy()
-            except: pass
-            
-            call_compilecube()
-            refresh_stat()
-        
+    def open_files_location(__self__, event=""):
+        try:
+            value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        except:
+            try:
+                value = Constants.MY_DATACUBE.name
+            except:
+                messagebox.showerror("No datacube!","Please load a datacube first.")
+                return
+        path = os.path.join(Constants.SAMPLES_FOLDER,value)
+        local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+        if os.path.exists(local_cube_path):
+            __self__.sample_select(event)
+            path = Constants.MY_DATACUBE.root
+            path = os.path.realpath(path)
+            os.startfile(path)
+        elif os.path.exists(path):
+            """if datacube is not compiled, check if mca files are under 
+            the selected sample folder chosen by the user"""
+            path = os.path.realpath(path)
+            os.startfile(path)
         else:
-            ErrorMessage("Directory {} not found!\nConfig.cfg saved!".format(configdict['directory']))
-            
-            cfgpath = os.getcwd() + '\config.cfg'
-            cfgfile = open(cfgpath,'w+')
-            cfgfile.write("<<CONFIG_START>>\r")
-            for key in configdict:
-                cfgfile.write("{} = {}\r".format(key,configdict[key]))
-            cfgfile.write("<<CALIBRATION>>\r")
-            
-            if configdict['calibration'] == 'manual': 
-                calibparam = ManualParam
-            else: 
-                calibparam = [[0,0],[0,0],[0,0]]
+            messagebox.showinfo("Directory not found.",
+                    "Sample files not found! Path {} couldn't be located.".format(path))
 
-            for pair in calibparam:
-                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
-            cfgfile.write("<<END>>\r")
-            cfgfile.close()
-            
-            SpecRead.setup()
-            ConfigDiag.destroy()
-            try: CalibDiag.destroy()
-            except: pass
-            refresh_stat()
+    def open_output_folder(__self__, event=""):
+        try: 
+            value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        except: 
+            try:
+                value = Constants.MY_DATACUBE.name
+            except: 
+                messagebox.showerror("No datacube!","Please load a datacube first.")
+                return
+        path = os.path.join(SpecRead.__PERSONAL__,"output",value)
+        if os.path.exists(path):
+            path = os.path.realpath(path)
+            os.startfile(path)
+        else:
+            messagebox.showinfo("Directory not found.",
+                    "Sample may be uncompiled. Output directory for sample {} not found.".format(value))
 
+    def export_density_map(__self__,event=""):
+        try: 
+            __self__.sample_select(event)
+        except: 
+            if Constants.MY_DATACUBE == None:
+                messagebox.showerror("No datacube!","Please load a datacube first.")
+                return
+        if os.path.exists(SpecRead.cube_path): 
+            f = filedialog.asksaveasfile(mode='w', 
+                    defaultextension=".png",
+                    filetypes=[("Portable Network Graphic", "*.png")],
+                    title="Save as...")
+        else: 
+            return
+        if f is None: 
+            return
+        __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
         return 0
-   
-    ConfigDiag = Toplevel(master=root)
-    ConfigDiag.resizable(False,False)
-    ConfigDiag.title("Configuration")
 
-    Label1 = Label(ConfigDiag, text="Sample directory:")
-    Label2 = Label(ConfigDiag, text="Background strip mode:")
-    Label3 = Label(ConfigDiag, text="Calculate ratios?")
-    Label4 = Label(ConfigDiag, text="Thick ratio:")
-    Label5 = Label(ConfigDiag, text="Calibration:")
-    Label6 = Label(ConfigDiag, text="Enhance image?")
-    Label7 = Label(ConfigDiag, text="Netpeak area method:")
+    def wipe(__self__,e=""):
+        try: 
+            __self__.ConfigDiag.master.grab_release()
+            __self__.ConfigDiag.master.destroy()
+        except: pass
+        Constants.MY_DATACUBE = None
+        load_cube()
+        __self__.write_stat()
+        __self__.draw_map()
+        __self__.toggle_(toggle='off')
+        __self__.SampleVar.set("Sample on memory: None")
+        try: 
+            if __self__.SamplesWindow.state() == "normal": 
+                __self__.SamplesWindow.deiconify()
+                __self__.SamplesWindow_TableLeft.focus_set()
+        except: pass
+        
+    def refresh_ImageCanvas(__self__,i):
+        try: 
+            __self__.sample_plot.imshow(__self__.densitymap,
+                    cmap=Constants.COLORMAP,
+                    label='Counts Map')
+        except: 
+            __self__.sample_plot.imshow(np.zeros([20,20]))
     
-    Label1.grid(row=0,column=0,sticky=W,pady=3)
-    Label2.grid(row=1,column=0,sticky=W,pady=3)
-    Label3.grid(row=2,column=0,sticky=W,pady=3)
-    Label4.grid(row=3,column=0,sticky=W,pady=3)
-    Label5.grid(row=4,column=0,sticky=W,pady=3)
-    Label6.grid(row=5,column=0,sticky=W,pady=3)
-    Label7.grid(row=6,column=0,sticky=W,pady=3)
+    def converter(__self__):
+        __self__.converterGUI = Convert_File_Name(__self__.master) 
+            
+    def batch(__self__):
+        #1 prompt for files
+        file_batch = filedialog.askopenfilenames(parent=__self__.master, 
+                title="Select mca's",                        
+                filetypes=(
+                    ("MCA Files", "*.mca"),
+                    ("Text Files", "*.txt"),
+                    ("All files", "*.*")))
+        if file_batch == "": return
+        
+        #1.1 get the name of parent directory
+        try: sample_name = str(file_batch[0]).split("/")[-2]
+        except IndexError: messagebox.showerror("No parent folder!","No parent folder detected. Be sure the spectra files are under a common folder (Hard drives are not parent folders!)")
+
+        #2 setups variables in SpecRead and GUI
+        SpecRead.conditional_setup(name=sample_name)
+        __self__.mcacount[sample_name] = len(file_batch)
+        """ samples dict attribute is always a string, except in this particular case """
+        __self__.samples[sample_name] = file_batch
+        __self__.mca_indexing[sample_name] = file_batch[0].split(".")[0]
+        __self__.mca_extension[sample_name] = "---"
+        Constants.FIRSTFILE_ABSPATH = file_batch[0]
+
+        #3 ask for a sample name and dimension (modified dimension diag)
+        try: __self__.config_xy = SpecRead.getdimension()
+        except:
+            dimension = dimension_diag(Constants.DIRECTORY)
+            __self__.master.wait_window(dimension.win) 
+            if dimension.exit_code == "cancel":
+                __self__.wipe()
+                return 0
+            __self__.ManualParam = []
+                
+        # calls the configuration window
+        __self__.ConfigDiag = ConfigDiag(__self__.master)
+        __self__.ConfigDiag.build_widgets()
+        
+    def plot_ROI(__self__):
+        master = __self__.master
+        ROI_plot = PlotWin(master)
+        ROI_plot.draw_ROI()
+
+    def plot_calibration_curve(__self__):
+        master = __self__.master
+        calibration_plot = PlotWin(master)
+        calibration_plot.draw_calibration()
     
-    DirectoryVar = StringVar(ConfigDiag)
-    ConfigDiagDirectory = Entry(ConfigDiag,textvariable=DirectoryVar)
+    def call_summation(__self__):
+        master = __self__.master
+        __self__.summation = PlotWin(master)
+        __self__.summation.draw_spec(
+                mode=['summation'],
+                display_mode=root.plot_display,
+                lines=False)
+        spawn_center(__self__.summation.master)
     
-    BgstripVar = StringVar(ConfigDiag)
-    ConfigDiagBgstrip = ttk.Combobox(ConfigDiag, textvariable=BgstripVar, values=("None","SNIPBG"))
+    def call_mps(__self__):
+        master = __self__.master
+        __self__.MPS = PlotWin(master)
+        __self__.MPS.draw_spec(
+                mode=['mps'],
+                display_mode=root.plot_display,
+                lines=False)
+        spawn_center(__self__.MPS.master)
     
-    RatioVar = BooleanVar()
-    ConfigDiagRatio = Checkbutton(ConfigDiag, variable=RatioVar)
+    def call_combined(__self__):
+        master = __self__.master
+        __self__.combined = PlotWin(master)
+        __self__.combined.draw_spec(
+                mode=['summation','mps'],
+                display_mode=root.plot_display,
+                lines=False)
+        spawn_center(__self__.combined.master)
     
-    ThickVar = DoubleVar()
-    ConfigDiagThick = Entry(ConfigDiag, textvariable=ThickVar)
-    
-    CalibVar = StringVar(ConfigDiag)
-    ConfigDiagCalib = ttk.Combobox(ConfigDiag, textvariable=CalibVar, values=("from_source","manual"))
+    def call_author(__self__):
+        try:
+            if __self__.AuthorWin.master.state() == "normal":
+                __self__.AuthorWin.master.focus_force()
+        except:
+            __self__.AuthorWin = Author(__self__)
 
-    EnhanceVar = BooleanVar()
-    ConfigDiagEnhance = Checkbutton(ConfigDiag, variable=EnhanceVar)
-    
-    MethodVar = StringVar(ConfigDiag)
-    ConfigDiagMethod = ttk.Combobox(ConfigDiag, textvariable=MethodVar, values=("simple_roi","auto_roi","PyMcaFit"))
-    
-    DirectoryVar.set(SpecRead.CONFIG.get('directory'))
-    BgstripVar.set(SpecRead.CONFIG.get('bgstrip'))
-    RatioVar.set(SpecRead.CONFIG.get('ratio'))
-    ThickVar.set(SpecRead.CONFIG.get('thickratio'))
-    CalibVar.set(SpecRead.CONFIG.get('calibration'))
-    MethodVar.set(SpecRead.CONFIG.get('peakmethod'))
-    EnhanceVar.set(SpecRead.CONFIG.get('enhance'))
+    def call_settings(__self__):
+        try:
+            if __self__.SettingsWin.Settings.winfo_exists() == False:
+                __self__.SettingsWin = Settings(__self__)
+            else:
+                __self__.SettingsWin.Settings.focus_force()
+                place_center(__self__.master,__self__.SettingsWin.Settings)
+                pass
+        except:
+            __self__.SettingsWin = Settings(__self__)
 
-    ConfigDiagDirectory.grid(row=0,column=1,sticky=E,padx=16)
-    ConfigDiagBgstrip.grid(row=1,column=1,sticky=E,padx=16)
-    ConfigDiagRatio.grid(row=2,column=1,sticky=E,padx=16)
-    ConfigDiagThick.grid(row=3,column=1,sticky=E,padx=16)
-    ConfigDiagCalib.grid(row=4,column=1,sticky=E,padx=16)
-    ConfigDiagEnhance.grid(row=5,column=1,sticky=E,padx=16)
-    ConfigDiagMethod.grid(row=6,column=1,sticky=E,padx=16)
-    
-    Label(ConfigDiag).grid(row=7)
-    ButtonsFrame = Frame(ConfigDiag)
-    ButtonsFrame.grid(row=8,columnspan=2)
-    SaveButton = Button(ButtonsFrame, text="SAVE", justify=CENTER, width=12, pady=4, bd=3,\
-            command=check_method_and_save)
-    SaveButton.grid(row=8,column=0,sticky=S,padx=16)
-    CancelButton = Button(ButtonsFrame, text="CANCEL", justify=CENTER, width=12, pady=4, bd=3,\
-            command=ConfigDiag.destroy)
-    CancelButton.grid(row=8,column=1,sticky=S,padx=16)
+    def open_mosaic(__self__):
+        CanvasSizeDialog()
 
-    ConfigDiag.mainloop()
+    def open_analyzer(__self__):
+        API = ImageAnalyzer(__self__.master,Constants.MY_DATACUBE)
+        __self__.ImageAnalyzers.append(API) 
 
-def prompt_folder():
-        print("Prompting for samples folder...")
-
-def check_calibration():
-    print("Checking calibration...")
-
-def find_elements():
-    print("Finding elements...")
-    lista_elementos = ['Cu']
-    MAPS = Mapping.getpeakmap(lista_elementos,MY_DATACUBE)
-    ImgMath.split_and_save(MY_DATACUBE,MAPS,lista_elementos)
-    refresh_stat()
-
-def call_heightmap():
-    print("Opening heightmap dialogue...")
-
-def root_quit():
-    for widget in root.master.winfo_children():
-        if isinstance(widget, Toplevel):
-            widget.destroy()
-    root.destroy()
-
-def call_summation():
-    if os.path.exists(SpecRead.cube_path): 
-        plt.clf()
-        SpecMath.getstackplot(MY_DATACUBE,'-semilog')
-    else: ErrorMessage("Can't locate {0}!".format(SpecRead.cube_path))
-
-def call_mps():
-    if os.path.exists(SpecRead.cube_path): 
-        plt.clf()
-        SpecMath.getstackplot(MY_DATACUBE,'-mps')
-    else: ErrorMessage("Can't locate {0}!".format(SpecRead.cube_path))
-
-def call_complete():
-    if os.path.exists(SpecRead.cube_path): 
-        plt.clf()
-        SpecMath.getstackplot(MY_DATACUBE,'-bg')
-    else: ErrorMessage("Can't locate {0}!".format(SpecRead.cube_path))
-
-def load_cube():
-    if os.path.exists(SpecRead.cube_path):
-        cube_file = open(SpecRead.cube_path,'rb')
-        global MY_DATACUBE
-        MY_DATACUBE = pickle.load(cube_file)
-        cube_file.close()
-    else: pass
-    return MY_DATACUBE
-
-
-class MainGUI:
-    def __init__(__self__):
-        __self__.master = Tk()
-        __self__.master.title("Nichteroy v.1.00 pre-alpha")
-        __self__.master.resizable(False,False)
-        __self__.build_widgets()
-        __self__.master.mainloop()
-
+    def reconfigure(__self__):
+        ReConfigDiag(__self__.master)
+        
     def build_widgets(__self__):
         
         # define the frame and layout
-        __self__.ButtonsFrame = Frame(__self__.master).pack(side=TOP)
-        __self__.ImageFrame = Frame(__self__.master).pack(side=BOTTOM)
-        __self__.DataFrame = Frame(__self__.master).pack(side=RIGHT)
+        __self__.ButtonsFrame = Frame(__self__.master)
+        __self__.ButtonsFrame.grid_propagate(1)
+        __self__.ButtonsFrame.grid(row=0, column=0, rowspan=3, columnspan=2,padx=16)
+        __self__.ImageCanvas = Canvas(__self__.master,width=200, height=200,\
+                bg='black', relief=SUNKEN, bd=5)
+        __self__.ImageCanvas.grid(row=3, column=0, rowspan=3, columnspan=2, padx=(8,8))
+        __self__.ImageCanvas.propagate(1)
+        __self__.DataFrame = Frame(__self__.master).grid(
+                padx=16, pady=16, row=0, column=2, rowspan=3, columnspan=3)
+        __self__.StatusScroller = Scrollbar(__self__.DataFrame, relief=SUNKEN)
+        __self__.StatusBox = Listbox(__self__.DataFrame, 
+                yscrollcommand=__self__.StatusScroller.set)
+        __self__.StatusBox.grid(
+                row=0, 
+                column=2, 
+                rowspan=3, 
+                columnspan=3, 
+                sticky=W+E, 
+                padx=(16,0))
+        __self__.StatusScroller.grid(row=0, column=5, rowspan=3, sticky=N+W+E+S, padx=(0,16))
+        __self__.StatusScroller.config(command=__self__.StatusBox.yview) 
+        __self__.ConfigFrame = LabelFrame(
+                __self__.DataFrame,
+                padx=8, pady=8,
+                text="Configuration: ")
+        __self__.master.columnconfigure(3,weight=1,minsize=4)
+        __self__.ConfigFrame.grid(row=3, column=2, rowspan=3, columnspan=4, padx=16,pady=10)
+         
+        # start matplotlib call inside __self__.ImageCanvas
+        blank_image = np.zeros([1,1])
+        __self__.plot_canvas = FigureCanvasTkAgg(__self__.sample_figure,__self__.ImageCanvas)
+        __self__.plot_canvas.draw()
+        __self__.plot_canvas.get_tk_widget().grid(\
+                row=3, column=0, rowspan=3, columnspan=2, sticky=E, padx=(3,3), pady=(3,3))
         
-        __self__.StatusBox = Listbox(__self__.DataFrame)
-        __self__.StatusBox.pack(side=TOP, fill=BOTH)
-        __self__.ConfigFrame = Frame(__self__.DataFrame, padx=5,pady=5,relief=SUNKEN)
-        __self__.ConfigFrame.pack(side=BOTTOM, fill=BOTH)
-        
+        __self__.draw_map()
+
         #####
         # define the tables which go inside the DataFrame (bottom left corner)
         
-        __self__.TableLabel1 = Label(\
-                __self__.DataFrame,text="Configuration embedded:",justify=CENTER)
-        __self__.TableLabel2 = Label(__self__.DataFrame,text="KEY")
-        __self__.TableLabel3 = Label(__self__.DataFrame,text="PACKED IN CUBE")
-        __self__.TableLabel4 = Label(__self__.DataFrame,text="IN CONFIG.CFG")
-        __self__.TableLabel1.pack(side=TOP,fill=X)
-        __self__.TableLabel2.pack(side=LEFT,anchor=CENTER)
-        __self__.TableLabel3.pack(side=LEFT,anchor=CENTER)
-        __self__.TableLabel4.pack(side=LEFT,anchor=CENTER)
+        __self__.TableLabel2 = Label(__self__.ConfigFrame,text="KEY")
+        __self__.TableLabel3 = Label(__self__.ConfigFrame,text="PACKED")
+        __self__.TableLabel2.grid(row=4, column=2)
+        __self__.TableLabel3.grid(row=4, column=3, columnspan=2)
 
-        __self__.TableLeft = Listbox(__self__.DataFrame)
-        __self__.TableMiddle = Listbox(__self__.DataFrame)
-        __self__.TableRight = Listbox(__self__.DataFrame)
-        __self__.TableLeft.pack(side=BOTTOM)
-        __self__.TableMiddle.pack(side=LEFT)
-        __self__.TableRight.pack(side=LEFT)
+        __self__.TableLeft = Listbox(__self__.ConfigFrame)
+        __self__.TableLeft.update()
+        __self__.TableMiddle = Listbox(
+                __self__.ConfigFrame, 
+                width=int(__self__.TableLeft.winfo_reqwidth()/3))
+        __self__.TableLeft.grid(row=5, column=2, sticky=N+S)
+        __self__.TableMiddle.grid(row=5, column=3, columnspan=2, sticky=N+S)
+        
+        re_configure_icon = PhotoImage(data=ICO_REFRESH)
+        __self__.re_configure_icon = re_configure_icon.subsample(1,1)
+        __self__.re_configure = Button(
+                __self__.ConfigFrame, 
+                image=__self__.re_configure_icon, 
+                width=32, 
+                height=32, 
+                command=__self__.reconfigure)
+        __self__.re_configure.grid(row=5, column=5, sticky=S,padx=6)
         
         #####
         # define the menu bar
@@ -3674,322 +3238,1273 @@ class MainGUI:
         __self__.derived_spectra = Menu(__self__.Toolbox,tearoff=0)
 
         __self__.MenuBar.add_cascade(label="Toolbox", menu=__self__.Toolbox)
-        __self__.MenuBar.add_command(label="Help", command=call_help)
-        __self__.derived_spectra.add_command(label="Summation", command=call_summation)
-        __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)", command=call_mps)
-        __self__.derived_spectra.add_command(label="Complete", command=call_complete)
-        __self__.Toolbox.add_command(label="Set samples folder...", command=prompt_folder)
+        __self__.MenuBar.add_command(label="Help", 
+                command=call_help)
+        __self__.MenuBar.add_command(label="Author", 
+                command=__self__.call_author)
+        __self__.derived_spectra.add_command(label="Summation", 
+                command=__self__.call_summation)
+        __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)",
+                command=__self__.call_mps)
+        __self__.derived_spectra.add_command(label="Combined", 
+                command=__self__.call_combined)
+        __self__.Toolbox.add_command(label="Load sample", 
+                command=__self__.list_samples)
+        __self__.Toolbox.add_command(label="Reset sample", 
+                command=__self__.reset_sample)
+        __self__.Toolbox.add_separator()
+        __self__.Toolbox.add_command(label="Change samples folder . . .", 
+                command=prompt_folder)
+        __self__.Toolbox.add_command(label="Load file selection . . .",
+                command=__self__.batch)
+        __self__.Toolbox.add_command(label="Convert spectra name . . .",
+                command=__self__.converter)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_cascade(label="Derived spectra", menu=__self__.derived_spectra)
-        __self__.Toolbox.add_command(label="Check calibration", command=check_calibration)
+        __self__.Toolbox.add_command(label="Check calibration", 
+                command=__self__.plot_calibration_curve)
+        __self__.Toolbox.add_command(label="Verify calculated ROI", 
+                command=__self__.plot_ROI)
         __self__.Toolbox.add_separator()
-        __self__.Toolbox.add_command(label="Find elements", command=find_elements)
-        __self__.Toolbox.add_command(label="Height-mapping", command=call_heightmap)
+        __self__.Toolbox.add_command(label="Map elements", 
+                command=__self__.find_elements)
+        __self__.Toolbox.add_command(label="Open Mosaic...", 
+                command=__self__.open_mosaic)
+        __self__.Toolbox.add_command(label="Image Analyzer . . .", 
+                command=__self__.open_analyzer)
         __self__.Toolbox.add_separator()
-        __self__.Toolbox.add_command(label="Exit", command=root_quit)
+        __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
+        __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
 
         __self__.master.config(menu=__self__.MenuBar)
         
         #####
-        # define the buttons wich go inside the ButtonsFrame (top left corner)
+        # define the buttons which go inside the ButtonsFrame (top left corner)
+        
+        subx,suby = 1,1 #icon resize factor
+        
+        # load icons
+        ButtonLoad_icon = PhotoImage(data=ICO_LOAD)
+        __self__.ButtonLoad_icon = ButtonLoad_icon.subsample(subx,suby)
+        ButtonReset_icon = PhotoImage(data=ICO_RESET)
+        __self__.ButtonReset_icon = ButtonReset_icon.subsample(subx,suby)
+        ImgAnalButton_icon = PhotoImage(data=ICO_IMGANAL)
+        __self__.ImgAnalButton_icon = ImgAnalButton_icon.subsample(subx,suby)
+        FindElementButton_icon = PhotoImage(data=ICO_RUBIK)
+        __self__.FindElementButton_icon = FindElementButton_icon.subsample(subx,suby)
+        QuitButton_icon = PhotoImage(data=ICO_QUIT)
+        __self__.QuitButton_icon = QuitButton_icon.subsample(subx,suby)
+        SettingsButton_icon = PhotoImage(data=ICO_SETTINGS)
+        __self__.SettingsButton_icon = SettingsButton_icon.subsample(subx,suby)
 
-        ImgAnalButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\img_anal.png')
-        __self__.ImgAnalButton_icon = ImgAnalButton_icon.subsample(2,2)
-        QuitButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\quit.png')
-        __self__.QuitButton_icon = QuitButton_icon.subsample(2,2)
-        SettingsButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\settings.png')
-        __self__.SettingsButton_icon = SettingsButton_icon.subsample(2,2)
+        # create buttons
+        __self__.ButtonLoad = Button(
+                __self__.ButtonsFrame, 
+                text="  Load Sample", 
+                anchor=W,
+                image=__self__.ButtonLoad_icon, 
+                bd=3, 
+                compound=LEFT, 
+                command=__self__.list_samples)
+        __self__.ButtonLoad.grid(row=0,column=0, sticky=W+E)
 
-        __self__.ButtonStat = Button(__self__.ButtonsFrame, text="Check Sample Status", command=call_stat)
-        __self__.ButtonStat.pack(fill=X)
-        __self__.ButtonList = Button(__self__.ButtonsFrame, text="Load Sample", command=call_listsamples)
-        __self__.ButtonList.pack(fill=X)
-        __self__.ButtonReset = Button(__self__.ButtonsFrame, text="Reset Sample", command=reset_sample)
-        __self__.ButtonReset.pack(fill=X)
-        __self__.ImgAnalButton = Button(__self__.ButtonsFrame, text="Image Analyzer",\
-                image=__self__.ImgAnalButton_icon, compound=LEFT, bd=3)
-        __self__.ImgAnalButton.pack(fill=X,side=LEFT)
-        __self__.QuitButton = Button(__self__.ButtonsFrame, text="Quit",\
-                image=__self__.QuitButton_icon, compound=LEFT, bd=3, command=root_quit)
-        __self__.QuitButton.pack(fill=X,side=LEFT)
-        __self__.SettingsButton = Button(__self__.ButtonsFrame, \
-                image=__self__.SettingsButton_icon, bd=3, command=call_configure)
-        __self__.SettingsButton.pack(fill=X, side=RIGHT)
+        __self__.ButtonReset = Button(
+                __self__.ButtonsFrame, 
+                text="  Reset Sample", 
+                anchor=W,
+                image=__self__.ButtonReset_icon, 
+                compound=LEFT, 
+                bd=3, 
+                command=__self__.reset_sample)
+        __self__.ButtonReset.grid(row=0,column=1, sticky=W+E)
+
+        __self__.ImgAnalButton = Button(
+                __self__.ButtonsFrame, 
+                text="  Image Analyzer", 
+                anchor=W,
+                image=__self__.ImgAnalButton_icon, 
+                compound=LEFT, 
+                bd=3, 
+                command=__self__.open_analyzer)
+        __self__.ImgAnalButton.grid(row=1,column=0, sticky=W+E)
+
+        __self__.FindElementButton = Button(
+                __self__.ButtonsFrame, 
+                text="  Map Elements", 
+                anchor=W,
+                image=__self__.FindElementButton_icon, 
+                compound=LEFT, 
+                bd=3, 
+                command=__self__.find_elements)
+        __self__.FindElementButton.grid(row=1,column=1, sticky=W+E)
+
+        __self__.QuitButton = Button(
+                __self__.ButtonsFrame, 
+                text="  Quit", 
+                anchor=W,
+                image=__self__.QuitButton_icon, 
+                compound=LEFT, 
+                bd=3, 
+                command=__self__.root_quit)
+        __self__.QuitButton.grid(row=2,column=1,sticky=W+E)
+
+        __self__.SettingsButton = Button(
+                __self__.ButtonsFrame, 
+                text="  Settings", 
+                anchor=W,
+                image=__self__.SettingsButton_icon, 
+                compound=LEFT, 
+                bd=3, 
+                command=__self__.call_settings)
+        __self__.SettingsButton.grid(row=2,column=0,sticky=W+E)
         
         #####
 
         __self__.SampleVar = StringVar()
-        __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
-        __self__.StatusBar = Label(__self__.master, textvariable=__self__.SampleVar,\
-                bd=1, relief=SUNKEN, anchor=W)
-        __self__.StatusBar.pack(side=BOTTOM, fill=X)
+        __self__.SampleVar.set("Sample on memory: "+Constants.DIRECTORY)
+        __self__.StatusBar = Label(
+                __self__.master, 
+                textvariable=__self__.SampleVar,
+                bd=1, 
+                relief=SUNKEN, 
+                anchor=W)
+        __self__.StatusBar.grid(row=6, column=0, columnspan=6, sticky=W+E)
 
-        __self__.master.protocol("WM_DELETE_WINDOW", root_quit)
-
-root = MainGUI()
-
-"""
-from win32api import GetSystemMetrics
-root = Tk()
-sample_status = None
-root.title("Scanner")
-screen_width = GetSystemMetrics(0)
-screen_height = GetSystemMetrics(1)
-root_tuple_size = (int(round(screen_width*0.15)),int(round(screen_height*0.15)))
-root_str_size = str(root_tuple_size[0])+'x'+str(str(root_tuple_size[1]))
-root.geometry(root_str_size) 
-root.resizable(False,False)
-
-UpperFrame = Frame(root)
-UpperFrame.pack(fill=X)
-LowerFrame = Frame(root)
-
-MenuBar = Menu(root,tearoff=0)
-Toolbox = Menu(MenuBar,tearoff=0)
-derived_spectra = Menu(Toolbox,tearoff=0)
-
-MenuBar.add_cascade(label="Toolbox", menu=Toolbox)
-MenuBar.add_command(label="Help", command=call_help)
-derived_spectra.add_command(label="Summation", command=call_summation)
-derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)", command=call_mps)
-derived_spectra.add_command(label="Complete", command=call_complete)
-Toolbox.add_command(label="Set samples folder...", command=prompt_folder)
-Toolbox.add_separator()
-Toolbox.add_cascade(label="Derived spectra", menu=derived_spectra)
-Toolbox.add_command(label="Check calibration", command=check_calibration)
-Toolbox.add_separator()
-Toolbox.add_command(label="Find elements", command=find_elements)
-Toolbox.add_command(label="Height-mapping", command=call_heightmap)
-Toolbox.add_separator()
-Toolbox.add_command(label="Exit", command=root_quit)
-
-root.config(menu=MenuBar)
-ImgAnalButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\img_anal.png')
-ImgAnalButton_icon = ImgAnalButton_icon.subsample(2,2)
-QuitButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\quit.png')
-QuitButton_icon = QuitButton_icon.subsample(2,2)
-SettingsButton_icon = PhotoImage(file = os.getcwd()+'\images\icons\settings.png')
-SettingsButton_icon = SettingsButton_icon.subsample(2,2)
-
-ButtonStat = Button(UpperFrame, text="Check Sample Status", command=call_stat)
-ButtonStat.pack(fill=X)
-ButtonList = Button(UpperFrame, text="Load Sample", command=call_listsamples)
-ButtonList.pack(fill=X)
-ButtonCompile = Button(UpperFrame, text="Reset Sample", command=reset_sample)
-ButtonCompile.pack(fill=X)
-ImgAnalButton = Button(LowerFrame, text="Image Analyzer",\
-        image=ImgAnalButton_icon, compound=LEFT, bd=3)
-ImgAnalButton.pack(fill=X,side=LEFT)
-QuitButton = Button(LowerFrame, text="Quit",\
-        image=QuitButton_icon, compound=LEFT, bd=3, command=root_quit)
-QuitButton.pack(fill=X,side=LEFT)
-SettingsButton = Button(LowerFrame, image=SettingsButton_icon, bd=3, command=call_configure)
-SettingsButton.pack(fill=X, side=RIGHT)
-
-SampleVar = StringVar()
-SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
-StatusBar = Label(root, textvariable=SampleVar,\
-        bd=1, relief=SUNKEN, anchor=W)
-StatusBar.pack(side=BOTTOM, fill=X)
-
-LowerFrame.pack(side=BOTTOM, fill=X)
-
-root.protocol("WM_DELETE_WINDOW", root_quit)
-root.mainloop()
-"""
-#if __name__=="__main__":
-"""
-    import Compounds
-    import numpy as np
-    import SpecRead
-    import SpecMath
-    import ImgMath
-    import Mapping
-    import EnergyLib
-    import matplotlib.pyplot as plt
-    
-    if flag1 == '-threshold':
-        
-        if os.path.exists(cube_path):
-            print("Loading {0} ...".format(cube_path))
-            sys.stdout.flush()
-            cube_file = open(cube_path,'rb')
-            datacube = pickle.load(cube_file)
-            cube_file.close()
-        else:
-            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
-
-        try: 
-            element = sys.argv[2]
-            if sys.argv[3].isdigit(): t = int(sys.argv[3])
-            if element not in EnergyLib.ElementList:
-                raise ValueError("{0} not an element!".format(element))
-        except:
-            raise ValueError("No threshold input.")
-        element_matrix = datacube.unpack_element(element) 
-        element_matrix = ImgMath.threshold(element_matrix,t)
-        
-        fig, ax = plt.subplots()
-        image = ax.imshow(element_matrix,cmap='gray')
-        ImgMath.colorbar(image)
-        ax.set_title("{0} map. Threshold {1}".format(element,t))
-        plt.show()
-    
-    if flag1 == '-lowpass':
-        
-        if os.path.exists(cube_path):
-            print("Loading {0} ...".format(cube_path))
-            sys.stdout.flush()
-            cube_file = open(cube_path,'rb')
-            datacube = pickle.load(cube_file)
-            cube_file.close()
-        else:
-            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
-
-        try: 
-            element = sys.argv[2]
-            if sys.argv[3].isdigit(): t = int(sys.argv[3])
-            if element not in EnergyLib.ElementList:
-                raise ValueError("{0} not an element!".format(element))
-        except:
-            raise ValueError("No threshold input.")
-        element_matrix = datacube.unpack_element(element) 
-        element_matrix = ImgMath.low_pass(element_matrix,t)
-        
-        fig, ax = plt.subplots()
-        image = ax.imshow(element_matrix,cmap='gray')
-        ImgMath.colorbar(image)
-        ax.set_title("{0} map. Cutting signals above {1}".format(element,t))
-        plt.show()
-
-    if flag1 == '-findelement':    
-        input_elements = input('Please input which elements are to be mapped: \n')
-        input_elements = input_elements.split(' ')
-        for arg in range(len(input_elements)):
-            if input_elements[arg] in EnergyLib.ElementList:
-                elementlist.append(input_elements[arg])
-            else: 
-                raise Exception("%s not an element!" % input_elements[arg])
-                logging.exception("{0} is not a chemical element!".format(input_elements[arg]))
-       
-        print("Loading {0}".format(cube_path))
-        sys.stdout.flush()
-        if os.path.exists(cube_path):
+        __self__.master.protocol("WM_DELETE_WINDOW", __self__.root_quit)
             
-            cube_file = open(cube_path,'rb')
-            datacube = pickle.load(cube_file)
-            cube_file.close() 
-            
-            if '-normalize' in sys.argv:
-                Mapping.getpeakmap(elementlist,datacube)
+    def write_stat(__self__):
+
+        __self__.no_sample = True
+        
+        __self__.TableMiddle.config(state=NORMAL)
+        __self__.TableLeft.config(state=NORMAL)
+        __self__.SampleVar.set("Sample on memory: "+Constants.DIRECTORY)
+        
+        # wipe all text
+        __self__.StatusBox.delete(0,END)
+        __self__.TableMiddle.delete(0,END)
+        __self__.TableLeft.delete(0,END)
+        
+        if Constants.MY_DATACUBE != None and not os.path.exists(SpecRead.selected_sample_folder): 
+            if os.path.exists(Constants.MY_DATACUBE.path):
+                files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
+                        if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
+                root.mcacount[Constants.DIRECTORY] = len(files)
+                __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
+                __self__.StatusBox.insert(END,
+                        "{0} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
+                __self__.StatusBox.insert(END, 
+                        "\nDatacube loaded with {} spectra packed\n".format(
+                            Constants.MY_DATACUBE.img_size))
+                __self__.no_sample = False
             else:
-                Mapping.getpeakmap(elementlist,datacube)
-    
-        else:
-            print("Compile is necessary.")
-            print("Please run 'python Core.py -compilecube' and try again.")
+                root.mcacount[Constants.DIRECTORY] = Constants.MY_DATACUBE.img_size
+                __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
+                __self__.StatusBox.insert(END,
+                        "Path doesn't exist, continuing with datacube information.")
+                __self__.StatusBox.insert(END, 
+                        "\nDatacube loaded with {} spectra packed\n".format(
+                            Constants.MY_DATACUBE.img_size))
+                __self__.no_sample = False
 
-    
-    if flag1 == '-plotmap':
-        print("Loading {0}".format(cube_path))
-        sys.stdout.flush()
-        if os.path.exists(cube_path):
-            
-            cube_file = open(cube_path,'rb')
-            datacube = pickle.load(cube_file)
-            cube_file.close()
-            
-            Mapping.getdensitymap(datacube)
-        else:
-            print("Compile is necessary.")
-            print("Please run 'python Core.py -compilecube' and try again.")
+        if os.path.exists(SpecRead.selected_sample_folder):
+            if Constants.MY_DATACUBE != None:
+                if os.path.exists(Constants.MY_DATACUBE.path):
+                    files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
+                            if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
+                    root.mcacount[Constants.DIRECTORY] = len(files)
+                    __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                    __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
+                    __self__.StatusBox.insert(END,
+                            "{0} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
+                    __self__.StatusBox.insert(END,
+                            "\nDatacube loaded with {} spectra packed\n".format(
+                                Constants.MY_DATACUBE.img_size))
+                    __self__.no_sample = False
+                else:
+                    root.mcacount[Constants.DIRECTORY] = Constants.MY_DATACUBE.img_size
+                    __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
+                    __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
+                    __self__.StatusBox.insert(END,
+                            "Path doesn't exist, continuing with datacube information.")
+                    __self__.StatusBox.insert(END,
+                            "\nDatacube loaded with {} spectra packed\n".format(
+                                Constants.MY_DATACUBE.img_size))
+                    __self__.no_sample = False
 
-    if flag1 == '-getratios':
-        
-        #######################################################################
-        # Calculates the thickness of a given layer by using the attenuation  #
-        # of the input element. The input element must be from the underlying #
-        # layer. Ex.: '-getratios Pb' will calculate the thickness of the pre #
-        # defined outer layer (reffered as compound) by using the Pb lines    #
-        # attenuation                                                         #
-        #######################################################################
-        
-        for arg in range(len(sys.argv)):
-            if sys.argv[arg] in EnergyLib.ElementList:
-                elementlist.append(sys.argv[arg])
             else: 
-                if sys.argv[arg] in inputlist:
-                    pass
-                else: 
-                    raise Exception("%s not an element!" % sys.argv[arg])
+                __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
+                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
+                __self__.StatusBox.insert(END, 
+                        "\n{} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
+                __self__.no_sample = False
+
+        if os.path.exists(SpecRead.cube_path):
+            cube_stats = os.stat(SpecRead.cube_path)
+            cube_size = convert_bytes(cube_stats.st_size)
+            __self__.StatusBox.insert(END,
+                    "Datacube is compiled. Cube size: {0}".format(cube_size))
+            __self__.StatusBox.insert(END,"Verifying packed elements...")
+            
+            packed_elements = Constants.MY_DATACUBE.check_packed_elements()
+            if len(packed_elements) == 0: __self__.StatusBox.insert(END,"None found.")
+            else: 
+                for element in packed_elements:
+                    __self__.StatusBox.insert(END,"Found a map for {0}".format(element))
+            __self__.StatusBox.insert(END,"Done.")
+            values_cube, values_cfg, values_keys = [],[],[]
+            for key in Constants.MY_DATACUBE.config:
+                values_cube.append(str(Constants.MY_DATACUBE.config[key]))
+                values_keys.append(str(key))
+            for item in range(len(values_cube)):
+                __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
+                __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+        
+        elif __self__.no_sample == True:
+            __self__.StatusBox.insert(END, "No sample configured!") 
+            for key in Constants.CONFIG:
+                __self__.TableLeft.insert(END,key)
+
+        else: 
+            __self__.StatusBox.insert(END, "Datacube not compiled.") 
+            __self__.StatusBox.insert(END, "Please compile the cube first.")
+            for key in Constants.CONFIG:
+                __self__.TableLeft.insert(END,key)
+
+        __self__.TableLeft.config(state=DISABLED)
+        __self__.TableMiddle.config(state=DISABLED)
+        
+       
+    def reset_sample(__self__):
+        
+        def repack(__self__, sample):
+            logger.warning("Cube {} and its output contents were erased!".\
+                    format(sample))
+            shutil.rmtree(SpecRead.output_path)
+            try: x,y,tag_dimension_file = SpecRead.getdimension()
+            except OSError as exception:
+                tag_dimension_file = False
+            if tag_dimension_file == True:
+                try: 
+                    os.remove(SpecRead.dimension_file)
+                    logger.warning("Custom image dimension was deleted.")
+                except: raise PermissionError("Can't delete custom dimension file!")
+
+            # clears all open plot windows
+            try: __self__.summation.master.destroy()
+            except: pass
+            try: __self__.MPS.master.destroy()
+            except: pass
+            try: __self__.combined.master.destroy()
+            except: pass
+
+            load_cube()
+            __self__.write_stat()
+            __self__.toggle_(toggle='off')
+            __self__.ResetWindow.grab_release()
+            __self__.wipe()
+            if __self__.mca_extension[sample] == "---": __self__.samples.pop(sample,None)
+            __self__.list_samples()
+            __self__.draw_map()
+            __self__.ResetWindow.destroy()
+
+        if os.path.exists(SpecRead.cube_path):
+
+            # creates dialogue to warn cube exists and promp to repack data
+            __self__.ResetWindow = Toplevel(master=__self__.master)
+            __self__.ResetWindow.title("Attention!")
+            __self__.ResetWindow.resizable(False,False)
+            LocalLabel = Label(__self__.ResetWindow, 
+                    text="Resetting the sample will erase all files in the OUTPUT folder of sample {}! Are you sure you want to proceed?".format(
+                        Constants.DIRECTORY),
+                    padx=10, 
+                    pady=4, 
+                    wraplength=250)
+            LocalLabel.pack()
+            Erase_ico = PhotoImage(data=ICO_ERASE)
+            __self__.Erase_ico = Erase_ico.zoom(2, 2)
+            EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
+                    pack(side=LEFT, pady=8, padx=16)
+            YesButton = Button(__self__.ResetWindow, text="Yes", justify=CENTER,\
+                    command=lambda: repack(__self__,Constants.MY_DATACUBE.config["directory"]), \
+                    width=10, bd=3).pack(side=TOP,pady=5)
+            NoButton = Button(
+                    __self__.ResetWindow, 
+                    text="No", 
+                    justify=CENTER,
+                    command=__self__.ResetWindow.destroy, 
+                    width=10, bd=3).pack(side=TOP, pady=5)
+            
+            place_center(__self__.master,__self__.ResetWindow)
+            icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
+            __self__.ResetWindow.iconbitmap(icon)
+            __self__.ResetWindow.grab_set()
+
+        else:
+            messagebox.showerror("Can't find sample!",
+                    "Sample {} could not be located!".format(Constants.DIRECTORY))
+
+    def call_configure(__self__):
+        
+        """ invokes the configuration dialog """
+
+        try: 
+            __self__.config_xy = SpecRead.getdimension()
+        except:
+            dimension = dimension_diag(Constants.DIRECTORY)
+            __self__.master.wait_window(dimension.win) 
+            if dimension.exit_code == "cancel":
+                __self__.wipe()
+                return 0
+
+        __self__.ManualParam = []
+        try: __self__.ConfigDiag.master.destroy()
+        except: pass
+        __self__.ConfigDiag = ConfigDiag(__self__.master)
+        __self__.ConfigDiag.build_widgets()
+        
+
+class ReConfigDiag:
+
+    def __init__(__self__, master):
+        __self__.master = Toplevel(master = master)
+        __self__.master.grab_set()
+        __self__.master.resizable(False,False)
+        __self__.master.title("Cube Configuration")
+        __self__.master.bind("<Escape>",__self__.kill)
+        __self__.master.bind("<Return>",__self__.kill)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+        __self__.Frame = Frame(__self__.master,padx=15,pady=15)
+        __self__.Labels = Frame(__self__.master,padx=15,pady=15)
+        __self__.MergeSettings = LabelFrame(__self__.master,padx=15,pady=15, 
+                text="Merged Cube Settings:")
+        __self__.MergeSettings.grid(row=1, column=0,columnspan=2)
+        __self__.Frame.grid(row=0, column=1)
+        __self__.Labels.grid(row=0, column=0)
+        __self__.build_widgets()
+    
+    def build_widgets(__self__):
+
+        #Label1 = Label(__self__.Labels, text="Thick ratio:")
+        Label2 = Label(__self__.Labels, text="Netpeak area method:")
+        Label3 = Label(__self__.Labels, text="Enhance image?")
+        Label4 = Label(__self__.Labels, text="Calculate ratios?")
+        __self__.Label5 = Label(__self__.MergeSettings, text="Scale data?")
+        __self__.Label6 = Label(__self__.MergeSettings, text="Re-calculate continuum?")
+        
+        #Label1.grid(row=1,column=0,sticky=W,pady=2)
+        Label2.grid(row=2,column=0,sticky=W,pady=2)
+        Label3.grid(row=3,column=0,sticky=W,pady=2)
+        Label4.grid(row=4,column=0,sticky=W,pady=2)
+        __self__.Label5.grid(row=0,column=1,sticky=W,pady=2)
+        __self__.Label6.grid(row=1,column=1,sticky=W,pady=2)
+        
+        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagEnhanceYes.grid(row=3,column=1,sticky=E,pady=2)
+        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes")
+        ConfigDiagRatioYes.grid(row=4,column=1,sticky=E,pady=2)
+
+        __self__.BgstripVar = StringVar()
+        __self__.DirectoryVar = StringVar()
+        __self__.RatioVar = BooleanVar()
+        #__self__.ThickVar = DoubleVar()
+        __self__.EnhanceVar = BooleanVar()
+        __self__.MethodVar = StringVar()
+        __self__.ScaleVar = BooleanVar()
+        __self__.ContVar = BooleanVar()
+        __self__.DirectoryVar.set(Constants.MY_DATACUBE.config.get('directory'))
+        __self__.BgstripVar.set(Constants.MY_DATACUBE.config.get('bgstrip'))
+        __self__.RatioVar.set(Constants.MY_DATACUBE.config.get('ratio'))
+        #__self__.ThickVar.set(Constants.MY_DATACUBE.config.get('thickratio'))
+        __self__.MethodVar.set(Constants.MY_DATACUBE.config.get('peakmethod'))
+        __self__.EnhanceVar.set(Constants.MY_DATACUBE.config.get('enhance'))
+        
+        __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
+        
+        #__self__.ConfigDiagThick = Entry(
+        #        __self__.Frame, 
+        #        textvariable=__self__.ThickVar,
+        #        width=15)
+        
+        __self__.ConfigDiagEnhance = Checkbutton(__self__.Frame, variable=__self__.EnhanceVar)
+        
+        __self__.ConfigDiagMethod = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.MethodVar, 
+                values=("simple_roi","auto_roi"),
+                state="readonly",
+                width=13)
+        
+        
+        #__self__.ConfigDiagThick.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagMethod.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagEnhance.grid(row=3,column=0,sticky=E,pady=2)
+        __self__.ConfigDiagRatio.grid(row=4,column=0,sticky=E,pady=2)
+        
+        dimension_text = "Image size = {0} x {1} pixels".format(
+                Constants.MY_DATACUBE.dimension[0],
+                Constants.MY_DATACUBE.dimension[1])
+        img_dimension_display = Label(__self__.master,text=dimension_text)
+        img_dimension_display.grid(row=2,column=0,sticky=W,padx=17,pady=2)
+        
+        __self__.scale = Checkbutton(__self__.MergeSettings, variable=__self__.ScaleVar)
+        __self__.cont = Checkbutton(__self__.MergeSettings, variable=__self__.ContVar)
+        __self__.scale.grid(row=0,column=0)
+        __self__.cont.grid(row=1,column=0)
+
+        ButtonsFrame = Frame(__self__.master)
+        ButtonsFrame.grid(row=5,columnspan=2,pady=10,padx=10)
+        SaveButton = Button(
+                ButtonsFrame, 
+                text="Save", 
+                justify=CENTER, 
+                width=10,
+                command=__self__.save)
+        SaveButton.grid(row=5,column=0,sticky=S)
+        CancelButton = Button(
+                ButtonsFrame, 
+                text="Cancel", 
+                justify=CENTER, 
+                width=10,
+                command=__self__.kill)
+        CancelButton.grid(row=5,column=1,sticky=S)
+        if hasattr(Constants.MY_DATACUBE,"scalable"):
+            __self__.toggle("on")
+            __self__.ScaleVar.set(Constants.MY_DATACUBE.scalable)
+        else: __self__.toggle("off")
+        place_center(root.master,__self__.master)
+        icon = os.path.join(os.getcwd(),"images","icons","refresh.ico")
+        __self__.master.iconbitmap(icon)
+        root.master.wait_window(__self__.master)
+
+    def save(__self__):
+        Constants.MY_DATACUBE.config["enhance"] = __self__.EnhanceVar.get()
+        Constants.MY_DATACUBE.config["peakmethod"] = __self__.MethodVar.get()
+        Constants.MY_DATACUBE.config["ratio"] = __self__.RatioVar.get()
+        if hasattr(Constants.MY_DATACUBE,"scalable"):
+            if Constants.MY_DATACUBE.scalable == False and __self__.ScaleVar.get() == True:
+                Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                apply_scaling(Constants.MY_DATACUBE,1)
+            if Constants.MY_DATACUBE.scalable == True and __self__.ScaleVar.get() == False:
+                Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                apply_scaling(Constants.MY_DATACUBE,-1)
+            if __self__.ContVar.get() == True:
+                bar = Busy(Constants.MY_DATACUBE.img_size,0)
+                bar.update_text("Stripping background")
+                Constants.MY_DATACUBE.strip_background(bgstrip="SNIPBG",
+                        recalculating=True,
+                        progressbar=bar)
+                bar.destroybar()
+            Constants.MY_DATACUBE.create_densemap()
+            Constants.MY_DATACUBE.save_cube()
+            root.draw_map()
+        root.write_stat()
+        __self__.kill()
+
+    def toggle(__self__,mode):
+        if mode == "on":
+            __self__.scale.config(state=NORMAL)
+            __self__.cont.config(state=NORMAL)
+            __self__.Label5.config(state=NORMAL)
+            __self__.Label6.config(state=NORMAL)
+        elif mode == "off":
+            __self__.scale.config(state=DISABLED)
+            __self__.cont.config(state=DISABLED)
+            __self__.Label5.config(state=DISABLED)
+            __self__.Label6.config(state=DISABLED)
+
+    def kill(__self__):
+        __self__.master.destroy()
+
+
+class ConfigDiag:
+
+    def __init__(__self__, master):
+        __self__.master = Toplevel(master = master)
+        __self__.master.grab_set()
+        __self__.master.resizable(False,False)
+        __self__.master.title("Configuration")
+        __self__.master.bind("<Escape>",__self__.wipe)
+        __self__.master.bind("<Return>",__self__.check_method_and_save)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe)
+        __self__.Frame = Frame(__self__.master,padx=15,pady=15)
+        __self__.Labels = Frame(__self__.master,padx=15,pady=15)
+        __self__.Frame.grid(row=0, column=1)
+        __self__.Labels.grid(row=0, column=0)
+
+    def check_method_and_save(__self__,e=""):
+        if __self__.CalibVar.get() == 'manual':
+            __self__.manual_calib()
+        else: __self__.save_config()
+
+    def save_param(__self__):
+        EntryParam = [
+                [__self__.ch1.get(),__self__.en1.get()],
+                [__self__.ch2.get(),__self__.en2.get()],
+                [__self__.ch3.get(),__self__.en3.get()],
+                [__self__.ch4.get(),__self__.en4.get()]]
+        for index in range(len(EntryParam)):
+            if EntryParam[index][0] > 0 and EntryParam[index][1] > 0:
+                root.ManualParam.append(EntryParam[index])
+            elif EntryParam[index][0] < 0 or EntryParam[index][1] < 0:
+                messagebox.showerror("Calibration Error",
+                        "Can't receive negative values!")
+                __self__.CalibDiag.focus_set()
+                root.ManualParam = []
+                raise ValueError("Manual calibration can't receive negative values!")
+        __self__.CalibDiag.grab_release()
+        __self__.save_config()
+    
+    def wipe(__self__,e=""):
+
+        try: 
+            __self__.master.grab_release()
+            __self__.master.destroy()
+        except: pass
+        Constants.MY_DATACUBE = None
+        if isinstance(root.samples[Constants.CONFIG["directory"]],tuple):
+            root.samples.pop(Constants.CONFIG["directory"])
+        load_cube()
+        root.write_stat()
+        root.draw_map()
+        root.toggle_(toggle="off")
+        root.SampleVar.set("Sample on memory: None")
+        try: 
+            if root.SamplesWindow.state() == "normal": 
+                root.SamplesWindow.deiconify()
+                root.SamplesWindow_TableLeft.focus_set()
+        except: pass
+
+    def manual_calib(__self__):
+        
+        __self__.CalibDiag = Toplevel(master = __self__.master)
+        __self__.CalibDiag.title("Manual configuration")
+        __self__.CalibDiag.resizable(False,False)
+        __self__.CalibDiag.protocol("WM_DELETE_WINDOW",__self__.focus_grab)
+        __self__.CalibDiag.grab_set()
+        icon = ".\\images\\icons\\settings.ico"
+        __self__.CalibDiag.iconbitmap(icon)
+        ParamFrame = Frame(__self__.CalibDiag)
+        ParamFrame.pack()
+        ButtonFrame = Frame(__self__.CalibDiag)
+        ButtonFrame.pack()
+        
+        __self__.ch1 = IntVar()
+        __self__.ch2 = IntVar()
+        __self__.ch3 = IntVar()
+        __self__.ch4 = IntVar()
+        
+        __self__.en1 = DoubleVar()
+        __self__.en2 = DoubleVar()
+        __self__.en3 = DoubleVar()
+        __self__.en4 = DoubleVar()
         
         try: 
-            ratiofile = SpecRead.output_path + '{1}_ratio_{0}.txt'\
-                    .format(elementlist[0],SpecRead.DIRECTORY)
-            ratiomatrix = SpecRead.RatioMatrixReadFile(ratiofile)
-        except: raise FileNotFoundError("ratio file for {0} not found.".format(elementlist))
+            # gets calibration parameters read while performing last 
+            # setup or conditional setup and fills entries
+            Constants.CONFIG['calibration'] = 'manual'
+            calibparam = SpecRead.getcalibration()
+            __self__.ch1.set(calibparam[0][0])
+            __self__.en1.set(calibparam[0][1])
+            __self__.ch2.set(calibparam[1][0])
+            __self__.en2.set(calibparam[1][1])
+            __self__.ch3.set(calibparam[2][0])
+            __self__.en3.set(calibparam[2][1])
+            __self__.ch4.set(calibparam[3][0])
+            __self__.en4.set(calibparam[3][1])
+        except: 
+            pass
         
-        if os.path.exists(cube_path):
-            print("Loading {0} ...".format(cube_path))
-            sys.stdout.flush()
-            cube_file = open(cube_path,'rb')
-            datacube = pickle.load(cube_file)
-            cube_file.close()
+        __self__.ConfigDiag_header = Label(ParamFrame, text="Channel\tEnergy").grid(
+                row=0,columnspan=2,sticky=W+E)
+        Channel1 = Entry(ParamFrame,textvariable=__self__.ch1).grid(row=1,column=0)
+        Channel2 = Entry(ParamFrame,textvariable=__self__.ch2).grid(row=2,column=0)
+        Channel3 = Entry(ParamFrame,textvariable=__self__.ch3).grid(row=3,column=0)
+        Channel4 = Entry(ParamFrame,textvariable=__self__.ch4).grid(row=4,column=0)
+        EnergyBox1 = Entry(ParamFrame,textvariable=__self__.en1).grid(row=1,column=1)
+        EnergyBox2 = Entry(ParamFrame,textvariable=__self__.en2).grid(row=2,column=1)
+        EnergyBox3 = Entry(ParamFrame,textvariable=__self__.en3).grid(row=3,column=1)
+        EnergyBox4 = Entry(ParamFrame,textvariable=__self__.en4).grid(row=4,column=1)
+        
+        OkButton = Button(ButtonFrame,text="SAVE",command=__self__.save_param).grid(
+                row=5,columnspan=2)
+        
+        place_center(__self__.master,__self__.CalibDiag)
+    
+        
+    def call_PeakClipper(__self__):
+        __self__.master.grab_release()
+        __self__.clipper = PeakClipper(root.master)
+        __self__.clipper.master.grab_set()
+
+    def focus_grab(__self__):
+        __self__.master.focus_set()
+        __self__.master.grab_set()
+
+    def save_config(__self__,e=""):
+
+        """ A workaround to always have Training Data in samples list and working, is
+        backing up the samples_folder variable, changing it temporarily to compile the 
+        Training Data datacube and then set it back so the other samples can be compiled
+        properly """
+
+        samples_folder_backup = copy.deepcopy(Constants.SAMPLES_FOLDER)
+        if __self__.DirectoryVar.get() == "Training Data 1" or\
+                __self__.DirectoryVar.get() == "Training Data 2":
+            Constants.SAMPLES_FOLDER = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+        
+        ##########################################################
+            
+        configdict = {"directory":__self__.DirectoryVar.get(),
+                "bgstrip":__self__.BgstripVar.get(),
+                "ratio":__self__.RatioVar.get(),
+                #"thickratio":__self__.ThickVar.get(),
+                "calibration":__self__.CalibVar.get(),
+                "enhance":__self__.EnhanceVar.get(),
+                "peakmethod":__self__.MethodVar.get(),
+                "bg_settings":root.snip_config}
+        
+        if not os.path.exists(SpecRead.output_path):
+            try:
+                os.mkdir(SpecRead.output_path)
+            except IOError as exception:
+                logger.warning("Error {}.".format(exception.__class__.__name__))
+                logger.warning("Can't create output folder {}".format(SpecRead.output_path))
+                if exception.__class__.__name__ == "FileExistsError": 
+                    exists = "Folder already exists!"
+                else: exists = None
+                messagebox.showerror("{}".format(exception.__class__.__name__),
+                        "Cannot create output folder {}\n{}".format(
+                            SpecRead.output_path, exists))
+                root.write_stat()
+                root.draw_map()
+                return
+            if not os.path.exists(SpecRead.dimension_file):
+                dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
+                dm_file.write("righe\t{}\n".format(root.config_xy[0]))
+                dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
+                dm_file.write(5*"*"+" user input data "+5*"*")
+                dm_file.close()
+
+        
+        if os.path.exists(os.path.join(Constants.SAMPLES_FOLDER,configdict["directory"]))\
+                or isinstance(root.samples[configdict["directory"]],tuple):
+            Constants.DIRECTORY = configdict["directory"]
+            SpecRead.selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER, 
+                    Constants.DIRECTORY)
+            if not isinstance(root.samples[configdict["directory"]],tuple):
+                Constants.FIRSTFILE_ABSPATH = os.path.join(SpecRead.selected_sample_folder,
+                    root.samples[configdict["directory"]]+\
+                    root.mca_indexing[configdict["directory"]]+\
+                    "."+root.mca_extension[configdict["directory"]])
+
+            # reads configuration integrity prior opening config.cfg for writing
+            if configdict['calibration'] == 'manual': 
+                calibparam = root.ManualParam
+                # save_config only passes positive integers forward
+                # in the case other data is received as user input, this will be filtered
+                # absence of acceptable parameters returns an empty list
+                if calibparam == []: 
+                    messagebox.showerror("Calibration Error",
+                            "No acceptable parameters passed!")
+                    __self__.CalibDiag.focus_set()
+                    root.ManualParam = []
+                    raise ValueError("No acceptable parameters passed!")
+                elif len(calibparam) <= 1: 
+                    messagebox.showerror("Calibration Error",
+                            "Need at least two anchors!")
+                    __self__.CalibDiag.focus_set()
+                    root.ManualParam = []
+                    raise ValueError("Calibration need at least two anchors!")
+            else: 
+                Constants.CONFIG["calibration"] = "from_source"
+                calibparam = SpecRead.getcalibration()
+
+            cfgpath = os.path.join(SpecRead.__PERSONAL__,"bin","config.cfg")
+            cfgfile = open(cfgpath,"w+")
+            cfgfile.write("<<CONFIG_START>>\r")
+            for key in configdict:
+                cfgfile.write("{} = {}\r".format(key,configdict[key]))
+            cfgfile.write("<<CALIBRATION>>\r")
+            for pair in calibparam:
+                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
+            cfgfile.write("<<END>>\r")
+            cfgfile.close()
+            
+            SpecRead.setup(root.samples[configdict["directory"]],
+                    root.mca_indexing[configdict["directory"]],
+                    root.mca_extension[configdict["directory"]])
+            __self__.master.grab_release()
+            __self__.master.destroy()
+            try: __self__.CalibDiag.destroy()
+            except: pass
+            try: root.ResetWindow.destroy()
+            except: pass
+             
+            call_compilecube()
+            load_cube()
+            root.write_stat()
+            root.draw_map()
+            root.toggle_(toggle='on')
+
         else:
-            print("Cube {0} not found. Please run Core.py -compilecube".format(cube_name))
+            cfgpath = os.path.join(SpecRead.__PERSONAL__,"bin","config.cfg")
+            cfgfile = open(cfgpath,'w+')
+            cfgfile.write("<<CONFIG_START>>\r")
+            for key in configdict:
+                cfgfile.write("{} = {}\r".format(key,configdict[key]))
+            cfgfile.write("<<CALIBRATION>>\r")
+            
+            if configdict['calibration'] == 'manual': 
+                calibparam = root.ManualParam
+            else: 
+                calibparam = [[0,0],[0,0],[0,0]]
 
-        compound = Compounds.compound()
-        compound.set_compound('PbWhite')
-        compound.identity = 'Pb'
-        compound.set_attenuation(elementlist[0])
+            for pair in calibparam:
+                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
+            cfgfile.write("<<END>>\r")
+            cfgfile.close()
+            messagebox.showerror("Directory not found!",
+                    "Directory {} not found!\nConfig.cfg saved!".format(
+                        configdict['directory']))
+            SpecRead.setup(root.samples[configdict["directory"]],
+                    root.mca_indexing[configdict["directory"]],
+                    root.mca_extension[configdict["directory"]])
+            __self__.master.grab_release()
+            __self__.master.destroy()
+            try: root.ResetWindow.destroy()
+            except: pass
+            try: __self__.CalibDiag.destroy()
+            except: pass
+            root.write_stat()
+            root.draw_map()
+        Constants.SAMPLES_FOLDER = samples_folder_backup
+   
+    def build_widgets(__self__):
 
-        #############################
-        # COMPOUND IDENTITY ELEMENT #
-        #############################
+        Label2 = Label(__self__.Labels, text="Background strip mode:")
+        Label3 = Label(__self__.Labels, text="Configure BG strip:")
+        Label4 = Label(__self__.Labels, text="Calibration:")
+        Label7 = Label(__self__.Labels, text="Netpeak area method:")
+        Label8 = Label(__self__.Labels, text="Calculate ratios?")
         
-        # abundance element method is deprecated
-        # preference is given for the identy element from database. nonetheless,
-        # if identity element does not exist (for custom or mixture compounds) abundance
-        # element is used
+        Label2.grid(row=1,column=0,sticky=W,pady=2)
+        Label3.grid(row=2,column=0,sticky=W,pady=2)
+        Label4.grid(row=3,column=0,sticky=W,pady=2)
+        Label7.grid(row=6,column=0,sticky=W,pady=2)
+        Label8.grid(row=7,column=0,sticky=W,pady=2)
         
-        mask = ImgMath.mask(datacube,compound)
-        mask = ImgMath.threshold(mask,105)
-        mae = compound.identity
-
-        print("Most abundant element in compound: {}".format(mae))
+        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes/No")
+        ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
+        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes/No")
+        ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
         
+        __self__.BgstripVar = StringVar()
+        __self__.ConfigDiagBgstrip = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.BgstripVar, 
+                values=("None","SNIPBG"),
+                state="readonly",
+                width=13+ConfigDiagRatioYes.winfo_width())
+        
+        __self__.DirectoryVar = StringVar()
+        
+        __self__.RatioVar = BooleanVar()
+        __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
+        
+        __self__.ConfigDiagSetBG = Button(__self__.Frame, text="Set BG",\
+               width=13+ConfigDiagRatioYes.winfo_width(),command=__self__.call_PeakClipper)
+        
+        __self__.CalibVar = StringVar()
+        __self__.ConfigDiagCalib = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.CalibVar, 
+                values=("from_source","manual"),
+                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
 
-        #######################################
+        __self__.EnhanceVar = BooleanVar()
+        
+        __self__.MethodVar = StringVar()
+        __self__.ConfigDiagMethod = ttk.Combobox(
+                __self__.Frame, 
+                textvariable=__self__.MethodVar, 
+                values=("simple_roi","auto_roi"),
+                state="readonly",
+                width=13+ConfigDiagRatioYes.winfo_width())
+        
+        __self__.DirectoryVar.set(Constants.CONFIG.get('directory'))
+        __self__.BgstripVar.set(Constants.CONFIG.get('bgstrip'))
+        __self__.RatioVar.set(Constants.CONFIG.get('ratio'))
+        __self__.CalibVar.set(Constants.CONFIG.get('calibration'))
+        __self__.MethodVar.set(Constants.CONFIG.get('peakmethod'))
+        __self__.EnhanceVar.set(Constants.CONFIG.get('enhance'))
 
+        __self__.ConfigDiagBgstrip.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagSetBG.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagCalib.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagMethod.grid(row=6,column=0,columnspan=2,sticky=E,pady=2)
+        __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
+        
+        dimension_text = "Image size = {0} x {1} pixels".format(
+                root.config_xy[0],root.config_xy[1])
+        img_dimension_display = Label(__self__.master,text=dimension_text)
+        img_dimension_display.grid(row=1,column=0,sticky=W,padx=17,pady=2)
+
+        ButtonsFrame = Frame(__self__.master)
+        ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
+        SaveButton = Button(
+                ButtonsFrame, 
+                text="Save", 
+                justify=CENTER, 
+                width=10,
+                command=__self__.check_method_and_save)
+        SaveButton.grid(row=8,column=0,sticky=S)
+        CancelButton = Button(
+                ButtonsFrame, 
+                text="Cancel", 
+                justify=CENTER, 
+                width=10,
+                command=__self__.wipe)
+        CancelButton.grid(row=8,column=1,sticky=S)
+        
+        place_center(root.master,__self__.master)
+        icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
+        __self__.master.iconbitmap(icon)
+        root.master.wait_window(__self__.master)
+
+
+class PeriodicTable:
+
+    # Creates the periodic table and starts find_elements module from Mapping.py
+
+    def __init__(__self__,parent):
+        __self__.master = Toplevel(parent.master)
+        __self__.master.tagged = True
+        __self__.master.title("Periodic Table of Elements")
+        __self__.master.resizable(False,False)
+        __self__.master.header = Label(__self__.master, text="Periodic Table of Elements.")
+        __self__.master.header.grid(row=0,column=0, columnspan=18)
+        __self__.master.body = Frame(__self__.master)
+        __self__.master.body.grid(
+                row=1,column=0, 
+                rowspan=9, columnspan=18,
+                padx=(3,3),pady=(3,0))
+        __self__.master.footer = Frame(__self__.master)
+        __self__.master.footer.grid(row=10,column=0, columnspan=18)
+        __self__.cvar1 = DoubleVar()
+        __self__.cvar2 = DoubleVar()
+        __self__.cvar1.set(0.0)
+        __self__.cvar2.set(0.5)
+        __self__.draw_buttons() 
+        icon = os.path.join(os.getcwd(),"images","icons","rubik.ico")
+        place_center(parent.master,__self__.master)
+        __self__.master.iconbitmap(icon)
+
+    
+    def add_element(__self__,toggle_btn):
+        if toggle_btn.config('relief')[-1] == 'sunken':
+            toggle_btn.config(relief="raised")
+            toggle_btn.config(bg=Constants.DEFAULTBTN_COLOR)
+            Constants.FIND_ELEMENT_LIST.remove(toggle_btn.cget("text"))
+            refresh_plots()
+        else:
+            toggle_btn.config(relief="sunken")
+            toggle_btn.config(bg="yellow")
+            Constants.FIND_ELEMENT_LIST.append(toggle_btn.cget("text"))
+            refresh_plots()
+    
+    def add_custom_element(__self__,toggle_btn):
+        if toggle_btn.config('relief')[-1] == 'sunken':
+            toggle_btn.config(relief="raised")
+            toggle_btn.config(bg=Constants.DEFAULTBTN_COLOR)
+            Constants.FIND_ELEMENT_LIST.remove("custom")
+            plottables_dict["custom"] = []
+            refresh_plots()
+        else:
+            # setting casual number
+            toggle_btn.config(relief="sunken")
+            toggle_btn.config(bg="yellow")
+            Constants.FIND_ELEMENT_LIST.append("custom")
+            plottables_dict["custom"] = [__self__.cvar1.get(),__self__.cvar2.get()]
+            refresh_plots()
+     
+       
+    def save_and_run(__self__):
+        if not Constants.FIND_ELEMENT_LIST: 
+            __self__.master.destroy()
+            messagebox.showinfo("Error", "No element input!")
+        else:
+            # disabled widgets to avoid user changes sample
+            root.toggle_(toggle="off")
+            root.SamplesWindow.destroy()
+
+            # Sets fano and noise factor 
+            FANO, NOISE = Constants.MY_DATACUBE.FN
+            FN_set(FANO, NOISE)
+            print("These are FANO and NOISE: {} {}".format(FANO,NOISE))
+
+            root.MenuBar.entryconfig("Toolbox", state=DISABLED)
+            root.ButtonLoad.config(state=DISABLED)
+            for widget in __self__.master.body.winfo_children():
+                try: widget.config(state=DISABLED)
+                except: pass
+            __self__.go.config(state=DISABLED)
+            
+            cube_status = os.stat(SpecRead.cube_path)
+            cube_size = cube_status.st_size
+            sys_mem = dict(virtual_memory()._asdict())
+            rnt_mem = [(cube_size*len(Constants.FIND_ELEMENT_LIST)),sys_mem["available"]]
+            process_memory = (convert_bytes(rnt_mem[0]),convert_bytes(rnt_mem[1]))
+            needed_memory = cube_size*len(Constants.FIND_ELEMENT_LIST)
+            
+            # multi-core mode
+            if Constants.MY_DATACUBE.config["peakmethod"] != "simple_roi":
+                if "custom" in Constants.FIND_ELEMENT_LIST: 
+                    results = []
+                    Constants.FIND_ELEMENT_LIST.remove("custom") 
+                    lines = [__self__.cvar1.get(),__self__.cvar2.get()]
+                    elmap, ROI = (grab_simple_roi_image(Constants.MY_DATACUBE,lines,\
+                            custom_energy=True))
+                    results.append((elmap, ROI, "custom"))
+                    digest_results(Constants.MY_DATACUBE,results,["custom"])
+
+                if len(Constants.FIND_ELEMENT_LIST) > 2 \
+                        and Constants.MY_DATACUBE.img_size > 999\
+                        and Constants.MULTICORE == True:
+                    
+                    max_copies = 0 #as many copies as cores available
+                    if needed_memory > root.RAM_limit_value:
+                        max_copies = 1
+                        while cube_size*max_copies < root.RAM_limit_value:
+                            max_copies += 1
+                    elif needed_memory > sys_mem["available"]:
+                        max_copies = 1
+                        while cube_size*max_copies < sys_mem["available"]:
+                            max_copies += 1
+                    if max_copies == 1:
+                        # if only one copy can be made, it's pointless to run multicore
+                        MAPS = getpeakmap(Constants.FIND_ELEMENT_LIST,Constants.MY_DATACUBE)
+                    else:
+                        cuber = Cube_reader(Constants.MY_DATACUBE.matrix,
+                                Constants.MY_DATACUBE.energyaxis,
+                                Constants.MY_DATACUBE.background,
+                                Constants.MY_DATACUBE.config,
+                                Constants.FIND_ELEMENT_LIST,
+                                max_copies)
+                        FANO, NOISE = Constants.MY_DATACUBE.FN
+                        results = cuber.start_workers(FANO, NOISE)
+                        cuber.p_bar.update_text("Digesting results...")
+                        results = sort_results(results,Constants.FIND_ELEMENT_LIST)
+                        digest_results(Constants.MY_DATACUBE,results,Constants.FIND_ELEMENT_LIST)
+                        cuber.p_bar.destroybar()
+
+                # single-core mode
+                else: 
+                    if len(Constants.FIND_ELEMENT_LIST) > 0:
+                        MAPS = getpeakmap(Constants.FIND_ELEMENT_LIST,Constants.MY_DATACUBE)
+                    else: pass
+
+            else:
+                results = []
+                for element in Constants.FIND_ELEMENT_LIST:
+                    if element == "custom":
+                        lines = [__self__.cvar1.get(),__self__.cvar2.get()]
+                        elmap, ROI = (grab_simple_roi_image(Constants.MY_DATACUBE,lines,\
+                                custom_energy=True))
+                        results.append((elmap, ROI, "custom"))
+                    else:
+                        lines = select_lines(element,Constants.MY_DATACUBE.config["ratio"])
+                        elmap, ROI = (grab_simple_roi_image(Constants.MY_DATACUBE,lines))
+                        results.append((elmap, ROI, element))
+                sort_results(results,Constants.FIND_ELEMENT_LIST)
+                digest_results(Constants.MY_DATACUBE,results,Constants.FIND_ELEMENT_LIST)
+
+            # reactivate widgets
+            wipe_list()
+            root.toggle_(toggle="on")
+            root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+            root.ButtonLoad.config(state=NORMAL)
+            root.write_stat()
+            refresh_plots()
+
+    def draw_buttons(__self__):
+        btnsize_w = 3
+        btnsize_h = 1
+        __self__.H = Button(__self__.master.body, text="H",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.H))
+        Constants.DEFAULTBTN_COLOR = __self__.H.cget("background")
+        __self__.H.grid(row=0,column=0)
+        __self__.He = Button(__self__.master.body, text="He",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.He))
+        __self__.He.grid(row=0,column=17)
+        __self__.Li = Button(__self__.master.body, text="Li",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Li))
+        __self__.Li.grid(row=1,column=0)
+        __self__.Be = Button(__self__.master.body, text="Be",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Be))
+        __self__.Be.grid(row=1,column=1)
+        __self__.B = Button(__self__.master.body, text="B",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.B))
+        __self__.B.grid(row=1,column=12)
+        __self__.C = Button(__self__.master.body, text="C",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.C))
+        __self__.C.grid(row=1,column=13)
+        __self__.N = Button(__self__.master.body, text="N",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.N))
+        __self__.N.grid(row=1,column=14)
+        __self__.O = Button(__self__.master.body, text="O",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.O))
+        __self__.O.grid(row=1,column=15)
+        __self__.F = Button(__self__.master.body, text="F",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.F))
+        __self__.F.grid(row=1,column=16)
+        __self__.Ne = Button(__self__.master.body, text="Ne",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ne))
+        __self__.Ne.grid(row=1,column=17)
+        __self__.Na = Button(__self__.master.body, text="Na",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Na))
+        __self__.Na.grid(row=2,column=0)
+        __self__.Mg = Button(__self__.master.body, text="Mg",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Mg))
+        __self__.Mg.grid(row=2,column=1)
+        __self__.Al = Button(__self__.master.body, text="Al",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Al))
+        __self__.Al.grid(row=2,column=12)
+        __self__.Si = Button(__self__.master.body, text="Si",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Si))
+        __self__.Si.grid(row=2,column=13)
+        __self__.P = Button(__self__.master.body, text="P",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.P))
+        __self__.P.grid(row=2,column=14)
+        __self__.S = Button(__self__.master.body, text="S",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.S))
+        __self__.S.grid(row=2,column=15)
+        __self__.Cl = Button(__self__.master.body, text="Cl",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cl))
+        __self__.Cl.grid(row=2,column=16)
+        __self__.Ar = Button(__self__.master.body, text="Ar",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ar))
+        __self__.Ar.grid(row=2,column=17)
+        
+        __self__.K = Button(__self__.master.body, text="K",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.K))
+        __self__.K.grid(row=3,column=0)
+        __self__.Ca = Button(__self__.master.body, text="Ca",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ca))
+        __self__.Ca.grid(row=3,column=1)
+        __self__.Sc = Button(__self__.master.body, text="Sc",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sc))
+        __self__.Sc.grid(row=3,column=2)
+        __self__.Ti = Button(__self__.master.body, text="Ti",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ti))
+        __self__.Ti.grid(row=3,column=3)
+        __self__.V = Button(__self__.master.body, text="V",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.V))
+        __self__.V.grid(row=3,column=4)
+        __self__.Cr = Button(__self__.master.body, text="Cr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cr))
+        __self__.Cr.grid(row=3,column=5)
+        __self__.Mn = Button(__self__.master.body, text="Mn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Mn))
+        __self__.Mn.grid(row=3,column=6)
+        __self__.Fe = Button(__self__.master.body, text="Fe",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Fe))
+        __self__.Fe.grid(row=3,column=7)
+        __self__.Co = Button(__self__.master.body, text="Co",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Co))
+        __self__.Co.grid(row=3,column=8)
+        __self__.Ni = Button(__self__.master.body, text="Ni",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ni))
+        __self__.Ni.grid(row=3,column=9)
+        __self__.Cu = Button(__self__.master.body, text="Cu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cu))
+        __self__.Cu.grid(row=3,column=10)
+        __self__.Zn = Button(__self__.master.body, text="Zn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Zn))
+        __self__.Zn.grid(row=3,column=11)
+        __self__.Ga = Button(__self__.master.body, text="Ga",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ga))
+        __self__.Ga.grid(row=3,column=12)
+        __self__.Ge = Button(__self__.master.body, text="Ge",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ge))
+        __self__.Ge.grid(row=3,column=13)
+        __self__.As = Button(__self__.master.body, text="As",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.As))
+        __self__.As.grid(row=3,column=14)
+        __self__.Se = Button(__self__.master.body, text="Se",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Se))
+        __self__.Se.grid(row=3,column=15)
+        __self__.Br = Button(__self__.master.body, text="Br",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Br))
+        __self__.Br.grid(row=3,column=16)
+        __self__.Kr = Button(__self__.master.body, text="Kr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Kr))
+        __self__.Kr.grid(row=3,column=17)
+        
+        __self__.Rb = Button(__self__.master.body, text="Rb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Rb))
+        __self__.Rb.grid(row=4,column=0)
+        __self__.Sr = Button(__self__.master.body, text="Sr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sr))
+        __self__.Sr.grid(row=4,column=1)
+        __self__.Y = Button(__self__.master.body, text="Y",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Y))
+        __self__.Y.grid(row=4,column=2)
+        __self__.Zr = Button(__self__.master.body, text="Zr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Zr))
+        __self__.Zr.grid(row=4,column=3)
+        __self__.Nb = Button(__self__.master.body, text="Nb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Nb))
+        __self__.Nb.grid(row=4,column=4)
+        __self__.Mo = Button(__self__.master.body, text="Mo",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Mo))
+        __self__.Mo.grid(row=4,column=5)
+        __self__.Tc = Button(__self__.master.body, text="Tc",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tc))
+        __self__.Tc.grid(row=4,column=6)
+        __self__.Ru = Button(__self__.master.body, text="Ru",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ru))
+        __self__.Ru.grid(row=4,column=7)
+        __self__.Rh = Button(__self__.master.body, text="Rh",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Rh))
+        __self__.Rh.grid(row=4,column=8)
+        __self__.Pd = Button(__self__.master.body, text="Pd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pd))
+        __self__.Pd.grid(row=4,column=9)
+        __self__.Ag = Button(__self__.master.body, text="Ag",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ag))
+        __self__.Ag.grid(row=4,column=10)
+        __self__.Cd = Button(__self__.master.body, text="Cd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cd))
+        __self__.Cd.grid(row=4,column=11)
+        __self__.In = Button(__self__.master.body, text="In",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.In))
+        __self__.In.grid(row=4,column=12)
+        __self__.Sn = Button(__self__.master.body, text="Sn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sn))
+        __self__.Sn.grid(row=4,column=13)
+        __self__.Sb = Button(__self__.master.body, text="Sb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sb))
+        __self__.Sb.grid(row=4,column=14)
+        __self__.Te = Button(__self__.master.body, text="Te",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Te))
+        __self__.Te.grid(row=4,column=15)
+        __self__.I = Button(__self__.master.body, text="I",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.I))
+        __self__.I.grid(row=4,column=16)
+        __self__.Xe = Button(__self__.master.body, text="Xe",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Xe))
+        __self__.Xe.grid(row=4,column=17)
+        
+        __self__.Cs = Button(__self__.master.body, text="Cs",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cs))
+        __self__.Cs.grid(row=5,column=0)
+        __self__.Ba = Button(__self__.master.body, text="Ba",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ba))
+        __self__.Ba.grid(row=5,column=1)
+        __self__.La = Button(__self__.master.body, text="La",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.La))
+        __self__.La.grid(row=5,column=2)
+        __self__.Hf = Button(__self__.master.body, text="Hf",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Hf))
+        __self__.Hf.grid(row=5,column=3)
+        __self__.Ta = Button(__self__.master.body, text="Ta",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ta))
+        __self__.Ta.grid(row=5,column=4)
+        __self__.W = Button(__self__.master.body, text="W",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.W))
+        __self__.W.grid(row=5,column=5)
+        __self__.Re = Button(__self__.master.body, text="Re",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Re))
+        __self__.Re.grid(row=5,column=6)
+        __self__.Os = Button(__self__.master.body, text="Os",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Os))
+        __self__.Os.grid(row=5,column=7)
+        __self__.Ir = Button(__self__.master.body, text="Ir",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ir))
+        __self__.Ir.grid(row=5,column=8)
+        __self__.Pt = Button(__self__.master.body, text="Pt",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pt))
+        __self__.Pt.grid(row=5,column=9)
+        __self__.Au = Button(__self__.master.body, text="Au",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Au))
+        __self__.Au.grid(row=5,column=10)
+        __self__.Hg = Button(__self__.master.body, text="Hg",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Hg))
+        __self__.Hg.grid(row=5,column=11)
+        __self__.Tl = Button(__self__.master.body, text="Tl",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tl))
+        __self__.Tl.grid(row=5,column=12)
+        __self__.Pb = Button(__self__.master.body, text="Pb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pb))
+        __self__.Pb.grid(row=5,column=13)
+        __self__.Bi = Button(__self__.master.body, text="Bi",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Bi))
+        __self__.Bi.grid(row=5,column=14)
+        __self__.Po = Button(__self__.master.body, text="Po",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Po))
+        __self__.Po.grid(row=5,column=15)
+        __self__.At = Button(__self__.master.body, text="At",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.At))
+        __self__.At.grid(row=5,column=16)
+        __self__.Rn = Button(__self__.master.body, text="Rn",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Rn))
+        __self__.Rn.grid(row=5,column=17)
+        
+        __self__.Fr = Button(__self__.master.body, text="Fr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Fr))
+        __self__.Fr.grid(row=6,column=0)
+        __self__.Ra = Button(__self__.master.body, text="Ra",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ra))
+        __self__.Ra.grid(row=6,column=1)
+        __self__.Ac = Button(__self__.master.body, text="Ac",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ac))
+        __self__.Ac.grid(row=6,column=2)
+
+        __self__.Ce = Button(__self__.master.body, text="Ce",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ce))
+        __self__.Ce.grid(row=7,column=4)
+        __self__.Pr = Button(__self__.master.body, text="Pr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pr))
+        __self__.Pr.grid(row=7,column=5)
+        __self__.Nd = Button(__self__.master.body, text="Nd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Nd))
+        __self__.Nd.grid(row=7,column=6)
+        __self__.Pm = Button(__self__.master.body, text="Pm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pm))
+        __self__.Pm.grid(row=7,column=7)
+        __self__.Sm = Button(__self__.master.body, text="Sm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Sm))
+        __self__.Sm.grid(row=7,column=8)
+        __self__.Eu = Button(__self__.master.body, text="Eu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Eu))
+        __self__.Eu.grid(row=7,column=9)
+        __self__.Gd = Button(__self__.master.body, text="Gd",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Gd))
+        __self__.Gd.grid(row=7,column=10)
+        __self__.Tb = Button(__self__.master.body, text="Tb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tb))
+        __self__.Tb.grid(row=7,column=11)
+        __self__.Dy = Button(__self__.master.body, text="Dy",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Dy))
+        __self__.Dy.grid(row=7,column=12)
+        __self__.Ho = Button(__self__.master.body, text="Ho",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Ho))
+        __self__.Ho.grid(row=7,column=13)
+        __self__.Er = Button(__self__.master.body, text="Er",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Er))
+        __self__.Er.grid(row=7,column=14)
+        __self__.Tm = Button(__self__.master.body, text="Tm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Tm))
+        __self__.Tm.grid(row=7,column=15)
+        __self__.Yb = Button(__self__.master.body, text="Yb",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Yb))
+        __self__.Yb.grid(row=7,column=16)
+        __self__.Lu = Button(__self__.master.body, text="Lu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Lu))
+        __self__.Lu.grid(row=7,column=17)
+
+        __self__.Th = Button(__self__.master.body, text="Th",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Th))
+        __self__.Th.grid(row=8,column=4)
+        __self__.Pa = Button(__self__.master.body, text="Pa",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pa))
+        __self__.Pa.grid(row=8,column=5)
+        __self__.U = Button(__self__.master.body, text="U",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.U))
+        __self__.U.grid(row=8,column=6)
+        __self__.Np = Button(__self__.master.body, text="Np",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Np))
+        __self__.Np.grid(row=8,column=7)
+        __self__.Pu = Button(__self__.master.body, text="Pu",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Pu))
+        __self__.Pu.grid(row=8,column=8)
+        __self__.Am = Button(__self__.master.body, text="Am",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Am))
+        __self__.Am.grid(row=8,column=9)
+        __self__.Cm = Button(__self__.master.body, text="Cm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cm))
+        __self__.Cm.grid(row=8,column=10)
+        __self__.Bk = Button(__self__.master.body, text="Bk",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Bk))
+        __self__.Bk.grid(row=8,column=11)
+        __self__.Cf = Button(__self__.master.body, text="Cf",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Cf))
+        __self__.Cf.grid(row=8,column=12)
+        __self__.Es = Button(__self__.master.body, text="Es",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Es))
+        __self__.Es.grid(row=8,column=13)
+        __self__.Fm = Button(__self__.master.body, text="Fm",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Fm))
+        __self__.Fm.grid(row=8,column=14)
+        __self__.Md = Button(__self__.master.body, text="Md",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Md))
+        __self__.Md.grid(row=8,column=15)
+        __self__.No = Button(__self__.master.body, text="No",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.No))
+        __self__.No.grid(row=8,column=16)
+        __self__.Lr = Button(__self__.master.body, text="Lr",width=btnsize_w,height=btnsize_h,relief='raised',command= lambda: __self__.add_element(__self__.Lr))
+        __self__.Lr.grid(row=8,column=17)
+        __self__.Custom = Button(__self__.master.body, text="Custom",width=2*btnsize_w,height=btnsize_h,relief='raised', fg="blue", command= lambda: __self__.add_custom_element(__self__.Custom))
+        __self__.Custom.grid(row=8,column=0,columnspan=2)
+
+        __self__.low = Entry(__self__.master.body, textvariable=__self__.cvar1, width=btnsize_w+1,fg="blue")
+        __self__.low.grid(row=9,column=0)
+        __self__.high = Entry(__self__.master.body, textvariable=__self__.cvar2, width=btnsize_w+1, fg="red")
+        __self__.high.grid(row=9,column=1)
+        __self__.clabel = Label(__self__.master.body, text="KeV", width=btnsize_w)
+        __self__.clabel.grid(row=9,column=2)
+
+        __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
+        __self__.go.grid(column=7,columnspan=3,pady=(6,3))
+
+
+if __name__.endswith('__main__'):         
+    import Constants
+    optimum_resolution = (1920,1080)
+    _init_numpy_mkl()
+    del _init_numpy_mkl
+
+    # tcl/Tk imports
+    try:
+        from tkinter import *
+        from tkinter import ttk
+        from tkinter import messagebox
+        from tkinter import filedialog
+        from tkinter import font as tkFont
+    except:
+        from Tkinter import *
+        from Tkinter import ttk
+        from Tkinter import messagebox
+        from Tkinter import filedialog
+        import tkFont
+
+    # general utilities
+    import numpy as np
+    import cv2
+    import sys, os, copy, pickle, stat, random, base64
+    import shutil
+    import webbrowser
+    from psutil import virtual_memory
+    from psutil import cpu_count
+    Constants.CPUS = cpu_count()
+    import logging, time
+    from multiprocessing import freeze_support
+    freeze_support()
+    
+    # matplotlib imports
+    import matplotlib
+    import matplotlib.pyplot as plt
+    matplotlib.use("TkAgg")
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.figure import Figure
+    from matplotlib.patches import Rectangle
+    from matplotlib import style
+    style.use('ggplot')
+    
+    def open_log():
+        # wipes logfile
         try:
-<<<<<<< Updated upstream
-            maps = []
-            fig, ax = plt.subplots(1,2,sharey=True)
-            maps.append(ax[0].imshow(ratiomatrix))
-            ax[0].set_title('{} ratio map'.format(elementlist[0]))
-            maps.append(ax[1].imshow(mask))
-            ax[1].set_title('{} mask'.format(compound.identity))
-            ImgMath.colorbar(maps[0])
-            ImgMath.colorbar(maps[1])
-            plt.show()
-            plt.cla()
-            plt.clf()
-            plt.close()
-        except: raise FileNotFoundError("{0} ratio file not found!".format(mae))
-        
-        heightmap = ImgMath.getheightmap(ratiomatrix,mask,\
-                config.get('thickratio'),compound)
-        fig, ax = plt.subplots()
-        cbar = ax.imshow(heightmap,cmap='gray')
-        ax.set_title('heightmap')
-        ImgMath.colorbar(cbar)
-        plt.show()
-        plt.cla()
-        plt.clf()
-        plt.close()
-        ImgMath.plot3D(heightmap)
-        """
-=======
             with open(os.path.join(SpecRead.__PERSONAL__,
                 "logfile.log"),'w+') as mylog: mylog.truncate(0)
         except: pass
@@ -3997,7 +4512,7 @@ root.mainloop()
         # tries to create logfile on user folder
         try: 
             logger = logging.getLogger("logfile")
-            logger.setLevel(logging.INFO)
+            logger.setLevel(Constants.LOGLEVEL)
             lHandler = logging.FileHandler(os.path.join(SpecRead.__PERSONAL__,
                 "logfile.log"))
             formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
@@ -4046,5 +4561,4 @@ root.mainloop()
     GUIicon = os.path.join(os.getcwd(),"images","icons","icon.ico")
     root.master.iconbitmap(GUIicon)  
     root.master.mainloop()
->>>>>>> Stashed changes
 

@@ -12,3 +12,4 @@ Version v1.x.x
 
 - Fixed Spectrum name converter when inputting dimension
 - Performance improvements in datacube packing
+- Performance improvements in multiprocessing
