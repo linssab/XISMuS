@@ -844,16 +844,20 @@ def setROI(lookup,xarray,yarray,localconfig):
         # gets ROI indexes #
         #################### 
 
-        idx = 0
-        while xarray[idx] <= lowx:
-            idx+=1
-        lowx_idx = idx-1
-        logger.debug("lowx_idx: %d" % lowx_idx)
-        while xarray[idx] <= highx:
-            idx+=1
-        highx_idx = idx+1
-        logger.debug("highx_idx: %d" % highx_idx)
-        
+        try:
+            idx = 0
+            while xarray[idx] <= lowx:
+                idx+=1
+            lowx_idx = idx-1
+            logger.debug("lowx_idx: %d" % lowx_idx)
+            while xarray[idx] <= highx:
+                idx+=1
+            highx_idx = idx+1
+            logger.debug("highx_idx: %d" % highx_idx)
+        except:
+            logger.debug("ROI error. Index out of bounds.")
+            return 0,2,1,False
+            
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
         
