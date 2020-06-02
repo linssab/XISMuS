@@ -1361,7 +1361,7 @@ class ImageAnalyzer:
         __self__.popup = Menu(__self__.master, tearoff=0)
         __self__.popup.add_command(
                 label="Export as...",
-                command=__self__.export_maps)
+                command=__self__.export_clicked)
 
         # map 1
         __self__.Map1Label = Label(
@@ -1400,7 +1400,8 @@ class ImageAnalyzer:
         __self__.plot1.grid(b=None)
         __self__.canvas1 = FigureCanvasTkAgg(__self__.figure1,__self__.LeftCanvas)
         __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
-        __self__.canvas1.mpl_connect("button_press_event",__self__.pop)
+        __self__.canvas1.mpl_connect("button_press_event",
+                lambda event: __self__.pop(event,1))
         
         __self__.figure2 = Figure(figsize=(5,4), dpi=75)
         __self__.plot2 = __self__.figure2.add_subplot(111)
@@ -1408,7 +1409,8 @@ class ImageAnalyzer:
         __self__.plot2.grid(b=None)
         __self__.canvas2 = FigureCanvasTkAgg(__self__.figure2,__self__.RightCanvas)
         __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
-        __self__.canvas2.mpl_connect("button_press_event",__self__.pop)
+        __self__.canvas2.mpl_connect("button_press_event",
+                lambda event: __self__.pop(event,2))
 
         # image controls Threshold, LowPass and Smooth
         __self__.T1check = BooleanVar()
@@ -1575,8 +1577,9 @@ class ImageAnalyzer:
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
     
-    def pop(__self__,event):
+    def pop(__self__,event,img_idx):
         if event.button == 3:
+            __self__.triggered_figure = img_idx
             root.master.update_idletasks()
             x = root.master.winfo_pointerx()
             y = root.master.winfo_pointery()
@@ -1795,6 +1798,21 @@ class ImageAnalyzer:
         corr_plot = PlotWin(__self__.master)
         corr_plot.draw_correlation(corr,labels)
 
+    def export_clicked(__self__):
+        f = filedialog.asksaveasfile(mode='w', 
+                    defaultextension=".png",
+                    filetypes=[("Portable Network Graphic", "*.png")],
+                    title="Save as...")
+        if f is None: 
+            return
+        if __self__.triggered_figure == 1: img = __self__.newimage1
+        elif __self__.triggered_figure == 2: img = __self__.newimage2
+        else: 
+            messagebox.showerror("Error","Could not export.")
+            return 1
+        plt.imsave(f.name, img, cmap=Constants.COLORMAP) 
+        return 0
+
     def export_maps(__self__):
         export = export_diag(__self__)
         return 0
@@ -1946,12 +1964,14 @@ class PlotWin:
                     __self__.plotdata,
                     label=roi_label,
                     color=ElementColors[element])
+                __self__.plot.fill_between(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,color=ElementColors[element],alpha=0.5)
             else: 
                 __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
                 __self__.plotdata,
                 label=roi_label,
                 color=ElementColors["Custom"])
+                __self__.plot.fill_between(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,color=ElementColors["Custom"],alpha=0.5)
 
         __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,

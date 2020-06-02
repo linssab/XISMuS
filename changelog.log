@@ -13,3 +13,4 @@ Version v1.x.x
 - Fixed Spectrum name converter when inputting dimension
 - Performance improvements in datacube packing
 - Performance improvements in multiprocessing
+- Changed right-clock export mode in Image Analyzer to support different color maps
