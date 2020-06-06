@@ -241,6 +241,7 @@ def load_cube():
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
         logger.debug("Loaded cube {} to memory.".format(cube_file))
+
     elif os.path.exists(os.path.join(SpecRead.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
         lz_file = open(SpecRead.cube_path,'rb')
@@ -842,7 +843,7 @@ class export_diag():
         place_center(__self__.parent.master,__self__.master)
         __self__.master.deiconify()
         __self__.master.focus_set()
-        icon = os.getcwd()+"\\images\\icons\\img_anal.ico"
+        icon = os.path.join(os.getcwd(),"image","icons","img_anal.ico")
         __self__.master.iconbitmap(icon)
 
 
@@ -1251,6 +1252,8 @@ class Annotator:
             lines = False
         
         __self__.parent.plot.DATA.set_ydata(__self__.parent.sum_spectrum)
+        __self__.parent.plot.plot.legend().get_texts()[0].set_text(
+                "{} Spectra".format(__self__.spec_no))
         __self__.parent.plot.plot.set_ylim(
                 bottom=1,
                 top=1.20*__self__.parent.sum_spectrum.max())
@@ -1294,7 +1297,9 @@ class Annotator:
     def calculate_area(__self__):
         __self__.area1_sum = 0
         __self__.area2_sum = 0
-        __self__.parent.sum_spectrum = np.ones([__self__.parent.DATACUBE.sum.shape[0]])
+        __self__.spec_no = 0
+        __self__.parent.sum_spectrum = np.ones([__self__.parent.DATACUBE.sum.shape[0]],
+                dtype="int32")
         unpacker1 = __self__.element1.split("_")
         unpacker2 = __self__.element2.split("_")
         
@@ -1306,11 +1311,13 @@ class Annotator:
         y_ = [__self__.y0,__self__.y1]
         x_.sort()
         y_.sort()
+
         for x in range(y_[0],y_[1]):
-            for y in range(x_[0],x_[1]):
-                __self__.area1_sum += image1[x][y]
-                __self__.area2_sum += image2[x][y]
-                __self__.parent.sum_spectrum += __self__.parent.DATACUBE.matrix[x][y]
+           for y in range(x_[0],x_[1]):
+               __self__.area1_sum += image1[x][y]
+               __self__.area2_sum += image2[x][y]
+               __self__.parent.sum_spectrum += __self__.parent.DATACUBE.matrix[x][y]
+               __self__.spec_no += 1
         __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
         __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
         if __self__.area2_sum > 0:
@@ -1821,7 +1828,7 @@ class ImageAnalyzer:
 class PlotWin:
 
     def __init__(__self__,master):
-        plot_font = {'fontname':'Arial','fontsize':10}
+        __self__.plot_font = {'fontname':'Arial','fontsize':10}
         __self__.master = Toplevel(master=master)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.title("Plot")
@@ -1863,26 +1870,31 @@ class PlotWin:
 
     def draw_calibration(__self__):
         __self__.master.tagged = True
-        plot_font = {'fontname':'Arial','fontsize':10}
         __self__.plotdata = Constants.MY_DATACUBE.energyaxis
         channels = np.arange(1,__self__.plotdata.shape[0]+1)
         anchors = Constants.MY_DATACUBE.calibration
         __self__.plot.set_title("{0} Calibration curve".format(
-            Constants.DIRECTORY),**plot_font)
+            Constants.DIRECTORY),**__self__.plot_font)
         __self__.plot.plot(channels,__self__.plotdata,label="Calibration curve")
         for pair in anchors:
             __self__.plot.plot(pair[0],pair[1], marker='+',mew=1,ms=10,
                     label="{0}".format(pair))
         __self__.plot.set_ylabel("Energy (KeV)")
         __self__.plot.set_xlabel("Channel")
-        __self__.plot.legend()
+        __self__.plot.grid(color="black", ls="--", lw=0.5)
+        __self__.plot.legend(
+                fancybox=True,
+                shadow=True,
+                fontsize=12,
+                framealpha=1,
+                borderpad=1,
+                facecolor="white")
 
     def draw_spec(__self__,mode,display_mode=None,lines=False):
         energy_list=[]
         __self__.master.tagged = False
         if __self__.master.winfo_exists() == True:
             __self__.plot.clear()
-            plot_font = {'fontname':'Arial','fontsize':10}
             colors = ["blue","red","green"]
             if display_mode == '-semilog':
                 __self__.plot.set_ylabel("Counts")
@@ -1913,7 +1925,8 @@ class PlotWin:
                             energy_list=[]
 
 
-                __self__.plot.set_title('{0} {1}'.format(Constants.DIRECTORY,mode),**plot_font)
+                __self__.plot.set_title('{0} {1}'.format(
+                    Constants.DIRECTORY,mode),**__self__.plot_font)
                 __self__.plot.set_xlabel("Energy (KeV)")
                 __self__.plot.legend()
             else:
@@ -1943,9 +1956,16 @@ class PlotWin:
                                 x=value, color=ElementColors[element],label=element)
                             energy_list=[]
 
-                __self__.plot.set_title('{0} {1}'.format(Constants.DIRECTORY,mode),**plot_font)
+                __self__.plot.set_title('{0} {1}'.format(
+                    Constants.DIRECTORY,mode),**__self__.plot_font)
                 __self__.plot.set_xlabel("Energy (KeV)")
-                __self__.plot.legend()
+                __self__.plot.legend(
+                        fancybox=True,
+                        shadow=True,
+                        fontsize=12,
+                        framealpha=1,
+                        borderpad=1,
+                        facecolor="white")
 
             __self__.canvas.draw()
     
@@ -1964,45 +1984,71 @@ class PlotWin:
                     __self__.plotdata,
                     label=roi_label,
                     color=ElementColors[element])
-                __self__.plot.fill_between(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,color=ElementColors[element],alpha=0.5)
+                __self__.plot.fill_between(
+                        Constants.MY_DATACUBE.energyaxis,
+                        __self__.plotdata,
+                        color=ElementColors[element],
+                        alpha=0.5)
             else: 
                 __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
                 __self__.plotdata,
                 label=roi_label,
                 color=ElementColors["Custom"])
-                __self__.plot.fill_between(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,color=ElementColors["Custom"],alpha=0.5)
+                __self__.plot.fill_between(
+                        Constants.MY_DATACUBE.energyaxis,
+                        __self__.plotdata,
+                        color=ElementColors["Custom"],
+                        alpha=0.5)
 
         __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
                 Constants.MY_DATACUBE.sum,
                 label="Sum spectrum",
                 color="blue")
-        __self__.plot.legend()
+        __self__.plot.grid(color="black", ls="--", lw=0.5)
+        __self__.plot.set_title("{0} Stacked ROI's sum for all spectra".format(
+            Constants.DIRECTORY),**__self__.plot_font)
+        __self__.plot.set_ylabel("Counts")
+        __self__.plot.set_xlabel("Energy (KeV)")
+        __self__.plot.legend(
+                fancybox=True,
+                shadow=True,
+                fontsize=12,
+                framealpha=1,
+                borderpad=1,
+                facecolor="white")
 
     def draw_correlation(__self__,corr,labels):
         A, B, R = SpecRead.linregress(corr[0],corr[1]) 
         fit = []
-        plot_font = {'fontname':'Times New Roman','fontsize':10}
-        __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**plot_font)
-        __self__.plot.set_xlabel(labels[0])
-        __self__.plot.set_ylabel(labels[1])
+        labelx,macrox = labels[0].split("_")[0],labels[0].split("_")[1]
+        linex = which_macro(labelx)
+        labelx = labelx+" "+linex+macrox
+        labely,macroy = labels[1].split("_")[0],labels[1].split("_")[1]
+        liney = which_macro(labely)
+        labely = labely+" "+liney+macroy
+
+        __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
+        __self__.plot.set_xlabel(labelx,fontsize=16)
+        __self__.plot.set_ylabel(labely,fontsize=16)
         __self__.plot.scatter(corr[0],corr[1])
         for i in range(int(corr[0].max())):
             value = A*i+B
             if value < corr[1].max(): 
                 fit.append(value)
+            if B < 0: sig = "-"
+            else: sig = "+"
         __self__.plot.plot(fit, color="blue", 
-                label="y(x) = {0:0.2f}x + {1:0.2f}\nR = {2:0.4f}".format(A,B,R))
-        __self__.plot.legend()
+                label="y(x) = {0:0.2f}x {1} {2:0.2f}\nR = {3:0.4f}".format(A,sig,abs(B),R))
+        __self__.plot.legend(shadow=True,fontsize=10,facecolor="white",loc="upper right")
         place_topright(__self__.master.master,__self__.master)
 
     def draw_selective_sum(__self__,DATACUBE,y_data,display_mode=None,lines=False):
         
         __self__.plot.clear()
-        plot_font = {'fontname':'Arial','fontsize':10}
         colors = ["blue","red","green"]
-        __self__.plot.set_title('{0}'.format(DATACUBE.name),**plot_font)
+        __self__.plot.set_title('{0}'.format(DATACUBE.name),**__self__.plot_font)
         __self__.plot.set_ylabel("Counts")
         __self__.plot.set_xlabel("Energy (KeV)")
 
@@ -2043,7 +2089,11 @@ class PlotWin:
                         __self__.EL = __self__.plot.axvline(
                         x=value, color=ElementColors[element],label=element)
                     energy_list=[]
-        __self__.plot.legend(loc="upper right")
+        __self__.plot.legend(
+                fontsize=12,
+                borderpad=1,
+                loc="upper right")
+        __self__.plot.grid(color="black", ls="--", lw=0.5)
         __self__.canvas.draw()
 
 
@@ -3106,7 +3156,9 @@ class MainGUI:
         Constants.FIRSTFILE_ABSPATH = file_batch[0]
 
         #3 ask for a sample name and dimension (modified dimension diag)
-        try: __self__.config_xy = SpecRead.getdimension()
+        try: 
+            __self__.config_xy = SpecRead.getdimension()
+            __self__.ManualParam = []
         except:
             dimension = dimension_diag(Constants.DIRECTORY)
             __self__.master.wait_window(dimension.win) 
@@ -4158,7 +4210,8 @@ class PeriodicTable:
         else:
             # disabled widgets to avoid user changes sample
             root.toggle_(toggle="off")
-            root.SamplesWindow.destroy()
+            try: root.SamplesWindow.destroy()
+            except: pass
 
             # Sets fano and noise factor 
             FANO, NOISE = Constants.MY_DATACUBE.FN
@@ -4571,7 +4624,7 @@ if __name__.endswith('__main__'):
     from SpecMath import getstackplot, correlate, peakstrip, FN_reset, FN_set, FN_fit
     from SpecMath import datacube as Cube
     from ProgressBar import Busy
-    from EnergyLib import plottables_dict, ElementColors
+    from EnergyLib import plottables_dict, ElementColors, which_macro
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results
 

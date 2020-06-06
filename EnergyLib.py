@@ -271,6 +271,12 @@ def set_densities_from_xlib():
         except: DensityDict["{0}".format(loc_element)] = np.nan
     return DensityDict
 
+def which_macro(element):
+    if element == "custom": return "" 
+    idx = ElementList.index(element)
+    if idx >= 54: return "L"
+    else: return "K"
+
 # Lists below uses the definition written manually in this file
 if USEXLIB == False:
     DensityDict = {index[0]:index[1] for index in ElementsInfo}
