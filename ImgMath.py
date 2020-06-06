@@ -598,7 +598,7 @@ def write_image(image,resize,path,enhance=False):
             large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
         if enhance == True:
             large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite(path,large_image)
+    plt.imsave(path,large_image,cmap=Constants.COLORMAP)
     return 0
 
 def stackimages(*args):
