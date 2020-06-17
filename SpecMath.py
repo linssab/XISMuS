@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.0.0 - May - 2020            #
+#                        version: 1.1.0 - Jun - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -171,8 +171,7 @@ def FN_fit(specdata,gain):
     v, w, r = 4,9,4
     while i < x:
         F, N = FN_iter(data,gain,v,w,r)
-        if 0.040 <= F <= 0.240: 
-            logger.warning("Fano in between 0.040 and 0.240")
+        if 0.114-0.0114 <= F <= 0.114+0.0114: 
             logger.warning("Fano and Noise matched: F:{} N:{}".format(F,N))
             return F, N
         avg_F += F
@@ -189,6 +188,7 @@ def FN_fit(specdata,gain):
     N = avg_N/i
     F = avg_F/i
     logger.warning("Fano and Noise averaged: F:{} N:{}".format(F,N))
+    if N >= 130: N=80
     return F, N
 
 def FN_iter(data,gain,v,w,r):
@@ -272,6 +272,7 @@ def fwhm(data,i,win):
     for j in range(i-win,i):
         if data[j]>=half: 
             lw = j-1
+            break
     j=0
     for j in range(i,i+win):
         if data[j]<=half: 
@@ -310,8 +311,6 @@ class datacube:
                 specsize.shape[0]],dtype="int32",order='C')
             __self__.config = configuration
             __self__.calibration = getcalibration()
-            __self__.energyaxis, __self__.gain = calibrate()
-            __self__.config["gain"] = __self__.gain
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
         __self__.ROI = {}
         __self__.hist = {}
@@ -390,8 +389,8 @@ class datacube:
         if recalculating == True: bgstrip = bgstrip
         else: bgstrip = __self__.config['bgstrip']
         counter = 0
-        __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],\
-                __self__.energyaxis.shape[0]],dtype="float32",order='C')
+        __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],
+                __self__.matrix.shape[2]],dtype="float32",order='C')
         if bgstrip == 'None':
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
         elif bgstrip == 'SNIPBG':
@@ -551,24 +550,34 @@ class datacube:
                 iterator += 1
         logger.info("Packed spectra in {} seconds".format(time.time()-timer))
 
+
         logger.debug("Calculating MPS...")
         __self__.progressbar.update_text("Calculating MPS...")
         mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
         datacube.MPS(__self__,mps)
         __self__.mps = mps
+
         logger.debug("Stripping background...")
         __self__.progressbar.update_text("Stripping background...")
         datacube.strip_background(__self__)
+
         logger.debug("Calculating summation spectrum...")
         __self__.progressbar.update_text("Calculating sum spec...")
         datacube.stacksum(__self__)
-        logger.debug("Writing summation mca and ANSII files...")
-        datacube.write_sum(__self__)
+        #datacube.cut_zeros(__self__)
+        __self__.energyaxis, __self__.gain, __self__.zero = calibrate()
+        __self__.config["gain"] = __self__.gain
+
         logger.debug("Calculating sum map...")
         __self__.progressbar.update_text("Calculating sum map...")
         datacube.create_densemap(__self__)
+        
+        logger.debug("Writing summation mca and ANSII files...")
+        datacube.write_sum(__self__)
+
         __self__.progressbar.update_text("Finding Noise and Fano...")
         datacube.fit_fano_and_noise(__self__)
+
         logger.debug("Saving cube file to disk...")
         __self__.progressbar.update_text("Writing to disk...")
         __self__.progressbar.destroybar()
@@ -586,6 +595,35 @@ class datacube:
         while iterator < __self__.img_size:
             __self__.progressbar.updatebar(iterator)
         return 0
+
+    def cut_zeros(__self__):
+        for i in range(__self__.sum.shape[0]):
+            if __self__.sum[i] < __self__.img_size:
+                lead_zeros = i
+            else: break
+        for i in range(1,__self__.sum.shape[0]):
+            if __self__.sum[-i] < __self__.img_size:
+                tail_zeros = __self__.matrix.shape[2]-i
+            else: break
+        
+        print("lead",lead_zeros,"tail",tail_zeros)
+
+        __self__.energyaxis, __self__.gain, __self__.zero = calibrate(
+                lead=lead_zeros,tail=__self__.matrix.shape[2]-tail_zeros)
+        __self__.config["gain"] = __self__.gain
+    
+        __self__.matrix = __self__.matrix[:,:,lead_zeros:tail_zeros]
+        __self__.background = __self__.background[:,:,lead_zeros:tail_zeros]
+        __self__.sum = __self__.sum[lead_zeros:tail_zeros]
+        __self__.sum_bg = __self__.sum_bg[lead_zeros:tail_zeros]
+        __self__.mps = __self__.mps[lead_zeros:tail_zeros]
+        
+        print(len(__self__.sum),"sum")
+        print(len(__self__.sum_bg),"sum_bg")
+        print(len(__self__.mps),"mps")
+        print(len(__self__.energyaxis),"energy")
+        return lead_zeros, tail_zeros
+
         
     def pack_element(__self__,image,element,line):
 
@@ -659,16 +697,6 @@ class datacube:
             __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
         __self__.__dict__["custom"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
     
-def shift_center(xarray,yarray):
-    
-    """ Returns the highest value and its index in yarray and its corresponding value
-    in xarray """
-
-    ymax = yarray.max()
-    y_list = yarray.tolist()
-    idx = y_list.index(ymax)
-    return xarray[idx],ymax,idx
-
 def refresh_position(a,b,length):
     
     """ Returns the next pixel position """
@@ -805,7 +833,7 @@ def setROI(lookup,xarray,yarray,localconfig):
     """
     INPUT: 
         lookup; eV energy (int)
-        xarray; np.array
+        xarray; np.array (energyaxis)
         yarray; np.array
         localconfig; dict
     OUTPUT: 
@@ -817,18 +845,28 @@ def setROI(lookup,xarray,yarray,localconfig):
     - indexes correspond to 2*FWHM of a gaussian centered
     at eV energy position (int, int, int, bool) 
     """
+   
+    def find_nearest(array, value):
+        array = np.asarray(array)
+        idx = (np.abs(array - value)).argmin()
+        return array[idx]
     
+    def shift_center(xarray,yarray):
+        ymax = yarray.max()
+        idx = np.where(yarray==ymax)[0][0]
+        return xarray[idx],ymax,idx
+
     lookup = int(lookup)
-    if lookup < 4800: w_tolerance = 2
-    elif lookup > 15000: w_tolerance = 3
-    else: w_tolerance = 1
+    if lookup < 4800: w_tolerance = 3
+    elif lookup > 15000: w_tolerance = 4
+    else: w_tolerance = 2
     peak_corr = 0
     peak_center = 0
     shift = [0,0,0]
     isapeak = True
+    idx, lowx_idx, highx_idx = 0,0,0
     
-    if localconfig.get('bgstrip') == 'SNIPBG':
-        yarray  = savgol_filter(yarray,5,3)
+    yarray  = savgol_filter(yarray,5,3)
     
     logger.debug("-"*15 + " Setting ROI " + "-"*15)
     
@@ -836,8 +874,8 @@ def setROI(lookup,xarray,yarray,localconfig):
         logger.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
         logger.debug("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
-        lowx = (lookup - (FWHM))/1000
-        highx = (lookup + (FWHM))/1000
+        lowx = (lookup - (FWHM/2))/1000
+        highx = (lookup + (FWHM/2))/1000
         logger.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
 
         #################### 
@@ -845,25 +883,23 @@ def setROI(lookup,xarray,yarray,localconfig):
         #################### 
 
         try:
-            idx = 0
-            while xarray[idx] <= lowx:
-                idx+=1
-            lowx_idx = idx-1
-            logger.debug("lowx_idx: %d" % lowx_idx)
-            while xarray[idx] <= highx:
-                idx+=1
-            highx_idx = idx+1
-            logger.debug("highx_idx: %d" % highx_idx)
+            idx = np.where(xarray==find_nearest(xarray,lookup/1000))[0][0]
+            lowx_idx = np.where(xarray==find_nearest(xarray,lowx))[0][0]
+            highx_idx = np.where(xarray==find_nearest(xarray,highx))[0][0]
         except:
             logger.debug("ROI error. Index out of bounds.")
             return 0,2,1,False
+        logger.debug("{}, {}".format(lowx_idx,highx_idx))
+        logger.debug("Closest peak index: {}; Value (KeV): {}".format(idx,xarray[idx]))
             
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
         
+        # skipped at first run, since shift is [0,0,0]
         if shift[0]*1000-lookup == 0: 
             lw,hi = lowx_idx, highx_idx
-            try: peak_center, = np.where((ROIaxis == shift[0]))[0]
+            try: 
+                peak_center, = np.where((ROIaxis == shift[0]))[0]
             except: return 0,2,1,False
             break
         
@@ -874,23 +910,24 @@ def setROI(lookup,xarray,yarray,localconfig):
         # verify the distance from a higher peak #
         ##########################################
 
-        difference = abs((shift[0]*1000)-lookup)
-        if difference < (3+w_tolerance)*localconfig["gain"]*1000:
-            logger.debug("Shift - lookup = {0}!".format((shift[0]*1000)-lookup))
+        difference = abs((shift[0])-xarray[idx])*1000
+        logger.debug("DIFFERENCE: {}, {}. Peak is at: {}".format(
+            int(difference),
+            int((w_tolerance)*localconfig["gain"]*1000),
+            shift[0]))
+        if int(difference) <= int((w_tolerance)*localconfig["gain"]*1000):
+            logger.debug("Shift - lookup = {0}!".format(difference))
             logger.debug("GAP IS LESSER THAN {0}!".format((
-                3+w_tolerance)*localconfig["gain"]*1000))
+                w_tolerance)*localconfig["gain"]*1000))
             peak_center = shift[2]
             peak_corr += 1
             lookup = shift[0]*1000
             if peak_corr == 2:
-                while xarray[idx] <= lowx:
-                    idx+=1
-                lowx_idx = idx-1
-                logger.debug("lowx_idx: %d" % lowx_idx)
-                while xarray[idx] <= highx:
-                    idx+=1
-                highx_idx = idx+1
-                logger.debug("highx_idx: %d" % highx_idx)
+                lowx_idx = np.where(xarray==find_nearest(xarray,lowx))[0][0]
+                highx_idx = np.where(xarray==find_nearest(xarray,highx))[0][0]
+                ROIaxis = xarray[lowx_idx:highx_idx]
+                ROIdata = yarray[lowx_idx:highx_idx]
+        
             lw, hi = lowx_idx, highx_idx
         else: 
             logger.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
@@ -902,6 +939,7 @@ def setROI(lookup,xarray,yarray,localconfig):
             if peak_corr == 0: 
                 isapeak = False
                 lw, hi = lowx_idx, highx_idx
+            logger.debug("Failed at first for energy: {}".format(lookup))
             return lw,hi,peak_center,isapeak
         
         logger.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
@@ -982,7 +1020,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,usedif2,dif2):
         plt.plot(xdata,ydata, label='data')
         try: plt.plot(xdata,smooth_dif2, label='2nd Differential')
         except: pass
-        plt.plot(xdata,ROIbg, label='BG estimation')
+        #plt.plot(xdata,ROIbg, label='BG estimation')
         plt.legend()
         plt.show()
     
@@ -1129,4 +1167,14 @@ def correlate(map1,map2):
 
 if __name__=="__main__":
     logger.info("This is SpecMath")
+    import Constants
+    _path_ = r"C:\Users\sergi\Documents\XISMuS\output\Training Data 2\Training Data 2.cube"
+    cube_file = open(_path_,'rb')
+    Constants.MY_DATACUBE = pickle.load(cube_file)
+    cube_file.close()
+    data = Constants.MY_DATACUBE.sum
+    getpeakarea(6441,data,Constants.MY_DATACUBE.energyaxis,
+            Constants.MY_DATACUBE.background,
+            Constants.MY_DATACUBE.config,True,
+            np.zeros([Constants.MY_DATACUBE.matrix.shape[2]]))
 

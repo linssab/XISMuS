@@ -299,7 +299,7 @@ def getdata(mca):
         Data = np.asarray(ObjectData)
     return Data
 
-def calibrate():
+def calibrate(lead=0, tail=0):
     
     """ Returns the energy axis and gain of the calibrated axis
     The parameters are taken from config.cfg if calibration is set to manual
@@ -312,19 +312,19 @@ def calibrate():
         for k in range(len(param[i])):
             x.append(param[i][0])
             y.append(param[i][1])
-    x=np.asarray([x])
+    x=np.asarray([x])-lead
     y=np.asarray([y])
     coefficients=list(linregress(x,y))
     GAIN=coefficients[0]
     B=coefficients[1]
     R=coefficients[2]
     logger.info("Correlation coefficient R = %f!" % R)
-    n = len(getdata(getfirstfile()))
+    n = len(getdata(getfirstfile()))-lead-tail
     curve = []
     for i in range(n):
         curve.append((GAIN*i)+B)
     curve = np.asarray(curve)
-    return curve,GAIN
+    return curve,GAIN,B
 
 def getgain():
 
