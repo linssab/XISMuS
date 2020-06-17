@@ -1971,6 +1971,7 @@ class PlotWin:
     
     def draw_ROI(__self__):
         __self__.master.tagged = True
+        patches = []
         for element in Constants.MY_DATACUBE.ROI:
             __self__.plotdata = Constants.MY_DATACUBE.ROI[element]
             if Constants.MY_DATACUBE.max_counts[element+"_a"] == 0:
@@ -1989,6 +1990,7 @@ class PlotWin:
                         __self__.plotdata,
                         color=ElementColors[element],
                         alpha=0.5)
+                patches.append(mpatches.Patch(color=ElementColors[element], label=roi_label))
             else: 
                 __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
@@ -2000,6 +2002,7 @@ class PlotWin:
                         __self__.plotdata,
                         color=ElementColors["Custom"],
                         alpha=0.5)
+                patches.append(mpatches.Patch(color=ElementColors["Custom"], label=roi_label))
 
         __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
@@ -2017,7 +2020,8 @@ class PlotWin:
                 fontsize=12,
                 framealpha=1,
                 borderpad=1,
-                facecolor="white")
+                facecolor="white",
+                handles=patches)
 
     def draw_correlation(__self__,corr,labels):
         A, B, R = SpecRead.linregress(corr[0],corr[1]) 
@@ -4572,13 +4576,15 @@ if __name__.endswith('__main__'):
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
     from matplotlib.figure import Figure
     from matplotlib.patches import Rectangle
+    import matplotlib.patches as mpatches
     from matplotlib import style
     style.use('ggplot')
     
     def open_log():
+        from SpecRead import __PERSONAL__
         # wipes logfile
         try:
-            with open(os.path.join(SpecRead.__PERSONAL__,
+            with open(os.path.join(__PERSONAL__,
                 "logfile.log"),'w+') as mylog: mylog.truncate(0)
         except: pass
 
@@ -4586,20 +4592,20 @@ if __name__.endswith('__main__'):
         try: 
             logger = logging.getLogger("logfile")
             logger.setLevel(Constants.LOGLEVEL)
-            lHandler = logging.FileHandler(os.path.join(SpecRead.__PERSONAL__,
+            lHandler = logging.FileHandler(os.path.join(__PERSONAL__,
                 "logfile.log"))
             formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
             lHandler.setFormatter(formatter)
             logger.addHandler(lHandler)
             logger.info('*'* 10 + ' LOG START! ' + '*'* 10)
-            log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+            log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
             logger.info(log_start)   
         except IOError as exception:
             p = Tk()
             p.iconify()
             messagebox.showerror(
                     exception.__class__.__name__,
-                    "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.path.join(SpecRead.__PERSONAL__,"logfile.log")))
+                    "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.path.join(__PERSONAL__,"logfile.log")))
             sys.exit(1)
         return 0
     class NavigationToolbar(NavigationToolbar2Tk):
@@ -4613,10 +4619,10 @@ if __name__.endswith('__main__'):
    
     check_screen_resolution(optimum_resolution)
     # internal imports
-    import SpecRead
-    from Mosaic import Mosaic_API
     open_log()
     logger = logging.getLogger("logfile")
+    import SpecRead
+    from Mosaic import Mosaic_API
     from ReadConfig import checkout_config, set_settings 
     from ImgMath import LEVELS, apply_scaling
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
