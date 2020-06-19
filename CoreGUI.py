@@ -843,7 +843,7 @@ class export_diag():
         place_center(__self__.parent.master,__self__.master)
         __self__.master.deiconify()
         __self__.master.focus_set()
-        icon = os.path.join(os.getcwd(),"image","icons","img_anal.ico")
+        icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
         __self__.master.iconbitmap(icon)
 
 
@@ -881,7 +881,7 @@ class export_diag():
                 title="Save merge as...")
         if f is None: 
             return
-        write_image(stack,__self__.TARGET,f.name,enhance=enhance)
+        write_image(stack,__self__.TARGET,f.name,enhance=enhance,merge=True)
         __self__.kill()
 
     def kill(__self__,e=""):

@@ -565,7 +565,7 @@ def split_and_save(datacube,map_array,element_list):
     logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0
 
-def write_image(image,resize,path,enhance=False):
+def write_image(image,resize,path,enhance=False,merge=False):
 
     """ Writes a 2D-array image to disk. Similar to split_and_save function.
     
@@ -595,10 +595,13 @@ def write_image(image,resize,path,enhance=False):
         else:
             large_image = image
         if enhance == False:
-            large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
+            large_image = cv2.resize(
+                large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
         if enhance == True:
-            large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_CUBIC)
-    plt.imsave(path,large_image,cmap=Constants.COLORMAP)
+            large_image = cv2.resize(
+                large_image,(newY,newX),interpolation=cv2.INTER_CUBIC)
+    if merge== False: plt.imsave(path,large_image,cmap=Constants.COLORMAP)
+    elif merge== True: cv2.imwrite(path,large_image)
     return 0
 
 def stackimages(*args):
