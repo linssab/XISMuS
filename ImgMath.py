@@ -602,7 +602,7 @@ def write_image(image,resize,path,enhance=False,merge=False):
                 large_image,(newY,newX),interpolation=cv2.INTER_CUBIC)
     if merge== False: plt.imsave(path,large_image,cmap=Constants.COLORMAP)
     elif merge== True: cv2.imwrite(path,large_image)
-    return 0
+    return large_image
 
 def stackimages(*args):
 
