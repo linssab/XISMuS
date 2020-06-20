@@ -44,3 +44,6 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 [x64]: https://mega.nz/file/8XAwEABK#gmyI-yPspTo4-SQrh7jzkOBKNIBO_IAIyMX72lZ4zZ0
 [x86]: https://mega.nz/file/0a42xQSa#cDzo_trAbRz7IWvSRrIVQF5KBNaKYV8VA_mkdAGSXog
 [UserGuide]: https://mega.nz/file/Ebon0YhS#u6HiWwlbOa4AkEte6UxvEtB18btDiK97Au8xIToAToU
+
+## Funding
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme under the Marie-Skłodowska Curie Innovative Training Networks (MSCA-ITN) grant agreement No 766311.
