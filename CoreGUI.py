@@ -49,6 +49,11 @@ def openURL(url):
 
 def place_topright(window1,window2):
     
+    import ctypes
+    user32 = ctypes.windll.user32
+    user32.SetProcessDPIAware()
+    w_user, h_user = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+    
     # adapted from: https://stackoverflow.com/questions/3352918/
     """ Places window2 next to window1 top-right end """ 
     
@@ -68,6 +73,9 @@ def place_topright(window1,window2):
     x = window1.winfo_rootx() + width
     y = window1.winfo_rooty() - titlebar_height
 
+    if x + width2 > w_user or y + height2 > h_user: 
+        place_center(window1,window2) 
+        return 1 
     if Constants.LOW_RES == None:
         window2.geometry("{}x{}+{}+{}".format(width2, height2, x, y))
         window2.deiconify()
@@ -995,15 +1003,18 @@ class PeakClipper:
         __self__.master.tagged = True
         __self__.parent = parent
         __self__.master.attributes("-alpha",0.0)
-        __self__.master.resizable(False,False)
+        __self__.master.resizable(True,True)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Escape>",__self__.kill)
         __self__.frame1 = Frame(__self__.master,height=320,width=240)
         __self__.frame2 = Frame(__self__.master)
         __self__.frame3 = Frame(__self__.master)
-        __self__.frame1.grid(row=0,rowspan=2,column=0)
-        __self__.frame2.grid(row=0,column=1,padx=15)
-        __self__.frame3.grid(row=1,column=1,padx=15,pady=15)
+        __self__.frame1.grid(row=0,rowspan=2,column=0,sticky=N+E+W+S)
+        __self__.frame2.grid(row=0,column=1,padx=15,sticky=E)
+        __self__.frame3.grid(row=1,column=1,padx=15,pady=15,sticky=E)
+        
+        __self__.master.grid_columnconfigure(0,weight=1)
+        __self__.master.grid_rowconfigure(0,weight=1)
 
         __self__.savgol = IntVar()
         __self__.savgol.set(5)
@@ -1032,7 +1043,7 @@ class PeakClipper:
         __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
         __self__.canvas.draw()
         __self__.mplCanvas = __self__.canvas.get_tk_widget()
-        __self__.mplCanvas.pack()
+        __self__.mplCanvas.pack(expand=True,fill=BOTH,anchor=N+W)
         __self__.canvas._tkcanvas.pack()
 
         # frame 2 (top-right)
@@ -1061,11 +1072,11 @@ class PeakClipper:
         __self__.entry_iter.grid(row=4,column=1,sticky=E)
 
         # frame 3 (lower-right)
-        __self__.button_try = Button(__self__.frame3,text="Try",width=10,\
+        __self__.button_try = Button(__self__.frame3,text="Try",width=10,
                 justify=CENTER,command=__self__.refresh_plot)
-        __self__.button_save = Button(__self__.frame3, text="Save",width=10,\
+        __self__.button_save = Button(__self__.frame3, text="Save",width=10,
                 justify=CENTER,command=__self__.save)
-        __self__.button_cancel = Button(__self__.frame3, text="Cancel",width=10,\
+        __self__.button_cancel = Button(__self__.frame3, text="Cancel",width=10,
                 justify=CENTER,command=__self__.kill)
 
         __self__.button_try.grid(row=0,column=0)
@@ -1074,11 +1085,13 @@ class PeakClipper:
         
         __self__.master.update()
         place_center(__self__.parent,__self__.master)
-        #__self__.master.deiconify()
         __self__.master.focus_set()
         icon = os.getcwd()+"\\images\\icons\\settings.ico"
         __self__.master.iconbitmap(icon)
         __self__.random_sample()
+        x = __self__.master.winfo_width()
+        y = __self__.master.winfo_height()
+        __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     
@@ -2602,7 +2615,7 @@ class MainGUI:
         if Constants.LOW_RES == "extreme": 
             quit = messagebox.showinfo("WARNING",
         "Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
-            if quit == "ok": sys.exit()
+            if quit == "ok": sys.exit(1)
         logger.info("Initializing program...")
         f = open(os.path.join(SpecRead.__BIN__,"settings.tag"),"r")
         for line in f:
@@ -2628,7 +2641,7 @@ class MainGUI:
         __self__.sample_plot.grid(b=None)
         __self__.sample_plot.axis('off')
         mapfont = {'fontname':'Arial','fontsize':10}
-        __self__.sample_plot.set_title('Sample Counts Map',**mapfont)
+        #__self__.sample_plot.set_title('Sample Counts Map',**mapfont)
 
         sys_mem = dict(virtual_memory()._asdict())
         inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
@@ -2676,8 +2689,6 @@ class MainGUI:
         checkout_config()
         __self__.master.destroy()
         sys.exit()
-    
-    
     
     def toggle_(__self__,toggle='on'):
         if toggle == 'on':
@@ -4090,7 +4101,7 @@ class ConfigDiag:
         __self__.RatioVar = BooleanVar()
         __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
         
-        __self__.ConfigDiagSetBG = Button(__self__.Frame, text="Set BG",\
+        __self__.ConfigDiagSetBG = Button(__self__.Frame, text="Set BG",
                width=13+ConfigDiagRatioYes.winfo_width(),command=__self__.call_PeakClipper)
         
         __self__.CalibVar = StringVar()
