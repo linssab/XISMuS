@@ -41,7 +41,7 @@ def cy_stack(int[:,:,:] stack,
 
 
 def cy_apply_scaling(float[:,:] scale_matrix,
-    float[:,:,:] cube_matrix,
+    int[:,:,:] cube_matrix,
     int scale_mode,
     float[:,:,:] scaled_matrix,
     int[:] shape):

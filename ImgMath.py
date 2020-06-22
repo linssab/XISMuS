@@ -99,7 +99,7 @@ def apply_scaling(datacube, scalemode=0):
             scalemode,
             scaled_matrix,
             np.asarray(datacube.matrix.shape,dtype="int32"))
-    datacube.matrix = scaled_matrix
+    datacube.matrix = scaled_matrix.astype("int32")
     datacube.create_densemap()
     if scaled_matrix.max() > 0: 
         return 1
