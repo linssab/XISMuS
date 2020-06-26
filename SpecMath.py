@@ -339,6 +339,45 @@ class datacube:
 
     def fit_fano_and_noise(__self__):
         __self__.FN = FN_fit(__self__.sum,__self__.gain)
+
+    def flush_spectra(__self__,path):
+        print("Flushing data to {}".format(path))
+        try: os.makedirs(path)
+        except: 
+            print("Path {} exists.".format(path))
+            print("Do you want to overwrite the data? (Y/N)")
+            proceed = input()
+            if proceed == "Y" or proceed == "y":
+                shutil.rmtree(path)
+                try: os.makedirs(path)
+                except: 
+                    print("Failed to create new directory. Aborting...")
+                    sys.exit(1)
+            else:  
+                print("Aborted by user.")
+                sys.exit(1)
+        iterator = 1
+        name = "Spec_"
+        for i in range(__self__.matrix.shape[0]):
+            for j in range(__self__.matrix.shape[1]):
+                spec = open(os.path.join(path,name+str(iterator)+".txt"),"+w")
+                spec.write(
+            "<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - Piratininga SM Sum Spectrum\n")
+                spec.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - OFF\n")
+                spec.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(
+                    time.strftime("%Y-%m-%d %H:%M:%S",
+                        time.gmtime())))
+                spec.write("SERIAL_NUMBER - 00001\n<<CALIBRATION>>\nLABEL - Channel\n")
+                for pair in __self__.calibration:
+                    spec.write("{0} {1}\n".format(pair[0],pair[1]))
+                spec.write("<<DATA>>\n")
+                for c in __self__.matrix[i][j]:
+                    spec.write("{}\n".format(int(c)))
+                spec.write("<<END>>")
+                spec.close()
+                iterator += 1
+                percent = iterator/__self__.img_size*100
+                print("{:0.2f} percent complete...".format(percent),end="\r")
     
     def write_sum(__self__):
 
