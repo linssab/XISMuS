@@ -559,6 +559,7 @@ def split_and_save(datacube,map_array,element_list):
             .format(datacube.config.get('bgstrip'),datacube.config.get('ratio')\
             ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
     
+    fig.clf()
     datacube.save_cube() 
     logger.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+Constants.DIRECTORY+'\\')
@@ -652,21 +653,22 @@ def binary_thresh(image,thresh):
             else: image[x][y] = 0
         return image, counts
 
-def subtract(image1, image2):
+def subtract(image1, image2,norm=True):
 
     """ Subtracts image2 from image1 """
 
     output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
-    hi1 = image1.max()
-    hi2 = image2.max()
-    lo1 = image1.min()
-    lo2 = image2.min()
-    if hi1 > hi2:
-        image2 = (image2/hi2)*hi1
-    elif hi2 > hi1:
-        image1 = (image1/hi1)*hi2
-    else:
-        pass
+    if norm == True:
+        hi1 = image1.max()
+        hi2 = image2.max()
+        lo1 = image1.min()
+        lo2 = image2.min()
+        if hi1 > hi2:
+            image2 = (image2/hi2)*hi1
+        elif hi2 > hi1:
+            image1 = (image1/hi1)*hi2
+        else:
+            pass
     shape = [image1.shape[0], image1.shape[1]]
     shape = np.asarray(shape,dtype="int32")
             

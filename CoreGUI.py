@@ -795,8 +795,6 @@ class export_diag():
     Target is the desired output image size. If enhance configuration is True,
     image is interpolated """
 
-    TARGET = 1024
-
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent.master)
         __self__.master.grab_set()
@@ -865,7 +863,11 @@ class export_diag():
                         title="Save image 1 as...")
                 if f is None: 
                     return
-                write_image(__self__.parent.newimage1,__self__.TARGET,f.name,enhance=enhance)
+                write_image(
+                        __self__.parent.newimage1,
+                        Constants.TARGET_RES,
+                        f.name,
+                        enhance=enhance)
             elif tag == 2: 
                 f = filedialog.asksaveasfile(mode='w', 
                         defaultextension=".png",
@@ -873,7 +875,11 @@ class export_diag():
                         title="Save image 2 as...")
                 if f is None: 
                     return
-                write_image(__self__.parent.newimage2,__self__.TARGET,f.name,enhance=enhance)
+                write_image(
+                        __self__.parent.newimage2,
+                        Constants.TARGET_RES,
+                        f.name,
+                        enhance=enhance)
             else: pass
         except PermissionError as exception: 
             messagebox.showerror("Error!",exception.__class__.__name__)
@@ -1830,7 +1836,13 @@ class ImageAnalyzer:
         else: 
             messagebox.showerror("Error","Could not export.")
             return 1
-        plt.imsave(f.name, img, cmap=Constants.COLORMAP) 
+        write_image(
+                img,
+                Constants.TARGET_RES, 
+                f.name, 
+                enhance=Constants.MY_DATACUBE.config["enhance"],
+                merge=False)
+        #plt.imsave(f.name, img, cmap=Constants.COLORMAP) 
         return 0
 
     def export_maps(__self__):
@@ -1842,6 +1854,7 @@ class PlotWin:
 
     def __init__(__self__,master):
         __self__.plot_font = {'fontname':'Arial','fontsize':10}
+        __self__.lw = 3
         __self__.master = Toplevel(master=master)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.title("Plot")
@@ -1925,16 +1938,17 @@ class PlotWin:
                             energies = plottables_dict[element]
                             __self__.plot.plot((energies[0],energies[0]),
                                     (0,__self__.plotdata.max()),'k--',color="cornflowerblue",
-                                    label="Custom Low")
+                                    label="Custom Low",linewidth=__self__.lw)
                             __self__.plot.plot((energies[1],energies[1]),
                                     (0,__self__.plotdata.max()),'k--',color="tomato",
-                                    label="Custom High")
+                                    label="Custom High",linewidth=__self__.lw)
                         else:
                             energies = plottables_dict[element]
                             for value in energies: 
                                 energy_list.append(value)
                                 __self__.EL = __self__.plot.axvline(
-                                x=value, color=ElementColors[element],label=element)
+                                x=value, color=ElementColors[element],
+                                label=element,linewidth=__self__.lw)
                             energy_list=[]
 
 
@@ -1957,16 +1971,17 @@ class PlotWin:
                             energies = plottables_dict[element]
                             __self__.plot.plot((energies[0],energies[0]),
                                     (0,__self__.plotdata.max()),'k--',color="cornflowerblue",
-                                    label="Custom Low")
-                            __self__.plot.plot((energies[1],energies[1]),\
+                                    label="Custom Low",linewidth=__self__.lw)
+                            __self__.plot.plot((energies[1],energies[1]),
                                     (0,__self__.plotdata.max()),'k--',color="tomato",
-                                    label="Custom High")
+                                    label="Custom High",linewidth=__self__.lw)
                         else:
                             energies = plottables_dict[element]
                             for value in energies: 
                                 energy_list.append(value)
                                 __self__.EL = __self__.plot.axvline(
-                                x=value, color=ElementColors[element],label=element)
+                                x=value, color=ElementColors[element],
+                                label=element,linewidth=__self__.lw)
                             energy_list=[]
 
                 __self__.plot.set_title('{0} {1}'.format(
@@ -2002,7 +2017,7 @@ class PlotWin:
                         Constants.MY_DATACUBE.energyaxis,
                         __self__.plotdata,
                         color=ElementColors[element],
-                        alpha=0.5)
+                        alpha=0.75)
                 patches.append(mpatches.Patch(color=ElementColors[element], label=roi_label))
             else: 
                 __self__.plot.semilogy(
@@ -2014,7 +2029,7 @@ class PlotWin:
                         Constants.MY_DATACUBE.energyaxis,
                         __self__.plotdata,
                         color=ElementColors["Custom"],
-                        alpha=0.5)
+                        alpha=0.75)
                 patches.append(mpatches.Patch(color=ElementColors["Custom"], label=roi_label))
 
         __self__.plot.semilogy(
@@ -2093,18 +2108,19 @@ class PlotWin:
                             (energies[0],energies[0]),
                             (0,__self__.plotdata.max()),
                             'k--',color="cornflowerblue",
-                            label="Custom Low")
+                            label="Custom Low",linewidth=__self__.lw)
                     __self__.EL_CUST_HIGH, =__self__.plot.plot(
                             (energies[1],energies[1]),
                             (0,__self__.plotdata.max()),
                             'k--',color="tomato",
-                            label="Custom High")
+                            label="Custom High",linewidth=__self__.lw)
                 else:
                     energies = plottables_dict[element]
                     for value in energies: 
                         energy_list.append(value)
                         __self__.EL = __self__.plot.axvline(
-                        x=value, color=ElementColors[element],label=element)
+                        x=value, color=ElementColors[element],
+                        label=element,linewidth=__self__.lw)
                     energy_list=[]
         __self__.plot.legend(
                 fontsize=12,
@@ -4229,7 +4245,10 @@ class PeriodicTable:
             except: pass
 
             # Sets fano and noise factor 
-            FANO, NOISE = Constants.MY_DATACUBE.FN
+            if not hasattr(Constants.MY_DATACUBE,"FN"):
+                FANO,NOISE = 0.114, 80
+            else:
+                FANO, NOISE = Constants.MY_DATACUBE.FN
             FN_set(FANO, NOISE)
             print("These are FANO and NOISE: {} {}".format(FANO,NOISE))
 
