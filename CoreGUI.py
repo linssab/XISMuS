@@ -47,6 +47,14 @@ def wipe_list():
 def openURL(url):
     webbrowser.open(url)
 
+def maximize_window(window,e=""):
+    if window.alt == False: return
+    else:
+        if window.master.state()=="zoomed":
+            window.master.state("normal")
+        else: 
+            window.master.state("zoomed")
+
 def place_topright(window1,window2):
     
     import ctypes
@@ -1354,6 +1362,10 @@ class ImageAnalyzer:
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
         __self__.master.title("Image Analyzer")
+        __self__.alt = False
+        __self__.master.bind("<Alt_L>",__self__.AltOn)
+        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
+        __self__.master.bind("<Return>",__self__.maximize)
         __self__.sampler = Frame(__self__.master)
         __self__.sampler.pack(side=TOP,anchor=CENTER)
         __self__.SampleFrame = Frame(__self__.master)
@@ -1603,6 +1615,15 @@ class ImageAnalyzer:
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
     
+    def AltOn(__self__,e=""):
+        __self__.alt = True
+    
+    def AltOff(__self__,e=""):
+        __self__.alt = False
+
+    def maximize(__self__,e=""):
+        maximize_window(__self__)
+
     def pop(__self__,event,img_idx):
         if event.button == 3:
             __self__.triggered_figure = img_idx
@@ -1614,7 +1635,6 @@ class ImageAnalyzer:
             try: __self__.popup.tk_popup(int(abs_coord_x), int(abs_coord_y), entry="")
             finally: __self__.popup.grab_release()
         else: return
-    
 
     def resize(__self__, event):
         wi = __self__.LeftCanvas.winfo_width()
@@ -1857,6 +1877,11 @@ class PlotWin:
         __self__.lw = 3
         __self__.master = Toplevel(master=master)
         __self__.master.attributes("-alpha",0.0)
+        __self__.alt = False
+        __self__.master.bind("<Alt_L>",__self__.AltOn)
+        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
+        __self__.master.bind("<Return>",__self__.maximize)
+
         __self__.master.title("Plot")
         __self__.master.tagged = None
         __self__.master.minsize(width=600,height=480)
@@ -1883,6 +1908,15 @@ class PlotWin:
         icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
         __self__.master.iconbitmap(icon)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+    
+    def AltOn(__self__,e=""):
+        __self__.alt = True
+
+    def AltOff(__self__,e=""):
+        __self__.alt = False
+
+    def maximize(__self__,e=""):
+        maximize_window(__self__)
     
     def wipe_plot(__self__):
 
