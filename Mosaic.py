@@ -823,9 +823,15 @@ class Mosaic_API:
         return layers
 
     def import_layers(__self__,loadfile=None):
+         
+
         global layers_dict
         layers_to_import = __self__.read_loadfile(loadfile)
         if layers_to_import == 0: return
+        
+        __self__.bar = Busy(len(layers_to_import),0)
+        __self__.bar.update_text("Loading layers...")
+        count = 0
 
         if __self__.layer_count > 0:
             del __self__.layer
@@ -838,6 +844,8 @@ class Mosaic_API:
             __self__.layer_numbering = {}
 
         for layer in layers_to_import.keys():
+            count+=1
+            __self__.bar.updatebar(count)
             success = __self__.load_layer(layers_to_import[layer])
             if success == 0: break
         
@@ -845,6 +853,7 @@ class Mosaic_API:
         __self__.reorder_layers()
         __self__.build_image()
         __self__.refocus()
+        __self__.bar.destroybar()
 
     def load_layer(__self__,layer):
         global layers_dict

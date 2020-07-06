@@ -9,6 +9,44 @@ from tkinter import *
 from tkinter import ttk
 
 
+class BusyManager:
+
+    def __init__(__self__, widget):
+        __self__.toplevel = widget.winfo_toplevel()
+        __self__.widgets = {}
+
+    def busy(__self__, widget=None):
+
+    # attach busy cursor to toplevel, plus all windows
+    # that define their own cursor.
+
+        if widget is None:
+            w = __self__.toplevel # myself
+        else:
+            w = widget
+
+        if not str(w) in __self__.widgets:
+            try:
+                # attach cursor to this widget
+                cursor = w.cget("cursor")
+                if cursor != "watch":
+                    __self__.widgets[str(w)] = (w, cursor)
+                    w.config(cursor="watch")
+            except TclError:
+                pass
+
+        for w in w.children.values():
+            __self__.busy(w)
+
+    def notbusy(__self__):
+        for w, cursor in __self__.widgets.values():
+            try:
+                w.config(cursor=cursor)
+            except TclError:
+                pass
+        __self__.widgets = {}
+
+
 class Busy:
     
     """ Progress bar class. """
@@ -106,7 +144,7 @@ class ThinkingWheel:
     
     def __init__(__self__,speed,x,y,auto=True,parent=None):
         if parent == None: auto = False
-        __self__.master = Tk()
+        __self__.master = Toplevel()
         __self__.parent = parent
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
@@ -116,7 +154,7 @@ class ThinkingWheel:
         spawn_y = __self__.master.winfo_screenheight()
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(x, y,\
+        __self__.master.geometry('{}x{}+{}+{}'.format(x, y,
                 int((spawn_x/2)-x/2), int((spawn_y/2)-y/2)))
         __self__.gif = [PhotoImage(file="./tnk.gif",format = 'gif -index %i' %(i),
             master = __self__.master) for i in range(8)]

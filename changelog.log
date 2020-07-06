@@ -1,14 +1,3 @@
-Version v1.0.1
-
-- Added right-click menus for canvases in Image Analyzer and front panel
-- Added color map option to "Settings" menu
-
-Image Analyzer
-- Fixed issues with sliders in Image Analyzer
-- Fixed issue with image smoothing
-- Color map support added
-
-
 Version v1.1.x
 
 - Fixed Spectrum name converter when inputting dimension
@@ -16,5 +5,8 @@ Version v1.1.x
 - Performance improvements in multiprocessing
 - Changed right-click export mode in Image Analyzer to support different color maps
 - Improved plot style
+
 - Significant improvements in element finding and Fano/Noise fitting
 - Fixed map merge functionality
+- Added "Wipe Maps" option under ListSamples dropdown menu
+- Added iterative database loading system
