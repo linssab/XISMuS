@@ -8,6 +8,7 @@ DEFAULTBTN_COLOR = "SystemButtonFace"
 LOW_RES = None
 FANO = 0.114
 NOISE = 80
+FIT_CYCLES = 1000
 TARGET_RES = 1024
 FILE_POOL = []
 FIRSTFILE_ABSPATH = None
@@ -15,12 +16,14 @@ CONFIG = {}
 CALIB = []
 DIRECTORY = None
 SAMPLES_FOLDER = ""
+DIMENSION_FILE = ""
+USER_DATABASE = {}
 COLORMAP = "hot"
 MULTICORE = True
 PLOTMODE = "Logarithmic"
 RAM_LIMIT = None
 WELCOME = False
-CPUS = 1
+CPUS = 12
 
 def list_all():
     return {"version":VERSION,

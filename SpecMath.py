@@ -15,6 +15,7 @@ import os, time
 import sys
 import numpy as np
 import pickle
+import random
 
 # import internal modules (only needed functions)
 from SpecRead import (getdata, 
@@ -74,8 +75,7 @@ def build_pool(size):
 
     Constants.FILE_POOL.append(spec)
     for idx in range(index,size+index-1,1):
-        spec = os.path.join(Constants.SAMPLES_FOLDER,
-                Constants.CONFIG["directory"],
+        spec = os.path.join(Constants.SAMPLE_PATH,
                 str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
         Constants.FILE_POOL.append(spec)
 
@@ -293,11 +293,11 @@ class datacube:
     def __init__(__self__,dtypes,configuration,mode="",name=""):
         if mode == "merge": 
             __self__.name = name
-            __self__.path = "No path, this cube was merged"
+            __self__.path = name
         else:
-            from Constants import SAMPLES_FOLDER
+            from Constants import SAMPLE_PATH
             __self__.name = configuration["directory"]
-            __self__.path = os.path.join(SAMPLES_FOLDER,__self__.name)
+            __self__.path = SAMPLE_PATH
         logger.debug("Initializing cube file")
         
         try: specsize = getdata(getfirstfile()) 
@@ -457,8 +457,7 @@ class datacube:
         replaced (updated) """ 
 
         from SpecRead import output_path, cube_path
-        from Constants import SAMPLES_FOLDER
-        __self__.root = SAMPLES_FOLDER
+        __self__.self_path = cube_path
         try: 
             if not os.path.exists(output_path):
                 logger.info("Creating outputh path {0}".forma(output_path))
@@ -636,6 +635,11 @@ class datacube:
         return 0
 
     def cut_zeros(__self__):
+        
+        """ Sliced the data cutting off the necessary lead and tail zeros.
+        Lead and tail are verified through the sum spectrum to avoid data loss """
+
+        lead_zeros, tail_zeros = 0,__self__.matrix.shape[2]
         for i in range(__self__.sum.shape[0]):
             if __self__.sum[i] < __self__.img_size:
                 lead_zeros = i
@@ -721,20 +725,41 @@ class datacube:
         if hasattr(__self__,"custom_a"): packed.append("custom_a")
         return packed
 
-    def prepack_elements(__self__,element_list):
+    def prepack_elements(__self__,element_list,wipe=False):
 
         """ Allocates keys in the datacube object to store the elemental distribution maps """
 
         for element in element_list:
-            __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],
-                __self__.dimension[1]],dtype="float32")
-            __self__.__dict__[element+"_b"] = np.zeros([__self__.dimension[0],
-                __self__.dimension[1]],dtype="float32")
-            __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]],dtype="float32")
-            __self__.max_counts[element+"_a"] = 0
-            __self__.max_counts[element+"_b"] = 0
-            __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
-        __self__.__dict__["custom"] = np.zeros([__self__.dimension[0],__self__.dimension[1]])
+
+            if wipe == False:
+                __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],
+                    __self__.dimension[1]],dtype="float32")
+                __self__.__dict__[element+"_b"] = np.zeros([__self__.dimension[0],
+                    __self__.dimension[1]],dtype="float32")
+                __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]],
+                        dtype="float32")
+                __self__.max_counts[element+"_a"] = 0
+                __self__.max_counts[element+"_b"] = 0
+                __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
+            __self__.__dict__["custom"] = np.zeros(
+                    [__self__.dimension[0],__self__.dimension[1]],dtype="float32")
+
+            if wipe == True: 
+                try: del __self__.__dict__[element+"_a"]
+                except KeyError: print("No alpha map for {}".format(element))
+                try: del __self__.__dict__[element+"_b"]
+                except KeyError: print("No beta map for {}".format(element))
+        if wipe == True:
+            __self__.max_counts = {}
+            __self__.hist = {}
+            __self__.ROI = {}
+            try: del __self__.__dict__["custom"]
+            except KeyError: pass
+
+    def wipe_maps(__self__):
+        element_list = [i.split("_")[0] for i in __self__.check_packed_elements()]
+        __self__.prepack_elements(element_list,wipe=True)
+        __self__.save_cube()
     
 def refresh_position(a,b,length):
     
@@ -750,6 +775,10 @@ def refresh_position(a,b,length):
         currentx+=1
     else:
         currenty+=1
+    if currentx > imagex:
+        currentx = 0
+    if currenty > imagey:
+        currenty = 0
     actual=([currentx,currenty])
     return actual
 
@@ -827,7 +856,7 @@ def getstackplot(datacube,mode=None):
         pass
     return output
 
-def sigma(energy):
+def sigma(energy,F=Constants.FANO,N=Constants.NOISE):
 
     """ Calculates sigma value based on energy input 
     Reference:
@@ -842,30 +871,26 @@ def sigma(energy):
     OUTPUT:
         float """
 
-    return math.sqrt(((Constants.NOISE/2.3548)**2)+(3.85*Constants.FANO*energy))
+    return math.sqrt(((N/2.3548)**2)+(3.85*F*energy))
 
-def gaussianbuilder(channel,energy):
+def gaussianbuilder(E_axis,energy,A,F,N):
 
-    """ Deprecated, to be removed in future updates """
-
-    sigma = sigma(energy)
-    chEnergy = (channel*GAIN + B)*1000
-    A = GAIN/(sigma)*math.sqrt(2*math.pi)
-    return A*(math.exp(-(((energy-chEnergy)**2)/(2*(sigma**2)))))
-
-def creategaussian(channels,energy):
+    """ Deprecated, to be removed in future updates.
     
-    """ Deprecated, to be removed in future updates """
+    ---------------------------------------------------------------------
 
-    gaussian = np.zeros([channels])
-    if isinstance(energy,int):
-        for i in range(channels):
-            gaussian[i]+=gaussianbuilder(i,energy)
-    elif isinstance(energy,list): 
-        for i in range(channels):
-            for k in range(len(energy)):
-                    gaussian[i]+=gaussianbuilder(i,energy[k])
-    return gaussian
+    INPUT:
+        E_axis; energy axis - electronvolts (1D-array)
+        energy; peak energies - electronvolts (1D-array)
+        A; fitted peak amplitudes (1D-array) """
+
+    gaus = np.zeros([energy.shape[0],E_axis.shape[0]],dtype="float32")
+    for i in range(energy.shape[0]):
+        s = sigma(energy[i],F,N)
+        print("sigma",energy[i],s)
+        for j in range(E_axis.shape[0]):
+            gaus[i][j]=A[i]*(math.exp(-(((E_axis[j]-energy[i])**2)/(2*(s**2)))))
+    return gaus
 
 def setROI(lookup,xarray,yarray,localconfig):
     
@@ -1204,6 +1229,117 @@ def correlate(map1,map2):
     corr_x, corr_y = np.asarray(corr_x), np.asarray(corr_y)
     return corr_x, corr_y
 
+def findpeaks(spectrum,v=4,w=9,r=1):
+    y,var,indexes = tophat(spectrum,v,w)
+    selected_peaks = []
+    for i in indexes:
+        if y[i]>r*var[i]:
+            selected_peaks.append(i)
+    plt.semilogy(spectrum)
+    plt.semilogy(y,color="green")
+    plt.semilogy(var,color="tomato")
+    for idx in indexes:
+        plt.axvline(x=idx)
+    plt.show()
+    return selected_peaks
+
+def deconvolute(E_axis,summation_spec,labels):
+    from scipy.optimize import curve_fit
+    
+    #################################
+    # Slices a random piece of data #
+    #################################
+
+    bounds = [random.randint(0,1023),random.randint(0,1023)]
+    bounds.sort()
+    summation_spec = summation_spec[bounds[0]:bounds[1]]
+    E_axis = E_axis[bounds[0]:bounds[1]]*1000 #Pass from KeV to eV
+
+    #################################
+
+    ######################
+    # Gets peaks indexes #
+    ######################
+
+    indexes = findpeaks(summation_spec,v=4,w=9,r=11)
+    print(indexes)
+
+    ######################
+    
+    #########################
+    # PREPARE INITIAL GUESS #
+    #########################
+    
+    """ Converts peak indexes to corresponding energies in the x_axis """
+    E_indexes = []
+    for i in indexes:
+        E_indexes.append(E_axis[i])
+    E_indexes = np.asarray(E_indexes,dtype="float32")
+    print("E_indexes",E_indexes)
+    """ ---------------------------------------------- """
+    
+    Noise, Fano = Constants.NOISE, Constants.FANO
+
+    """ Extracts the counts at each peak index """
+    y_peak = np.asarray(summation_spec[indexes])
+    """ ---------------------------------------------- """
+
+    A0 = y_peak*np.sqrt((np.square(Noise/2.3548))+(3.85*Fano*E_indexes))*np.sqrt(2*np.pi)
+    initial_guess = np.concatenate(([Noise, Fano], A0))
+
+    print("Counts and Initial guess lengths:")
+    print(len(summation_spec[indexes]),len(A0))
+    plt.plot(summation_spec[indexes],label="sum")
+    plt.plot(A0,label="guess")
+    plt.legend()
+    plt.show()
+
+    #########################
+
+    Constants.FIT_CYCLES = 10000
+    popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
+        E_axis,E_indexes,Noise,Fano,*A), 
+        E_axis, 
+        summation_spec, 
+        p0=initial_guess, 
+        maxfev=Constants.FIT_CYCLES) 
+
+    print("Fit results:",popt_gaus)
+    print("Type:",type(popt_gaus))
+    print("Shape: ",popt_gaus.shape)
+    print("FANO AND NOISE: ",popt_gaus[0],popt_gaus[1])
+    
+    y_gaus_single = np.asarray(
+                    gaussianbuilder(
+                        E_axis,
+                        E_indexes,
+                        popt_gaus[2:],
+                        popt_gaus[1],
+                        popt_gaus[0]))
+    print(y_gaus_single)
+    print(y_gaus_single.shape)
+    for i in range(y_gaus_single.shape[0]):
+        plt.semilogy(y_gaus_single[i])
+    plt.semilogy(summation_spec,color="blue")
+    plt.show()
+    
+    return indexes
+
+def gaus(x, E_peak, Noise, Fano, *A):
+    
+    """ Model function to be fitted.
+    
+    ---------------------------------------------
+
+    INPUT:
+        x: (1D-array); contains the calibrated energy axis
+        E_peak: (1D-array); contains the energy where peaks where found """
+
+    s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
+    return np.sum(
+            A/(s*np.sqrt(2*np.pi))*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
+
+
 if __name__=="__main__":
     logger.info("This is SpecMath")
     import Constants
@@ -1212,8 +1348,10 @@ if __name__=="__main__":
     Constants.MY_DATACUBE = pickle.load(cube_file)
     cube_file.close()
     data = Constants.MY_DATACUBE.sum
-    getpeakarea(6441,data,Constants.MY_DATACUBE.energyaxis,
-            Constants.MY_DATACUBE.background,
-            Constants.MY_DATACUBE.config,True,
-            np.zeros([Constants.MY_DATACUBE.matrix.shape[2]]))
+    e_axis = Constants.MY_DATACUBE.energyaxis
+    #getpeakarea(6441,data,Constants.MY_DATACUBE.energyaxis,
+    #        Constants.MY_DATACUBE.background,
+    #        Constants.MY_DATACUBE.config,True,
+    #        np.zeros([Constants.MY_DATACUBE.matrix.shape[2]]))
+    deconvolute(e_axis,data,[])
 

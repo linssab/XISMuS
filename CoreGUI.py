@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.0.1                         #
+#                        version: 1.0.1dev                      #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -21,6 +21,60 @@ def start_up():
     except: pass
     logger.info("Done.")
     Constants.FIND_ELEMENT_LIST = []
+
+def load_user_database():
+
+    """ Read database file and load all entries to global variable """    
+
+    path = os.path.join(SpecRead.__BIN__,"database.dat")
+    db = open(path,"r")
+    lines = db.readlines() 
+    for i in range(1,len(lines),7):
+        if lines[i].replace("\n","").startswith("SAMPLE"):
+            try:
+                name = lines[i].replace("\n","").split("\t")[-1]
+                Constants.USER_DATABASE[name] = {}
+                Constants.USER_DATABASE[name]["path"] = \
+                        lines[i+1].replace("\n","").split("\t")[-1]
+                Constants.USER_DATABASE[name]["prefix"] = \
+                        lines[i+2].replace("\n","").split("\t")[-1]
+                Constants.USER_DATABASE[name]["mcacount"] = \
+                        int(lines[i+3].replace("\n","").split("\t")[-1])
+                Constants.USER_DATABASE[name]["extension"] = \
+                        lines[i+4].replace("\n","").split("\t")[-1]
+                Constants.USER_DATABASE[name]["indexing"] = \
+                        lines[i+5].replace("\n","").split("\t")[-1]
+            except IndexError as exception:
+                logging.error("Database.dat integrity may be compromised. Could not load.")
+    db.close()
+
+def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
+    path = os.path.join(SpecRead.__BIN__,"database.dat")
+    db = open(path,"a+")
+    db.write("\nSAMPLE\t{}\n".format(name))
+    db.write("path\t{}\n".format(sample_path))
+    db.write("prefix\t{}\n".format(prefix))
+    db.write("mcacount\t{}\n".format(count))
+    db.write("extension\t{}\n".format(extension))
+    db.write("indexing\t{}\n".format(indexing))
+    db.close()
+
+def remove_entry_from_database(smpl_name):
+    path = os.path.join(SpecRead.__BIN__,"database.dat")
+    db = open(path,"r")
+    lines = db.readlines()
+    new_lines = copy.deepcopy(lines)
+    db.close()
+    for i in range(len(lines)):
+        line = lines[i]
+        if line.replace("\n","").startswith("SAMPLE") and smpl_name == line.replace("\n","").split("\t")[-1]:
+            del new_lines[i:i+7]
+            continue
+    db = open(path,"w+")
+    for line in new_lines:
+        db.write(line)
+    db.close()
+    return
 
 def refresh_all_plots():
     try:
@@ -249,6 +303,8 @@ def load_cube():
     latest SpecRead parameters. See setup conditions inside SpecRead module.
     Returns the datacube object """
 
+    root_busy.busy()
+
     logger.debug("Trying to load cube file.")
     logger.debug(SpecRead.cube_path)
     if os.path.exists(SpecRead.cube_path):
@@ -269,6 +325,9 @@ def load_cube():
         logger.debug("No cube found.")
         MainGUI.toggle_(root,toggle='Off') 
         pass
+    
+    root_busy.notbusy()
+
     return Constants.MY_DATACUBE
 
 def refresh_plots(exclusive=""):
@@ -370,6 +429,7 @@ def _init_numpy_mkl():
             print("Loaded {}".format(_dll))
     except Exception:
         pass
+
 
 class Author:
 
@@ -738,7 +798,6 @@ class Welcome:
             message[page-1] += line
             if i == len(lines)-1: message[page-1] += "\nLog {} of {}".format(page,tot+1)
         f.close()
-        #for i in message: print(i)
         return message
         
     def next_page(__self__):
@@ -903,7 +962,7 @@ class export_diag():
                 title="Save merge as...")
         if f is None: 
             return
-        write_image(stack,__self__.TARGET,f.name,enhance=enhance,merge=True)
+        write_image(stack,Constants.TARGET_RES,f.name,enhance=enhance,merge=True)
         __self__.kill()
 
     def kill(__self__,e=""):
@@ -1174,7 +1233,7 @@ class PeakClipper:
             mca = root.samples[folder][__self__.sample]
         else:
             __self__.sample = random.randint(1,spec_no-1)
-            mca = os.path.join(SpecRead.selected_sample_folder,
+            mca = os.path.join(Constants.SAMPLE_PATH,
                     root.samples[folder]+"{0}.{1}".format(__self__.sample,
                         root.mca_extension[folder]))
             
@@ -2168,6 +2227,7 @@ class Samples:
 
     def __init__(__self__):
         __self__.samples_database = {}
+        __self__.samples_path = {}
         __self__.mcacount = {}
         __self__.mca_indexing = {}
         __self__.mca_extension = {}
@@ -2192,7 +2252,7 @@ class Samples:
         __self__.filequeue.set(" ")
         __self__.bar = Frame(__self__.splash,bg="#DCDCDC")
         __self__.bar.grid(row=1,column=0,columnspan=2,sticky=W+E)
-        __self__.label1 = Label(__self__.bar, text="Reading samples files...\t",bg="#DCDCDC")
+        __self__.label1 = Label(__self__.bar, text="Adding to database...\t",bg="#DCDCDC")
         __self__.label1.grid(row=0,column=0,sticky=W)
         __self__.label2 = Label(__self__.bar, textvariable = __self__.filequeue,bg="#DCDCDC")
         __self__.label2.grid(row=0,column=1)
@@ -2227,18 +2287,44 @@ class Samples:
                 width=166, height=52)
         __self__.outerframe.grid(row=0,column=0,sticky=E+W)
         __self__.outerframe.grid_propagate(0)
-        __self__.popup.label1 = Label(__self__.outerframe, text="Reading samples...")
+        __self__.popup.label1 = Label(__self__.outerframe, text="Adding to database...")
         __self__.popup.label1.grid(row=0,column=0,sticky=W)       
         __self__.label2 = Label(__self__.outerframe, textvariable = __self__.filequeue)
         __self__.label2.grid(row=1,column=0,sticky=W)
 
+    def load_folder_from_database(__self__,folder):
+        __self__.samples_database[folder] = Constants.USER_DATABASE[folder]["prefix"]
+        __self__.samples_path[folder] = Constants.USER_DATABASE[folder]["path"]
+        __self__.mcacount[folder] = Constants.USER_DATABASE[folder]["mcacount"]
+        __self__.mca_extension[folder] = Constants.USER_DATABASE[folder]["extension"]
+        __self__.mca_indexing[folder] = Constants.USER_DATABASE[folder]["indexing"]
+
+    def pre_load_from_database(__self__):
+        not_found_samples = []
+        for folder in Constants.USER_DATABASE.keys():
+            if os.path.exists(Constants.USER_DATABASE[folder]["path"]):
+                __self__.load_folder_from_database(folder)
+                logger.info("Loaded {} parameters from database...".format(folder))
+                __self__.skip_list.append(folder)
+                continue
+            else:
+                not_found_samples.append(folder)
+                logger.info(
+                        "{} path ({}) does not exist. Removed from database...".format(
+                            folder,Constants.USER_DATABASE[folder]["path"]))
+                remove_entry_from_database(folder)
+        for folder in not_found_samples:
+            Constants.USER_DATABASE.pop(folder)
+
     def list_all(__self__):
+        __self__.skip_list = []
         logger.info("Loading sample list...")
-        skip_list = []
+        logger.info("Reading database...")
+        load_user_database()
+        __self__.pre_load_from_database()
+        logger.info("Done with reading database...")
         indexing = None
         mca_prefix = None
-        __self__.samples_database = {}
-
         
         try:
                         
@@ -2260,17 +2346,19 @@ class Samples:
                             try: __self__.splash.update_idletasks()
                             except: __self__.popup.update_idletasks()
                             finally: pass
-                            skip_list.append(name.split(".cube")[0])
+                            __self__.skip_list.append(name.split(".cube")[0])
                 
                 """ Lists the spectra files """            
                 files = [name for name in os.listdir(os.path.join(Constants.SAMPLES_FOLDER,
                     folder))if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                 extension = files[:]
+                
 
-                """ If no spectra are found, move to next step """
-                if files == []: pass
-                else:
-                    if folder not in skip_list:
+                """ If spectra are found, list and get the files prefix, 
+                indexing and extension """
+
+                if files != []:
+                    if folder not in __self__.skip_list:
                         for item in range(len(files)): 
                             # displays file being read on splash screen
                             __self__.filequeue.set("{}".format(files[item]))
@@ -2312,10 +2400,19 @@ class Samples:
                         
                         # creates a dict key only if the numer of mca's is larger than 20.
                         if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                            p = os.path.join(Constants.SAMPLES_FOLDER,folder)
                             __self__.samples_database[folder] = mca_prefix
+                            __self__.samples_path[folder] = p
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
+                            write_to_user_database(
+                                    folder,
+                                    p,
+                                    mca_prefix,
+                                    len(files),
+                                    mca_extension,
+                                    indexing)
 
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
@@ -2352,13 +2449,13 @@ class Samples:
                             try: __self__.splash.update_idletasks()
                             except: __self__.popup.update_idletasks()
                             finally: pass
-                            skip_list.append(name.split(".cube")[0])
+                            __self__.skip_list.append(name.split(".cube")[0])
                 files = [name for name in os.listdir(new_path+folder) \
                         if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                 extension = files[:]
                 if files == []: pass
                 else:
-                    if folder not in skip_list:
+                    if folder not in _self__.skip_list:
                         for item in range(len(files)): 
                             # displays file being read on splash screen
                             __self__.filequeue.set("{}".format(files[item]))
@@ -2400,6 +2497,7 @@ class Samples:
                         # creates a dict key only if the numer of mca's is larger than 20.
                         if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
                             __self__.samples_database[folder] = mca_prefix
+                            __self__.samples_path[folder] = os.path.abspath(new_path)
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
@@ -2466,9 +2564,11 @@ class Samples:
                     # creates a dict key only if the numer of mca's is larger than 20.
                     if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
                         __self__.samples_database[folder] = mca_prefix
+                        __self__.samples_path[folder] = os.path.abspath(os.path.join(
+                            new_path,folder))
                         __self__.mcacount[folder] = len(files)
                         __self__.mca_extension[folder] = mca_extension
-                        __self__.mca_indexing[folder] = indexing
+                        __self__.mca_indexing[folder] = "1"
 
         except: logger.info("Could not locate Training Data.")
 
@@ -2486,6 +2586,7 @@ class Samples:
                     if cubes != []: 
                         # sampes_database keys hold the mca prefixes
                         __self__.samples_database[folder] = "---"
+                        __self__.samples_path[folder] = "---"
                         __self__.mcacount[folder] = 0
                         __self__.mca_extension[folder] = "---"
                         logger.info("Datacube {} located. Ignoring mca files".format(folder))
@@ -2662,6 +2763,7 @@ class Settings:
 class MainGUI:
 
     def __init__(__self__):
+
         if Constants.LOW_RES == "extreme": 
             quit = messagebox.showinfo("WARNING",
         "Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
@@ -2703,16 +2805,29 @@ class MainGUI:
         __self__.build_widgets()
         __self__.plot_canvas.mpl_connect("button_press_event",__self__.pop)
         
-        # Spawn splash scree and look for samples under the search folder
-        # from folder.ini
+        #####################################################################
+        # Spawn splash screen and look for samples under the search folder  #
+        # set at folder.ini # It also check the database.dat file to avoid  #
+        # reading thousands of files that were read before at some time     #
+        #####################################################################
 
         __self__.SampleLoader = Samples()
         __self__.SampleLoader.splash_screen(__self__)
         __self__.master.after(100,__self__.SampleLoader.list_all())
+
+        #####################################################################
+
+        #############################################
+        # Attributes that carry samples information #
+        #############################################
+
         __self__.samples = __self__.SampleLoader.samples_database
+        __self__.samples_path = __self__.SampleLoader.samples_path
         __self__.mcacount = __self__.SampleLoader.mcacount
         __self__.mca_indexing = __self__.SampleLoader.mca_indexing
         __self__.mca_extension = __self__.SampleLoader.mca_extension
+
+        #############################################
 
         __self__.plot_canvas_popup = Menu(__self__.master, tearoff=0)
         __self__.plot_canvas_popup.add_command(
@@ -2720,10 +2835,10 @@ class MainGUI:
                 command=__self__.export_density_map)
         __self__.plot_canvas_popup.add_command(
                 label="Open files location",
-                command=__self__.open_files_location)
+                command=__self__.open_files_location_from_cube)
         __self__.plot_canvas_popup.add_command(
                 label="Open output folder",
-                command=__self__.open_output_folder)
+                command=__self__.open_output_folder_from_cube)
 
         time.sleep(0.1)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
@@ -2780,6 +2895,7 @@ class MainGUI:
         __self__.SampleLoader.pop_loader()
         __self__.SampleLoader.list_all()
         __self__.samples = __self__.SampleLoader.samples_database
+        __self__.samples_path = __self__.SampleLoader.samples_path
         try: 
             __self__.SamplesWindow.destroy()
             __self__.list_samples()
@@ -2862,6 +2978,12 @@ class MainGUI:
         __self__.SamplesWindow.popup.add_command(
                 label="Open output folder",
                 command=__self__.open_output_folder)
+        __self__.SamplesWindow.popup.add_command(
+                label="Remove from list",
+                command=__self__.remove_sample)
+        __self__.SamplesWindow.popup.add_command(
+                label="Clear all maps",
+                command=lambda: __self__.sample_select(override=True))
 
         for key in __self__.samples:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
@@ -2871,6 +2993,45 @@ class MainGUI:
         __self__.SamplesWindow.iconbitmap(icon)
         __self__.SamplesWindow_TableRight.config(state=DISABLED)
         __self__.SamplesWindow_TableLeft.focus_set()
+
+    def remove_sample(__self__,e=""):
+        try:
+            sample = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        except:
+            sample = event
+        if sample == "" or "Training Data" in sample: return
+
+        d = messagebox.askquestion("Attention!",
+        "Are you sure you want to remove sample {} from the list? It will not delete the sample data or the compiled datacube.".format(sample))
+        
+        if d=="yes":
+            del __self__.samples[sample]
+            del Constants.USER_DATABASE[sample]["prefix"]
+            del __self__.samples_path[sample]
+            del Constants.USER_DATABASE[sample]["path"]
+            del __self__.mcacount[sample]
+            del Constants.USER_DATABASE[sample]["mcacount"]
+            del __self__.mca_indexing[sample]
+            del Constants.USER_DATABASE[sample]["indexing"]
+            del __self__.mca_extension[sample]
+            del Constants.USER_DATABASE[sample]["extension"]
+            __self__.list_samples()
+
+            try: __self__.summation.master.destroy()
+            except: pass
+            try: __self__.MPS.master.destroy()
+            except: pass
+            try: __self__.combined.master.destroy()
+            except: pass
+
+            SpecRead.conditional_setup()
+            load_cube()
+            __self__.write_stat()
+            __self__.wipe()
+            __self__.list_samples()
+            __self__.draw_map()
+
+        else: return
 
     def select_multiple(__self__):
 
@@ -3020,14 +3181,36 @@ class MainGUI:
         if __self__.SamplesWindow_TableRight.yview() != __self__.SamplesWindow_TableLeft.yview():
             __self__.SamplesWindow_TableRight.yview_scroll(1,"units") 
 
-    def sample_select(__self__,event=""):
+    def sample_select(__self__,event="",override=False):
     
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
         
-        # name of selected sample
-        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-        if value == "": return
+        print(override)
+        if override  == False:
+            # name of selected sample
+            try: 
+                value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+            except:
+                value = event
+            if value == "": return
+        else: 
+            value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+
+            """ If cube clicked is not the one in memory, load it and configure variables """
+            try: in_memory = Constants.MY_DATACUBE.name
+            except AttributeError: in_memory = None
+            if in_memory != value:
+                local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+                if os.path.exists(local_cube_path):
+                    SpecRead.cube_path = os.path.join(
+                            SpecRead.workpath,"output",value,value+".cube")
+                    load_cube()
+                    SpecRead.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
+                    __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
+            """ ------------------------------------------------------------------------- """
+
+            Constants.MY_DATACUBE.wipe_maps()
 
         __self__.master.deiconify()
         __self__.master.focus_set()
@@ -3038,7 +3221,7 @@ class MainGUI:
                 except:
                     pass
         __self__.toggle_("off")
-        
+         
         if __self__.SampleVar.get().split(":")[1].replace(" ","") != value:
             # destroy any open configuration window
             # and all open plot windows
@@ -3051,9 +3234,19 @@ class MainGUI:
             try: __self__.combined.master.destroy()
             except: pass
 
-            if __self__.SamplesWindow_multi["relief"] == "sunken":
-               __self__.select_multiple()
-               return
+            #########################################################################
+            # This funcion can be called by the main panel when SamplesWindow       #
+            # is destroyed or not yet invoked. To avoid crashes, the function       #
+            # attempts to check the multi buttun status (multiple selection on/off  #
+            #########################################################################
+            
+            try:
+                if __self__.SamplesWindow_multi["relief"] == "sunken":
+                    __self__.select_multiple()
+                    return
+            except: pass
+            
+           #########################################################################
         
         """ to avoid unecessarily changing the global variable cube_path, a local version
         is created to check the existance of a cube file for the selected sample. 
@@ -3069,12 +3262,14 @@ class MainGUI:
             SpecRead.cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
             load_cube()
             SpecRead.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
-            __self__.SampleVar.set("Sample on memory: "+SpecRead.selected_sample_folder)
+            __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
             __self__.toggle_(toggle="on")    
             __self__.write_stat()   
             __self__.draw_map()
         else: 
-            SpecRead.conditional_setup(name=value)
+            if "Example Data" in value: path="auto"
+            else: path=root.samples_path[value]
+            SpecRead.conditional_setup(name=value,path=path)
             __self__.call_configure()
 
     def pop_welcome(__self__):
@@ -3108,29 +3303,63 @@ class MainGUI:
             __self__.sample_plot.imshow(blank, cmap=Constants.COLORMAP)
             __self__.plot_canvas.draw()
     
-    def open_files_location(__self__, event=""):
+    def open_files_location_from_cube(__self__,event=""):
         try:
-            value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+            value = Constants.MY_DATACUBE.name
         except:
-            try:
-                value = Constants.MY_DATACUBE.name
-            except:
-                messagebox.showerror("No datacube!","Please load a datacube first.")
-                return
-        path = os.path.join(Constants.SAMPLES_FOLDER,value)
+            messagebox.showerror("No datacube!","Please load a datacube first.")
+            return
         local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
         if os.path.exists(local_cube_path):
-            __self__.sample_select(event)
-            path = Constants.MY_DATACUBE.root
+            path = Constants.MY_DATACUBE.path
             path = os.path.realpath(path)
             os.startfile(path)
-        elif os.path.exists(path):
-            """if datacube is not compiled, check if mca files are under 
-            the selected sample folder chosen by the user"""
+    
+    def open_output_folder_from_cube(__self__, event=""):
+        try:
+            value = Constants.MY_DATACUBE.name
+        except:
+            messagebox.showerror("No datacube!","Please load a datacube first.")
+            return
+        path = os.path.join(SpecRead.__PERSONAL__,"output",value)
+        if os.path.exists(path):
             path = os.path.realpath(path)
             os.startfile(path)
         else:
             messagebox.showinfo("Directory not found.",
+                    "Sample may be uncompiled. Output directory for sample {} not found.".format(value))
+
+    
+    def open_files_location(__self__, event=""):
+        value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+        local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+        path = root.samples_path[value]
+        if Constants.MY_DATACUBE == None or Constants.MY_DATACUBE.name != value:
+            if os.path.exists(local_cube_path):
+                __self__.sample_select(event)
+                path = Constants.MY_DATACUBE.path
+                path = os.path.realpath(path)
+                try: os.startfile(path)
+                except FileNotFoundError:
+                    messagebox.showinfo("Directory not found.",
+                        "Sample files not found! Path {} couldn't be located.".format(path))
+            elif os.path.exists(path):
+                """if datacube is not compiled, check if mca files are under 
+                the selected sample folder chosen by the user"""
+                path = os.path.realpath(path)
+                try: os.startfile(path)
+                except FileNotFoundError:
+                    messagebox.showinfo("Directory not found.",
+                        "Sample files not found! Path {} couldn't be located.".format(path))
+            else:
+                messagebox.showinfo("Directory not found.",
+                        "Sample files not found! Path {} couldn't be located.".format(path))
+        else:
+            path = Constants.MY_DATACUBE.path
+            path = os.path.realpath(path)
+            try: os.startfile(path)
+            except FileNotFoundError:
+                messagebox.showinfo("Directory not found.",
                     "Sample files not found! Path {} couldn't be located.".format(path))
 
     def open_output_folder(__self__, event=""):
@@ -3200,22 +3429,34 @@ class MainGUI:
     def batch(__self__):
         #1 prompt for files
         file_batch = filedialog.askopenfilenames(parent=__self__.master, 
-                title="Select mca's",                        
+                title="Select spectra",                        
                 filetypes=(
                     ("MCA Files", "*.mca"),
                     ("Text Files", "*.txt"),
                     ("All files", "*.*")))
         if file_batch == "": return
+        #for i in file_batch:
+        #    if not str(i).lower().endswith(".mca") or not str(i).lower().endswith(".txt"):
+        #        messagebox.showerror("OSError",
+        #                "Only *.mca or *.txt files are accepted at the moment.")
+        #        return
         
         #1.1 get the name of parent directory
         try: sample_name = str(file_batch[0]).split("/")[-2]
         except IndexError: messagebox.showerror("No parent folder!","No parent folder detected. Be sure the spectra files are under a common folder (Hard drives are not parent folders!)")
 
-        #2 setups variables in SpecRead and GUI
-        SpecRead.conditional_setup(name=sample_name)
+        #2 setup variables in SpecRead and GUI
+        path = str(file_batch[0]).split("/")
+        path.pop(-1)
+        conc_path = ""
+        for i in path:
+            conc_path += i+"\\"
+        conc_path = os.path.abspath(conc_path)
+        SpecRead.conditional_setup(name=sample_name,path=conc_path)
         __self__.mcacount[sample_name] = len(file_batch)
         """ samples dict attribute is always a string, except in this particular case """
         __self__.samples[sample_name] = file_batch
+        __self__.samples_path[sample_name] = conc_path
         __self__.mca_indexing[sample_name] = file_batch[0].split(".")[0]
         __self__.mca_extension[sample_name] = "---"
         Constants.FIRSTFILE_ABSPATH = file_batch[0]
@@ -3515,14 +3756,14 @@ class MainGUI:
         
         __self__.TableMiddle.config(state=NORMAL)
         __self__.TableLeft.config(state=NORMAL)
-        __self__.SampleVar.set("Sample on memory: "+Constants.DIRECTORY)
+        __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
         
         # wipe all text
         __self__.StatusBox.delete(0,END)
         __self__.TableMiddle.delete(0,END)
         __self__.TableLeft.delete(0,END)
-        
-        if Constants.MY_DATACUBE != None and not os.path.exists(SpecRead.selected_sample_folder): 
+         
+        if Constants.MY_DATACUBE != None and not os.path.exists(Constants.SAMPLE_PATH): 
             if os.path.exists(Constants.MY_DATACUBE.path):
                 files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
                         if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
@@ -3546,7 +3787,7 @@ class MainGUI:
                             Constants.MY_DATACUBE.img_size))
                 __self__.no_sample = False
 
-        if os.path.exists(SpecRead.selected_sample_folder):
+        if os.path.exists(Constants.SAMPLE_PATH):
             if Constants.MY_DATACUBE != None:
                 if os.path.exists(Constants.MY_DATACUBE.path):
                     files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
@@ -3572,8 +3813,10 @@ class MainGUI:
                     __self__.no_sample = False
 
             else: 
+                files = [f for f in os.listdir(Constants.SAMPLE_PATH) \
+                            if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
                 __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
-                __self__.StatusBox.insert(END,"{0}\n".format(SpecRead.selected_sample_folder))
+                __self__.StatusBox.insert(END,"{0}\n".format(Constants.SAMPLE_PATH))
                 __self__.StatusBox.insert(END, 
                         "\n{} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
                 __self__.no_sample = False
@@ -3625,7 +3868,7 @@ class MainGUI:
                 tag_dimension_file = False
             if tag_dimension_file == True:
                 try: 
-                    os.remove(SpecRead.dimension_file)
+                    os.remove(Constants.DIMENSION_FILE)
                     logger.warning("Custom image dimension was deleted.")
                 except: raise PermissionError("Can't delete custom dimension file!")
 
@@ -3646,6 +3889,7 @@ class MainGUI:
             __self__.list_samples()
             __self__.draw_map()
             __self__.ResetWindow.destroy()
+            return
 
         if os.path.exists(SpecRead.cube_path):
 
@@ -3664,8 +3908,8 @@ class MainGUI:
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
             EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
                     pack(side=LEFT, pady=8, padx=16)
-            YesButton = Button(__self__.ResetWindow, text="Yes", justify=CENTER,\
-                    command=lambda: repack(__self__,Constants.MY_DATACUBE.config["directory"]), \
+            YesButton = Button(__self__.ResetWindow, text="Yes", justify=CENTER,
+                    command=lambda: repack(__self__,Constants.MY_DATACUBE.config["directory"]),
                     width=10, bd=3).pack(side=TOP,pady=5)
             NoButton = Button(
                     __self__.ResetWindow, 
@@ -3997,7 +4241,6 @@ class ConfigDiag:
         configdict = {"directory":__self__.DirectoryVar.get(),
                 "bgstrip":__self__.BgstripVar.get(),
                 "ratio":__self__.RatioVar.get(),
-                #"thickratio":__self__.ThickVar.get(),
                 "calibration":__self__.CalibVar.get(),
                 "enhance":__self__.EnhanceVar.get(),
                 "peakmethod":__self__.MethodVar.get(),
@@ -4018,21 +4261,21 @@ class ConfigDiag:
                 root.write_stat()
                 root.draw_map()
                 return
-            if not os.path.exists(SpecRead.dimension_file):
+            if not os.path.exists(Constants.DIMENSION_FILE):
                 dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
                 dm_file.write("righe\t{}\n".format(root.config_xy[0]))
                 dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
                 dm_file.write(5*"*"+" user input data "+5*"*")
                 dm_file.close()
-
         
-        if os.path.exists(os.path.join(Constants.SAMPLES_FOLDER,configdict["directory"]))\
+        if os.path.exists(root.samples_path[Constants.DIRECTORY])\
                 or isinstance(root.samples[configdict["directory"]],tuple):
             Constants.DIRECTORY = configdict["directory"]
-            SpecRead.selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER, 
-                    Constants.DIRECTORY)
+            #Constants.SAMPLE_PATH = os.path.join(Constants.SAMPLES_FOLDER, 
+            #        Constants.DIRECTORY)
+            Constants.SAMPLE_PATH = root.samples_path[configdict["directory"]]
             if not isinstance(root.samples[configdict["directory"]],tuple):
-                Constants.FIRSTFILE_ABSPATH = os.path.join(SpecRead.selected_sample_folder,
+                Constants.FIRSTFILE_ABSPATH = os.path.join(Constants.SAMPLE_PATH,
                     root.samples[configdict["directory"]]+\
                     root.mca_indexing[configdict["directory"]]+\
                     "."+root.mca_extension[configdict["directory"]])
@@ -4693,7 +4936,7 @@ if __name__.endswith('__main__'):
     from Decoder import *
     from SpecMath import getstackplot, correlate, peakstrip, FN_reset, FN_set, FN_fit
     from SpecMath import datacube as Cube
-    from ProgressBar import Busy
+    from ProgressBar import Busy, BusyManager
     from EnergyLib import plottables_dict, ElementColors, which_macro
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results
@@ -4703,5 +4946,6 @@ if __name__.endswith('__main__'):
     root = MainGUI()
     GUIicon = os.path.join(os.getcwd(),"images","icons","icon.ico")
     root.master.iconbitmap(GUIicon)  
+    root_busy = BusyManager(root.master)
     root.master.mainloop()
 

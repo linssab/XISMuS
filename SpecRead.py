@@ -48,18 +48,17 @@ def setup(prefix, indexing, extension):
     contained there """
 
     logger.debug("Running setup from Config.cfg") 
-    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
+    global workpath, cube_path, output_path
 
     Constants.CONFIG,Constants.CALIB = CONFIGURE()
     Constants.DIRECTORY = Constants.CONFIG.get("directory")
     
     # build paths
-    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
     workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",
             Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
     output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
-    dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
+    Constants.DIMENSION_FILE = os.path.join(Constants.SAMPLE_PATH,"colonneXrighe.txt")
 
     Constants.NAME_STRUCT = [prefix,indexing,extension]
     
@@ -71,44 +70,44 @@ def setup_from_datacube(datacube,sample_database):
     configuration parameters accordingly """
 
     logger.debug("Running setup from datacube {}".format(datacube.name)) 
-    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
+    global workpath, cube_path, output_path
     
     Constants.CONFIG,Constants.CALIB = datacube.config, datacube.calibration
     Constants.DIRECTORY = Constants.CONFIG.get("directory")
     
     # build sample paths
-    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
+    Constants.SAMPLE_PATH = datacube.path
     workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",
             Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
     output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
-    dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
-    
+    Constants.DIMENSION_FILE = os.path.join(datacube.path, "colonneXrighe.txt")
     Constants.FIRSTFILE_ABSPATH = sample_database[Constants.DIRECTORY]
     
     return np.nan 
 
-def conditional_setup(name='None'):
+def conditional_setup(name="None",path="auto"):
 
     """ Reads Config.cfg file configuration parameters and changes Constants.DIRECTORY
     parameter to input value. """
     
     logger.debug("Running conditional setup for {}".format(name)) 
-    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
+    global workpath, cube_path, output_path
     
     Constants.CONFIG,Constants.CALIB = CONFIGURE()
     Constants.CONFIG['directory'] = name
     
     # build paths
     Constants.DIRECTORY = Constants.CONFIG.get("directory")
-    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
+    if path=="auto":
+        Constants.SAMPLE_PATH = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
+    else: Constants.SAMPLE_PATH = path
     workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",
             Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
     output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
-    dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
-    
-    Constants.FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder, name)
+    Constants.DIMENSION_FILE = os.path.join(Constants.SAMPLE_PATH, "colonneXrighe.txt")
+    Constants.FIRSTFILE_ABSPATH = os.path.join(Constants.SAMPLE_PATH, name)
 
     return np.nan
 
@@ -192,7 +191,9 @@ def getcalibration():
         param = Constants.CALIB 
     elif Constants.CONFIG['calibration'] == 'from_source':
         param = []
-        mca_file = open(getfirstfile(),'r')
+        try: mca_file = open(getfirstfile(),'r')
+        except:
+            return Constants.MY_DATACUBE.calibration
         line = mca_file.readline()
         while line != "":
             while "<<CALIBRATION>>" not in line:
@@ -319,7 +320,9 @@ def calibrate(lead=0, tail=0):
     B=coefficients[1]
     R=coefficients[2]
     logger.info("Correlation coefficient R = %f!" % R)
-    n = len(getdata(getfirstfile()))-lead-tail
+    try: n = len(getdata(getfirstfile()))-lead-tail
+    except:
+        n = Constants.MY_DATACUBE.matrix.shape[2]
     curve = []
     for i in range(n):
         curve.append((GAIN*i)+B)
@@ -386,7 +389,8 @@ def getdimension():
         y; int
         user_input; bool """
 
-    global dimension_file
+    dimension_file = Constants.DIMENSION_FILE
+
     if not os.path.exists(dimension_file):
         dimension_file = os.path.join(Constants.SAMPLES_FOLDER,"colonneXrighe.txt")
         if not os.path.exists(dimension_file):

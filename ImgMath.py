@@ -475,7 +475,7 @@ def plotlastmap(image,name):
     ax.set_title(name)
     plt.show()
 
-def split_and_save(datacube,map_array,element_list):
+def split_and_save(datacube,map_array,element_list,fitted=False):
     
     """ Sorts the element maps contained in map_array and packs them into the
     datacube cube class object prior pickling to disk. Saves each map as a grayscale png
@@ -490,6 +490,7 @@ def split_and_save(datacube,map_array,element_list):
 
     if datacube.config["ratio"] == True:
         lines = np.asarray(["a","b"])
+    elif fitted==True: lines = np.asarray(["a"])
     else: lines = np.asarray(["a"])
 
     imagsize = datacube.dimension
