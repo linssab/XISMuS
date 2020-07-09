@@ -160,6 +160,7 @@ def grab_line(cube,lines,iterator,Element):
         cube["config"]["peakmethod"],
         timestamp,
         time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+    timestamps.close()
        
     logger.info("Finished map acquisition!")
     if cube["config"]["peakmethod"] == 'auto_roi': 

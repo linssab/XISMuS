@@ -728,8 +728,7 @@ class datacube:
     def prepack_elements(__self__,element_list,wipe=False):
 
         """ Allocates keys in the datacube object to store the elemental distribution maps """
-
-        for element in element_list:
+        for element in set(element_list):
 
             if wipe == False:
                 __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],
@@ -745,6 +744,7 @@ class datacube:
                     [__self__.dimension[0],__self__.dimension[1]],dtype="float32")
 
             if wipe == True: 
+                print(element+"_a")
                 try: del __self__.__dict__[element+"_a"]
                 except KeyError: print("No alpha map for {}".format(element))
                 try: del __self__.__dict__[element+"_b"]
