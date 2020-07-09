@@ -9,6 +9,9 @@ LOW_RES = None
 FANO = 0.114
 NOISE = 80
 FIT_CYCLES = 1000
+PEAK_TOLERANCE = 1.30
+SAVE_FIT_FIGURES = True
+MATCHES = None
 TARGET_RES = 1024
 FILE_POOL = []
 FIRSTFILE_ABSPATH = None
@@ -33,9 +36,23 @@ def list_all():
             "low res":LOW_RES,
             "fano":FANO,
             "noise":NOISE,
+            "fit cycles":FIT_CYCLES,
+            "peak tolerance":PEAK_TOLERANCE,
+            "save fit figures":SAVE_FIT_FIGURES,
+            "matches":MATCHES,
+            "target resolution":TARGET_RES,
             "file pool":FILE_POOL,
             "firstfile abspath":FIRSTFILE_ABSPATH,
             "config":CONFIG,
             "calib":CALIB,
             "directory":DIRECTORY,
-            "samples folder":SAMPLES_FOLDER}
+            "samples folder":SAMPLES_FOLDER,
+            "dimension file":DIMENSION_FILE,
+            "user database":USER_DATABASE,
+            "colormap":COLORMAP,
+            "multicore":MULTICORE,
+            "plotmode":PLOTMODE,
+            "ram limit":RAM_LIMIT,
+            "welcome":WELCOME,
+            "cpu count":CPUS}
+
