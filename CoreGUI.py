@@ -96,7 +96,8 @@ def wipe_list():
     destroys the Periodic Table Tk.Toplevel window """
 
     Constants.FIND_ELEMENT_LIST = []
-    root.find_elements_diag.master.destroy()
+    try: root.find_elements_diag.master.destroy()
+    except AttributeError: pass #for auto_wizard method
 
 def openURL(url):
     webbrowser.open(url)
@@ -303,17 +304,17 @@ def load_cube():
     latest SpecRead parameters. See setup conditions inside SpecRead module.
     Returns the datacube object """
 
-    root_busy.busy()
 
     logger.debug("Trying to load cube file.")
     logger.debug(SpecRead.cube_path)
     if os.path.exists(SpecRead.cube_path):
+        root_busy.busy()
         cube_file = open(SpecRead.cube_path,'rb')
         del Constants.MY_DATACUBE
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
         logger.debug("Loaded cube {} to memory.".format(cube_file))
-
+        root_busy.notbusy()
     elif os.path.exists(os.path.join(SpecRead.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
         lz_file = open(SpecRead.cube_path,'rb')
@@ -326,7 +327,6 @@ def load_cube():
         MainGUI.toggle_(root,toggle='Off') 
         pass
     
-    root_busy.notbusy()
 
     return Constants.MY_DATACUBE
 
@@ -2101,17 +2101,30 @@ class PlotWin:
             else: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
             roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
             if element != "custom":
-                __self__.plot.semilogy(
-                    Constants.MY_DATACUBE.energyaxis,
-                    __self__.plotdata,
-                    label=roi_label,
-                    color=ElementColors[element])
-                __self__.plot.fill_between(
+                if isinstance(__self__.plotdata,tuple):
+                    for i in [j for j in __self__.plotdata if j>0]:
+                        __self__.plot.axvline(x=Constants.MY_DATACUBE.energyaxis[i],
+                        color=ElementColors[element],
+                        label=element,linewidth=__self__.lw)
+                    patches.append(
+                        mpatches.Patch(
+                            color=ElementColors[element], 
+                            label=roi_label))
+                else:
+                    __self__.plot.semilogy(
                         Constants.MY_DATACUBE.energyaxis,
                         __self__.plotdata,
-                        color=ElementColors[element],
-                        alpha=0.75)
-                patches.append(mpatches.Patch(color=ElementColors[element], label=roi_label))
+                        label=roi_label,
+                        color=ElementColors[element])
+                    __self__.plot.fill_between(
+                            Constants.MY_DATACUBE.energyaxis,
+                            __self__.plotdata,
+                            color=ElementColors[element],
+                            alpha=0.75)
+                    patches.append(
+                            mpatches.Patch(
+                                color=ElementColors[element], 
+                                label=roi_label))
             else: 
                 __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
@@ -2123,7 +2136,10 @@ class PlotWin:
                         __self__.plotdata,
                         color=ElementColors["Custom"],
                         alpha=0.75)
-                patches.append(mpatches.Patch(color=ElementColors["Custom"], label=roi_label))
+                patches.append(
+                        mpatches.Patch(
+                            color=ElementColors["Custom"], 
+                            label=roi_label))
 
         __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
@@ -2334,6 +2350,7 @@ class Samples:
             
             """ Verifies which samples have a compiled datacube in output folder """
             for folder in samples:
+                indexing = None
                 if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
                     for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
                         "output",folder)):
@@ -2352,7 +2369,6 @@ class Samples:
                 files = [name for name in os.listdir(os.path.join(Constants.SAMPLES_FOLDER,
                     folder))if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                 extension = files[:]
-                
 
                 """ If spectra are found, list and get the files prefix, 
                 indexing and extension """
@@ -2378,6 +2394,7 @@ class Samples:
                                                 not files[item][-i-1].isdigit(): 
                                             if indexing == None:
                                                 indexing = files[item][-i:]
+                                                print(folder,indexing)
                                             files[item] = files[item][:-i]
                                             break
                                 except: pass
@@ -2848,12 +2865,15 @@ class MainGUI:
         __self__.pop_welcome()
                
     def root_quit(__self__):
-        for widget in __self__.master.winfo_children():
-            if isinstance(widget, Toplevel):
-                widget.destroy()
-        checkout_config()
-        __self__.master.destroy()
-        sys.exit()
+        p = messagebox.askquestion("Attention","Are you sure you want to exit?")
+        if p == "yes":
+            for widget in __self__.master.winfo_children():
+                if isinstance(widget, Toplevel):
+                    widget.destroy()
+            checkout_config()
+            __self__.master.destroy()
+            sys.exit()
+        else: return
     
     def toggle_(__self__,toggle='on'):
         if toggle == 'on':
@@ -2901,11 +2921,106 @@ class MainGUI:
             __self__.list_samples()
         except: __self__.list_samples()
 
+    def invoke_wizard(__self__):
+
+        """ This function invokes the auto wizard (BatchFitting)
+
+        --------------------------------------------------------- """
+        
+        def call_table(elements):
+            __self__.PoolTable = PeriodicTable(root)
+            __self__.PoolTable.auto(elements)
+            return
+
+        fit_path = SpecRead.output_path
+        p1 = messagebox.askquestion("Attention!",
+        "The wizard is going to look for elements in your sample. Do you want to proceed?")
+        if p1 == "yes":
+
+            ###########################################################
+            # Checks number of cores, starts MultiFitter class object #
+            # and verifies which elements were detected in findpeak   #
+            ###########################################################
+
+            if Constants.MULTICORE == True and Constants.CPUS>1:
+                __self__.MultiFitter = MultiFit(fit_path)
+                __self__.peaks, __self__.matches = __self__.MultiFitter.locate_peaks()
+            else:
+                __self__.SingleFitter = SingleFit(fit_path)
+                __self__.peaks, __self__.matches = __self__.SingleFitter.locate_peaks()
+            elements = [key for key in __self__.matches.keys()]
+            elements = [ElementList[int(i)] for i in elements[:-1]]
+
+            ###########################################################
+            
+            #########################
+            # create message string #
+            #########################
+            message1 = ""
+            for i in elements:
+                if i == elements[-1]:
+                    message1 += "and {}".format(i)
+                else: message1 += "{}, ".format(i)
+            #########################
+
+            p2 = messagebox.askyesnocancel("Attention!",
+"We have found {} in your sample {}. Do you want to add more elements to the pool?".format(
+        message1,Constants.MY_DATACUBE.name))
+
+            if p2 == None:
+                return
+
+            elif p2 == True:
+                call_table(elements)
+                return
+
+            elif p2 == False:
+
+                start_time = time.time()
+                if Constants.MULTICORE == True and Constants.CPUS>1:
+                    __self__.MultiFitter.launch_workers()
+                else: 
+                    __self__.SingleFitter.run_fit()
+
+                build_images(fit_path)
+
+                timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+                timestamps.write(
+                    "\n{4} - {5} WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
+                    elements,
+                    Constants.MY_DATACUBE.config["bgstrip"],
+                    Constants.MY_DATACUBE.config["enhance"],
+                    time.time()-start_time,
+                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+                    Constants.MY_DATACUBE.name))
+
+            ######################################################
+
+            #################################################################### 
+            # Updates mainGUI panels when running without pooling new elements #
+            #################################################################### 
+            
+            """
+            wipe_list()
+            __self__.toggle_(toggle="on")
+            __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
+            __self__.ButtonLoad.config(state=NORMAL)
+            __self__.write_stat()
+            refresh_plots()
+            """
+
+            #################################################################### 
+
+        else: return 0
+
     def find_elements(__self__):
+        mode = Constants.MY_DATACUBE.config["peakmethod"]
+        if mode == "auto_wizard":
+            return __self__.invoke_wizard()
         try:
             if __self__.find_elements_diag.master.winfo_exists() == False:
                 __self__.find_elements_diag = PeriodicTable(__self__)
-                __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",\
+                __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
                         lambda: wipe_list())
             else:
                 __self__.find_elements_diag.master.focus_force()
@@ -2913,7 +3028,7 @@ class MainGUI:
                 pass
         except:
             __self__.find_elements_diag = PeriodicTable(__self__)
-            __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",\
+            __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
                     lambda: wipe_list())
         
     def call_listsamples(__self__):
@@ -3186,7 +3301,6 @@ class MainGUI:
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
         
-        print(override)
         if override  == False:
             # name of selected sample
             try: 
@@ -3209,8 +3323,12 @@ class MainGUI:
                     SpecRead.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
                     __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
             """ ------------------------------------------------------------------------- """
-
-            Constants.MY_DATACUBE.wipe_maps()
+            
+            p = messagebox.askquestion("Attention!",
+                    "This will remove all elemental maps packed in datacube {}. Are you sure you want to proceed?".format(Constants.MY_DATACUBE.name))
+            if p == "yes":
+                Constants.MY_DATACUBE.wipe_maps()
+            else: return 0
 
         __self__.master.deiconify()
         __self__.master.focus_set()
@@ -3969,7 +4087,7 @@ class ReConfigDiag:
     def build_widgets(__self__):
 
         #Label1 = Label(__self__.Labels, text="Thick ratio:")
-        Label2 = Label(__self__.Labels, text="Netpeak area method:")
+        Label2 = Label(__self__.Labels, text="Area method:")
         Label3 = Label(__self__.Labels, text="Enhance image?")
         Label4 = Label(__self__.Labels, text="Calculate ratios?")
         __self__.Label5 = Label(__self__.MergeSettings, text="Scale data?")
@@ -4014,7 +4132,7 @@ class ReConfigDiag:
         __self__.ConfigDiagMethod = ttk.Combobox(
                 __self__.Frame, 
                 textvariable=__self__.MethodVar, 
-                values=("simple_roi","auto_roi"),
+                values=("simple_roi","auto_roi","auto_wizard"),
                 state="readonly",
                 width=13)
         
@@ -4081,6 +4199,7 @@ class ReConfigDiag:
             Constants.MY_DATACUBE.create_densemap()
             Constants.MY_DATACUBE.save_cube()
             root.draw_map()
+        Constants.MY_DATACUBE.save_cube()
         root.write_stat()
         __self__.kill()
 
@@ -4367,7 +4486,7 @@ class ConfigDiag:
         Label2 = Label(__self__.Labels, text="Background strip mode:")
         Label3 = Label(__self__.Labels, text="Configure BG strip:")
         Label4 = Label(__self__.Labels, text="Calibration:")
-        Label7 = Label(__self__.Labels, text="Netpeak area method:")
+        Label7 = Label(__self__.Labels, text="Area method:")
         Label8 = Label(__self__.Labels, text="Calculate ratios?")
         
         Label2.grid(row=1,column=0,sticky=W,pady=2)
@@ -4410,7 +4529,7 @@ class ConfigDiag:
         __self__.ConfigDiagMethod = ttk.Combobox(
                 __self__.Frame, 
                 textvariable=__self__.MethodVar, 
-                values=("simple_roi","auto_roi"),
+                values=("simple_roi","auto_roi","auto_wizard"),
                 state="readonly",
                 width=13+ConfigDiagRatioYes.winfo_width())
         
@@ -4481,6 +4600,79 @@ class PeriodicTable:
         icon = os.path.join(os.getcwd(),"images","icons","rubik.ico")
         place_center(parent.master,__self__.master)
         __self__.master.iconbitmap(icon)
+    
+    def auto(__self__,elements):
+
+        #####################################################################
+        # give attribute to avoid lambda function and call this list in run #
+        #####################################################################
+        __self__.elements = elements
+        #####################################################################
+        
+        #########################################################
+        # disable detected elements and change the "run" button #
+        #########################################################
+
+        __self__.master.grab_set()
+        for btn in __self__.master.body.children.values():
+                   
+            if btn["text"] in elements:
+                __self__.add_element(btn)
+                btn.config(state=DISABLED)
+            if "Custom" in btn["text"]: btn.config(state=DISABLED)
+        __self__.low.config(state=DISABLED)
+        __self__.high.config(state=DISABLED)
+
+        for btn in __self__.master.footer.children.values():
+            if btn["text"] == "Map selected elements!":
+                btn.destroy()
+                __self__.go = Button(
+                        __self__.master.footer, 
+                        text="Run wizard!",
+                        relief='raised',
+                        fg="white",bg="blue",
+                        command= __self__.save_and_run_wizard)
+                __self__.go.grid(column=7,columnspan=3,pady=(6,3))
+
+        #########################################################
+
+        __self__.master.focus_set()
+        
+        return 
+
+    def save_and_run_wizard(__self__):
+        
+        for i in __self__.elements: Constants.FIND_ELEMENT_LIST.remove(i)
+        __self__.elements = [ElementList.index(i) for i in Constants.FIND_ELEMENT_LIST]
+        logger.info("Elements to add to wizard: {}".format(__self__.elements))
+        __self__.master.grab_release()
+        __self__.master.destroy()
+        start_time = time.time()
+        
+
+        if Constants.MULTICORE == True and Constants.CPUS>1:
+            root.MultiFitter.locate_peaks(add_list=__self__.elements)
+            root.MultiFitter.launch_workers()
+        else:
+            root.SingleFitter.locate_peaks(add_list=__self__.elements)
+            root.SingleFitter.run_fit()
+
+        build_images(SpecRead.output_path)
+
+        timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+        timestamps.write(
+                "\n{4} - WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
+            __self__.elements,
+            Constants.MY_DATACUBE.config["bgstrip"],
+            Constants.MY_DATACUBE.config["enhance"],
+            time.time()-start_time,
+            time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+        wipe_list()
+        root.toggle_(toggle="on")
+        root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+        root.ButtonLoad.config(state=NORMAL)
+        root.write_stat()
+        refresh_plots()
 
     
     def add_element(__self__,toggle_btn):
@@ -4510,8 +4702,11 @@ class PeriodicTable:
             plottables_dict["custom"] = [__self__.cvar1.get(),__self__.cvar2.get()]
             refresh_plots()
      
-       
-    def save_and_run(__self__):
+    def save_and_run(__self__,mode=None):
+        mode = Constants.MY_DATACUBE.config["peakmethod"]
+        if mode == "auto_wizard": 
+            __self__.master.destroy()
+            return 0
         if not Constants.FIND_ELEMENT_LIST: 
             __self__.master.destroy()
             messagebox.showinfo("Error", "No element input!")
@@ -4581,7 +4776,10 @@ class PeriodicTable:
                         results = cuber.start_workers(FANO, NOISE)
                         cuber.p_bar.update_text("Digesting results...")
                         results = sort_results(results,Constants.FIND_ELEMENT_LIST)
-                        digest_results(Constants.MY_DATACUBE,results,Constants.FIND_ELEMENT_LIST)
+                        digest_results(
+                                Constants.MY_DATACUBE,
+                                results,
+                                Constants.FIND_ELEMENT_LIST)
                         cuber.p_bar.destroybar()
 
                 # single-core mode
@@ -4937,9 +5135,10 @@ if __name__.endswith('__main__'):
     from SpecMath import getstackplot, correlate, peakstrip, FN_reset, FN_set, FN_fit
     from SpecMath import datacube as Cube
     from ProgressBar import Busy, BusyManager
-    from EnergyLib import plottables_dict, ElementColors, which_macro
+    from EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results
+    from BatchFitter import MultiFit, SingleFit, build_images
 
     logger.info("Loading GUI...")
     start_up()

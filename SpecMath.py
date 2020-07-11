@@ -99,7 +99,7 @@ def read_pool(start,end,pool,dimension,m):
         with lock: iterator += 1
 
 def get_chunks(size):
-    max_chunks = Constants.CPUS
+    max_chunks = Constants.CPUS*2
     bites = int(((size[0]*size[1])/max_chunks)/size[1])
     
     ###################################################################

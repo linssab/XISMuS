@@ -475,7 +475,7 @@ def plotlastmap(image,name):
     ax.set_title(name)
     plt.show()
 
-def split_and_save(datacube,map_array,element_list,fitted=False):
+def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
     
     """ Sorts the element maps contained in map_array and packs them into the
     datacube cube class object prior pickling to disk. Saves each map as a grayscale png
@@ -488,9 +488,8 @@ def split_and_save(datacube,map_array,element_list,fitted=False):
         map_array; 4D-array
         element_list; list """
 
-    if datacube.config["ratio"] == True:
+    if datacube.config["ratio"] or force_alfa_and_beta:
         lines = np.asarray(["a","b"])
-    elif fitted==True: lines = np.asarray(["a"])
     else: lines = np.asarray(["a"])
 
     imagsize = datacube.dimension
@@ -509,8 +508,16 @@ def split_and_save(datacube,map_array,element_list,fitted=False):
     fig_list = []
     for Element in range(len(element_list)):
         for line in range(lines.shape[0]):
+
+            if line == 0: siegbahn = "_a"
+            else: siegbahn = "_b"
+
             image = map_array[:,:,line,Element]
             raw_image = map_array[:,:,line,Element]
+
+            Constants.MY_DATACUBE.max_counts[element_list[Element]+siegbahn] = image.max()
+            print(element_list[Element],image.max())
+
             if image.max() > 0: image = image/image.max()*LEVELS
              
             histogram,bins = np.histogram(image.flatten(),LEVELS,[0,LEVELS])
@@ -549,10 +556,6 @@ def split_and_save(datacube,map_array,element_list,fitted=False):
                     datacube.config.get('peakmethod')))
             cv2.imwrite(save_path,large_image)
             
-            # function test
-            #checker = datacube.unpack_element('Cu')
-            #plotlastmap(checker,element_list[Element])
-
     ##################################################
     
     fig.savefig(SpecRead.workpath+'/output/'+Constants.DIRECTORY+
@@ -564,8 +567,9 @@ def split_and_save(datacube,map_array,element_list,fitted=False):
     datacube.save_cube() 
     logger.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+Constants.DIRECTORY+'\\')
-    logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
-    return 0
+    logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(
+        IMAGE_PATH,(newY,newX)))
+    return
 
 def write_image(image,resize,path,enhance=False,merge=False):
 

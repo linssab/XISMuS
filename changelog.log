@@ -3,10 +3,14 @@ Version v1.1.x
 - Fixed Spectrum name converter when inputting dimension
 - Performance improvements in datacube packing
 - Performance improvements in multiprocessing
-- Changed right-click export mode in Image Analyzer to support different color maps
-- Improved plot style
 
+
+- Changed right-click export mode now supports different color maps
+- Improved plot style
 - Significant improvements in element finding and Fano/Noise fitting
 - Fixed map merge functionality
+
+
 - Added "Wipe Maps" option under ListSamples dropdown menu
 - Added iterative database loading system
+- Added Fitting engine as "auto_wizard" peakmethod
