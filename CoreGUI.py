@@ -2917,7 +2917,7 @@ class MainGUI:
 
         __self__.plot_canvas_popup = Menu(__self__.master, tearoff=0)
         __self__.plot_canvas_popup.add_command(
-                label="Save density map ...",
+                label="Save density map as . . .",
                 command=__self__.export_density_map)
         __self__.plot_canvas_popup.add_command(
                 label="Open files location",
@@ -3054,7 +3054,8 @@ class MainGUI:
             else:
                 root.Fitter = SingleFit(fit_path)
             
-            __self__.peaks, __self__.matches = root.Fitter.locate_peaks()
+            save_path = os.path.join(SpecRead.output_path,"peak_find.png")
+            __self__.peaks, __self__.matches = root.Fitter.locate_peaks(path=save_path)
 
             elements = [key for key in __self__.matches.keys()]
             elements = [ElementList[int(i)] for i in elements[:-1]]
@@ -3858,7 +3859,7 @@ class MainGUI:
                 command=__self__.call_mps)
         __self__.derived_spectra.add_command(label="Combined", 
                 command=__self__.call_combined)
-        __self__.Toolbox.add_command(label="Load sample", 
+        __self__.Toolbox.add_command(label="Open samples database . . .", 
                 command=__self__.list_samples)
         __self__.Toolbox.add_command(label="Reset sample", 
                 command=__self__.reset_sample)
@@ -3910,7 +3911,7 @@ class MainGUI:
         # create buttons
         __self__.ButtonLoad = Button(
                 __self__.ButtonsFrame, 
-                text="  Load Sample", 
+                text="  Database", 
                 anchor=W,
                 image=__self__.ButtonLoad_icon, 
                 bd=3, 
@@ -4789,7 +4790,10 @@ class PeriodicTable:
             root.Fitter.locate_peaks(add_list=__self__.elements)
             root.Fitter.run_fit()
 
-        build_images(SpecRead.output_path)
+        root.bar = Busy(1,0)
+        root.bar.update_text("Building images...")
+
+        build_images(SpecRead.output_path,bar=root.bar)
 
         timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
         timestamps.write(
