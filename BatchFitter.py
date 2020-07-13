@@ -292,8 +292,8 @@ def gausfit(
         # FROM HERE TO PLOT SPECTRA #
         #############################
         
-        #if Constants.SAVE_FIT_FIGURES and (it+1)%500==0:
-        if (it+1)%500==0:
+        if Constants.SAVE_FIT_FIGURES and (it+1)%Constants.SAVE_INTERVAL==0:
+        #if (it+1)%500==0:
             
             y_gaus_single = np.asarray(
                 [gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
@@ -892,91 +892,6 @@ def findpeak(
     """
 
     return x_peak, Z_dict
-
-############ Determine Continuum ###########
-"""
-Input:
-    y_savgol:        (files,channels)   <class 'numpy.ndarray'>  Counts spectra with Savitzky-Golay filter
-    ndegree_global:  ()                 <class 'int'>            Polynomial degree set for global spectrum (default = 6)
-    ndegree_single:  ()                 <class 'int'>            Polynomial degree set for single spectra  (default = 0)
-    r:               ()                 <class 'int'>            Adjustable parameter used for weights     (default = 2)
-
-Output:
-    y_cont_global:   (files+1,channels) <class 'numpy.ndarray'>  Continuum of global and single spectra
-"""
-def polfit(y_savgol,ndegree_global=6,ndegree_single=0,r=2):
-
-    y_savgol=np.concatenate((np.sum(y_savgol,0)[None,:],y_savgol),axis=0) #Prepend global spectrum to spectra
-    ndegree=[ndegree_global,ndegree_single] #Create list of ndegree settings to enumerate over
-    y_cont_global=np.empty((0,y_savgol.shape[1])) #Create empty numpy array representing final y_cont size including y_cont global
-
-    for it,y_savgol in enumerate([y_savgol[[0]],y_savgol[1:]]): #Loop over global and single spectra in two parts
-
-        if ndegree[it]==0:
-            y_cont=np.zeros(y_savgol.shape)
-            print("No continuum initialized")
-
-        else:
-            #"Shape every first axis represents new spectrum"
-            x = np.arange(y_savgol.shape[1])
-            y_cont = np.zeros(y_savgol.shape)
-            gamma = np.zeros((len(y_savgol),ndegree[it]+1)) #Make space +1 for recurrence relation, with gamma[-1] unchanging starting point
-            gamma[:,-1] = 1  # Last digit gammma remains unchanged
-            a,b,c_prev,c,sc = (np.zeros((len(y_savgol),ndegree[it])) for _ in range(5))
-            p = np.zeros((len(y_savgol),ndegree[it]+1,y_savgol.shape[1]))
-            # w = 1/y_savgol #Initial configuration w
-            w=np.zeros(y_savgol.shape)
-            iteration=0
-
-            while np.any(np.abs(c_prev-c)>=sc):
-                # Initialize weights each iteration (from0.12>0.05 sec)
-                # if y_cont
-                #double slicing? np.sqrt(y_cont[y_cont>0])
-
-                w[y_cont <= 0] = 1/y_savgol[y_cont <= 0].clip(1)
-                y_cont[y_cont<=0]=0 #Negative y_cont can be now clipped to zero for next sqrt calculation
-
-                w[(y_cont > 0) & (y_savgol<=(y_cont+r*np.sqrt(y_cont)))] = 1/y_cont[(y_cont > 0) & (y_savgol<=(y_cont+r*np.sqrt(y_cont)))]
-                w[(y_cont > 0) & (y_savgol>(y_cont+r*np.sqrt(y_cont)))] = 1/np.square(y_savgol[(y_cont > 0) & (y_savgol>(y_cont+r*np.sqrt(y_cont)))]-y_cont[(y_cont > 0) & (y_savgol>(y_cont+r*np.sqrt(y_cont)))])
-
-                len_cont = np.count_nonzero((y_cont>0)&(y_savgol<=(y_cont+r*np.sqrt(y_cont)))|(y_cont<=0),axis=1)
-                p[:,0,:] = 1
-                p[:,-1,:] = 0
-
-                c_prev = c.copy()  #Make deep ndarray copy in order to compare previous to new c-values
-
-                #Significance new c needs to be tested two tail because can be smaller or bigger than 0; Then test for 2sigma so 95% conficence, meaning alpha=0.05/5% significance level having C bigger than 0 (=null hypothesis). If not fullfilled C not significantly bigger than 0!
-                for j in range(ndegree[it]): #Determining coefficients for ndegree
-                    gamma[:,j]=np.sum(w*p[:,j,:]*p[:,j,:]) #Sum of normalization
-                    a[:,j]=np.sum(w*x*p[:,j,:]*p[:,j,:])/gamma[:,j]
-                    b[:,j]=np.sum(w*x*p[:,j,:]*p[:,j-1,:])/gamma[:,j-1]
-
-                    c[:,j]=np.sum(w*y_savgol*p[:,j,:])/gamma[:,j]
-                    sc[:,j]=np.sqrt(1/gamma[:,j]) #Standard deviation coefficients
-
-                    p[:,j+1,:]=(x-a[:,[j]])*p[:,j,:]-b[:,[j]]*p[:,j-1,:]
-
-                y_cont=np.squeeze(c[:,None]@p[:,:-1,:],axis=1) #Matrix multiplication using @ operator with c having on first axis representing each spectrum similar to p + change to 2d array / remain 2d array by squeezing axis=1
-
-                rchisq = np.sum(w*np.square(y_savgol-y_cont))/(len_cont-ndegree[it])
-                sc=np.sqrt(rchisq)[:,None]*sc #Actual sd must be element-wise multiplied by chi since error data points unkown, so np.sqrt(rchisq) represents overall error data points sigma(i)=sigma
-
-                iteration += 1
-            print("Iterations polynomial to overall converge: %i"%iteration)
-            # print("Percentage of channels considered as continuum:",np.round(len_cont/y_savgol.shape[1]*100,2))
-            print("Average percentage of channels considered as continuum in spectra: %.2f"%np.mean(len_cont/y_savgol.shape[1]*100))
-            if np.any(len_cont==y_savgol.shape[1]):
-                print("Warning continuum spectra: %s not well defined"%(np.where(len_cont==y_savgol.shape[1])))
-
-    # z=np.poly1d(np.polyfit(range(y_savgol.size),y_savgol,6,w=1/y_savgol)) #0.0027 sec
-    # plt.semilogy(range(y_savgol.size),cf[range(y_savgol.size)])
-    # plt.semilogy(range(y_savgol.size),z(range(y_savgol.size)))
-    # plt.semilogy(range(y_savgol.size),y_cont)
-    # plt.semilogy(range(y_savgol.size),y_savgol)
-    # plt.semilogy(range(y_savgol.size),(y_savgol-y_cont).clip(1))
-    # plt.show()
-        y_cont_global=np.concatenate((y_cont_global,y_cont),0) #Concatenate continuum global spectrum with continui single spectra to empty y_cont_global
-    return y_cont_global
 
 
 class Interrupt(Exception):
