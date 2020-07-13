@@ -16,7 +16,7 @@ freeze_support()
 #################
 import Constants
 import SpecRead
-from SpecMath import savgol_filter, peakstrip, refresh_position 
+from SpecMath import savgol_filter, peakstrip, polfit_batch, refresh_position 
 from ImgMath import split_and_save
 import EnergyLib
 import SpecMath
@@ -474,6 +474,7 @@ def findpeak(
         zero,
         gain,
         energies,
+        path,
         width=9,
         r=2): 
 
@@ -491,6 +492,8 @@ def findpeak(
         Slope from linear regression calibration data
         gain:           ()                     <class 'numpy.float64'>     
         Intercept from linear regression calibration data
+        energies:       ()                     <class 'numpy.ndarray'>     
+        path:           ()                     <class 'string'>
 
     Output:
         x_peak:         (peaks,)               <class 'numpy.ndarray'>     
@@ -875,11 +878,10 @@ def findpeak(
         Z_dict.setdefault(i,[]).append(j)
     Z_dict['Unmatched']=list(set(range(len(x_peak))).difference(x_peak_id)) 
     
-    """
     plt.figure()
     #plt.xlim([energies.min(),energies.max()])
-    plt.xlim([2000,16000])
-    #plt.ylim([0,y_global.max()])
+    #plt.xlim([2000,16000])
+    plt.ylim([10e-3,y_global.max()])
     spectrum=0
     plt.plot(energies,y_global)
     plt.plot(energies,y_conv)
@@ -890,8 +892,7 @@ def findpeak(
     E_peak = zero + gain * x_peak
     for j in E_peak:
         plt.axvline(x=j)
-    plt.savefig("Test3/2Test5_5.pdf")
-    """
+    plt.savefig(path,format="png",dpi=600)
 
     return x_peak, Z_dict
 
@@ -932,7 +933,13 @@ class SingleFit():
         # the function                                                          #
         #########################################################################
 
-        global_continuum = peakstrip(copy.deepcopy(__self__.SUM),24,5,5,3)
+        if Constants.MY_DATACUBE.config["bgstrip"] == "SNIPBG":
+            global_continuum = peakstrip(__self__.SUM,24,5,5,3)
+        elif Constants.MY_DATACUBE.config["bgstrip"] == "Polynomial":
+            global_continuum = SpecMath.polfit_batch(
+                    __self__.counts,custom_global_spec=__self__.SUM)[0]
+
+        #global_continuum = peakstrip(copy.deepcopy(__self__.SUM),24,5,5,3)
         __self__.continuum = np.insert(__self__.continuum,0,global_continuum, axis=0)
 
         #########################################################################
@@ -987,14 +994,15 @@ class SingleFit():
                 bar = __self__.bar)
         __self__.bar.destroybar()
 
-    def locate_peaks(__self__,add_list=None):
+    def locate_peaks(__self__,add_list=None,path="./"):
 
         peaks, matches = findpeak(
                 __self__.counts,
                 __self__.continuum,
                 __self__.intercept,
                 __self__.slope,
-                __self__.energies)
+                __self__.energies,
+                path=path)
 
         ########################
         # Add element manually #
@@ -1125,9 +1133,16 @@ class MultiFit():
 
         return block, leftovers
     
-    def locate_peaks(__self__,add_list=None):
+    def locate_peaks(__self__,add_list=None,path="./"):
 
-        global_continuum = peakstrip(copy.deepcopy(__self__.SUM),24,5,5,3)
+        if Constants.MY_DATACUBE.config["bgstrip"] == "SNIPBG":
+            global_continuum = peakstrip(__self__.SUM,24,5,5,3)
+        elif Constants.MY_DATACUBE.config["bgstrip"] == "Polynomial":
+            global_continuum = SpecMath.polfit_batch(
+                    __self__.counts,
+                    custom_global_spec=__self__.SUM)[0]
+
+        #global_continuum = peakstrip(copy.deepcopy(__self__.SUM),24,5,5,3)
         continuum = np.insert(__self__.continuum,0,global_continuum, axis=0)
 
         peaks, matches = findpeak(
@@ -1135,7 +1150,8 @@ class MultiFit():
                 continuum,
                 __self__.intercept,
                 __self__.slope,
-                __self__.energies)
+                __self__.energies,
+                path)
 
         ########################
         # Add element manually #
@@ -1321,12 +1337,22 @@ def find_and_fit(
         global_spec; <1D-array> - summation derived spectrum
         clipped_global_spec; <1D-array> - obtained by summing the clipped data (clipped to 1)
     """
+    
+    #####################################################################################
+    # regardless of the continuum mode selected by the user, here, the SNIPBG           #
+    # method is always used. It doen's matter much, since the global spectrum in the    #
+    # chunks is always overlooked                                                       #
+    #####################################################################################
 
     counts, continuum = np.asarray(data[0]), np.asarray(data[1])
     global_continuum = peakstrip(global_spec,24,5,5,3)
     continuum = np.insert(continuum,0,global_continuum, axis=0)
+
+    #####################################################################################
+
     print("Chunk {} data size: ".format(chunk),convert_bytes(counts.nbytes))
     print("Chunk {} data size (cont): ".format(chunk),convert_bytes(continuum.nbytes))
+
     del data
 
     if chunk < 10:

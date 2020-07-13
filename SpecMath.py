@@ -1243,13 +1243,38 @@ def peakstrip(an_array,cycles,width,*args):
 
     return snip_bg
 
-def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2):
+def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
+        custom_global_spec=None):
 
-    spectra_batch=np.concatenate(
+    """ Calculates the continuum following a polynomial fitting function for the entire
+    dataset and the summation derived spectrum. A custom summation spectrum can be passed
+    instead, as in the case of find_and_fit function in BatchFitter.py. There, for finding
+    the peaks, the summation spectrum is calculated for the savgol filtered dataset, 
+    clipping values lower than 1.
+
+    -------------------------------------------------------------------------------------    
+    
+    INPUT:
+        spectra_batch; <2D-array> - contains all dataset (shape is: no. os spectra,channels)
+        ndegree_global; <int> - polynomial function degree to fit summation spectrum continuum
+        ndegree_single; <int> - polynomial degree to find the continuum of all other spectra
+        r; <int> - adjustable parameter used for weights
+    OUTPUT:
+        y_cont_global; <2D-array> - Continuum of global and single spectra
+    """
+     
+    if isinstance(custom_global_spec,np.ndarray):
+        spectra_batch = np.insert(
+            spectra_batch,
+            0,
+            custom_global_spec,
+            axis=0) 
+    else:
+        spectra_batch=np.concatenate(
             (np.sum(spectra_batch,0)[None,:],
                 spectra_batch),
-            axis=0) 
-    
+            axis=0)   
+
     #####################################################
     # Create list of ndegree settings to enumerate over #
     #####################################################
