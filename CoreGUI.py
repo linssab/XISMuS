@@ -326,8 +326,6 @@ def load_cube():
         logger.debug("No cube found.")
         MainGUI.toggle_(root,toggle='Off') 
         pass
-    
-
     return Constants.MY_DATACUBE
 
 def refresh_plots(exclusive=""):
@@ -2394,7 +2392,6 @@ class Samples:
                                                 not files[item][-i-1].isdigit(): 
                                             if indexing == None:
                                                 indexing = files[item][-i:]
-                                                print(folder,indexing)
                                             files[item] = files[item][:-i]
                                             break
                                 except: pass
@@ -2513,11 +2510,19 @@ class Samples:
                                 mca_extension_count = counter_ext[ext]
                         # creates a dict key only if the numer of mca's is larger than 20.
                         if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                            p = os.path.join(Constants.SAMPLES_FOLDER)
                             __self__.samples_database[folder] = mca_prefix
                             __self__.samples_path[folder] = os.path.abspath(new_path)
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
+                            write_to_user_database(
+                                    folder,
+                                    p,
+                                    mca_prefix,
+                                    len(files),
+                                    mca_extension,
+                                    indexing)
         
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
@@ -2865,8 +2870,8 @@ class MainGUI:
         __self__.pop_welcome()
                
     def root_quit(__self__):
-        p = messagebox.askquestion("Attention","Are you sure you want to exit?")
-        if p == "yes":
+        r = messagebox.askquestion("Attention","Are you sure you want to exit?")
+        if r == "yes":
             for widget in __self__.master.winfo_children():
                 if isinstance(widget, Toplevel):
                     widget.destroy()
@@ -2926,14 +2931,48 @@ class MainGUI:
         """ This function invokes the auto wizard (BatchFitting)
 
         --------------------------------------------------------- """
+        fit_path = SpecRead.output_path
         
         def call_table(elements):
             __self__.PoolTable = PeriodicTable(root)
             __self__.PoolTable.auto(elements)
             return
+        
+        def verify_existing_fit_chunks():
+            frames = [npy for npy in os.listdir(
+                fit_path) if npy.lower().endswith(".npy")]
+            if frames == []:
+                return 0
+            else: 
+                return frames
 
-        fit_path = SpecRead.output_path
-        p1 = messagebox.askquestion("Attention!",
+        p0 = verify_existing_fit_chunks()
+        p01 = None
+        if p0:
+            p01 = messagebox.askquestion("Fit pieces found!",
+                    "We have detected few *.npy fit pieces in the output folder. Do you wish to erase them and fit again? (Fitting the data can take some considerable time. If you don't wish to re-fit the data, the existing *.npy files will be used to build elemental maps, replacing the existing ones).")    
+            if p01 == "yes":
+                try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
+                except: pass
+                for chunk in p0:
+                    try: os.remove(os.path.join(fit_path,chunk))
+                    except: pass
+            else:
+                root.bar = Busy(1,0)
+                root.bar.update_text("Building images...")
+                build_images(fit_path,bar=root.bar)
+                wipe_list()
+                __self__.toggle_(toggle="on")
+                __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
+                __self__.ButtonLoad.config(state=NORMAL)
+                __self__.write_stat()
+                refresh_plots()
+                return
+        
+        if p0 and p01 == "yes":
+            p1="yes"
+        else:
+            p1 = messagebox.askquestion("Attention!",
         "The wizard is going to look for elements in your sample. Do you want to proceed?")
         if p1 == "yes":
 
@@ -2942,12 +2981,15 @@ class MainGUI:
             # and verifies which elements were detected in findpeak   #
             ###########################################################
 
-            if Constants.MULTICORE == True and Constants.CPUS>1:
-                __self__.MultiFitter = MultiFit(fit_path)
-                __self__.peaks, __self__.matches = __self__.MultiFitter.locate_peaks()
+            if Constants.MULTICORE == True and \
+                    Constants.CPUS>1 and \
+                    Constants.MY_DATACUBE.img_size > 500:
+                root.Fitter = MultiFit(fit_path)
             else:
-                __self__.SingleFitter = SingleFit(fit_path)
-                __self__.peaks, __self__.matches = __self__.SingleFitter.locate_peaks()
+                root.Fitter = SingleFit(fit_path)
+            
+            __self__.peaks, __self__.matches = root.Fitter.locate_peaks()
+
             elements = [key for key in __self__.matches.keys()]
             elements = [ElementList[int(i)] for i in elements[:-1]]
 
@@ -2977,12 +3019,16 @@ class MainGUI:
             elif p2 == False:
 
                 start_time = time.time()
-                if Constants.MULTICORE == True and Constants.CPUS>1:
-                    __self__.MultiFitter.launch_workers()
+                if Constants.MULTICORE == True and \
+                        Constants.CPUS>1 and\
+                        Constants.MY_DATACUBE.img_size > 500:
+                    root.Fitter.launch_workers()
                 else: 
-                    __self__.SingleFitter.run_fit()
+                    root.Fitter.run_fit()
 
-                build_images(fit_path)
+                root.bar = Busy(1,0)
+                root.bar.update_text("Building images...")
+                build_images(fit_path,bar=root.bar)
 
                 timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
                 timestamps.write(
@@ -2993,6 +3039,7 @@ class MainGUI:
                     time.time()-start_time,
                     time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
                     Constants.MY_DATACUBE.name))
+                timestamps.close()
 
             ######################################################
 
@@ -3000,36 +3047,35 @@ class MainGUI:
             # Updates mainGUI panels when running without pooling new elements #
             #################################################################### 
             
-            """
             wipe_list()
             __self__.toggle_(toggle="on")
             __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
             __self__.ButtonLoad.config(state=NORMAL)
             __self__.write_stat()
             refresh_plots()
-            """
 
             #################################################################### 
-
-        else: return 0
+        else: pass
+        root.master.mainloop()
 
     def find_elements(__self__):
         mode = Constants.MY_DATACUBE.config["peakmethod"]
         if mode == "auto_wizard":
-            return __self__.invoke_wizard()
-        try:
-            if __self__.find_elements_diag.master.winfo_exists() == False:
+            __self__.invoke_wizard()
+        else: 
+            try:
+                if __self__.find_elements_diag.master.winfo_exists() == False:
+                    __self__.find_elements_diag = PeriodicTable(__self__)
+                    __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
+                            lambda: wipe_list())
+                else:
+                    __self__.find_elements_diag.master.focus_force()
+                    place_center(__self__.master,__self__.find_elements_diag.master)
+                    pass
+            except:
                 __self__.find_elements_diag = PeriodicTable(__self__)
                 __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
                         lambda: wipe_list())
-            else:
-                __self__.find_elements_diag.master.focus_force()
-                place_center(__self__.master,__self__.find_elements_diag.master)
-                pass
-        except:
-            __self__.find_elements_diag = PeriodicTable(__self__)
-            __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
-                    lambda: wipe_list())
         
     def call_listsamples(__self__):
 
@@ -3978,8 +4024,7 @@ class MainGUI:
     def reset_sample(__self__):
         
         def repack(__self__, sample):
-            logger.warning("Cube {} and its output contents were erased!".\
-                    format(sample))
+            logger.warning("Cube {} and its output contents were erased!".format(sample))
             shutil.rmtree(SpecRead.output_path)
             try: x,y,tag_dimension_file = SpecRead.getdimension()
             except OSError as exception:
@@ -4026,15 +4071,19 @@ class MainGUI:
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
             EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
                     pack(side=LEFT, pady=8, padx=16)
-            YesButton = Button(__self__.ResetWindow, text="Yes", justify=CENTER,
-                    command=lambda: repack(__self__,Constants.MY_DATACUBE.config["directory"]),
-                    width=10, bd=3).pack(side=TOP,pady=5)
+            YesButton = Button(
+                    __self__.ResetWindow, 
+                    text="Yes", 
+                    justify=CENTER,
+                    command=lambda: repack(
+                        __self__,Constants.MY_DATACUBE.config["directory"]),
+                    width=10).pack(side=TOP,pady=5)
             NoButton = Button(
                     __self__.ResetWindow, 
                     text="No", 
                     justify=CENTER,
                     command=__self__.ResetWindow.destroy, 
-                    width=10, bd=3).pack(side=TOP, pady=5)
+                    width=10).pack(side=TOP, pady=5)
             
             place_center(__self__.master,__self__.ResetWindow)
             icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
@@ -4192,7 +4241,8 @@ class ReConfigDiag:
             if __self__.ContVar.get() == True:
                 bar = Busy(Constants.MY_DATACUBE.img_size,0)
                 bar.update_text("Stripping background")
-                Constants.MY_DATACUBE.strip_background(bgstrip="SNIPBG",
+                Constants.MY_DATACUBE.strip_background(
+                        bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
                         recalculating=True,
                         progressbar=bar)
                 bar.destroybar()
@@ -4504,7 +4554,7 @@ class ConfigDiag:
         __self__.ConfigDiagBgstrip = ttk.Combobox(
                 __self__.Frame, 
                 textvariable=__self__.BgstripVar, 
-                values=("None","SNIPBG"),
+                values=("None","SNIPBG","Polynomial"),
                 state="readonly",
                 width=13+ConfigDiagRatioYes.winfo_width())
         
@@ -4648,25 +4698,29 @@ class PeriodicTable:
         __self__.master.grab_release()
         __self__.master.destroy()
         start_time = time.time()
-        
 
-        if Constants.MULTICORE == True and Constants.CPUS>1:
-            root.MultiFitter.locate_peaks(add_list=__self__.elements)
-            root.MultiFitter.launch_workers()
+        if Constants.MULTICORE == True and \
+                Constants.CPUS>1 and \
+                Constants.MY_DATACUBE.img_size > 500:
+            root.Fitter.locate_peaks(add_list=__self__.elements)
+            root.Fitter.launch_workers()
         else:
-            root.SingleFitter.locate_peaks(add_list=__self__.elements)
-            root.SingleFitter.run_fit()
+            root.Fitter.locate_peaks(add_list=__self__.elements)
+            root.Fitter.run_fit()
 
         build_images(SpecRead.output_path)
 
         timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
         timestamps.write(
-                "\n{4} - WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
+                "\n{4} - {5} WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
             __self__.elements,
             Constants.MY_DATACUBE.config["bgstrip"],
             Constants.MY_DATACUBE.config["enhance"],
             time.time()-start_time,
-            time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+            time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+            Constants.MY_DATACUBE.name))
+        timestamps.close()
+
         wipe_list()
         root.toggle_(toggle="on")
         root.MenuBar.entryconfig("Toolbox", state=NORMAL)

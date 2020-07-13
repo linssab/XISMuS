@@ -428,11 +428,20 @@ class datacube:
         if recalculating == True: bgstrip = bgstrip
         else: bgstrip = __self__.config['bgstrip']
         counter = 0
+        
+        ##########################
+        # initialize empty array #
+        ##########################
+
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],
                 __self__.matrix.shape[2]],dtype="float32",order='C')
-        if bgstrip == 'None':
+
+        ##########################
+
+        if bgstrip == "None":
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
-        elif bgstrip == 'SNIPBG':
+
+        elif bgstrip == "SNIPBG":
             try: cycles, window,savgol,order= __self__.config["bg_settings"] 
             except: cycles, window, savgol, order = 24,5,5,3
             __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
@@ -444,6 +453,27 @@ class datacube:
                     counter = counter + 1
                     if recalculating == True: progressbar.updatebar(counter)
                     else: __self__.progressbar.updatebar(counter)
+
+        elif bgstrip == "Polynomial":
+            print("\n\nHERE\n\n")
+            try: ndegree_global, ndegree_single, r_fact, =  __self__.config["bg_settings"]
+            except: ndegree_global, ndegree_single, r_fact = 6,0,2
+            matrix_flatten = __self__.matrix.reshape(-1,__self__.matrix.shape[-1])
+
+            y_cont = polfit_batch(
+                    matrix_flatten,
+                    ndegree_global=ndegree_global,
+                    ndegree_single=ndegree_single,
+                    r=r_fact)
+            __self__.sum_bg = y_cont[0]
+            for x in range(__self__.matrix.shape[0]):
+                for y in range(__self__.matrix.shape[1]):
+                    counter += 1 #ignores first continuum which is the global one
+                    __self__.background[x][y] = y_cont[counter]
+                    if recalculating == True: progressbar.updatebar(counter)
+                    else: __self__.progressbar.updatebar(counter)
+            del y_cont
+        return
 
     def create_densemap(__self__):
 
@@ -871,7 +901,7 @@ def sigma(energy,F=Constants.FANO,N=Constants.NOISE):
     OUTPUT:
         float """
 
-    return math.sqrt(((N/2.3548)**2)+(3.85*F*energy))
+    return np.sqrt(((N/2.3548)**2)+(3.85*F*energy))
 
 def gaussianbuilder(E_axis,energy,A,F,N):
 
@@ -938,8 +968,8 @@ def setROI(lookup,xarray,yarray,localconfig):
         logger.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
         logger.debug("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
-        lowx = (lookup - (FWHM/2))/1000
-        highx = (lookup + (FWHM/2))/1000
+        lowx = (lookup - (FWHM))/1000
+        highx = (lookup + (FWHM))/1000
         logger.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
 
         #################### 
@@ -1212,6 +1242,146 @@ def peakstrip(an_array,cycles,width,*args):
         plt.show()
 
     return snip_bg
+
+def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2):
+
+    spectra_batch=np.concatenate(
+            (np.sum(spectra_batch,0)[None,:],
+                spectra_batch),
+            axis=0) 
+    
+    #####################################################
+    # Create list of ndegree settings to enumerate over #
+    #####################################################
+
+    ndegree=[ndegree_global,ndegree_single] 
+
+    #####################################################
+
+    ##################################################################################    
+    #Create empty numpy array representing final y_cont size including y_cont global #
+    ##################################################################################    
+
+    y_cont_global=np.empty((0,spectra_batch.shape[1])) 
+
+    ##################################################################################    
+
+    for it,spectra_batch in enumerate([spectra_batch[[0]],spectra_batch[1:]]): 
+
+        if ndegree[it]==0:
+            y_cont=np.zeros(spectra_batch.shape)
+            print("No continuum initialized")
+
+        else:
+            #"Shape every first axis represents new spectrum"
+            x = np.arange(spectra_batch.shape[1])
+            y_cont = np.zeros(spectra_batch.shape)
+
+            #########################################################
+            # Make space +1 for recurrence relation, with gamma[-1] # 
+            # unchanging starting point                             #
+            #########################################################
+
+            gamma = np.zeros((len(spectra_batch),ndegree[it]+1)) 
+
+            #########################################################
+
+            gamma[:,-1] = 1  # Last digit gammma remains unchanged
+            a,b,c_prev,c,sc = (np.zeros((len(spectra_batch),ndegree[it])) for _ in range(5))
+            p = np.zeros((len(spectra_batch),ndegree[it]+1,spectra_batch.shape[1]))
+            w=np.zeros(spectra_batch.shape)
+            iteration=0
+
+            while np.any(np.abs(c_prev-c)>=sc):
+                w[y_cont <= 0] = 1/spectra_batch[y_cont <= 0].clip(1)
+                
+                ########################################################################
+                # Negative y_cont can be now clipped to zero for next sqrt calculation #
+                ########################################################################
+
+                y_cont[y_cont<=0]=0 
+
+                ########################################################################
+
+                w[(y_cont > 0) & (spectra_batch<=(y_cont+r*np.sqrt(y_cont)))] = \
+                        1/y_cont[(y_cont > 0) & (spectra_batch<=(y_cont+r*np.sqrt(y_cont)))]
+                w[(y_cont > 0) & (spectra_batch>(y_cont+r*np.sqrt(y_cont)))] = \
+                        1/np.square(spectra_batch[(y_cont > 0) & \
+                        (spectra_batch>(y_cont+r*np.sqrt(y_cont)))]-y_cont[(y_cont > 0) & \
+                        (spectra_batch>(y_cont+r*np.sqrt(y_cont)))])
+
+                len_cont = np.count_nonzero((y_cont>0) & \
+                        (spectra_batch<=(y_cont+r*np.sqrt(y_cont)))|(y_cont<=0),axis=1)
+                p[:,0,:] = 1
+                p[:,-1,:] = 0
+
+                #######################################################################
+                # Make deep ndarray copy in order to compare previous to new c-values #
+                #######################################################################
+
+                c_prev = c.copy()  
+
+                #######################################################################
+
+                #################################################################
+                # Significance new c needs to be tested two tail because        #
+                # can be smaller or bigger than 0; Then test for 2sigma         #
+                # so 95% conficence, meaning alpha=0.05/5% significance level   #
+                # having C bigger than 0 (=null hypothesis). If not fullfilled  #
+                # C not significantly bigger than 0!                            #
+                #################################################################
+
+                for j in range(ndegree[it]): #Determining coefficients for ndegree
+                    gamma[:,j]=np.sum(w*p[:,j,:]*p[:,j,:]) #Sum of normalization
+                    a[:,j]=np.sum(w*x*p[:,j,:]*p[:,j,:])/gamma[:,j]
+                    b[:,j]=np.sum(w*x*p[:,j,:]*p[:,j-1,:])/gamma[:,j-1]
+
+                    c[:,j]=np.sum(w*spectra_batch*p[:,j,:])/gamma[:,j]
+                    sc[:,j]=np.sqrt(1/gamma[:,j]) #Standard deviation coefficients
+
+                    p[:,j+1,:]=(x-a[:,[j]])*p[:,j,:]-b[:,[j]]*p[:,j-1,:]
+
+                #################################################################
+
+                #################################################################
+                # Matrix multiplication using @ operator with c having on first #
+                # axis representing each spectrum similar to p + change to 2d   #
+                # array / remain 2d array by squeezing axis=1                   #
+                #################################################################
+
+                y_cont=np.squeeze(c[:,None]@p[:,:-1,:],axis=1) 
+
+                #################################################################
+
+                rchisq = np.sum(w*np.square(spectra_batch-y_cont))/(len_cont-ndegree[it])
+
+                #################################################################
+                # Actual sd must be element-wise multiplied by chi since error  #
+                # data points unkown, so np.sqrt(rchisq) represents overall     #
+                # error data points sigma(i)=sigma                              #
+                #################################################################
+                
+                sc=np.sqrt(rchisq)[:,None]*sc 
+
+                #################################################################
+
+                iteration += 1
+
+            print("Iterations polynomial to overall converge: %i"%iteration)
+            if np.any(len_cont==spectra_batch.shape[1]):
+                print("Warning continuum spectra: %s not well defined"%(
+                    np.where(len_cont==spectra_batch.shape[1])))
+
+        ########################################################################
+        # Concatenate continuum global spectrum with continuum single spectra  #
+        # to empty y_cont_global                                               #
+        ########################################################################
+
+        y_cont_global=np.concatenate((y_cont_global,y_cont),0)
+
+        ########################################################################
+
+    return y_cont_global
 
 def correlate(map1,map2):
 
