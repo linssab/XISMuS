@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 1.0 - Jul - 2020              #
+#                        version: 1.1.0 - Jul - 2020            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -26,15 +26,10 @@ import sys, os, multiprocessing, copy, pickle
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import LinearRegression #Linear regression
-import scipy.signal #Savitzky-Golay filter
-# /\ GET RID OF
+#from scipy.special import erfc #Complementary errorfunction
+#from scipy.special import wofz #Faddeeva function defined as exp(-z**2) * erfc(-i*z)
 
-from scipy.optimize import curve_fit
-from scipy.special import erfc #Complementary errorfunction
-from scipy.special import wofz #Faddeeva function defined as exp(-z**2) * erfc(-i*z)
-
-import time
+import time,timeit
 
 lock = multiprocessing.Lock()
 
@@ -86,6 +81,9 @@ def gausfit(
         Figures of fitted spectra                                              
     """
 
+    from scipy.optimize import curve_fit
+    time0 = timeit.default_timer()
+    cycles = Constants.FIT_CYCLES
     #############################################################################
     # Fit using linregression calibration with x_peaks deduced from this and    #
     # hence automatically located perfectly at peaks and after element          #
@@ -137,7 +135,7 @@ def gausfit(
     # To be locally fitted #
     ########################
 
-    A0 = y_peak*np.sqrt((np.square(Noise0/2.3548))+(3.85*Fano0*E_peak))*np.sqrt(2*np.pi)
+    A0 = y_peak*np.sqrt((np.square(Noise0/2.3548))+(3.85*Fano0*E_peak))*np.sqrt(2*np.pi)/gain
 
     ########################
     params_gaus = np.insert(A0,[0],[Noise0,Fano0],axis=1)  #Params Gaussian fit
@@ -146,12 +144,12 @@ def gausfit(
     ''' Plotting params '''
     element = [*Z_dict][:-1] #To be plotted elements
     color=plt.cm.jet(np.linspace(0,1,len(element))) #Create fixed color for specific element
-    seen=set() #Define set of all values seen so far in set comprehension
     
     ########################################
     # Get duplicate values from dictionary #
     ########################################
 
+    seen=set() #Define set of all values seen so far in set comprehension
     dupl_value=set(x for x in [value for sublist in Z_dict.values() \
             for value in sublist] if x in seen or seen.add(x)) 
 
@@ -169,7 +167,7 @@ def gausfit(
     tot = len(y_savgol)
     for it in range(tot):
 
-        if bar!=None: 
+        if bar!=None and not bar.make_abortion: 
             iterator += 1
             percent = iterator/tot*100
             bar.updatebar(iterator)
@@ -190,12 +188,12 @@ def gausfit(
         ''' Gaussian Fit '''
         try: 
             popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
-                x,E_peak,Noise,Fano,*A) + y_cont[it], 
+                x,E_peak,gain,Noise,Fano, *A) + y_cont[it], 
                 x, 
                 y_savgol[it], 
                 p0=params_gaus[it], 
                 sigma=uncertainty[it], 
-                maxfev=Constants.FIT_CYCLES) #Clean Gaus
+                maxfev=cycles) #Clean Gaus
         except:
             print("WARNING:\nFit failed for spec {}".format(it))
             popt_gaus = np.zeros(E_peak.shape[0]+2,dtype="int32")
@@ -204,10 +202,10 @@ def gausfit(
         # Determine boundaries of fitted Noise and Fano for which to print warning #
         ############################################################################
 
-        if not (0<popt_gaus[0]<200)|(0<popt_gaus[1]<0.2): 
-            print(
-                    "  -  Non-physical value of fitted noise {} and fano {}".format(
-                popt_gaus[1],popt_gaus[0]))
+        #if not (0<popt_gaus[0]<200)|(0<popt_gaus[1]<0.2): 
+        #    print(
+        #            "  -  Non-physical value of fitted noise {} and fano {}".format(
+        #        popt_gaus[1],popt_gaus[0]))
 
         ############################################################################
             
@@ -222,7 +220,8 @@ def gausfit(
             # elements into dictionary only taking positive area's #
             ########################################################
             
-            Area_dict_gaus={i: [p for p in popt_gaus[2:][Z_dict[i]] if p > 0]\
+            Area_dict_gaus={i: [p for p in popt_gaus[2:][Z_dict[i]] if p>0]\
+            #Area_dict_gaus={i: sum(popt_gaus[2:][Z_dict[i]][popt_gaus[2:][Z_dict[i]]>0])\
                     for i in [*Z_dict][:-1]} #-1 excludes last key "Unmatched"
 
             ########################################################
@@ -231,11 +230,9 @@ def gausfit(
 
         ######################################
         
-        y_gaus = gaus(x,E_peak,*popt_gaus)+y_cont[it]
+        y_gaus = gaus(x,E_peak,gain,*popt_gaus)+y_cont[it]
 
-        y_gaus_single = np.asarray(
-                [gaus(x,E_peak[i],*popt_gaus[[0,1,2+i]]) for i in range(
-                        E_peak.size)]) + y_cont[it]
+        
 
 
         #############################################################################
@@ -295,8 +292,13 @@ def gausfit(
         # FROM HERE TO PLOT SPECTRA #
         #############################
         
-        if Constants.SAVE_FIT_FIGURES and (it+1)%100==0:
+        #if Constants.SAVE_FIT_FIGURES and (it+1)%500==0:
+        if (it+1)%500==0:
             
+            y_gaus_single = np.asarray(
+                [gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
+                        E_peak.size)]) + y_cont[it]
+
             fig,ax=plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
             ax[0].set_title('Element deconvolution',fontsize=16)
             plt.setp(ax, xlim=(x.min(),x.max())) #Set xlim on both axes
@@ -394,18 +396,23 @@ def gausfit(
             by_label = dict(zip(labels,handles))
             ax[0].legend(by_label.values(), by_label.keys(),prop={'size': 7})
 
-            plt.savefig(os.path.join(figures_path,"Fit_{}.png".format(it+1)))
+            plt.savefig(
+                    os.path.join(figures_path,"Fit_{}.png".format(it+1)),
+                    dpi=600,
+                    format="png")
             plt.close()
+            del y_gaus_single
 
         ############# END OF SAVE BLOCK #############
 
-        #time_avg = (timeit.default_timer()-time0)/(it+1) 
+        time_avg = (timeit.default_timer()-time0)/(it+1) 
+        print("Avg time: {0:0.2f}".format(time_avg),end="\r")
+
         #print("\rFitting spectrum: %s of %s (%.2f%%)  time left: %i min"%(it+1,len(y_savgol),
         #    100*(it+1)/len(y_savgol),time_avg*(len(y_savgol)-it)/60),end='',flush=True)
 
         del popt_gaus
         del y_gaus
-        del y_gaus_single
         del residuals_gaus
         del ss_res_gaus
         del rchisq_gaus
@@ -427,7 +434,7 @@ def gausfit(
 
 """ Model functions ------------------------------------------------------------"""
 
-def gaus(x, E_peak, Noise, Fano, *A):
+def gaus(x, E_peak, gain, Noise, Fano, *A):
     
     """ Sum changes although summing over rows automatically back to one row 
     array and hence only x needs to be Transposed instead of A,E_peak and 
@@ -437,16 +444,11 @@ def gaus(x, E_peak, Noise, Fano, *A):
 
     s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
     #s = np.sqrt(np.square(Noise/2.3548)+3.85*Fano*E_peak)
-    return np.sum(
+    return gain*np.sum(
             A/(s*np.sqrt(2*np.pi))*np.exp(
                 -np.square(x[:,None]-E_peak)/(2*np.square(s))
                 ),1
-            ) 
-    #return np.sum(
-    #        A*np.exp(
-    #            -np.square(x[:,None]-E_peak)/(2*np.square(s))
-    #            ),1
-    #        )
+            )
 
 """-----------------------------------------------------------------------------"""
             
@@ -977,6 +979,10 @@ def polfit(y_savgol,ndegree_global=6,ndegree_single=0,r=2):
     return y_cont_global
 
 
+class Interrupt(Exception):
+    pass
+
+
 class SingleFit():
 
     def __init__(__self__,path):
@@ -999,6 +1005,8 @@ class SingleFit():
             __self__.bar.updatebar(i)
             __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
 
+        del Constants.MY_DATACUBE.matrix
+        del Constants.MY_DATACUBE.background
         __self__.SUM = np.sum(__self__.counts,0)
 
         #########################################################################
@@ -1046,6 +1054,7 @@ class SingleFit():
         peaks, matches = Constants.MATCHES
         percent = __self__.iterator/len(__self__.counts)*100
         __self__.bar = Busy(len(__self__.counts),0)
+        __self__.bar.add_abort(multiprocess=False)
         fitted_spec = gausfit(
                 __self__.energies,
                 __self__.counts,
@@ -1060,7 +1069,6 @@ class SingleFit():
                 __self__.iterator,
                 bar = __self__.bar)
         __self__.bar.destroybar()
-        return
 
     def locate_peaks(__self__,add_list=None):
 
@@ -1245,7 +1253,6 @@ class MultiFit():
         return peaks, matches
 
     def check_progress(__self__):
-        f=1
         __self__.bar.update_text("Fitting data...")
         tot = int(__self__.cores*__self__.bite_size)+__self__.leftovers
         while __self__.global_iterator.value < tot and \
@@ -1253,10 +1260,16 @@ class MultiFit():
             __self__.bar.updatebar(__self__.global_iterator.value)
             percent = __self__.global_iterator.value/tot*100
             __self__.bar.update_text("Fitting data... {0:0.2f}%".format(percent))
-        __self__.bar.destroybar()
-        return 0
+        try: 
+            __self__.bar.destroybar()
+            return 0
+        except: 
+            return 1
 
     def launch_workers(__self__):
+
+        del Constants.MY_DATACUBE.matrix
+        del Constants.MY_DATACUBE.background
         
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.updatebar(0)
@@ -1276,9 +1289,9 @@ class MultiFit():
 
             __self__.bar.update_text("Polling chunks...")
 
-            counts, continuum = copy.deepcopy(block)
-            print("Chunk {} data size: ".format(chunk),convert_bytes(sys.getsizeof(block)))
+            counts, continuum = np.asarray(copy.deepcopy(block),dtype="int32")
             del block
+            
             counts = np.asarray(counts,dtype="int32")
 
             it += 1
@@ -1301,6 +1314,8 @@ class MultiFit():
                         matches))
 
             __self__.workers.append(p)
+            del counts, continuum
+        del bites
 
         #########################
 
@@ -1320,7 +1335,7 @@ class MultiFit():
                         __self__.intercept,
                         __self__.slope,
                         __self__.path,
-                        __sels__.save_plots_path,
+                        __self__.save_plots_path,
                         chunk,
                         __self__.results,
                         __self__.energies,
@@ -1335,6 +1350,7 @@ class MultiFit():
         ######################################
 
         workers_count=0
+        __self__.bar.add_abort(__self__.workers)
         for p in __self__.workers:
             workers_count+=1
             print("\nPolling chunk ", workers_count)
@@ -1392,6 +1408,9 @@ def find_and_fit(
     counts, continuum = np.asarray(data[0]), np.asarray(data[1])
     global_continuum = peakstrip(global_spec,24,5,5,3)
     continuum = np.insert(continuum,0,global_continuum, axis=0)
+    print("Chunk {} data size: ".format(chunk),convert_bytes(counts.nbytes))
+    print("Chunk {} data size (cont): ".format(chunk),convert_bytes(continuum.nbytes))
+    del data
 
     if chunk < 10:
         fit_path = os.path.join(path,"Fit_Chunk_0{0}.npy".format(chunk))
@@ -1458,7 +1477,9 @@ def mock(data,intercept,slope,path,chunk,results,energies):
     results.put(1)
     return 0
 
-def build_images(frames_path): 
+def build_images(
+        frames_path,
+        bar=None): 
     
     ####################################
     # Reads frame files in frames_path #
@@ -1467,7 +1488,6 @@ def build_images(frames_path):
     elements = []
     frames = [npy for npy in os.listdir(
         frames_path) if npy.lower().endswith(".npy")]
-    print(frames)
     frmcount = 0
 
     ####################################
@@ -1476,7 +1496,9 @@ def build_images(frames_path):
     # Verify which elements are fitted and prepare the list #
     #########################################################
 
+    bar.progress["max"]=len(frames)
     for frmfile in frames:
+        bar.updatebar(frmcount)
         frmcount += 1
         frame = np.load(
                 os.path.abspath(os.path.join(frames_path,frmfile)),
@@ -1496,26 +1518,6 @@ def build_images(frames_path):
     except: print("No unmatched peaks! Elements:",elements)
     for element in elements: print(element,type(element))
     element_list = [EnergyLib.ElementList[key] for key in elements]
-    print(element_list)
-
-    #########################################################
-
-    #element_list.remove("Tl")
-    #elements.remove(52)
-    #element_list.remove("Xe")
-    #elements.remove(54)
-    #element_list.remove("Rb")
-    #elements.remove(37)
-    #element_list.remove("Ru")
-    #elements.remove(44)
-    #element_list.remove("Ga")
-    #elements.remove(31)
-    #element_list.remove("Pd")
-    #elements.remove(46)
-    #element_list.remove("Zr")
-    #elements.remove(40)
-
-    #################################################################
 
     #################################################################
     # reload cube because data is changed somewhere down the road   #
@@ -1547,12 +1549,15 @@ def build_images(frames_path):
         Constants.MY_DATACUBE.matrix.shape[1],
         alfa_beta,len(element_list)],dtype="float32")
 
-    print("\n","-"*5,"Starting image builder","-"*5)
-    print(elements)
+    logger.info("\n"+"-"*5+"Starting image builder"+"-"*5)
     x,y,iteration,frmcount = 0,0,0,0
     start_x, start_y = 0,0
+    bar.updatebar(0)
+    bar.progress["max"]=len(elements)
+    bar.update_text("Building images - {}/{}".format(0,len(frames)))
     for frmfile in frames:
         frmcount += 1
+        bar.update_text("Building images - {}/{}".format(frmcount,len(frames)))
         print("\nFrame {}".format(frmcount))
         frame = np.load(
                 os.path.abspath(os.path.join(frames_path,frmfile)),
@@ -1579,6 +1584,7 @@ def build_images(frames_path):
                 x,y = pos[0],pos[1]
             x,y = start_x, start_y
             maps_count += 1
+            bar.updatebar(maps_count)
             
         iteration, maps_count = 0,0
         print("\npos: ",pos)
@@ -1603,6 +1609,7 @@ def build_images(frames_path):
     print(el_maps.shape)
     split_and_save(Constants.MY_DATACUBE,el_maps,element_list,
             force_alfa_and_beta=True)
+    bar.destroybar()
 
     ##########################################################
     
@@ -1664,7 +1671,7 @@ if __name__.endswith('__main__'):
     except: mode = None
     
     ####################
-    name = "dippintofabio"
+    name = "cuoio1"
     ####################
 
     cube_path = r"C:\Users\sergi\Documents\XISMuS\output\{0}\{0}.cube".format(name)
@@ -1709,6 +1716,7 @@ if __name__.endswith('__main__'):
     
     if mode == "-single":
 
+        print("starting fit")
         np.set_printoptions(threshold=False)
         energies = Constants.MY_DATACUBE.energyaxis*1000
         intercept = energies[0]
@@ -1735,6 +1743,7 @@ if __name__.endswith('__main__'):
 
         path = SpecRead.output_path
         workers = SingleFit(path)
+        workers.locate_peaks()
         print("\nPROCESSES DONE\n")
         
     #################
