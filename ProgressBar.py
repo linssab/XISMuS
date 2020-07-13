@@ -7,6 +7,10 @@
 
 from tkinter import *
 from tkinter import ttk
+import logging
+import Constants
+logger = logging.getLogger("logfile")
+logger.info("Importing module BatchFitter.py...")
 
 
 class BusyManager:
@@ -53,14 +57,16 @@ class Busy:
     
     def __init__(__self__,max_,min_):
         __self__.master = Toplevel()
+        __self__.make_abortion = False
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
         x = __self__.master.winfo_screenwidth()
         y = __self__.master.winfo_screenheight()
-        win_x = __self__.master.winfo_width()
-        win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(166, 49,\
-                int((x/2)-80), int((y/2)-23)))
+        __self__.master.geometry("{}x{}+{}+{}".format(
+            166, 49,
+            int((x/2)-80), int((y/2)-23)))
+        __self__.btnz = Frame(__self__.master)
+        __self__.btnz.grid(row=1,column=0)
         __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
         __self__.outerframe.grid(row=0,column=0)
         __self__.master.label = Label(__self__.outerframe, text="Packing spectra...")
@@ -70,6 +76,8 @@ class Busy:
         __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
         __self__.progress.grid(row=0,column=0)
         __self__.master.grab_set()
+        __self__.win_x = __self__.master.winfo_width()
+        __self__.win_y = __self__.master.winfo_height()
 
     def updatebar(__self__,value):
 
@@ -105,6 +113,39 @@ class Busy:
             __self__.updatebar(timeout-i)
             time.sleep(1)
         __self__.destroybar()
+
+    def add_abort(__self__,workers=None,multiprocess=Constants.MULTICORE):
+        __self__.workers = workers
+        __self__.multiprocess = multiprocess
+        __self__.master.geometry("{}x{}".format(166,81))
+        __self__.abort = Button(__self__.outerframe,
+                text="Abort",
+                width=7,
+                height=1,
+                command=__self__.abort)
+        __self__.abort.grid(row=2,column=0,pady=3)
+        __self__.btnz.update()
+
+    def abort(__self__):
+
+        import pickle
+        import Constants
+        import SpecRead
+
+        if __self__.multiprocess:
+            for p in __self__.workers:
+                p.terminate()
+            __self__.make_abortion = True
+        else: __self__.make_abortion = True
+        messagebox.showinfo("ABORTED!","The fitting process was aborted by the user.")
+
+        cube_file = open(SpecRead.cube_path,'rb')
+        del Constants.MY_DATACUBE
+        Constants.MY_DATACUBE = pickle.load(cube_file)
+        cube_file.close()
+
+        __self__.destroybar()
+        return 
 
 
 class ReadProgress:
