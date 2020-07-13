@@ -1069,34 +1069,67 @@ class PeakClipper:
 
     """Creates a dialog to set-up SNIPBG parameters"""
     
-    def __init__(__self__,parent):
+    def __init__(__self__,parent,mode=None):
         __self__.master = Toplevel(parent)
+        __self__.mode = mode
         __self__.master.tagged = True
         __self__.parent = parent
         __self__.master.attributes("-alpha",0.0)
         __self__.master.resizable(True,True)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Escape>",__self__.kill)
-        __self__.frame1 = Frame(__self__.master,height=320,width=240)
-        __self__.frame2 = Frame(__self__.master)
-        __self__.frame3 = Frame(__self__.master)
-        __self__.frame1.grid(row=0,rowspan=2,column=0,sticky=N+E+W+S)
-        __self__.frame2.grid(row=0,column=1,padx=15,sticky=E)
-        __self__.frame3.grid(row=1,column=1,padx=15,pady=15,sticky=E)
+
+        __self__.right_panel = Frame(__self__.master,height=480)
+        __self__.frame1 = Frame(__self__.master,height=480,width=320)
+        __self__.frame2 = LabelFrame(__self__.right_panel, 
+                height=320,width=120,
+                padx=15, pady=15,
+                text="SNIPBG Parameters:")
+        __self__.frame3 = LabelFrame(__self__.right_panel, 
+                padx=15, pady=15,
+                height=320,width=120,
+                text="Polynomial Parameters:")
+        __self__.frame4 = Frame(__self__.right_panel)
+
+        __self__.right_panel.grid(row=0,rowspan=2,column=1,padx=10,sticky="") 
+        __self__.frame1.grid(row=0,rowspan=3,column=0,sticky=N+E+W+S)
+        __self__.frame2.grid(row=1,column=1,padx=15,sticky="")
+        #__self__.frame3.grid(row=2,column=1,padx=15,sticky=W+E)
+        __self__.frame4.grid(row=3,column=1,columnspan=2,padx=15,pady=15,sticky="")
         
         __self__.master.grid_columnconfigure(0,weight=1)
         __self__.master.grid_rowconfigure(0,weight=1)
 
-        __self__.savgol = IntVar()
-        __self__.savgol.set(5)
-        __self__.order = IntVar()
-        __self__.order.set(3)
-        __self__.window = IntVar()
-        __self__.window.set(5)
-        __self__.iter = IntVar()
-        __self__.iter.set(24)
+        __self__.savgol = IntVar() #Savgol window
+        __self__.order = IntVar() #Savgol order function order
+        __self__.window = IntVar() #Clip window
+        __self__.iter = IntVar() #No. of cycles
+        __self__.nglobal = IntVar() #Polynomial function degree for global spectrum
+        __self__.nsingle = IntVar() #Polynomial function degree for all other spectra
+        __self__.r_factor = IntVar() #Polyfit r factor
+
+        if mode == "SNIPBG":
+            __self__.savgol.set(5)
+            __self__.order.set(3)
+            __self__.window.set(5)
+            __self__.iter.set(24)
+        elif mode == "Polynomial":
+            __self__.nglobal.set(6)
+            __self__.r_factor.set(2)
         
         __self__.build_widgets()
+        if mode == "SNIPBG":
+            # Not yet implemented #
+            #__self__.frame3.config(state=DISABLED)
+            pass
+        elif mode == "Polynomial":
+            __self__.entry_savgol.config(state=DISABLED)
+            __self__.entry_order.config(state=DISABLED)
+            __self__.entry_window.config(state=DISABLED)
+            __self__.entry_iter.config(state=DISABLED)
+            __self__.button_save.config(state=DISABLED)
+            __self__.button_try.config(state=DISABLED)
+            __self__.randomize.config(state=DISABLED)
 
     def build_widgets(__self__):
        
@@ -1117,12 +1150,15 @@ class PeakClipper:
         __self__.mplCanvas.pack(expand=True,fill=BOTH,anchor=N+W)
         __self__.canvas._tkcanvas.pack()
 
-        # frame 2 (top-right)
+        # right panel (top)
         __self__.randomize = Button(
-                __self__.frame2, 
+                __self__.right_panel, 
                 text="Pick random spectrum",
                 command=__self__.random_sample, 
                 justify=CENTER)
+        __self__.randomize.grid(row=0,column=0,columnspan=2,pady=15)
+        
+        # frame 2 (top-right)
         __self__.label_savgol = Label(__self__.frame2, text="Sav-gol window: ")
         __self__.label_order = Label(__self__.frame2, text="Sav-gol order: ")
         __self__.label_window = Label(__self__.frame2, text= "Clipping window: ")
@@ -1132,7 +1168,14 @@ class PeakClipper:
         __self__.entry_window = Entry(__self__.frame2,textvariable=__self__.window,width=15)
         __self__.entry_iter = Entry(__self__.frame2,textvariable=__self__.iter,width=15)
 
-        __self__.randomize.grid(row=0,column=0,columnspan=2,pady=15)
+        # frame 3 (middle-right)
+        __self__.label_nglobal = Label(__self__.frame3, text="Global spectrum degree: ")
+        __self__.label_r_factor = Label(__self__.frame3, text= "R factor: ")
+        __self__.entry_nglobal = Entry(__self__.frame3,
+                textvariable=__self__.nglobal,width=15)
+        __self__.entry_r_factor = Entry(__self__.frame3,
+                textvariable=__self__.r_factor,width=15)
+
         __self__.label_savgol.grid(row=1,column=0)
         __self__.label_order.grid(row=2,column=0)
         __self__.label_window.grid(row=3,column=0)
@@ -1141,37 +1184,46 @@ class PeakClipper:
         __self__.entry_order.grid(row=2,column=1,sticky=E)
         __self__.entry_window.grid(row=3,column=1,sticky=E)
         __self__.entry_iter.grid(row=4,column=1,sticky=E)
+        
+        __self__.label_nglobal.grid(row=1,column=0)
+        __self__.label_r_factor.grid(row=2,column=0)
+        __self__.entry_nglobal.grid(row=1,column=1,sticky=E)
+        __self__.entry_r_factor.grid(row=2,column=1,sticky=E)
 
-        # frame 3 (lower-right)
-        __self__.button_try = Button(__self__.frame3,text="Try",width=10,
+        # frame 4 (lower-right)
+        __self__.button_try = Button(__self__.frame4,text="Try",width=10,
                 justify=CENTER,command=__self__.refresh_plot)
-        __self__.button_save = Button(__self__.frame3, text="Save",width=10,
+        __self__.button_save = Button(__self__.frame4, text="Save",width=10,
                 justify=CENTER,command=__self__.save)
-        __self__.button_cancel = Button(__self__.frame3, text="Cancel",width=10,
+        __self__.button_cancel = Button(__self__.frame4, text="Cancel",width=10,
                 justify=CENTER,command=__self__.kill)
 
         __self__.button_try.grid(row=0,column=0)
         __self__.button_save.grid(row=0,column=1)
         __self__.button_cancel.grid(row=1,column=0,columnspan=2)
-        
+
         __self__.master.update()
         place_center(__self__.parent,__self__.master)
         __self__.master.focus_set()
-        icon = os.getcwd()+"\\images\\icons\\settings.ico"
+        icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
         __self__.master.iconbitmap(icon)
         __self__.random_sample()
         x = __self__.master.winfo_width()
         y = __self__.master.winfo_height()
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
-
     
     def stripbg(__self__):
-        savgol = __self__.savgol.get()
-        order = __self__.order.get()
-        window = __self__.window.get()
-        cycles = __self__.iter.get()
-        background = peakstrip(__self__.spectrum,cycles,window,savgol,order)
+        if __self__.mode == "SNIPBG":
+            savgol = __self__.savgol.get()
+            order = __self__.order.get()
+            window = __self__.window.get()
+            cycles = __self__.iter.get()
+            background = peakstrip(__self__.spectrum,cycles,window,savgol,order)
+        elif __self__.mode == "Polynomial":
+            nglobal = __self__.nglobal.get()
+            r_factor = __self__.r_factor.get()
+            background = peakstrip(__self__.spectrum,cycles,window,savgol,order)
         return background
 
     def refresh_plot(__self__):
@@ -1930,7 +1982,7 @@ class ImageAnalyzer:
 class PlotWin:
 
     def __init__(__self__,master):
-        __self__.plot_font = {'fontname':'Arial','fontsize':10}
+        __self__.plot_font = {'fontname':'Arial','fontsize':14}
         __self__.lw = 3
         __self__.master = Toplevel(master=master)
         __self__.master.attributes("-alpha",0.0)
@@ -2181,6 +2233,18 @@ class PlotWin:
         __self__.plot.plot(fit, color="blue", 
                 label="y(x) = {0:0.2f}x {1} {2:0.2f}\nR = {3:0.4f}".format(A,sig,abs(B),R))
         __self__.plot.legend(shadow=True,fontsize=10,facecolor="white",loc="upper right")
+        place_topright(__self__.master.master,__self__.master)
+
+    def draw_map(__self__):
+        __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
+        __self__.plot.set_xlabel("Size [pixel]",fontsize=16)
+        __self__.plot.set_ylabel("Size [pixel]",fontsize=16)
+        fixed_image = write_image(Constants.MY_DATACUBE.densitymap,
+                resize=Constants.TARGET_RES,
+                path=None,
+                enhance=Constants.MY_DATACUBE.config["enhance"],
+                save=False)
+        __self__.plot.imshow(fixed_image, cmap=Constants.COLORMAP)
         place_topright(__self__.master.master,__self__.master)
 
     def draw_selective_sum(__self__,DATACUBE,y_data,display_mode=None,lines=False):
@@ -2892,6 +2956,7 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=NORMAL)
             __self__.Toolbox.entryconfig("Map elements",state=NORMAL)
             __self__.re_configure.config(state=NORMAL)
+            __self__.magnifier.config(state=NORMAL)
         if toggle == 'off':
             __self__.Toolbox.entryconfig("Derived spectra", state=DISABLED)
             __self__.Toolbox.entryconfig("Image Analyzer . . .", state=DISABLED)
@@ -2903,6 +2968,7 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Verify calculated ROI",state=DISABLED)
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.re_configure.config(state=DISABLED)
+            __self__.magnifier.config(state=DISABLED)
     
     def pop(__self__,event):
         if event.button == 3:
@@ -3599,11 +3665,6 @@ class MainGUI:
                     ("Text Files", "*.txt"),
                     ("All files", "*.*")))
         if file_batch == "": return
-        #for i in file_batch:
-        #    if not str(i).lower().endswith(".mca") or not str(i).lower().endswith(".txt"):
-        #        messagebox.showerror("OSError",
-        #                "Only *.mca or *.txt files are accepted at the moment.")
-        #        return
         
         #1.1 get the name of parent directory
         try: sample_name = str(file_batch[0]).split("/")[-2]
@@ -3670,8 +3731,7 @@ class MainGUI:
         spawn_center(__self__.MPS.master)
     
     def call_combined(__self__):
-        master = __self__.master
-        __self__.combined = PlotWin(master)
+        __self__.combined = PlotWin(__self__.master)
         __self__.combined.draw_spec(
                 mode=['summation','mps'],
                 display_mode=root.plot_display,
@@ -3707,15 +3767,23 @@ class MainGUI:
         ReConfigDiag(__self__.master)
         
     def build_widgets(__self__):
-        
+        magnifier_icon = PhotoImage(data=ICO_MAGNIFIER)
+        __self__.MAG_ICON = magnifier_icon.subsample(1,1)
+
         # define the frame and layout
         __self__.ButtonsFrame = Frame(__self__.master)
         __self__.ButtonsFrame.grid_propagate(1)
         __self__.ButtonsFrame.grid(row=0, column=0, rowspan=3, columnspan=2,padx=16)
-        __self__.ImageCanvas = Canvas(__self__.master,width=200, height=200,\
+        __self__.ImageCanvas = Canvas(__self__.master,
+                width=200, height=200,
                 bg='black', relief=SUNKEN, bd=5)
         __self__.ImageCanvas.grid(row=3, column=0, rowspan=3, columnspan=2, padx=(8,8))
         __self__.ImageCanvas.propagate(1)
+        __self__.magnifier = Button(__self__.master,
+                image=__self__.MAG_ICON,
+                bg="white", bd=1,
+                command=__self__.magnify)
+        __self__.magnifier.grid(row=5, column=0, sticky=S+W, padx=(11,0), pady=(0,20))
         __self__.DataFrame = Frame(__self__.master).grid(
                 padx=16, pady=16, row=0, column=2, rowspan=3, columnspan=3)
         __self__.StatusScroller = Scrollbar(__self__.DataFrame, relief=SUNKEN)
@@ -3913,6 +3981,11 @@ class MainGUI:
         __self__.StatusBar.grid(row=6, column=0, columnspan=6, sticky=W+E)
 
         __self__.master.protocol("WM_DELETE_WINDOW", __self__.root_quit)
+
+    def magnify(__self__):
+        __self__.magnified = PlotWin(__self__.master)
+        __self__.magnified.draw_map()
+        spawn_center(__self__.magnified.master)
             
     def write_stat(__self__):
 
@@ -4385,9 +4458,17 @@ class ConfigDiag:
     
         
     def call_PeakClipper(__self__):
-        __self__.master.grab_release()
-        __self__.clipper = PeakClipper(root.master)
-        __self__.clipper.master.grab_set()
+        if __self__.BgstripVar.get() == "None":
+            messagebox.showinfo("BG Config","No background estimation mode selected!")
+            return
+        elif __self__.BgstripVar.get() == "SNIPBG":
+            __self__.master.grab_release()
+            __self__.clipper = PeakClipper(root.master,mode="SNIPBG")
+            __self__.clipper.master.grab_set()
+        elif __self__.BgstripVar.get() == "Polynomial":
+            __self__.master.grab_release()
+            __self__.clipper = PeakClipper(root.master,mode="Polynomial")
+            __self__.clipper.master.grab_set()
 
     def focus_grab(__self__):
         __self__.master.focus_set()
