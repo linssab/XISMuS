@@ -1,6 +1,6 @@
 import logging
 
-VERSION = "1.0.1dev"
+VERSION = "1.1.0"
 LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None

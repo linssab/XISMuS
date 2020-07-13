@@ -8,6 +8,8 @@
 import logging
 logger = logging.getLogger("logfile")
 logger.info("Importing module BatchFitter.py...")
+from multiprocessing import freeze_support
+freeze_support()
 
 #################
 # Local imports #
@@ -23,6 +25,7 @@ from ProgressBar import Busy
 
 import xraylib as xlib
 import sys, os, multiprocessing, copy, pickle
+from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -81,7 +84,6 @@ def gausfit(
         Figures of fitted spectra                                              
     """
 
-    from scipy.optimize import curve_fit
     time0 = timeit.default_timer()
     cycles = Constants.FIT_CYCLES
     #############################################################################

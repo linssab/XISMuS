@@ -1,4 +1,4 @@
-Version v1.1.x
+New in Version v1.1.0
 
 - Fixed Spectrum name converter when inputting dimension
 - Performance improvements in datacube packing
@@ -12,5 +12,10 @@ Version v1.1.x
 
 
 - Added "Wipe Maps" option under ListSamples dropdown menu
-- Added iterative database loading system
-- Added Fitting engine as "auto_wizard" peakmethod
+- Implemented iterative database loading system
+- Implemented Fitting engine as "auto_wizard" peakmethod
+- Added magnification icon to sample image on main panel
+
+
+- Fixed minor bugs to simple- and auto-roi FWHM criteria
+
