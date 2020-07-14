@@ -3037,8 +3037,10 @@ class MainGUI:
         f = open(os.path.join(SpecRead.__BIN__,"settings.tag"),"r")
         for line in f:
             if line.startswith("<welcome>"):
-                if line.split("\t")[1] == "True": __self__.checker = True
-                else: __self__.checker = False
+                if line.split("\t")[1] == "True": 
+                    Constants.WELCOME = True
+                else: 
+                    Constants.WELCOME = False
         f.close()
         
         __self__.master = Tk()
@@ -3688,7 +3690,7 @@ class MainGUI:
     def pop_welcome(__self__):
         
         """Displays a pop-up window with information on the software"""
-        if __self__.checker == True:
+        if Constants.WELCOME == True:
             __self__.welcome_window = Welcome(__self__.master)
             __self__.welcome_window.master.grab_set()
             place_center(__self__.master, __self__.welcome_window.master)
