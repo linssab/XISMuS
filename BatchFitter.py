@@ -98,8 +98,8 @@ def gausfit(
     # Prepend global spectrum to spectra #
     ######################################
     
-    #y_savgol=np.concatenate((np.sum(y_savgol,0)[None,:],y_savgol),axis=0) 
-    y_savgol=np.insert(y_savgol,0,SUM,axis=0) 
+    y_savgol=np.concatenate((np.sum(y_savgol,0)[None,:],y_savgol),axis=0) 
+    #y_savgol=np.insert(y_savgol,0,SUM,axis=0) 
 
     ######################################
 
@@ -232,10 +232,19 @@ def gausfit(
 
         ######################################
         
+        else: 
+            y_gaus_single = np.asarray(
+                    [gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
+                        E_peak.size)]) + y_cont[it]
+            g_fit_path = fit_path.split(".")[0]
+            g_fit_path, chunk = g_fit_path.split("Fit_Chunk_",1)
+            g_peak_order_path = g_fit_path + "Global_Peak_Order_{}.npy".format(chunk)
+            g_fit_path = g_fit_path + "Global_Fit_Chunk_{}.npy".format(chunk)
+            np.save(g_fit_path,y_gaus_single)
+            ordered_peaks = E_peak,Z_dict
+            np.save(g_peak_order_path,ordered_peaks)
+       
         y_gaus = gaus(x,E_peak,gain,*popt_gaus)+y_cont[it]
-
-        
-
 
         #############################################################################
         #Residuals devided by sigma y_i/y_savgol or eventual 1 in case of sigma = 0 #
@@ -1199,7 +1208,10 @@ class MultiFit():
         except: 
             return 1
 
-    def launch_workers(__self__):
+    def launch_workers(__self__,
+            cycles,
+            plot_save_interval,
+            save_plots):
 
         del Constants.MY_DATACUBE.matrix
         del Constants.MY_DATACUBE.background
@@ -1244,7 +1256,8 @@ class MultiFit():
                         __self__.work_done,
                         __self__.SUM,
                         peaks,
-                        matches))
+                        matches,
+                        (cycles,plot_save_interval,save_plots)))
 
             __self__.workers.append(p)
             del counts, continuum
@@ -1276,7 +1289,8 @@ class MultiFit():
                         __self__.work_done,
                         __self__.SUM,
                         peaks,
-                        matches))
+                        matches,
+                        (cycles,plot_save_interval,save_plots)))
 
             __self__.workers.append(p)
 
@@ -1319,7 +1333,8 @@ def find_and_fit(
         work_done,
         global_spec,
         peaks,
-        matches):
+        matches,
+        global_parameters):
 
     """ Target function for MultiFit class 
 
@@ -1338,6 +1353,10 @@ def find_and_fit(
         clipped_global_spec; <1D-array> - obtained by summing the clipped data (clipped to 1)
     """
     
+    Constants.FIT_CYCLES = global_parameters[0]
+    Constants.SAVE_INTERVAL = global_parameters[1]
+    Constants.SAVE_FIT_FIGURES = global_parameters[2]
+
     #####################################################################################
     # regardless of the continuum mode selected by the user, here, the SNIPBG           #
     # method is always used. It doen's matter much, since the global spectrum in the    #
@@ -1430,7 +1449,8 @@ def build_images(
 
     elements = []
     frames = [npy for npy in os.listdir(
-        frames_path) if npy.lower().endswith(".npy")]
+        frames_path) if npy.startswith("Fit_Chunk") and not \
+                os.path.isdir(os.path.join(frames_path,npy))]
     frmcount = 0
 
     ####################################
@@ -1498,6 +1518,7 @@ def build_images(
     bar.updatebar(0)
     bar.progress["max"]=len(elements)
     bar.update_text("Building images - {}/{}".format(0,len(frames)))
+    
     for frmfile in frames:
         frmcount += 1
         bar.update_text("Building images - {}/{}".format(frmcount,len(frames)))
@@ -1509,20 +1530,16 @@ def build_images(
         print("Size: ",frame.shape[0]*len(element_list))
         for key in elements:
             maximum_counts = 0
-            line = 0
             for c in range(frame.shape[0]):
                 iteration+=1
                 percent = iteration/size
                 print("Map {}: {}, pos {} x {}\t {:0.2f} percent complete...".format(
                     maps_count,element_list[maps_count],x,y,percent*100),end="\r")
-                try:
-                    for line in range(len(frame[c][key])):
-                        try: 
-                            el_maps[x][y][line][maps_count] = frame[c][key][line]
-                        except: 
-                            el_maps[x][y][line][maps_count] = 0
-                except:
-                    pass
+                for line in range(len(frame[c][key])):
+                    try: 
+                        el_maps[x][y][line][maps_count] = frame[c][key][line]
+                    except: 
+                        el_maps[x][y][line][maps_count] = 0
                 pos = refresh_position(x,y,Constants.MY_DATACUBE.dimension)
                 x,y = pos[0],pos[1]
             x,y = start_x, start_y
@@ -1535,61 +1552,73 @@ def build_images(
 
     ####################################################
     
-    ##########################################################
-    # split images into individual maps and pack to datacube #
-    ##########################################################
-    try:
-        for key in Constants.MATCHES[1]:
-            if key != "Unmatched":
-                peak1 = Constants.MATCHES[0][Constants.MATCHES[1][key][0]]
-                try:
-                    peak2 = Constants.MATCHES[0][Constants.MATCHES[1][key][1]]
-                except: peak2 = 0
-                Constants.MY_DATACUBE.ROI[EnergyLib.ElementList[key]] = peak1, peak2
-    except:
-        print("Running module alone, MATCHES variable may have not been declared.")
-    print("Done. Splitting and saving...")
-    print(el_maps.shape)
+    ###############################################################################
+    # Gives ROI attribute to datacube object. It can be a tuple with the          #  
+    # peaks indexes (for each element) or the curve, set at add_roi_to_datacube() #
+    ###############################################################################
+
+    #try:
+    #    for key in Constants.MATCHES[1]:
+    #        if key != "Unmatched":
+    #            peak1 = Constants.MATCHES[0][Constants.MATCHES[1][key][0]]
+    #            try:
+    #                peak2 = Constants.MATCHES[0][Constants.MATCHES[1][key][1]]
+    #            except: peak2 = 0
+    #            Constants.MY_DATACUBE.ROI[EnergyLib.ElementList[key]] = peak1, peak2
+    #except:
+    #    print("Running module alone, MATCHES variable may have not been declared.")
+    
+    add_roi_to_datacube()
+    
+    ###############################################################################
+
+    print("Splitting and saving...")
     split_and_save(Constants.MY_DATACUBE,el_maps,element_list,
             force_alfa_and_beta=True)
     bar.destroybar()
 
-    ##########################################################
     
-def fit_wiz(ordered_elements_list=None):
+def add_roi_to_datacube():
     
-    els = ordered_elements_list
+    #######################################
+    # List all Global Fit files in output #
+    #######################################
 
-    ##################################################
-    # List all files in Fit Chunks, divided by chunk #
-    ##################################################
+    spectra_paths = [i for i in os.listdir(SpecRead.output_path) if "Global_Fit" in i]
+    elements_order_paths = [i for i in os.listdir(SpecRead.output_path) if "Global_Peak" in i]
+    for i in range(len(spectra_paths)):
+        spectra_paths[i] = os.path.abspath(
+                os.path.join(SpecRead.output_path,spectra_paths[i]))
+        elements_order_paths[i] = os.path.abspath(
+                os.path.join(SpecRead.output_path,elements_order_paths[i]))
 
-    paths = [i for i in os.listdir(SpecRead.output_path) if "Fit_Chunk" \
-            in i and os.path.isdir(os.path.join(SpecRead.output_path,i))]
-    files = {}
-    for i in range(len(paths)):
-        paths[i] = os.path.abspath(os.path.join(SpecRead.output_path,paths[i]))
-        files["Chunk_{}".format(i)] = \
-                [os.path.join(paths[i],f) for f in os.listdir(paths[i]) \
-                if f.lower().startswith("spec")]
-
-    ##################################################
+    #######################################
     
-    fit = np.zeros(1024)
-    for key in files.keys():
-        for f in files[key]:
-            spectrum = np.load(f,allow_pickle=True)
-            print("Spec",f,"No of elements: ",spectrum.shape[0])
-            for element in range(spectrum.shape[0]):
-                fit += spectrum[element]
-            del spectrum
-
+    fit = np.zeros(Constants.MY_DATACUBE.matrix.shape[2])
     E_axis = Constants.MY_DATACUBE.energyaxis
-    plt.semilogy(E_axis,fit)
-    plt.semilogy(E_axis,Constants.MY_DATACUBE.sum,color="blue",label="Sum")
-    plt.semilogy(E_axis,Constants.MY_DATACUBE.sum_bg,color="green",label="Sum BG")
-    plt.legend()
-    plt.show()
+    it = 0
+    for f,o in zip(spectra_paths,elements_order_paths):
+        it += 1
+        idx = 0
+        spectrum = np.load(f,allow_pickle=True)
+        el_order = np.load(o,allow_pickle=True)
+        print("Chunk",it,"No of elements: ",spectrum.shape[0])
+        for key in el_order[1].keys():
+            if key == "Unmatched": continue
+            for plots in range(len(el_order[1][key])):
+                idx = el_order[1][key][plots]
+                print("Key", key, "line", plots,"in frame ",it, "spec index:",idx)
+                Constants.MY_DATACUBE.ROI[EnergyLib.ElementList[int(key)]] += spectrum[idx]
+            #if key == 26:
+            #    plt.semilogy(E_axis,Constants.MY_DATACUBE.ROI[EnergyLib.ElementList[key]],
+            #        label=key)
+        del spectrum
+
+    #plt.semilogy(E_axis,fit)
+    #plt.semilogy(E_axis,Constants.MY_DATACUBE.sum,color="blue",label="Sum")
+    #plt.semilogy(E_axis,Constants.MY_DATACUBE.sum_bg,color="green",label="Sum BG")
+    #plt.legend()
+    #plt.show()
     return 0
 
 if __name__.endswith('__main__'):
@@ -1614,7 +1643,7 @@ if __name__.endswith('__main__'):
     except: mode = None
     
     ####################
-    name = "cuoio1"
+    name = "Training Data 1"
     ####################
 
     cube_path = r"C:\Users\sergi\Documents\XISMuS\output\{0}\{0}.cube".format(name)
@@ -1686,12 +1715,12 @@ if __name__.endswith('__main__'):
 
         path = SpecRead.output_path
         workers = SingleFit(path)
-        workers.locate_peaks()
+        workers.locate_peaks(path=path)
         print("\nPROCESSES DONE\n")
         
     #################
 
-    #fit_wiz()
+    add_roi_to_datacube()
     build_images(fit_path)
 
     #dimension = [110,130]

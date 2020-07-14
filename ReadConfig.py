@@ -210,29 +210,47 @@ def set_settings(inifile):
         if line.split("\t")[0] == "<ColorMap>": 
             ColorMapMode = str(line.split("\t")[1])
             ColorMapMode = ColorMapMode.replace("\n","")
-        if line.split("\t")[0] == "<MultiCore>": 
+        elif line.split("\t")[0] == "<MultiCore>": 
             if line.split("\t")[1] == "False":
                 CoreMode = False
             else: CoreMode = True
-        if line.split("\t")[0] == "<PlotMode>": 
+        elif line.split("\t")[0] == "<PlotMode>": 
             PlotMode = str(line.split("\t")[1])
-        if line.split("\t")[0] == "<RAMLimit>": 
+        elif line.split("\t")[0] == "<RAMLimit>": 
             if line.split("\t")[1] == "False":
                 RAMMode = False
             else: RAMMode = True
-        if line.split("\t")[0] == "<welcome>": 
+        elif line.split("\t")[0] == "<welcome>": 
             if line.split("\t")[1] == "False":
                 WlcmMode = False
             else: WlcmMode = True
+        elif line.split("\t")[0] == "<Tolerance>":
+            PeakTolerance=[]
+            line = line.split("\t")[1].replace("[","").replace("]","")
+            line = line.split(",")
+            for i in line:
+                PeakTolerance.append(float(i))
+        elif line.split("\t")[0] == "<Cycles>":
+            Cycles = int(line.split("\t")[1])
+        elif line.split("\t")[0] == "<SaveInterval>":
+            SaveInterval = int(line.split("\t")[1])
+        elif line.split("\t")[0] == "<SavePlot>":
+            if line.split("\t")[1] == "False":
+                SavePlot = False
+            else: SavePlot = True
     ini.close() 
     Constants.COLORMAP = ColorMapMode
     Constants.MULTICORE = CoreMode
     Constants.PLOTMODE = PlotMode
     Constants.RAM_LIMIT = RAMMode
     Constants.WELCOME = WlcmMode
+    Constants.SETROI_TOLERANCE = PeakTolerance
+    Constants.FIT_CYCLES = Cycles
+    Constants.SAVE_INTERVAL = SaveInterval
+    Constants.SAVE_FIT_FIGURES = SavePlot
+
     output = Constants.list_all()
-    #for key in output.keys():
-    #    print(key,output[key])
+
     return
 
 if __name__ == "__main__":

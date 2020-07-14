@@ -331,11 +331,11 @@ class datacube:
         """ Reall all data in datacube.matrix and return the summation derived spectrum """
 
         __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype="int32")
-        __self__.sum_bg = np.zeros([__self__.matrix.shape[2]],dtype="float32")
+        #__self__.sum_bg = np.zeros([__self__.matrix.shape[2]],dtype="float32")
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
-                __self__.sum_bg += __self__.background[x,y]
+                #__self__.sum_bg += __self__.background[x,y]
 
     def fit_fano_and_noise(__self__):
         __self__.FN = FN_fit(__self__.sum,__self__.gain)
@@ -444,7 +444,6 @@ class datacube:
         elif bgstrip == "SNIPBG":
             try: cycles, window,savgol,order= __self__.config["bg_settings"] 
             except: cycles, window, savgol, order = 24,5,5,3
-            __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
                     # default cycle and sampling window = 24,5
@@ -453,9 +452,9 @@ class datacube:
                     counter = counter + 1
                     if recalculating == True: progressbar.updatebar(counter)
                     else: __self__.progressbar.updatebar(counter)
+            __self__.sum_bg = peakstrip(__self__.sum,cycles,window,savgol,order)
 
         elif bgstrip == "Polynomial":
-            print("\n\nHERE\n\n")
             try: ndegree_global, ndegree_single, r_fact, =  __self__.config["bg_settings"]
             except: ndegree_global, ndegree_single, r_fact = 6,0,2
             matrix_flatten = __self__.matrix.reshape(-1,__self__.matrix.shape[-1])
@@ -625,17 +624,17 @@ class datacube:
         datacube.MPS(__self__,mps)
         __self__.mps = mps
 
-        logger.debug("Stripping background...")
-        __self__.progressbar.update_text("Stripping background...")
-        datacube.strip_background(__self__)
-
         logger.debug("Calculating summation spectrum...")
         __self__.progressbar.update_text("Calculating sum spec...")
         datacube.stacksum(__self__)
         #datacube.cut_zeros(__self__)
         __self__.energyaxis, __self__.gain, __self__.zero = calibrate()
         __self__.config["gain"] = __self__.gain
-
+        
+        logger.debug("Stripping background...")
+        __self__.progressbar.update_text("Stripping background...")
+        datacube.strip_background(__self__)
+        
         logger.debug("Calculating sum map...")
         __self__.progressbar.update_text("Calculating sum map...")
         datacube.create_densemap(__self__)
@@ -922,19 +921,20 @@ def gaussianbuilder(E_axis,energy,A,F,N):
             gaus[i][j]=A[i]*(math.exp(-(((E_axis[j]-energy[i])**2)/(2*(s**2)))))
     return gaus
 
-def setROI(lookup,xarray,yarray,localconfig):
+def setROI(lookup,xarray,yarray,localconfig,tolerance=Constants.SETROI_TOLERANCE):
     
     """
     INPUT: 
-        lookup; eV energy (int)
-        xarray; np.array (energyaxis)
-        yarray; np.array
-        localconfig; dict
+        lookup; <int> - eV energy of peak being searched for
+        xarray; <np.array> - energyaxis in KeV
+        yarray; <np.array> - counts
+        localconfig; <dict> - configuration parameters
+        tolerance; <optional> 1D-array - tolerance indexes
     OUTPUT: 
-        low_idx; int
-        high_idx; int
-        peak_center; int
-        isapeak; bool
+        low_idx; <int>
+        high_idx; <int>
+        peak_center; <int>
+        isapeak; <bool>
     
     - indexes correspond to 2*FWHM of a gaussian centered
     at eV energy position (int, int, int, bool) 
@@ -951,9 +951,9 @@ def setROI(lookup,xarray,yarray,localconfig):
         return xarray[idx],ymax,idx
 
     lookup = int(lookup)
-    if lookup < 4800: w_tolerance = 3
-    elif lookup > 15000: w_tolerance = 4
-    else: w_tolerance = 2
+    if lookup < 4800: w_tolerance = tolerance[0]
+    elif lookup > 12000: w_tolerance = tolerance[1]
+    else: w_tolerance = tolerance[2]
     peak_corr = 0
     peak_center = 0
     shift = [0,0,0]
@@ -1005,7 +1005,7 @@ def setROI(lookup,xarray,yarray,localconfig):
         ##########################################
 
         difference = abs((shift[0])-xarray[idx])*1000
-        logger.debug("DIFFERENCE: {}, {}. Peak is at: {}".format(
+        logger.debug("DIFFERENCE: {}, Tolerable: {}. Peak is at: {}".format(
             int(difference),
             int((w_tolerance)*localconfig["gain"]*1000),
             shift[0]))

@@ -20,6 +20,8 @@ from SpecRead import dump_ratios, setup, __BIN__, __PERSONAL__
 from matplotlib import pyplot as plt
 from EnergyLib import ElementList, Energies, kbEnergies
 from ImgMath import interpolate_zeros, split_and_save
+import Constants
+
 lock = multiprocessing.Lock()
 
 def convert_bytes(num):
@@ -192,8 +194,11 @@ def sort_results(results,element_list):
                 sorted_results.append(results[packed])
     return sorted_results
 
-def start_reader(cube,Element,iterator,results,F,N):
+def start_reader(cube,Element,iterator,results,F,N,TOL):
+
     SpecMath.FN_set(F,N)
+    Constants.SETROI_TOLERANCE = TOL
+    print("Fano {} Noise {} and Tolerance {} in autoroi-multicore".format(F,N,TOL))
     
     def call_peakmethod(cube,Element,iterator,results):
         
@@ -256,12 +261,11 @@ class Cube_reader():
         __self__.run_count = 0 
         __self__.chunks = break_list(__self__.element_list,instances)
     
-    def start_workers(__self__,N,F):
+    def start_workers(__self__,N,F,TOL):
         __self__.p_bar.progress["maximum"] = __self__.cube["img_size"]\
                 *len(__self__.element_list)
         __self__.p_bar.update_text("Processing data...")
         __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
-
 
         partial_ = []
         for chunk in __self__.chunks:
@@ -276,7 +280,13 @@ class Cube_reader():
             for element in chunk:
                 p = multiprocessing.Process(target=start_reader,
                     name=element,
-                    args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results,N,F))
+                    args=(__self__.cube,
+                        element,
+                        __self__.p_bar_iterator,
+                        __self__.results,
+                        N,
+                        F,
+                        TOL))
                 __self__.processes.append(p)
                 __self__.process_names.append(p.name)
                 logger.info("Polling process {}".format(p))

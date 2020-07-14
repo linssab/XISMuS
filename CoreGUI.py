@@ -546,7 +546,7 @@ class Convert_File_Name:
 
         __self__.LeftPane = LabelFrame(__self__.master,height=250,width=128,text="Input")
         __self__.LeftPane.grid(row=0,column=0,sticky=N+W+S+E,padx=(3,2),pady=2)
-        __self__.RightPane = LabelFrame(__self__.master, height=250,text="Output")
+        __self__.RightPane = LabelFrame(__self__.master, height=250,text="Output",padx=15)
         __self__.RightPane.grid(row=0, column=1,sticky=N+S,padx=(2,3),pady=2)
 
         __self__.build_widgets()
@@ -573,13 +573,17 @@ class Convert_File_Name:
 
         """ Right Pane Entries """
         __self__.PrefixEntry = Entry(__self__.RightPane, 
-                textvariable=__self__.prefix)
+                textvariable=__self__.prefix,
+                width=10)
         __self__.StartEntry = Entry(__self__.RightPane,
-                textvariable=__self__.starting_index)
+                textvariable=__self__.starting_index,
+                width=10)
         __self__.WidthEntry = Entry(__self__.RightPane,
-                textvariable=__self__.width)
+                textvariable=__self__.width,
+                width=10)
         __self__.HeightEntry = Entry(__self__.RightPane,
-                textvariable=__self__.height)
+                textvariable=__self__.height,
+                width=10)
         
         """ Right Pane Buttons """
         icon = PhotoImage(data=ICO_ACCEPT)
@@ -617,7 +621,7 @@ class Convert_File_Name:
         
         __self__.master.columnconfigure(0, weight=1,minsize=128)
         __self__.master.columnconfigure(1, weight=0)
-        __self__.master.columnconfigure(2, weight=0)
+        __self__.master.columnconfigure(2, weight=0,pad=15)
         for i in range(5):
             __self__.master.rowconfigure(i, weight=1)
         __self__.master.rowconfigure(5, weight=0)
@@ -2151,6 +2155,13 @@ class PlotWin:
             else: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
             roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
             if element != "custom":
+
+                ###########################################################################
+                # This block can be used if the ROI's are set as the peak indexes instead #
+                # of the plot curve itself. Changes must be done inside                   #
+                # BatchFitter.build_image()                                               #
+                ###########################################################################
+
                 if isinstance(__self__.plotdata,tuple):
                     for i in [j for j in __self__.plotdata if j>0]:
                         __self__.plot.axvline(x=Constants.MY_DATACUBE.energyaxis[i],
@@ -2160,32 +2171,42 @@ class PlotWin:
                         mpatches.Patch(
                             color=ElementColors[element], 
                             label=roi_label))
+
+                ###########################################################################
+
                 else:
-                    __self__.plot.semilogy(
-                        Constants.MY_DATACUBE.energyaxis,
-                        __self__.plotdata,
-                        label=roi_label,
-                        color=ElementColors[element])
+                    #__self__.plot.semilogy(
+                    #    Constants.MY_DATACUBE.energyaxis,
+                    #    __self__.plotdata,
+                    #    label=roi_label,
+                    #    color=ElementColors[element])
                     __self__.plot.fill_between(
                             Constants.MY_DATACUBE.energyaxis,
+                            Constants.MY_DATACUBE.sum_bg,
                             __self__.plotdata,
                             color=ElementColors[element],
-                            alpha=0.75)
+                            where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
+                            alpha=0.85,
+                            interpolate=True,
+                            zorder=3)
                     patches.append(
                             mpatches.Patch(
                                 color=ElementColors[element], 
                                 label=roi_label))
             else: 
-                __self__.plot.semilogy(
-                Constants.MY_DATACUBE.energyaxis,
-                __self__.plotdata,
-                label=roi_label,
-                color=ElementColors["Custom"])
+                #__self__.plot.semilogy(
+                #Constants.MY_DATACUBE.energyaxis,
+                #__self__.plotdata,
+                #label=roi_label,
+                #color=ElementColors["Custom"])
                 __self__.plot.fill_between(
                         Constants.MY_DATACUBE.energyaxis,
+                        Constants.MY_DATACUBE.sum_bg,
                         __self__.plotdata,
                         color=ElementColors["Custom"],
-                        alpha=0.75)
+                        where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
+                        alpha=0.85,
+                        zorder=3)
                 patches.append(
                         mpatches.Patch(
                             color=ElementColors["Custom"], 
@@ -2194,13 +2215,27 @@ class PlotWin:
         __self__.plot.semilogy(
                 Constants.MY_DATACUBE.energyaxis,
                 Constants.MY_DATACUBE.sum,
+                color="blue",
                 label="Sum spectrum",
-                color="blue")
+                linewidth=3)
+        patches.append(mpatches.Patch(
+                    color="blue",
+                    label="Sum spectrum"))
+        __self__.plot.semilogy(
+                Constants.MY_DATACUBE.energyaxis,
+                Constants.MY_DATACUBE.sum_bg,
+                color="green",
+                label="Continuum",
+                linewidth=3)
+        patches.append(mpatches.Patch(
+                    color="green",
+                    label="Continuum"))
         __self__.plot.grid(color="black", ls="--", lw=0.5)
         __self__.plot.set_title("{0} Stacked ROI's sum for all spectra".format(
             Constants.DIRECTORY),**__self__.plot_font)
         __self__.plot.set_ylabel("Counts")
         __self__.plot.set_xlabel("Energy (KeV)")
+        __self__.plot.set_ylim([1,Constants.MY_DATACUBE.sum.max()])
         __self__.plot.legend(
                 fancybox=True,
                 shadow=True,
@@ -2691,25 +2726,40 @@ class Samples:
 class Settings:        
         
     def __init__(__self__,parent):
+
         __self__.Settings = Toplevel(master=parent.master)
+        __self__.Settings.title("Settings")
         __self__.Settings.resizable(False,False)
+        __self__.Settings.protocol("WM_DELETE_WINDOW",__self__.kill_window)
+
         __self__.CoreCount = Constants.CPUS
-        __self__.ScreenFrame = Frame(__self__.Settings,padx=15,pady=15)
-        __self__.ScreenFrame.grid(row=0,column=1)
-        __self__.TextFrame = Frame(__self__.Settings,padx=15,pady=15)
-        __self__.TextFrame.grid(row=0,column=0)
         sys_mem = dict(virtual_memory()._asdict())
+
+        __self__.GeneralOptions = LabelFrame(__self__.Settings, 
+                text="General options",padx=15,pady=15)
+        __self__.PeakOptions = LabelFrame(__self__.Settings, 
+                text="Peakmethod options",padx=15,pady=15)
+
+        __self__.GeneralOptions.grid(row=0,column=0,padx=(15,15),sticky=N+S+W+E)
+        __self__.PeakOptions.grid(row=1,column=0,padx=(15,15),sticky=N+S+W+E)
+
         __self__.RAM_tot = convert_bytes(sys_mem["total"])
         __self__.RAM_free = convert_bytes(sys_mem["available"])
         __self__.build_widgets()
-        __self__.Settings.title("Settings")
+
         icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
         __self__.Settings.iconbitmap(icon)  
-        __self__.Settings.protocol("WM_DELETE_WINDOW",__self__.kill_window)
+
         place_center(root.master,__self__.Settings)
+
         __self__.Settings.grab_set()
 
     def build_widgets(__self__):
+
+        ########################
+        # Set window variables #
+        ########################
+        
         __self__.PlotMode = StringVar()
         __self__.ColorMapMode = StringVar()
         __self__.CoreMode = BooleanVar()
@@ -2717,6 +2767,12 @@ class Settings:
         __self__.RAMEntry = DoubleVar()
         __self__.RAMUnit = StringVar()
         __self__.WlcmMode = BooleanVar()
+        __self__.TolVar1 = DoubleVar()
+        __self__.TolVar2 = DoubleVar()
+        __self__.TolVar3 = DoubleVar()
+        __self__.CycVar = DoubleVar()
+        __self__.PlotSaveVar = DoubleVar()
+        __self__.PlotSaveBoolVar = BooleanVar()
         
         __self__.PlotMode.set(Constants.PLOTMODE)
         __self__.ColorMapMode.set(Constants.COLORMAP)
@@ -2726,66 +2782,137 @@ class Settings:
                 "%.2f"%(float(convert_bytes(root.RAM_limit_value).split(" ")[0])))
         __self__.RAMUnit.set(convert_bytes(root.RAM_limit_value).split(" ")[1])
         __self__.WlcmMode.set(Constants.WELCOME)
+        __self__.TolVar1.set(Constants.SETROI_TOLERANCE[0])
+        __self__.TolVar2.set(Constants.SETROI_TOLERANCE[1])
+        __self__.TolVar3.set(Constants.SETROI_TOLERANCE[2])
+        __self__.CycVar.set(Constants.FIT_CYCLES)
+        __self__.PlotSaveVar.set(Constants.SAVE_INTERVAL)
+        __self__.PlotSaveBoolVar.set(Constants.SAVE_FIT_FIGURES)
+
+        ########################
         
-        PlotLabel = Label(__self__.TextFrame,text="Plot mode: ")
-        PlotLabel.grid(row=0,column=0,sticky=W)
-        PlotOption = ttk.Combobox(
-                __self__.ScreenFrame, 
+        PlotLabel = Label(__self__.GeneralOptions,text="Plot mode: ")
+        PlotOption = ttk.Combobox(__self__.GeneralOptions, 
                 textvariable=__self__.PlotMode, 
                 values=("Linear","Logarithmic"),
-                width=13,
+                width=12,
                 state="readonly")
-        PlotOption.grid(row=0,column=0,columnspan=3,sticky=E)
-        
-        ColorMapLabel = Label(__self__.TextFrame,text="Color scale: ")
-        ColorMapLabel.grid(row=1,column=0,sticky=W)
-        ColorMapOption = ttk.Combobox(
-                __self__.ScreenFrame, 
+
+        ColorMapLabel = Label(__self__.GeneralOptions,text="Color scale: ")
+        ColorMapOption = ttk.Combobox(__self__.GeneralOptions, 
                 textvariable=__self__.ColorMapMode, 
                 values=("gray","jet","hot"),
-                width=13,
+                width=12,
                 state="readonly")
-        ColorMapOption.grid(row=1,column=0,columnspan=3,sticky=E)
-        
 
-        CoreLabel = Label(__self__.TextFrame,text="Enable multi-core processing? ")
-        CoreLabel.grid(row=2,column=0,sticky=W)
-        CoreOption = Checkbutton(__self__.ScreenFrame, variable=__self__.CoreMode,pady=3)
-        CoreOption.grid(row=2,rowspan=2,column=0,columnspan=2,sticky=E)
-        CoreOptionText = Label(__self__.ScreenFrame, text="Yes",pady=3)
-        CoreOptionText.grid(row=2,rowspan=2,column=2,sticky=E)
-        CoreCountLabel = Label(
-                __self__.TextFrame,
-                text="Total number of cores: "+str(__self__.CoreCount))
-        CoreCountLabel.grid(row=3,column=0,sticky=W)
+        CoreLabel = Label(__self__.GeneralOptions,text="Enable Multi-Core? ")
+        CoreOption = Checkbutton(__self__.GeneralOptions, variable=__self__.CoreMode,
+                command=__self__.toggle_multicore)
+        CoreOptionText = Label(__self__.GeneralOptions, text="Yes")
+        CoreCountLabel = Label(__self__.GeneralOptions,
+                text="Total number of cores: "+str(__self__.CoreCount),
+                relief=GROOVE)
         
-        RAMLabel = Label(__self__.TextFrame,text="Limit RAM usage for multi-core? ")
-        RAMLabel.grid(row=4,column=0,sticky=W)
-        RAMUnit = Label(__self__.ScreenFrame, text=__self__.RAMUnit.get())
-        RAMUnit.grid(row=5,column=2,sticky=E)
-        RAMOption = Checkbutton(__self__.ScreenFrame, variable=__self__.RAMMode)
-        RAMOption.grid(row=4,column=0,columnspan=2,sticky=E)
-        RAMOptionText = Label(__self__.ScreenFrame, text="Yes")
-        RAMOptionText.grid(row=4,column=2,sticky=E)
-        __self__.RAMEntryBox = Entry(
-                __self__.ScreenFrame, 
+        __self__.RAMLabel = Label(__self__.GeneralOptions,text="Limit RAM in Multi-Core? ")
+        __self__.RAMUnitLabel = Label(__self__.GeneralOptions, text=__self__.RAMUnit.get())
+        __self__.RAMOption = Checkbutton(__self__.GeneralOptions, variable=__self__.RAMMode,
+                command=__self__.toggle_ram)
+        __self__.RAMOptionText = Label(__self__.GeneralOptions, text="Yes")
+        __self__.RAMEntryBox = Entry(__self__.GeneralOptions, 
                 textvariable=__self__.RAMEntry,
-                width=13-RAMUnit.winfo_width())
-        __self__.RAMEntryBox.grid(row=5,column=0,columnspan=2,sticky=E)
-        RAMCountLabel = Label(
-                __self__.TextFrame,
+                width=10)
+        __self__.RAMCountLabel = Label(__self__.GeneralOptions,
                 text="Available RAM: "+str(__self__.RAM_free))
-        RAMCountLabel.grid(row=5,column=0,sticky=W)
 
-
-        WlcmLabel = Label(__self__.TextFrame,text="Display welcome message at startup? ")
-        WlcmLabel.grid(row=6,column=0,sticky=W)
-        WlcmOption = Checkbutton(__self__.ScreenFrame, variable=__self__.WlcmMode)
-        WlcmOption.grid(row=6,column=0,columnspan=2,sticky=E)
-        WlcmOptionText = Label(__self__.ScreenFrame, text="Yes")
-        WlcmOptionText.grid(row=6,column=2,sticky=E)
+        WlcmLabel = Label(__self__.GeneralOptions,text="Welcome message at startup? ")
+        WlcmOption = Checkbutton(__self__.GeneralOptions, variable=__self__.WlcmMode)
+        WlcmOptionText = Label(__self__.GeneralOptions, text="Yes")
         
-        __self__.ScreenFrame.grid_columnconfigure(1,pad=8)
+        PlotLabel.grid(row=0,column=0,sticky=W)
+        PlotOption.grid(row=0,column=1,columnspan=2,sticky=E)
+        ColorMapLabel.grid(row=1,column=0,sticky=W)
+        ColorMapOption.grid(row=1,column=1,columnspan=2,sticky=E)
+        CoreLabel.grid(row=3,column=0,sticky=W)
+        CoreOption.grid(row=3,column=1,sticky=E)
+        CoreOptionText.grid(row=3,column=2,sticky=E)
+        CoreCountLabel.grid(row=2,column=0,columnspan=12,sticky=N+S+W+E,pady=(8,0))
+        __self__.RAMLabel.grid(row=4,column=0,sticky=W)
+        __self__.RAMUnitLabel.grid(row=5,column=2,sticky="")
+        __self__.RAMOption.grid(row=4,column=1,sticky=E)
+        __self__.RAMOptionText.grid(row=4,column=2,sticky=E)
+        __self__.RAMEntryBox.grid(row=5,column=1,sticky=E)
+        __self__.RAMCountLabel.grid(row=5,column=0,sticky=W)
+        WlcmLabel.grid(row=6,column=0,sticky=W)
+        WlcmOption.grid(row=6,column=1,sticky=E)
+        WlcmOptionText.grid(row=6,column=2,sticky=E)
+
+        ###########################
+        # Peakmethod Option Frame #
+        ###########################
+
+        ToleranceLabel = Label(__self__.PeakOptions, 
+                text="Auto and simple roi peak tolerance:",
+                relief=GROOVE)
+        Tolerance1 = Label(__self__.PeakOptions, text="< 4 KeV")
+        Tolerance2 = Label(__self__.PeakOptions, text="4-12 KeV")
+        Tolerance3 = Label(__self__.PeakOptions, text="> 12 KeV")
+        ToleranceDescription1 = Label(__self__.PeakOptions, text="*gain")
+        ToleranceDescription2 = Label(__self__.PeakOptions, text="*gain")
+        ToleranceDescription3 = Label(__self__.PeakOptions, text="*gain")
+        ToleranceEntry1 = Entry(__self__.PeakOptions, 
+                textvariable=__self__.TolVar1,
+                width=6)
+        ToleranceEntry2 = Entry(__self__.PeakOptions, 
+                textvariable=__self__.TolVar2,
+                width=6)
+        ToleranceEntry3 = Entry(__self__.PeakOptions, 
+                textvariable=__self__.TolVar3,
+                width=6)
+
+        ToleranceLabel.grid(row=0,column=0,columnspan=3,sticky=N+S+W+E)
+        Tolerance1.grid(row=1,column=0,sticky=W)
+        Tolerance2.grid(row=2,column=0,sticky=W)
+        Tolerance3.grid(row=3,column=0,sticky=W)
+        ToleranceEntry1.grid(row=1,column=1,sticky=E)
+        ToleranceEntry2.grid(row=2,column=1,sticky=E)
+        ToleranceEntry3.grid(row=3,column=1,sticky=E)
+        ToleranceDescription1.grid(row=1,column=2,sticky=E)
+        ToleranceDescription2.grid(row=2,column=2,sticky=E)
+        ToleranceDescription3.grid(row=3,column=2,sticky=E)
+
+        AutoWizardLabel = Label(__self__.PeakOptions, text="Auto wizard parameters: ",
+                relief=GROOVE)
+        FitCycles = Label(__self__.PeakOptions, text="Fit cycles/spectrum ")
+        __self__.PlotSaveInterval = Label(__self__.PeakOptions, 
+                text="Save plots w/ interval: ")
+        PlotSave = Label(__self__.PeakOptions, text="Save fit plots? ")
+        PlotSaveYes = Label(__self__.PeakOptions, text="Yes")
+        FitCyclesEntry = Entry(__self__.PeakOptions, 
+                textvariable=__self__.CycVar,
+                width=13)
+        __self__.PlotSaveIntervalEntry = Entry(__self__.PeakOptions, 
+                textvariable=__self__.PlotSaveVar,
+                width=13)
+        PlotSaveBool = Checkbutton(__self__.PeakOptions, 
+                variable=__self__.PlotSaveBoolVar,
+                command=__self__.toggle_save_plot)
+
+        AutoWizardLabel.grid(row=4,column=0,columnspan=3,sticky=N+S+W+E,pady=(8,0))
+        FitCycles.grid(row=5,column=0,sticky=W)
+        __self__.PlotSaveInterval.grid(row=6,column=0,sticky=W)
+        PlotSave.grid(row=7,column=0,sticky=W)
+        FitCyclesEntry.grid(row=5,column=1,columnspan=2,sticky=E)
+        __self__.PlotSaveIntervalEntry.grid(row=6,column=1,columnspan=2,sticky=E)
+        PlotSaveBool.grid(row=7,column=1,sticky=E)
+        PlotSaveYes.grid(row=7,column=2,sticky=E)
+
+        ###########################
+        
+        __self__.GeneralOptions.grid_columnconfigure(0,weight=1,pad=32)
+        __self__.PeakOptions.grid_columnconfigure(0,weight=1,pad=32)
+        __self__.toggle_ram()
+        __self__.toggle_multicore()
+        __self__.toggle_save_plot()
         
         ButtonsFrame = Frame(__self__.Settings, padx=10, pady=10)
         ButtonsFrame.grid(row=4,column=0,columnspan=2)
@@ -2803,6 +2930,48 @@ class Settings:
                 width=10,
                 command=__self__.kill_window)
         CancelButton.grid(row=4,column=1)
+
+    def toggle_save_plot(__self__,e=""):
+        yn = __self__.PlotSaveBoolVar.get()
+        if yn:
+            __self__.PlotSaveInterval.config(state=NORMAL)
+            __self__.PlotSaveIntervalEntry.config(state=NORMAL)
+        else:
+            __self__.PlotSaveInterval.config(state=DISABLED)
+            __self__.PlotSaveIntervalEntry.config(state=DISABLED)
+
+    def toggle_ram(__self__,e=""):
+        yn = __self__.RAMMode.get()
+        if yn:
+            __self__.RAMUnitLabel.config(state=NORMAL)
+            __self__.RAMEntryBox.config(state=NORMAL)
+            __self__.RAMCountLabel.config(state=NORMAL)
+        else:
+            __self__.RAMUnitLabel.config(state=DISABLED)
+            __self__.RAMEntryBox.config(state=DISABLED)
+            __self__.RAMCountLabel.config(state=DISABLED)
+    
+    def toggle_multicore(__self__,e=""):
+        yn = __self__.CoreMode.get()
+        if yn:
+            __self__.RAMLabel.config(state=NORMAL)
+            __self__.RAMOption.config(state=NORMAL)
+            __self__.RAMOptionText.config(state=NORMAL)
+        elif __self__.RAMMode.get():
+            __self__.RAMMode.set(0)
+            __self__.RAMLabel.config(state=DISABLED)
+            __self__.RAMOption.config(state=DISABLED)
+            __self__.RAMOptionText.config(state=DISABLED)
+            __self__.RAMUnitLabel.config(state=DISABLED)
+            __self__.RAMEntryBox.config(state=DISABLED)
+            __self__.RAMCountLabel.config(state=DISABLED)
+        else:
+            __self__.RAMLabel.config(state=DISABLED)
+            __self__.RAMOption.config(state=DISABLED)
+            __self__.RAMOptionText.config(state=DISABLED)
+            __self__.RAMUnitLabel.config(state=DISABLED)
+            __self__.RAMEntryBox.config(state=DISABLED)
+            __self__.RAMCountLabel.config(state=DISABLED)
     
     def write_to_ini(__self__):
         try: 
@@ -2813,7 +2982,11 @@ class Settings:
             ini.write("<MultiCore>\t{}\n".format(__self__.CoreMode.get()))
             ini.write("<PlotMode>\t{}\n".format(__self__.PlotMode.get()))
             ini.write("<RAMLimit>\t{}\n".format(__self__.RAMMode.get()))
-            ini.write("<welcome>\t{}".format(__self__.WlcmMode.get()))
+            ini.write("<welcome>\t{}\n".format(__self__.WlcmMode.get()))
+            ini.write("<Tolerance>\t{}\n".format(Constants.SETROI_TOLERANCE))
+            ini.write("<Cycles>\t{}\n".format(int(__self__.CycVar.get())))
+            ini.write("<SaveInterval>\t{}\n".format(int(__self__.PlotSaveVar.get())))
+            ini.write("<SavePlot>\t{}".format(__self__.PlotSaveBoolVar.get()))
             ini.close()
             __self__.kill_window()
         except: 
@@ -2838,6 +3011,12 @@ class Settings:
         Constants.WELCOME = __self__.WlcmMode.get()
         if Constants.PLOTMODE == "Logarithmic": root.plot_display = "-semilog"
         if Constants.PLOTMODE == "Linear": root.plot_display = None
+
+        Constants.SETROI_TOLERANCE = [__self__.TolVar1.get(),
+                __self__.TolVar2.get(),__self__.TolVar3.get()]
+        Constants.FIT_CYCLES = int(__self__.CycVar.get())
+        Constants.SAVE_INTERVAL = int(__self__.PlotSaveVar.get())
+        Constants.SAVE_FIT_FIGURES = __self__.PlotSaveBoolVar.get()
 
         refresh_plots()
         try: root.clipper.refresh_plot() 
@@ -3089,7 +3268,10 @@ class MainGUI:
                 if Constants.MULTICORE == True and \
                         Constants.CPUS>1 and\
                         Constants.MY_DATACUBE.img_size > 500:
-                    root.Fitter.launch_workers()
+                    root.Fitter.launch_workers(
+                            Constants.FIT_CYCLES,
+                            Constants.SAVE_INTERVAL,
+                            Constants.SAVE_FIT_FIGURES)
                 else: 
                     root.Fitter.run_fit()
 
@@ -4060,6 +4242,7 @@ class MainGUI:
                 __self__.no_sample = False
 
         if os.path.exists(SpecRead.cube_path):
+
             cube_stats = os.stat(SpecRead.cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
             __self__.StatusBox.insert(END,
@@ -4072,13 +4255,25 @@ class MainGUI:
                 for element in packed_elements:
                     __self__.StatusBox.insert(END,"Found a map for {0}".format(element))
             __self__.StatusBox.insert(END,"Done.")
+
+            #######################################################################
+            # write datacube configuration to panel 9  (see user manual for ref.) #
+            #######################################################################
+
             values_cube, values_cfg, values_keys = [],[],[]
             for key in Constants.MY_DATACUBE.config:
-                values_cube.append(str(Constants.MY_DATACUBE.config[key]))
                 values_keys.append(str(key))
+                if key == "gain":
+                    values_cube.append(str(int(float(Constants.MY_DATACUBE.config[key])*1000))+" eV")
+                elif key == "bg_settings" and Constants.MY_DATACUBE.config[key] == []:
+                    values_cube.append("Default values")
+                else:
+                    values_cube.append(str(Constants.MY_DATACUBE.config[key]))
             for item in range(len(values_cube)):
                 __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
                 __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+
+            #######################################################################
         
         elif __self__.no_sample == True:
             __self__.StatusBox.insert(END, "No sample configured!") 
@@ -4786,7 +4981,10 @@ class PeriodicTable:
                 Constants.CPUS>1 and \
                 Constants.MY_DATACUBE.img_size > 500:
             root.Fitter.locate_peaks(add_list=__self__.elements,path=save_path)
-            root.Fitter.launch_workers()
+            root.Fitter.launch_workers(
+                            Constants.FIT_CYCLES,
+                            Constants.SAVE_INTERVAL,
+                            Constants.SAVE_FIT_FIGURES)
         else:
             root.Fitter.locate_peaks(add_list=__self__.elements,path=save_path)
             root.Fitter.run_fit()
@@ -4859,6 +5057,7 @@ class PeriodicTable:
             # Sets fano and noise factor 
             if not hasattr(Constants.MY_DATACUBE,"FN"):
                 FANO,NOISE = 0.114, 80
+                logger.warning("Datacube has no attribute FN, using default FANO and NOISE")
             else:
                 FANO, NOISE = Constants.MY_DATACUBE.FN
             FN_set(FANO, NOISE)
@@ -4913,7 +5112,8 @@ class PeriodicTable:
                                 Constants.FIND_ELEMENT_LIST,
                                 max_copies)
                         FANO, NOISE = Constants.MY_DATACUBE.FN
-                        results = cuber.start_workers(FANO, NOISE)
+                        TOLERANCE = Constants.SETROI_TOLERANCE
+                        results = cuber.start_workers(FANO, NOISE, TOLERANCE)
                         cuber.p_bar.update_text("Digesting results...")
                         results = sort_results(results,Constants.FIND_ELEMENT_LIST)
                         digest_results(
