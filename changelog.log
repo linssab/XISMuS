@@ -18,4 +18,4 @@ New in Version v1.1.0
 
 
 - Fixed minor bugs to simple- and auto-roi FWHM criteria
-
+- Added peakmethod setup options to Settings menu
