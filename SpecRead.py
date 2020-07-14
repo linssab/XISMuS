@@ -281,19 +281,19 @@ def getdata(mca):
 
             # Works if file is just counts per line
             elif line.isdigit():
-                while "<<END>>" not in line:
+                while line:
                     ObjectData.append(int(line))
                     line = datafile.readline()
                     if line == "": break
             
             # if file has two columns separated by space or tab
             elif "\t" in line or " " in line: 
-                while "<<END>>" not in line:
+                while line:
                     counts = line.split("\t")[-1]
                     if counts.isdigit(): ObjectData.append(int(counts))
                     else:
                         counts = line.split(" ")[-1]
-                        ObjectData.append(int(counts))
+                        ObjectData.append(float(counts)*10e3)
                     line = datafile.readline()
                     if line == "": break
             del datafile
