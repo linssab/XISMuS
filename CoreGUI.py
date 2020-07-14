@@ -4781,13 +4781,14 @@ class PeriodicTable:
         __self__.master.destroy()
         start_time = time.time()
 
+        save_path = os.path.join(SpecRead.output_path,"peak_find.png")
         if Constants.MULTICORE == True and \
                 Constants.CPUS>1 and \
                 Constants.MY_DATACUBE.img_size > 500:
-            root.Fitter.locate_peaks(add_list=__self__.elements)
+            root.Fitter.locate_peaks(add_list=__self__.elements,path=save_path)
             root.Fitter.launch_workers()
         else:
-            root.Fitter.locate_peaks(add_list=__self__.elements)
+            root.Fitter.locate_peaks(add_list=__self__.elements,path=save_path)
             root.Fitter.run_fit()
 
         root.bar = Busy(1,0)
