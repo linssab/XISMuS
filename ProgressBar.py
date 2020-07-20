@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          PROGRESS BARS AND LOADING MODULE                     #
-#                        version: 1.0.1                         #
+#                        version: 1.1.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -128,9 +128,17 @@ class Busy:
 
     def abort(__self__):
 
-        import pickle
+        import pickle, os
         import Constants
         import SpecRead
+        
+        def verify_existing_fit_chunks():
+            frames = [npy for npy in os.listdir(
+                fit_path) if npy.lower().endswith(".npy")]
+            if frames == []:
+                return 0
+            else: 
+                return frames
 
         if __self__.multiprocess:
             for p in __self__.workers:
@@ -143,6 +151,15 @@ class Busy:
         del Constants.MY_DATACUBE
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
+
+        fit_path = SpecRead.output_path
+        frames = verify_existing_fit_chunks()
+
+        try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
+        except: pass
+        for chunk in frames:
+            try: os.remove(os.path.join(fit_path,chunk))
+            except: pass
 
         __self__.destroybar()
         return 

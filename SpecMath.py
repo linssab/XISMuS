@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.1.0 - Jun - 2020            #
+#                        version: 1.1.0 - Jul - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -146,12 +146,16 @@ def digest_lstsq(y,energies):
 
     return abs(C)
 
-def FN_fit(specdata,gain):
+def FN_fit_pseudoinv(specdata,gain):
 
-    """ Finds suitable FANO and NOISE factors to the input spectrum
+    """ Finds suitable FANO and NOISE factors to the input spectrum using only 
+    the gain and no background.
+
+    --------------------------------------------------------------------------
+
     INPUT:
-        specdata; 1D-array
-        gain; calibration gain (eV)
+        specdata; <1D-array> - spectrum to be used
+        gain; <float> - calibration gain (eV)
     OUTPUT:
         1D-tuple (F, N) 
         
@@ -165,30 +169,29 @@ def FN_fit(specdata,gain):
     (between 0.040 and 0.240) is found for the FANO factor. """
 
     F, N = 0, 0
-    i, x = 0, 200
+    i, x = 0, 80
     avg_F, avg_N = 0,0
     data = savgol_filter(specdata,5,3)
-    v, w, r = 4,9,4
+    w, r = 9,2
+    v = (w/2)+1
     while i < x:
         F, N = FN_iter(data,gain,v,w,r)
-        if 0.114-0.0114 <= F <= 0.114+0.0114: 
+        if 0.114-(2*0.0114) <= F <= 0.114+(2*0.0114): 
             logger.warning("Fano and Noise matched: F:{} N:{}".format(F,N))
-            return F, N
+            return F,N
         avg_F += F
         avg_N += N
         r += 1
         if r > 12:
             r = 4
             w += 2
+            v = int(w/2)+1
             if w >= 13:
                 w = 2
-                v += 1
-                if v == 7: v=1
+                v = int(w/2)+1
         i += 1
     N = avg_N/i
     F = avg_F/i
-    logger.warning("Fano and Noise averaged: F:{} N:{}".format(F,N))
-    if N >= 130: N=80
     return F, N
 
 def FN_iter(data,gain,v,w,r):
@@ -207,7 +210,6 @@ def FN_iter(data,gain,v,w,r):
             energies.append(gain*i*1000)
     N, F = digest_psdinv(widths,energies)
     return F, N**.5
-
 
 def tophat(y,v,w):
 
@@ -281,6 +283,146 @@ def fwhm(data,i,win):
     if lw >= up: return 0,0,0
     return lw, up, up-lw
 
+def FN_fit_gaus(spec,spec_bg,e_axis,gain):
+
+    """ Finds a series of relevant peaks between 2100 and 30000 eV and fits them
+    with a gaussian fuction to obtain the global Fano and Noise factors.
+
+    ----------------------------------------------------------------------------
+    INPUT:
+        spec; <1D-array> - global spectrum to be used in the peak sampling and fit
+        spec_bg; <1D-array> - continuum of the above spectrum
+        e_axis; <1D-array> - calibrated energy axis in KeV
+        gain; <float> - calibration gain in KeV
+    OUTPU:
+        Fano; <float> - Fano factor of the input spectrum
+        Noise; <float> - Noise factor of the input spectrum """
+
+    from scipy.optimize import curve_fit
+    import copy
+
+    ####################################
+
+    Fano = 0.114
+    Noise = 80
+    gain = gain*1000
+    energyaxis = e_axis*1000
+    zero = energyaxis[0]
+    y_array, y_cont = spec, spec_bg
+
+    ####################################
+
+    #########################
+    # perform deconvolution #
+    #########################
+
+    w = Constants.PEAK_TOLERANCE
+    v = int(w/2)+1
+    r = 2 
+    peaks = []
+    y_conv, y_delta, pre_peaks = tophat(y_array,v,w)
+    for i in pre_peaks:
+        if y_conv[i-1]<=y_conv[i]>=y_conv[i+1]: 
+            if y_conv[i]>(r*y_delta[i]) and \
+                    y_conv[i]>y_cont[i]*Constants.CONTINUUM_SUPPRESSION: 
+                peaks.append(i)
+
+    #########################
+
+    ######################################
+    # filters peaks and exclude outliers #
+    ######################################
+
+    filtered_peaks, E_peaks, y_peaks = [],[],[]
+    for i in peaks:
+        if 2100<=energyaxis[i]<=30000:
+            E_peaks.append(energyaxis[i])
+            filtered_peaks.append(i)
+            y_peaks.append(y_array[i])
+
+    peaks = np.asarray(filtered_peaks)
+    E_peaks = np.asarray(E_peaks) 
+    y_peaks = np.asarray(y_peaks)
+
+    ######################################
+
+    guess = y_peaks*np.sqrt(
+            (np.square(Noise/2.3548))+(3.85*Noise*E_peaks))*np.sqrt(2*np.pi)/gain
+    guess = np.insert(guess,0,[Noise,Fano],axis=0)
+    uncertainty = np.sqrt(y_array).clip(1)
+    
+    popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
+            energyaxis,E_peaks,gain,Noise,Fano,
+                *A) + y_cont,
+            energyaxis,
+            y_array,
+            p0=guess,
+            sigma=uncertainty,
+            maxfev=Constants.FIT_CYCLES)
+
+    #print(popt_gaus.shape)
+    #print("NOISE",popt_gaus[0])
+    #print("FANO",popt_gaus[1])
+
+    #y_gaus = np.asarray(
+    #        [gaus(energyaxis,E_peaks[i],gain,*popt_gaus[[0,1,2+i]]) \
+    #                for i in range(E_peaks.size)])+ y_cont
+    #for i in y_gaus:
+    #    plt.semilogy(energyaxis,i,label="Fit")
+    #plt.semilogy(energyaxis,y_array,label="Data")
+    #plt.semilogy(energyaxis,y_cont,label="Continuum")
+    #plt.legend()
+    #plt.show()
+
+    return popt_gaus[1], popt_gaus[0]
+
+def batch_continuum_for_wizard(
+        spectra_batch,
+        bgstrip=None,
+        bgparams=(24,5,5,3),
+        bar=None,
+        global_spectrum=None):
+
+    """ Used to fit a batch of spectra for auto_wizard method. Auto wizard requires
+    the data to be filtered, otherwise the peak detection and gaussian fit performs
+    very poorly. For tis reason, the continuum matrix must be recalculated everytime
+    the wizard is invoked. This avoid harming the data. The RAW data remains always
+    untouched in the datacube after fitting the data with auto wizard. """
+
+    continuum = np.zeros([spectra_batch.shape[0],spectra_batch.shape[1]],dtype="float32")
+    global_continuum = np.zeros([spectra_batch.shape[1]],dtype="float32")
+
+    if bgstrip == "None":
+        return continuum, global_continuum
+
+    elif bgstrip == "SNIPBG":
+        try: cycles, window, savgol, order = bgparams
+        except: cycles, window, savgol, order = 24,5,5,3
+        for i in range(spectra_batch.shape[0]):
+            if bar!= None: bar.updatebar(i)
+            stripped = peakstrip(spectra_batch[i],cycles,window,savgol,order)
+            continuum[i] = stripped
+        global_continuum = peakstrip(global_spectrum,cycles,window,savgol,order)
+        return continuum, global_continuum
+
+    elif bgstrip == "Polynomial":
+        ndegree_global, ndegree_single, r_fact = 6,0,2
+        attempt = 0
+        while continuum.sum()==0:
+            attempt += 1
+            continuum = polfit_batch(
+                spectra_batch,
+                ndegree_global=ndegree_global,
+                ndegree_single=ndegree_single,
+                r=r_fact,
+                custom_global_spec=global_spectrum)
+            r_fact+=1
+        for i in range(spectra_batch.shape[0]):
+            if i: continuum[i] = continuum[i]
+            else: global_continuum = continuum[i]
+            if bar!= None: bar.updatebar(i)
+        return continuum, global_continuum
+
 
 class datacube:
 
@@ -331,14 +473,15 @@ class datacube:
         """ Reall all data in datacube.matrix and return the summation derived spectrum """
 
         __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype="int32")
-        #__self__.sum_bg = np.zeros([__self__.matrix.shape[2]],dtype="float32")
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
-                #__self__.sum_bg += __self__.background[x,y]
 
     def fit_fano_and_noise(__self__):
-        __self__.FN = FN_fit(__self__.sum,__self__.gain)
+        __self__.FN = FN_fit_gaus(__self__.sum,
+                __self__.sum_bg,
+                __self__.energyaxis,
+                __self__.gain)
 
     def flush_spectra(__self__,path):
         print("Flushing data to {}".format(path))
@@ -425,8 +568,12 @@ class datacube:
         The calculated data is saved into the datacube object.
         bgstrip; a string """
         
-        if recalculating == True: bgstrip = bgstrip
-        else: bgstrip = __self__.config['bgstrip']
+        if recalculating == True: 
+            bgstrip = bgstrip
+            progressbar = progressbar
+        else: 
+            bgstrip = __self__.config['bgstrip']
+            progressbar = __self__.progressbar
         counter = 0
         
         ##########################
@@ -435,13 +582,12 @@ class datacube:
 
         __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],
                 __self__.matrix.shape[2]],dtype="float32",order='C')
+        __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
 
         ##########################
-
-        if bgstrip == "None":
-            __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
-
-        elif bgstrip == "SNIPBG":
+       
+        if bgstrip == "SNIPBG":
+            progressbar.update_text("Calculating SNIPBG")
             try: cycles, window,savgol,order= __self__.config["bg_settings"] 
             except: cycles, window, savgol, order = 24,5,5,3
             for x in range(__self__.matrix.shape[0]):
@@ -450,28 +596,39 @@ class datacube:
                     stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
                     __self__.background[x,y] = stripped
                     counter = counter + 1
-                    if recalculating == True: progressbar.updatebar(counter)
-                    else: __self__.progressbar.updatebar(counter)
+                    progressbar.updatebar(counter)
             __self__.sum_bg = peakstrip(__self__.sum,cycles,window,savgol,order)
 
         elif bgstrip == "Polynomial":
             try: ndegree_global, ndegree_single, r_fact, =  __self__.config["bg_settings"]
             except: ndegree_global, ndegree_single, r_fact = 6,0,2
             matrix_flatten = __self__.matrix.reshape(-1,__self__.matrix.shape[-1])
-
-            y_cont = polfit_batch(
+            
+            y_cont, attempt = np.zeros([__self__.matrix.shape[2]]), 0
+            progressbar.update_text(
+                    "Fitting continuum. Trial: {}".format(attempt))
+            while y_cont.sum()==0:
+                attempt += 1
+                y_cont = polfit_batch(
                     matrix_flatten,
                     ndegree_global=ndegree_global,
                     ndegree_single=ndegree_single,
                     r=r_fact)
+                progressbar.update_text(
+                        "Fitting continuum. Trial: {}".format(attempt))
+                logger.warning(
+                "Attempt {} to fit continuum. Too slow, increasing R factor".format(
+                            attempt))
+                r_fact+=1
+
             __self__.sum_bg = y_cont[0]
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
                     counter += 1 #ignores first continuum which is the global one
                     __self__.background[x][y] = y_cont[counter]
-                    if recalculating == True: progressbar.updatebar(counter)
-                    else: __self__.progressbar.updatebar(counter)
+                    progressbar.updatebar(counter)
             del y_cont
+
         return
 
     def create_densemap(__self__):
@@ -501,29 +658,36 @@ class datacube:
 
     def digest_merge(__self__,bar=None):
         if bar != None: 
-            bar.progress["maximum"] = 5
+            bar.progress["maximum"] = 6
             bar.updatebar(1)
-            bar.update_text("1/5 Calculating MPS...")
+            bar.update_text("1/6 Calculating MPS...")
         mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
-        datacube.MPS(__self__,mps)
+        __self__.MPS(mps)
         __self__.mps = mps
         if bar != None: 
-            bar.update_text("2/5 Calculating Stacksum...")
+            bar.update_text("2/6 Calculating Stacksum...")
             bar.updatebar(2)
-        datacube.stacksum(__self__)
-        datacube.write_sum(__self__)
+        __self__.stacksum()
+        __self__.write_sum()
         if bar != None:
-            bar.update_text("3/5 Finding Fano and Noise...")
+            bar.update_text("3/6 Creating densemap...")
             bar.updatebar(3)
-        datacube.fit_fano_and_noise(__self__)
+        __self__.create_densemap()
         if bar != None:
-            bar.update_text("4/5 Creating densemap...")
+            bar.update_text("4/6 Calculating continuum...")
             bar.updatebar(4)
-        datacube.create_densemap(__self__)
+        __self__.strip_background(
+                recalculating=True,
+                bgstrip=__self__.config["bgstrip"],
+                progressbar=bar)
         if bar != None:
-            bar.update_text("5/5 Writing to disk...")
+            bar.update_text("5/6 Finding Fano and Noise...")
             bar.updatebar(5)
-        datacube.save_cube(__self__)
+        __self__.fit_fano_and_noise()
+        if bar != None:
+            bar.update_text("6/6 Writing to disk...")
+            bar.updatebar(6)
+        __self__.save_cube()
 
     def compile_cube(__self__):
 
@@ -773,7 +937,6 @@ class datacube:
                     [__self__.dimension[0],__self__.dimension[1]],dtype="float32")
 
             if wipe == True: 
-                print(element+"_a")
                 try: del __self__.__dict__[element+"_a"]
                 except KeyError: print("No alpha map for {}".format(element))
                 try: del __self__.__dict__[element+"_b"]
@@ -916,7 +1079,6 @@ def gaussianbuilder(E_axis,energy,A,F,N):
     gaus = np.zeros([energy.shape[0],E_axis.shape[0]],dtype="float32")
     for i in range(energy.shape[0]):
         s = sigma(energy[i],F,N)
-        print("sigma",energy[i],s)
         for j in range(E_axis.shape[0]):
             gaus[i][j]=A[i]*(math.exp(-(((E_axis[j]-energy[i])**2)/(2*(s**2)))))
     return gaus
@@ -1291,11 +1453,12 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
 
     ##################################################################################    
 
+    timeout=0.5
     for it,spectra_batch in enumerate([spectra_batch[[0]],spectra_batch[1:]]): 
+        start=time.time()
 
         if ndegree[it]==0:
             y_cont=np.zeros(spectra_batch.shape)
-            print("No continuum initialized")
 
         else:
             #"Shape every first axis represents new spectrum"
@@ -1355,7 +1518,7 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
                 # having C bigger than 0 (=null hypothesis). If not fullfilled  #
                 # C not significantly bigger than 0!                            #
                 #################################################################
-
+                
                 for j in range(ndegree[it]): #Determining coefficients for ndegree
                     gamma[:,j]=np.sum(w*p[:,j,:]*p[:,j,:]) #Sum of normalization
                     a[:,j]=np.sum(w*x*p[:,j,:]*p[:,j,:])/gamma[:,j]
@@ -1365,6 +1528,7 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
                     sc[:,j]=np.sqrt(1/gamma[:,j]) #Standard deviation coefficients
 
                     p[:,j+1,:]=(x-a[:,[j]])*p[:,j,:]-b[:,[j]]*p[:,j-1,:]
+                    
 
                 #################################################################
 
@@ -1391,11 +1555,9 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
                 #################################################################
 
                 iteration += 1
-
-            print("Iterations polynomial to overall converge: %i"%iteration)
-            if np.any(len_cont==spectra_batch.shape[1]):
-                print("Warning continuum spectra: %s not well defined"%(
-                    np.where(len_cont==spectra_batch.shape[1])))
+                if time.time()-start > timeout: return np.zeros([spectra_batch.shape[1]])
+                
+            logger.info("Iterations polynomial to overall converge: {}".format(iteration))
 
         ########################################################################
         # Concatenate continuum global spectrum with continuum single spectra  #
@@ -1438,100 +1600,22 @@ def findpeaks(spectrum,v=4,w=9,r=1):
     plt.show()
     return selected_peaks
 
-def deconvolute(E_axis,summation_spec,labels):
-    from scipy.optimize import curve_fit
-    
-    #################################
-    # Slices a random piece of data #
-    #################################
+def gaus(x, E_peak, gain, Noise, Fano, *A):
 
-    bounds = [random.randint(0,1023),random.randint(0,1023)]
-    bounds.sort()
-    summation_spec = summation_spec[bounds[0]:bounds[1]]
-    E_axis = E_axis[bounds[0]:bounds[1]]*1000 #Pass from KeV to eV
-
-    #################################
-
-    ######################
-    # Gets peaks indexes #
-    ######################
-
-    indexes = findpeaks(summation_spec,v=4,w=9,r=11)
-    print(indexes)
-
-    ######################
-    
-    #########################
-    # PREPARE INITIAL GUESS #
-    #########################
-    
-    """ Converts peak indexes to corresponding energies in the x_axis """
-    E_indexes = []
-    for i in indexes:
-        E_indexes.append(E_axis[i])
-    E_indexes = np.asarray(E_indexes,dtype="float32")
-    print("E_indexes",E_indexes)
-    """ ---------------------------------------------- """
-    
-    Noise, Fano = Constants.NOISE, Constants.FANO
-
-    """ Extracts the counts at each peak index """
-    y_peak = np.asarray(summation_spec[indexes])
-    """ ---------------------------------------------- """
-
-    A0 = y_peak*np.sqrt((np.square(Noise/2.3548))+(3.85*Fano*E_indexes))*np.sqrt(2*np.pi)
-    initial_guess = np.concatenate(([Noise, Fano], A0))
-
-    print("Counts and Initial guess lengths:")
-    print(len(summation_spec[indexes]),len(A0))
-    plt.plot(summation_spec[indexes],label="sum")
-    plt.plot(A0,label="guess")
-    plt.legend()
-    plt.show()
-
-    #########################
-
-    Constants.FIT_CYCLES = 10000
-    popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
-        E_axis,E_indexes,Noise,Fano,*A), 
-        E_axis, 
-        summation_spec, 
-        p0=initial_guess, 
-        maxfev=Constants.FIT_CYCLES) 
-
-    print("Fit results:",popt_gaus)
-    print("Type:",type(popt_gaus))
-    print("Shape: ",popt_gaus.shape)
-    print("FANO AND NOISE: ",popt_gaus[0],popt_gaus[1])
-    
-    y_gaus_single = np.asarray(
-                    gaussianbuilder(
-                        E_axis,
-                        E_indexes,
-                        popt_gaus[2:],
-                        popt_gaus[1],
-                        popt_gaus[0]))
-    print(y_gaus_single)
-    print(y_gaus_single.shape)
-    for i in range(y_gaus_single.shape[0]):
-        plt.semilogy(y_gaus_single[i])
-    plt.semilogy(summation_spec,color="blue")
-    plt.show()
-    
-    return indexes
-
-def gaus(x, E_peak, Noise, Fano, *A):
-    
     """ Model function to be fitted.
-    
+
     ---------------------------------------------
 
     INPUT:
-        x: (1D-array); contains the calibrated energy axis
-        E_peak: (1D-array); contains the energy where peaks where found """
+        x; <1D-array> - contains the calibrated energy axis
+        E_peak; <1D-array> - contains the energy where peaks where found 
+        gain; <float> - energy gain per channel in electronvolts
+        Noise; <float> - Noise factor
+        Fano; <float> - Fano factor
+        A; <1D-array> - Gaussian amplitude array """
 
     s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
-    return np.sum(
+    return gain*np.sum(
             A/(s*np.sqrt(2*np.pi))*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
 
 
@@ -1548,5 +1632,4 @@ if __name__=="__main__":
     #        Constants.MY_DATACUBE.background,
     #        Constants.MY_DATACUBE.config,True,
     #        np.zeros([Constants.MY_DATACUBE.matrix.shape[2]]))
-    deconvolute(e_axis,data,[])
 

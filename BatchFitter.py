@@ -25,7 +25,6 @@ from ProgressBar import Busy
 
 import xraylib as xlib
 import sys, os, multiprocessing, copy, pickle
-from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -56,6 +55,7 @@ def gausfit(
         fit_path,
         figures_path,
         SUM,
+        FN,
         iterator,
         bar=None,
         work_done=None,
@@ -84,8 +84,9 @@ def gausfit(
         Figures of fitted spectra                                              
     """
 
-    time0 = timeit.default_timer()
+    from scipy.optimize import curve_fit
     cycles = Constants.FIT_CYCLES
+
     #############################################################################
     # Fit using linregression calibration with x_peaks deduced from this and    #
     # hence automatically located perfectly at peaks and after element          #
@@ -94,14 +95,16 @@ def gausfit(
     # in true spectrum values on x/energy-axis dont matter for peak area!       #
     #############################################################################
 
-    ######################################
-    # Prepend global spectrum to spectra #
-    ######################################
-    
-    y_savgol=np.concatenate((np.sum(y_savgol,0)[None,:],y_savgol),axis=0) 
-    #y_savgol=np.insert(y_savgol,0,SUM,axis=0) 
+    ######################################################################################
+    # Prepend global spectrum to spectra. Each gausfit instance receives the RAW         #
+    # global spectrum (not modified by filtering) and its corresponding continuum        #
+    # This global spectrum is then fitted to be displayed as the selected calculated ROI #
+    ######################################################################################
 
-    ######################################
+    y_savgol = np.insert(y_savgol,0,SUM[0],axis=0) 
+    y_cont[0] = SUM[1]
+
+    ######################################################################################
 
     ####################################################################################
     # Calculate uncertainty y_savgol + clip to one as default value in curve_fit sigma #
@@ -111,8 +114,15 @@ def gausfit(
 
     ####################################################################################
 
-    Noise0 = 80  # To be globally fitted
-    Fano0 = 0.114  # To be globally fitted
+    #######################################################################################
+    # FANO and NOISE can be locally fitted, however, this consumes considerably more      #
+    # resources. Using a global value for these parameters reduces the fitting complexity #
+    # and runs much faster                                                                #
+    #######################################################################################
+
+    Fano0 = FN[0]
+    Noise0 = FN[1]
+
     gamma0 = 1
     frame = [] 
 
@@ -133,15 +143,16 @@ def gausfit(
 
     #############################################################
 
-    ########################
-    # To be locally fitted #
-    ########################
+    ############################
+    # Parameters initial guess #
+    ############################
 
     A0 = y_peak*np.sqrt((np.square(Noise0/2.3548))+(3.85*Fano0*E_peak))*np.sqrt(2*np.pi)/gain
+    params_gaus = A0
+    #params_gaus = np.insert(A0,[0],[Noise0,Fano0],axis=1)
+    #params_voigt = np.insert(A0,[0],[Noise0,Fano0,gamma0],axis=1)
 
-    ########################
-    params_gaus = np.insert(A0,[0],[Noise0,Fano0],axis=1)  #Params Gaussian fit
-    params_voigt = np.insert(A0,[0],[Noise0,Fano0,gamma0],axis=1) #Params Voigt fit
+    ############################
 
     ''' Plotting params '''
     element = [*Z_dict][:-1] #To be plotted elements
@@ -152,7 +163,7 @@ def gausfit(
     ########################################
 
     seen=set() #Define set of all values seen so far in set comprehension
-    dupl_value=set(x for x in [value for sublist in Z_dict.values() \
+    dupl_value=set(int(x) for x in [value for sublist in Z_dict.values() \
             for value in sublist] if x in seen or seen.add(x)) 
 
     ########################################
@@ -160,14 +171,18 @@ def gausfit(
     #######################################################
     # Get corresponding duplicate keys and reversely sort #
     #######################################################
-
+        
+    un_ = Z_dict["Unmatched"]
+    Z_dict.pop("Unmatched")
     dupl_key=sorted([key for key,sublist in Z_dict.items() \
             for value in sublist if value in dupl_value],reverse=True) 
+    Z_dict["Unmatched"] = un_
 
     #######################################################
 
     tot = len(y_savgol)
     for it in range(tot):
+        time0 = timeit.default_timer()
 
         if bar!=None and not bar.make_abortion: 
             iterator += 1
@@ -186,31 +201,22 @@ def gausfit(
         #print("y_cont[0]",y_cont[0].shape)
         #print("uncertainty",uncertainty.shape)
         #print("params gaus",params_gaus.shape)
-
+        
+        time_fit = timeit.default_timer()
         ''' Gaussian Fit '''
         try: 
-            popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
-                x,E_peak,gain,Noise,Fano, *A) + y_cont[it], 
-                x, 
-                y_savgol[it], 
-                p0=params_gaus[it], 
-                sigma=uncertainty[it], 
+            popt_gaus, pcov_gaus = curve_fit(lambda x,*A: gaus(
+                x,E_peak,gain,Noise0,Fano0,*A) + y_cont[it],
+                x,
+                y_savgol[it],
+                p0=params_gaus[it],
+                sigma=uncertainty[it],
                 maxfev=cycles) #Clean Gaus
         except:
             print("WARNING:\nFit failed for spec {}".format(it))
             popt_gaus = np.zeros(E_peak.shape[0]+2,dtype="int32")
+        print("curve_fit time: {0:0.2f}".format(timeit.default_timer()-time_fit),end="\r")
         
-        ############################################################################
-        # Determine boundaries of fitted Noise and Fano for which to print warning #
-        ############################################################################
-
-        #if not (0<popt_gaus[0]<200)|(0<popt_gaus[1]<0.2): 
-        #    print(
-        #            "  -  Non-physical value of fitted noise {} and fano {}".format(
-        #        popt_gaus[1],popt_gaus[0]))
-
-        ############################################################################
-            
         ######################################
         # Exclude global spectrum from frame #
         ######################################
@@ -222,8 +228,9 @@ def gausfit(
             # elements into dictionary only taking positive area's #
             ########################################################
             
-            Area_dict_gaus={i: [p for p in popt_gaus[2:][Z_dict[i]] if p>0]\
-            #Area_dict_gaus={i: sum(popt_gaus[2:][Z_dict[i]][popt_gaus[2:][Z_dict[i]]>0])\
+            #Area_dict_gaus={i: [p for p in popt_gaus[2:][Z_dict[i]] if p>0]\ 
+            #Area_dict_gaus={i: popt_gaus[2:][Z_dict[i]]\
+            Area_dict_gaus={i: popt_gaus[:][Z_dict[i]]\
                     for i in [*Z_dict][:-1]} #-1 excludes last key "Unmatched"
 
             ########################################################
@@ -234,17 +241,19 @@ def gausfit(
         
         else: 
             y_gaus_single = np.asarray(
-                    [gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
+            #        [gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
+                    [gaus(x,E_peak[i],gain,Noise0,Fano0,popt_gaus[i]) for i in range(
                         E_peak.size)]) + y_cont[it]
             g_fit_path = fit_path.split(".")[0]
             g_fit_path, chunk = g_fit_path.split("Fit_Chunk_",1)
-            g_peak_order_path = g_fit_path + "Global_Peak_Order_{}.npy".format(chunk)
-            g_fit_path = g_fit_path + "Global_Fit_Chunk_{}.npy".format(chunk)
+            g_peak_order_path = g_fit_path + "Global_Peak_Order.npy"
+            g_fit_path = g_fit_path + "Global_Fit_Chunk.npy"
             np.save(g_fit_path,y_gaus_single)
             ordered_peaks = E_peak,Z_dict
             np.save(g_peak_order_path,ordered_peaks)
        
-        y_gaus = gaus(x,E_peak,gain,*popt_gaus)+y_cont[it]
+        #y_gaus = gaus(x,E_peak,gain,*popt_gaus)+y_cont[it]
+        y_gaus = gaus(x,E_peak,gain,Noise0,Fano0,popt_gaus)+y_cont[it]
 
         #############################################################################
         #Residuals devided by sigma y_i/y_savgol or eventual 1 in case of sigma = 0 #
@@ -298,16 +307,19 @@ def gausfit(
         # print("\rStandard error params Voigt:",s_params_voigt)
         # FWHM_voigt=2.355*np.sqrt((np.square(popt_voigt[0]/2.3548))+(3.85*popt_voigt[1]*E_peak)) #(Divide /gain to get FWHM expressed in channels)
         # print("\rFWHM_voigt (eV):",FWHM)
-
+        
+        #time_avg = (timeit.default_timer()-time0) 
+        #print("Avg time: {0:0.2f}".format(time_avg),end="\r")
+        
         #############################
         # FROM HERE TO PLOT SPECTRA #
         #############################
         
         if Constants.SAVE_FIT_FIGURES and (it+1)%Constants.SAVE_INTERVAL==0:
-        #if (it+1)%500==0:
             
             y_gaus_single = np.asarray(
-                [gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
+                #[gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
+                [gaus(x,E_peak[i],gain,Noise0,Fano0,popt_gaus[i]) for i in range(
                         E_peak.size)]) + y_cont[it]
 
             fig,ax=plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
@@ -315,13 +327,13 @@ def gausfit(
             plt.setp(ax, xlim=(x.min(),x.max())) #Set xlim on both axes
             
             ax[0].text(
-                    14000,
+                    0,
                     np.max(y_savgol[it]),
                     "$\chi^2$: %.3f"%rchisq_gaus,
-                    fontsize=15,
-                    bbox={'facecolor':'white', 'edgecolor':'None', 'pad':10})
-            ax[0].semilogy(x,y_cont[it],linewidth=1,zorder=1,label='Continuum')
-            ax[0].plot(x,y_savgol[it],linewidth=1,zorder=1, label='Counts')
+                    fontsize=10,
+                    bbox={'facecolor':'None', 'edgecolor':'None', 'pad':10})
+            ax[0].semilogy(x,y_cont[it],linewidth=1,zorder=1,label='Continuum',color="green")
+            ax[0].plot(x,y_savgol[it],linewidth=1,zorder=1, label='Counts',color="blue")
             ax[0].plot(x,y_gaus,label='Fit')
             ax[0].set_ylim([1,y_savgol[it].max()])
             element = [*Z_dict][:-1] #To be plotted elements
@@ -416,12 +428,6 @@ def gausfit(
 
         ############# END OF SAVE BLOCK #############
 
-        time_avg = (timeit.default_timer()-time0)/(it+1) 
-        print("Avg time: {0:0.2f}".format(time_avg),end="\r")
-
-        #print("\rFitting spectrum: %s of %s (%.2f%%)  time left: %i min"%(it+1,len(y_savgol),
-        #    100*(it+1)/len(y_savgol),time_avg*(len(y_savgol)-it)/60),end='',flush=True)
-
         del popt_gaus
         del y_gaus
         del residuals_gaus
@@ -444,36 +450,25 @@ def gausfit(
     return 0
 
 """ Model functions ------------------------------------------------------------"""
+    
+""" Sum changes although summing over rows automatically back to one row 
+array and hence only x needs to be Transposed instead of A,E_peak and 
+s --- A using gausfit seperated from params concatenate ndarray and put 
+in solo tuple, so not ndarray within tuple like when calling specifically 
+funcs and hence does not need to be unpacked """
 
 def gaus(x, E_peak, gain, Noise, Fano, *A):
-    
-    """ Sum changes although summing over rows automatically back to one row 
-    array and hence only x needs to be Transposed instead of A,E_peak and 
-    s --- A using gausfit seperated from params concatenate ndarray and put 
-    in solo tuple, so not ndarray within tuple like when calling specifically 
-    funcs and hence does not need to be unpacked """
-
     s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
-    #s = np.sqrt(np.square(Noise/2.3548)+3.85*Fano*E_peak)
-    return gain*np.sum(
-            A/(s*np.sqrt(2*np.pi))*np.exp(
-                -np.square(x[:,None]-E_peak)/(2*np.square(s))
-                ),1
-            )
+    return gain*np.sum(A/(s*np.sqrt(2*np.pi))*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
 
 """-----------------------------------------------------------------------------"""
-            
+    
+""" Both sigma and gamma energy dependance E_peak, sigma since 
+direct function and gamma since divided by sigma """        
+
 def voigt(x, E_peak, Noise, Fano, gamma, *A):
-
-    """ Both sigma and gamma energy dependance E_peak, sigma since 
-    direct function and gamma since divided by sigma """
-
     s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
-    return np.sum(
-            A/(s*np.sqrt(2*np.pi))*np.real(
-                wofz(((x[:,None]-E_peak)+1j*gamma)/(s*np.sqrt(2)))
-                ),1
-            )
+    return np.sum(A/(s*np.sqrt(2*np.pi))*np.real(wofz(((x[:,None]-E_peak)+1j*gamma)/(s*np.sqrt(2)))),1)
 
 """-----------------------------------------------------------------------------"""
 
@@ -528,9 +523,8 @@ def findpeak(
     #################################################################
 
     y_global = np.sum(y_savgol.clip(1),0)
-    #y_global = Constants.MY_DATACUBE.sum
-    #y_global = savgol_filter(Constants.MY_DATACUBE.mps,5,3)
-    #y_cont[0] = 0.75*peakstrip(y_global,24,5,5,3)
+    width=int(Constants.PEAK_TOLERANCE)
+    continuum_tol = Constants.CONTINUUM_SUPPRESSION
 
     #################################################################
     # Calculating fill and width value side windows by by adding 1  #
@@ -592,7 +586,7 @@ def findpeak(
             (np.roll(y_conv,-1)<y_conv) & \
                     (np.roll(y_conv,1)<y_conv) & \
                     (y_conv>np.sqrt(var_conv)*r) & \
-                    (y_global>Constants.PEAK_TOLERANCE*y_cont[0])) 
+                    (y_global>continuum_tol*y_cont[0])) 
 
     #######################################################
     
@@ -648,7 +642,6 @@ def findpeak(
     #########################################################################
 
     E_mesh = np.isclose(E_lib[:,:,None],E_peak,rtol=2*gain/4000)#rtol=0.006) 
-
 
     """ If two peaks put for one (by means of two peaks within 4 channels), i
     remove latter (rare: means y_conv has mistakenly added two lines for only one peak): """
@@ -888,20 +881,19 @@ def findpeak(
     Z_dict['Unmatched']=list(set(range(len(x_peak))).difference(x_peak_id)) 
     
     plt.figure()
-    #plt.xlim([energies.min(),energies.max()])
-    #plt.xlim([2000,16000])
-    plt.ylim([10e-3,y_global.max()])
     spectrum=0
     plt.plot(energies,y_global)
     plt.plot(energies,y_conv)
     plt.plot(energies,(np.sqrt(var_conv)*r))
     plt.plot(energies,y_cont[spectrum])
-    plt.semilogy(energies,Constants.PEAK_TOLERANCE*y_cont[spectrum])
+    plt.semilogy(energies,continuum_tol*y_cont[spectrum])
+    plt.ylim([10e-2,y_global.max()])
+    #plt.xlim([0,4000])
     
     E_peak = zero + gain * x_peak
     for j in E_peak:
         plt.axvline(x=j)
-    plt.savefig(path,format="png",dpi=600)
+    plt.savefig(path,format="png",dpi=1200)
 
     return x_peak, Z_dict
 
@@ -919,65 +911,37 @@ class SingleFit():
         __self__.slope = Constants.MY_DATACUBE.gain*1000
         __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
                 -1,Constants.MY_DATACUBE.matrix.shape[-1])
-        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
-                -1,Constants.MY_DATACUBE.background.shape[-1])
+        __self__.FN = Constants.MY_DATACUBE.FN
         
-        ################
-        # Prepare data #
-        ################
+        ###################################################################################
+        # Prepare the data. Spectra are filtered with a savgol filter and the global      #
+        # spectrum must be recalculated for the filtered data. The same for the continuum #
+        ###################################################################################
 
         __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.update_text("Preparing data...")
+        __self__.bar.update_text("Filtering data...")
         for i in range(len(__self__.counts)):
             __self__.bar.updatebar(i)
             __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
+        __self__.SUM = np.sum(__self__.counts,0)
+        __self__.bar.update_text("Adjusting continuum...")
+        __self__.continuum, __self__.global_continuum = SpecMath.batch_continuum_for_wizard(
+                __self__.counts,
+                bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
+                bgparams=Constants.MY_DATACUBE.config["bg_settings"],
+                bar=__self__.bar,
+                global_spectrum=__self__.SUM)
+
+        __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
+        __self__.continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
 
         del Constants.MY_DATACUBE.matrix
         del Constants.MY_DATACUBE.background
-        __self__.SUM = np.sum(__self__.counts,0)
-
-        #########################################################################
-        # Continuum of global sum (sum of all prepared data) must be parsed to  #
-        # findpeak function. The clipped global spectrum is calculated inside   #
-        # the function                                                          #
-        #########################################################################
-
-        if Constants.MY_DATACUBE.config["bgstrip"] == "SNIPBG":
-            global_continuum = peakstrip(__self__.SUM,24,5,5,3)
-        elif Constants.MY_DATACUBE.config["bgstrip"] == "Polynomial":
-            global_continuum = SpecMath.polfit_batch(
-                    __self__.counts,custom_global_spec=__self__.SUM)[0]
-
-        #global_continuum = peakstrip(copy.deepcopy(__self__.SUM),24,5,5,3)
-        __self__.continuum = np.insert(__self__.continuum,0,global_continuum, axis=0)
-
-        #########################################################################
 
         __self__.bar.destroybar()
 
-        ################
-
         __self__.fit_path = os.path.join(path,"Fit_Chunk_1.npy")
 
-        #start = timeit.default_timer()
-        #dimension, energies, intercept, slope, counts = getData(spectrum_path)
-        #stop = timeit.default_timer()
-        #print("Data: ", stop - start)
-
-        #print("BORIS")
-        #print(counts.shape)
-        #print(type(counts))
-
-        # start2 = timeit.default_timer()
-        # continuum = SNIPBG(counts,11,3,24)
-        # stop2 = timeit.default_timer()
-        # print("SNIPGB: ", stop2 - start2)
-        # start1 = timeit.default_timer()
-        # continuum = polfit(counts)
-        # stop1 = timeit.default_timer()
-        # print("Polynomial: ", stop1 - start1)
-
-        ########################
 
     def run_fit(__self__):
         
@@ -998,7 +962,8 @@ class SingleFit():
                 __self__.slope,
                 __self__.fit_path,
                 figures_path,
-                __self__.SUM,
+                __self__.raw_sum_and_bg,
+                __self__.FN,
                 __self__.iterator,
                 bar = __self__.bar)
         __self__.bar.destroybar()
@@ -1013,9 +978,11 @@ class SingleFit():
                 __self__.energies,
                 path=path)
 
-        ########################
-        # Add element manually #
-        ########################
+        peaks, matches = recheck_peaks(peaks,matches)
+
+        #########################
+        # Add elements manually #
+        #########################
 
         if add_list:
             for el in add_list:
@@ -1038,8 +1005,10 @@ class SingleFit():
                 el = [[el,int((elka_peak[0]+elka_peak[1])/2),
                         int((elkb_peak[0]+elkb_peak[1])/2)]]
 
-                try: peaks, matches = add_elements(peaks,matches,el)
-                except: logger.warning("Could not add element {} to chunk".format(el))
+                peaks, matches = add_elements(peaks,matches,el)
+                #except: logger.warning("Could not add element {} to chunk".format(el))
+
+        #########################
 
         Constants.MATCHES = peaks, matches
         logger.info("Elements being fitted: {}".format(matches))
@@ -1062,28 +1031,42 @@ class MultiFit():
         __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
         __self__.intercept = __self__.energies[0]
         __self__.slope = Constants.MY_DATACUBE.gain*1000
+        __self__.FN = Constants.MY_DATACUBE.FN
         __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
             -1,Constants.MY_DATACUBE.matrix.shape[-1])
-        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
-            -1,Constants.MY_DATACUBE.background.shape[-1])
         __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.update_text("Preparing data...")
-
-        ###############################################################
-        # Smooths the data (renders peak detection easier) and create #
-        # the sum spectrum of the soothed data                        #
-        ###############################################################
         
+        ###################################################################################
+        # Prepare the data. Spectra are filtered with a savgol filter and the global      #
+        # spectrum must be recalculated for the filtered data. The same for the continuum #
+        ###################################################################################
+        
+        __self__.bar.update_text("Filtering data...")
         for i in range(len(__self__.counts)):
             __self__.bar.updatebar(i)
             __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
         __self__.SUM = np.sum(__self__.counts,0)
-
+        __self__.bar.update_text("Adjusting continuum...")
+        __self__.continuum, __self__.global_continuum = SpecMath.batch_continuum_for_wizard(
+                __self__.counts,
+                bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
+                bgparams=Constants.MY_DATACUBE.config["bg_settings"],
+                bar=__self__.bar,
+                global_spectrum=__self__.SUM)
+        __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
+        
         __self__.bar.destroybar()
-        ###############################################################
+
+        ###################################################################################
 
     def eat_data(__self__):
-        __self__.bar.update_text("Eating data...")
+
+        ##############################################################
+        # Split the data into blocks to distribute accross processes #
+        # Here, the continuum array has the same size as the counts  #
+        ##############################################################
+
+        __self__.bar.update_text("Splitting data...")
         __self__.bar.updatebar(0)
 
         counts, continuum,block = [],[],[]
@@ -1144,15 +1127,14 @@ class MultiFit():
     
     def locate_peaks(__self__,add_list=None,path="./"):
 
-        if Constants.MY_DATACUBE.config["bgstrip"] == "SNIPBG":
-            global_continuum = peakstrip(__self__.SUM,24,5,5,3)
-        elif Constants.MY_DATACUBE.config["bgstrip"] == "Polynomial":
-            global_continuum = SpecMath.polfit_batch(
-                    __self__.counts,
-                    custom_global_spec=__self__.SUM)[0]
+        ######################################################################
+        # The global continuum of the filtered spectra is parsed to findpeak #
+        # function. It uses this background as a criteria to select peaks    #
+        ######################################################################
 
-        #global_continuum = peakstrip(copy.deepcopy(__self__.SUM),24,5,5,3)
-        continuum = np.insert(__self__.continuum,0,global_continuum, axis=0)
+        continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
+
+        ######################################################################
 
         peaks, matches = findpeak(
                 __self__.counts,
@@ -1161,6 +1143,8 @@ class MultiFit():
                 __self__.slope,
                 __self__.energies,
                 path)
+
+        peaks, matches = recheck_peaks(peaks,matches)
 
         ########################
         # Add element manually #
@@ -1252,9 +1236,10 @@ class MultiFit():
                         chunk,
                         __self__.results,
                         __self__.energies,
+                        __self__.FN,
                         __self__.global_iterator,
                         __self__.work_done,
-                        __self__.SUM,
+                        __self__.raw_sum_and_bg,
                         peaks,
                         matches,
                         (cycles,plot_save_interval,save_plots)))
@@ -1285,9 +1270,10 @@ class MultiFit():
                         chunk,
                         __self__.results,
                         __self__.energies,
+                        __self__.FN,
                         __self__.global_iterator,
                         __self__.work_done,
-                        __self__.SUM,
+                        __self__.raw_sum_and_bg,
                         peaks,
                         matches,
                         (cycles,plot_save_interval,save_plots)))
@@ -1329,9 +1315,10 @@ def find_and_fit(
         chunk,
         results,
         energies,
+        fano_and_noise,
         iterator,
         work_done,
-        global_spec,
+        global_spec_and_bg,
         peaks,
         matches,
         global_parameters):
@@ -1348,8 +1335,9 @@ def find_and_fit(
         chunk; <integer> - chunk number
         results; <multiprocessing Queue object> - collects outputs from processes
         energies; <1D-array> - calibrated energy axis of datacube in memory
+        fano_and_noise; <1D-array> - contains the global fitted Fano and Noise values
         iterator; <Synchronized> - counter to verify processes progress
-        global_spec; <1D-array> - summation derived spectrum
+        global_spec_and_bg; <2D-array> - summation derived spectrum [0] and its continuum [1]
         clipped_global_spec; <1D-array> - obtained by summing the clipped data (clipped to 1)
     """
     
@@ -1364,8 +1352,7 @@ def find_and_fit(
     #####################################################################################
 
     counts, continuum = np.asarray(data[0]), np.asarray(data[1])
-    global_continuum = peakstrip(global_spec,24,5,5,3)
-    continuum = np.insert(continuum,0,global_continuum, axis=0)
+    continuum = np.insert(continuum,0,global_spec_and_bg, axis=0)
 
     #####################################################################################
 
@@ -1398,7 +1385,8 @@ def find_and_fit(
             slope,
             fit_path,
             plots_save_path,
-            global_spec,
+            global_spec_and_bg,
+            fano_and_noise,
             iterator,
             bar=None,
             work_done=work_done,
@@ -1423,7 +1411,58 @@ def add_elements(peaks,matches,element_list):
         matches = {int(k) : v for k, v in matches.items()}
         matches["Unmatched"] = un_
 
+    peaks, matches = recheck_peaks(peaks,matches)
+
     return peaks, matches
+
+def recheck_peaks(peaks,matches):
+
+    """ Must run always after the findpeak() function. This function re-checks the 
+    outputs from findpeak() by verifiying how far the identified peaks are from the
+    theoretical position. This solves issues with doubled peaks or mis-identification
+    that happens usually with higher energy peaks """
+
+    un_ = matches["Unmatched"]
+    matches.pop("Unmatched")
+
+    energies = {key:peaks[peak] for key,peak in matches.items()}
+    checked_matches = {}
+    gain = Constants.MY_DATACUBE.config["gain"]*1000
+    W = Constants.CHECK_TOLERANCE
+
+    for key in matches.keys():
+        checked_matches[key] = []
+        element = EnergyLib.ElementList[key]
+        theoretical_energies = [EnergyLib.Energies[key]*1000,
+                EnergyLib.kbEnergies[key]*1000]
+        for peak in range(len(matches[key])):
+            lower = theoretical_energies[peak] - (W*gain)
+            high = (W*gain) + theoretical_energies[peak]
+            pos = Constants.MY_DATACUBE.energyaxis[energies[key][peak]]*1000
+            #print(lower,pos,high)
+            if len(matches[key])>1:
+                if lower <= pos <= high:
+                    checked_matches[key].append(matches[key][peak])
+            else: 
+
+                #################################################################
+                # If, from findpeak(), only beta line is detected, check twice  #
+                # the only value inside the matches key as the only key in this #
+                # case is the beta one                                          #
+                #################################################################
+
+                for line in range(2):
+                    lower = theoretical_energies[line] - (Constants.CHECK_TOLERANCE*gain)
+                    high = (Constants.CHECK_TOLERANCE*gain) + theoretical_energies[line]
+                    if lower <= pos <= high:
+                        checked_matches[key].append(matches[key][peak])
+
+                #################################################################
+
+        if checked_matches[key] == []: checked_matches.pop(key)
+
+    checked_matches["Unmatched"] = un_
+    return peaks, checked_matches
 
 def mock(data,intercept,slope,path,chunk,results,energies):
 
@@ -1522,23 +1561,27 @@ def build_images(
     for frmfile in frames:
         frmcount += 1
         bar.update_text("Building images - {}/{}".format(frmcount,len(frames)))
-        print("\nFrame {}".format(frmcount))
+        #print("\nFrame {}".format(frmcount))
         frame = np.load(
                 os.path.abspath(os.path.join(frames_path,frmfile)),
                 allow_pickle=True)
         size = frame.shape[0]*len(element_list)
-        print("Size: ",frame.shape[0]*len(element_list))
+        #print("Size: ",frame.shape[0]*len(element_list))
+        if not elements: continue
         for key in elements:
             maximum_counts = 0
             for c in range(frame.shape[0]):
                 iteration+=1
                 percent = iteration/size
-                print("Map {}: {}, pos {} x {}\t {:0.2f} percent complete...".format(
-                    maps_count,element_list[maps_count],x,y,percent*100),end="\r")
+                #print("Map {}: {}, pos {} x {}\t {:0.2f} percent complete...".format(
+                #    maps_count,element_list[maps_count],x,y,percent*100),end="\r")
                 for line in range(len(frame[c][key])):
-                    try: 
-                        el_maps[x][y][line][maps_count] = frame[c][key][line]
-                    except: 
+                    if frame[c][key][line] > 0:
+                        try: 
+                            el_maps[x][y][line][maps_count] = frame[c][key][line]
+                        except: 
+                            el_maps[x][y][line][maps_count] = 0
+                    else:
                         el_maps[x][y][line][maps_count] = 0
                 pos = refresh_position(x,y,Constants.MY_DATACUBE.dimension)
                 x,y = pos[0],pos[1]
@@ -1547,7 +1590,7 @@ def build_images(
             bar.updatebar(maps_count)
             
         iteration, maps_count = 0,0
-        print("\npos: ",pos)
+        #print("\npos: ",pos)
         start_x, start_y, x, y = pos[0], pos[1], pos[0], pos[1]
 
     ####################################################
@@ -1576,7 +1619,6 @@ def build_images(
     split_and_save(Constants.MY_DATACUBE,el_maps,element_list,
             force_alfa_and_beta=True)
     bar.destroybar()
-
     
 def add_roi_to_datacube():
     
@@ -1608,17 +1650,22 @@ def add_roi_to_datacube():
             for plots in range(len(el_order[1][key])):
                 idx = el_order[1][key][plots]
                 print("Key", key, "line", plots,"in frame ",it, "spec index:",idx)
-                Constants.MY_DATACUBE.ROI[EnergyLib.ElementList[int(key)]] += spectrum[idx]
-            #if key == 26:
-            #    plt.semilogy(E_axis,Constants.MY_DATACUBE.ROI[EnergyLib.ElementList[key]],
-            #        label=key)
-        del spectrum
+                
+                #############################################################################
+                # Each fitted peak carries the continuum with it, by summing both peaks to  #
+                # create a single array to represent them, the continuum is doubled.        #
+                # Therefore, each added peak has the continuum subtracted at each addition  #
+                # and then added one single time at the end                                 #
+                #############################################################################
 
-    #plt.semilogy(E_axis,fit)
-    #plt.semilogy(E_axis,Constants.MY_DATACUBE.sum,color="blue",label="Sum")
-    #plt.semilogy(E_axis,Constants.MY_DATACUBE.sum_bg,color="green",label="Sum BG")
-    #plt.legend()
-    #plt.show()
+                if not np.isnan(np.sum(spectrum[idx])):
+                    Constants.MY_DATACUBE.ROI[
+                EnergyLib.ElementList[int(key)]]+=(spectrum[idx]-Constants.MY_DATACUBE.sum_bg)
+            Constants.MY_DATACUBE.ROI[
+                    EnergyLib.ElementList[int(key)]]+=Constants.MY_DATACUBE.sum_bg
+
+                #############################################################################
+        del spectrum
     return 0
 
 if __name__.endswith('__main__'):

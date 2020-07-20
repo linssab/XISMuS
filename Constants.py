@@ -1,15 +1,25 @@
+#################################################################
+#                                                               #
+#          CONSTANTS                                            #
+#                        version: 1.1.9 - Jul - 2020            #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
 import logging
 
 VERSION = "1.1.0"
-LOGLEVEL = logging.INFO
+LOGLEVEL = logging.DEBUG
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None
 DEFAULTBTN_COLOR = "SystemButtonFace"
 LOW_RES = None
 FANO = 0.114
 NOISE = 80
+USEXLIB = False
 FIT_CYCLES = 1000
-PEAK_TOLERANCE = 1.30
+PEAK_TOLERANCE = 9
+CONTINUUM_SUPPRESSION = 1.5
+CHECK_TOLERANCE = 10
 SETROI_TOLERANCE = [3,4,3]
 SAVE_FIT_FIGURES = True
 SAVE_INTERVAL = 500

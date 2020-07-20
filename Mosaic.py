@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 1.1.0 - May - 2020            #
+#                        version: 1.1.0 - Jul - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -1103,7 +1103,7 @@ class Mosaic_API:
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
             new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
-            new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
+            new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],
                     new_cube.energyaxis.shape[0]],dtype='float32',order='C')
             new_cube.matrix = __self__.merge_matrix
             new_cube.background = __self__.merge_bg

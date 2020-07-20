@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          CONFIGURATION PARSER                                 #
-#                        version: 1.0.1                         #
+#                        version: 1.1.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -232,6 +232,12 @@ def set_settings(inifile):
                 PeakTolerance.append(float(i))
         elif line.split("\t")[0] == "<Cycles>":
             Cycles = int(line.split("\t")[1])
+        elif line.split("\t")[0] == "<Sensitivity>":
+            Sensitivity = float(line.split("\t")[1])
+        elif line.split("\t")[0] == "<Suppression>":
+            ContSuppr = float(line.split("\t")[1])
+        elif line.split("\t")[0] == "<WizTolerance>":
+            WizTol = float(line.split("\t")[1])
         elif line.split("\t")[0] == "<SaveInterval>":
             SaveInterval = int(line.split("\t")[1])
         elif line.split("\t")[0] == "<SavePlot>":
@@ -246,6 +252,9 @@ def set_settings(inifile):
     Constants.WELCOME = WlcmMode
     Constants.SETROI_TOLERANCE = PeakTolerance
     Constants.FIT_CYCLES = Cycles
+    Constants.PEAK_TOLERANCE = Sensitivity
+    Constants.CONTINUUM_SUPPRESSION = ContSuppr
+    Constants.CHECK_TOLERANCE = WizTol
     Constants.SAVE_INTERVAL = SaveInterval
     Constants.SAVE_FIT_FIGURES = SavePlot
 

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.0.1dev                      #
+#                        version: 1.1.0 - Jul - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -52,11 +52,17 @@ def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
     path = os.path.join(SpecRead.__BIN__,"database.dat")
     db = open(path,"a+")
     db.write("\nSAMPLE\t{}\n".format(name))
+    Constants.USER_DATABASE[name] = {}
     db.write("path\t{}\n".format(sample_path))
+    Constants.USER_DATABASE[name]["path"] = sample_path
     db.write("prefix\t{}\n".format(prefix))
+    Constants.USER_DATABASE[name]["prefix"] = prefix
     db.write("mcacount\t{}\n".format(count))
+    Constants.USER_DATABASE[name]["mcacount"] = count
     db.write("extension\t{}\n".format(extension))
+    Constants.USER_DATABASE[name]["extension"] = extension
     db.write("indexing\t{}\n".format(indexing))
+    Constants.USER_DATABASE[name]["indexing"] = indexing
     db.close()
 
 def remove_entry_from_database(smpl_name):
@@ -71,9 +77,13 @@ def remove_entry_from_database(smpl_name):
             del new_lines[i:i+7]
             continue
     db = open(path,"w+")
-    for line in new_lines:
-        db.write(line)
-    db.close()
+    if len(new_lines) < 2:
+        db.close()
+        return
+    else:
+        for line in new_lines:
+            db.write(line)
+        db.close()
     return
 
 def refresh_all_plots():
@@ -862,7 +872,7 @@ class Welcome:
         __self__.master.destroy()
 
 
-class export_diag():
+class ExportDiag():
 
     """ Creates a dialog to export ImageAnalyzer API images.
     Target is the desired output image size. If enhance configuration is True,
@@ -977,7 +987,7 @@ class export_diag():
         __self__.master.destroy()
 
 
-class dimension_diag():
+class DimensionDiag():
 
     """ Creates a pop-up dialog to prompt the datacube dimension
     if no colonneXrighe.txt file is found for the data selected.
@@ -1069,7 +1079,7 @@ class dimension_diag():
     
     def kill(__self__,e):
         __self__.exit_code = "cancel"
-        root.samples.pop(Constants.CONFIG["directory"])
+        #root.samples.pop(Constants.CONFIG["directory"])
         __self__.win.destroy()
 
 
@@ -1983,7 +1993,7 @@ class ImageAnalyzer:
         return 0
 
     def export_maps(__self__):
-        export = export_diag(__self__)
+        export = ExportDiag(__self__)
         return 0
 
 
@@ -2102,7 +2112,6 @@ class PlotWin:
                                 label=element,linewidth=__self__.lw)
                             energy_list=[]
 
-
                 __self__.plot.set_title('{0} {1}'.format(
                     Constants.DIRECTORY,mode),**__self__.plot_font)
                 __self__.plot.set_xlabel("Energy (KeV)")
@@ -2178,31 +2187,27 @@ class PlotWin:
 
                 ###########################################################################
 
-                else:
-                    #__self__.plot.semilogy(
-                    #    Constants.MY_DATACUBE.energyaxis,
-                    #    __self__.plotdata,
-                    #    label=roi_label,
-                    #    color=ElementColors[element])
-                    __self__.plot.fill_between(
-                            Constants.MY_DATACUBE.energyaxis,
-                            Constants.MY_DATACUBE.sum_bg,
-                            __self__.plotdata,
-                            color=ElementColors[element],
-                            where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
-                            alpha=0.85,
-                            interpolate=True,
-                            zorder=3)
-                    patches.append(
-                            mpatches.Patch(
-                                color=ElementColors[element], 
-                                label=roi_label))
-            else: 
+                #elif element=="Au" or element=="Hg":
                 #__self__.plot.semilogy(
-                #Constants.MY_DATACUBE.energyaxis,
-                #__self__.plotdata,
-                #label=roi_label,
-                #color=ElementColors["Custom"])
+                #    Constants.MY_DATACUBE.energyaxis,
+                #    __self__.plotdata,
+                #    label=roi_label,
+                #    color=ElementColors[element])
+                __self__.plot.fill_between(
+                        Constants.MY_DATACUBE.energyaxis,
+                        Constants.MY_DATACUBE.sum_bg,
+                        __self__.plotdata,
+                        color=ElementColors[element],
+                        where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
+                        alpha=0.85,
+                        interpolate=True,
+                        linewidth=3,
+                        zorder=1)
+                patches.append(
+                        mpatches.Patch(
+                            color=ElementColors[element], 
+                            label=roi_label))
+            else: 
                 __self__.plot.fill_between(
                         Constants.MY_DATACUBE.energyaxis,
                         Constants.MY_DATACUBE.sum_bg,
@@ -2210,7 +2215,7 @@ class PlotWin:
                         color=ElementColors["Custom"],
                         where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
                         alpha=0.85,
-                        zorder=3)
+                        zorder=1)
                 patches.append(
                         mpatches.Patch(
                             color=ElementColors["Custom"], 
@@ -2239,7 +2244,8 @@ class PlotWin:
             Constants.DIRECTORY),**__self__.plot_font)
         __self__.plot.set_ylabel("Counts")
         __self__.plot.set_xlabel("Energy (KeV)")
-        __self__.plot.set_ylim([1,Constants.MY_DATACUBE.sum.max()])
+        __self__.plot.set_ylim([1,Constants.MY_DATACUBE.sum.max()*1.20])
+        #__self__.plot.set_xlim([9.20,10.90])
         __self__.plot.legend(
                 fancybox=True,
                 shadow=True,
@@ -2545,87 +2551,86 @@ class Samples:
             """ After trying to look at every folder under the folder selected, 
             priority is given to the actual selected folder """
 
-            if __self__.samples_database == {}:
-                local_path = Constants.SAMPLES_FOLDER.split("\\")
-                folder = local_path.pop(-1)
-                
-                # builds new path
-                new_path = ""
-                for name in local_path:
-                    new_path = new_path + name + "\\"
-                Constants.SAMPLES_FOLDER = new_path
+            #if __self__.samples_database == {}:
+            local_path = Constants.SAMPLES_FOLDER.split("\\")
+            folder = local_path.pop(-1)
+            
+            # builds new path
+            new_path = ""
+            for name in local_path:
+                new_path = new_path + name + "\\"
 
-                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
-                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
-                        "output")):
-                        if name.lower().endswith(".cube"):
-                            __self__.filequeue.set(
-                                    "Cube for {} already compiled, skipping mca\'s".format(
-                                        folder))
-                            __self__.label2.update()
-                            try: __self__.splash.update_idletasks()
-                            except: __self__.popup.update_idletasks()
-                            finally: pass
-                            __self__.skip_list.append(name.split(".cube")[0])
-                files = [name for name in os.listdir(new_path+folder) \
-                        if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
-                extension = files[:]
-                if files == []: pass
-                else:
-                    if folder not in _self__.skip_list:
-                        for item in range(len(files)): 
-                            # displays file being read on splash screen
-                            __self__.filequeue.set("{}".format(files[item]))
-                            __self__.label2.update()
-                            try: __self__.splash.update_idletasks()
-                            except: __self__.popup.update_idletasks()
-                            finally: 
-                                try:
-                                    files[item], extension[item] = \
-                                            files[item].split(".",1)[0],\
-                                            files[item].split(".",1)[1]
+            if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
+                for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
+                    "output")):
+                    if name.lower().endswith(".cube"):
+                        __self__.filequeue.set(
+                                "Cube for {} already compiled, skipping mca\'s".format(
+                                    folder))
+                        __self__.label2.update()
+                        try: __self__.splash.update_idletasks()
+                        except: __self__.popup.update_idletasks()
+                        finally: pass
+                        __self__.skip_list.append(name.split(".cube")[0])
+            files = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
+                    if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+            extension = files[:]
+            if files == []: pass
+            else:
+                if folder not in __self__.skip_list:
+                    for item in range(len(files)): 
+                        # displays file being read on splash screen
+                        __self__.filequeue.set("{}".format(files[item]))
+                        __self__.label2.update()
+                        try: __self__.splash.update_idletasks()
+                        except: __self__.popup.update_idletasks()
+                        finally: 
+                            try:
+                                files[item], extension[item] = \
+                                        files[item].split(".",1)[0],\
+                                        files[item].split(".",1)[1]
 
-                                    """ Gets rid of file numbering """
-                                    for i in range(len(files[item])):
-                                        if not files[item][-1].isdigit(): break
-                                        if files[item][-i].isdigit() and \
-                                                not files[item][-i-1].isdigit(): 
-                                            if indexing == None:
-                                                indexing = files[item][-i:]
-                                            files[item] = files[item][:-i]
-                                            break
-                                except: pass
+                                """ Gets rid of file numbering """
+                                for i in range(len(files[item])):
+                                    if not files[item][-1].isdigit(): break
+                                    if files[item][-i].isdigit() and \
+                                            not files[item][-i-1].isdigit(): 
+                                        if indexing == None:
+                                            indexing = files[item][-i:]
+                                        files[item] = files[item][:-i]
+                                        break
+                            except: pass
 
-                        files_set = set(files)
-                        extension_set = set(extension)
-                        counter = dict((x,files.count(x)) for x in files_set)
-                        counter_ext = dict((x,extension.count(x)) for x in extension_set)
-                        mca_prefix_count = 0
-                        mca_extension_count = 0
-                        # counts mca files and stores the prefix string and no. of files
-                        for counts in counter:
-                            if counter[counts] > mca_prefix_count:
-                                mca_prefix = counts
-                                mca_prefix_count = counter[counts]
-                        for ext in counter_ext:
-                            if counter_ext[ext] > mca_extension_count:
-                                mca_extension = ext
-                                mca_extension_count = counter_ext[ext]
-                        # creates a dict key only if the numer of mca's is larger than 20.
-                        if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
-                            p = os.path.join(Constants.SAMPLES_FOLDER)
-                            __self__.samples_database[folder] = mca_prefix
-                            __self__.samples_path[folder] = os.path.abspath(new_path)
-                            __self__.mcacount[folder] = len(files)
-                            __self__.mca_extension[folder] = mca_extension
-                            __self__.mca_indexing[folder] = indexing
-                            write_to_user_database(
-                                    folder,
-                                    p,
-                                    mca_prefix,
-                                    len(files),
-                                    mca_extension,
-                                    indexing)
+                    files_set = set(files)
+                    extension_set = set(extension)
+                    counter = dict((x,files.count(x)) for x in files_set)
+                    counter_ext = dict((x,extension.count(x)) for x in extension_set)
+                    mca_prefix_count = 0
+                    mca_extension_count = 0
+                    # counts mca files and stores the prefix string and no. of files
+                    for counts in counter:
+                        if counter[counts] > mca_prefix_count:
+                            mca_prefix = counts
+                            mca_prefix_count = counter[counts]
+                    for ext in counter_ext:
+                        if counter_ext[ext] > mca_extension_count:
+                            mca_extension = ext
+                            mca_extension_count = counter_ext[ext]
+                    # creates a dict key only if the numer of mca's is larger than 20.
+                    if mca_prefix_count >= 20 and mca_extension_count >= mca_prefix_count:
+                        p = os.path.join(Constants.SAMPLES_FOLDER)
+                        __self__.samples_database[folder] = mca_prefix
+                        __self__.samples_path[folder] = os.path.abspath(Constants.SAMPLES_FOLDER)
+                        __self__.mcacount[folder] = len(files)
+                        __self__.mca_extension[folder] = mca_extension
+                        __self__.mca_indexing[folder] = indexing
+                        write_to_user_database(
+                                folder,
+                                p,
+                                mca_prefix,
+                                len(files),
+                                mca_extension,
+                                indexing)
         
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
@@ -2775,6 +2780,9 @@ class Settings:
         __self__.TolVar2 = DoubleVar()
         __self__.TolVar3 = DoubleVar()
         __self__.CycVar = DoubleVar()
+        __self__.Sensitivity = DoubleVar()
+        __self__.WizTol = DoubleVar()
+        __self__.ContSuppr = DoubleVar()
         __self__.PlotSaveVar = DoubleVar()
         __self__.PlotSaveBoolVar = BooleanVar()
         
@@ -2790,6 +2798,9 @@ class Settings:
         __self__.TolVar2.set(Constants.SETROI_TOLERANCE[1])
         __self__.TolVar3.set(Constants.SETROI_TOLERANCE[2])
         __self__.CycVar.set(Constants.FIT_CYCLES)
+        __self__.Sensitivity.set(Constants.PEAK_TOLERANCE)
+        __self__.WizTol.set(Constants.CHECK_TOLERANCE)
+        __self__.ContSuppr.set(Constants.CONTINUUM_SUPPRESSION)
         __self__.PlotSaveVar.set(Constants.SAVE_INTERVAL)
         __self__.PlotSaveBoolVar.set(Constants.SAVE_FIT_FIGURES)
 
@@ -2805,7 +2816,7 @@ class Settings:
         ColorMapLabel = Label(__self__.GeneralOptions,text="Color scale: ")
         ColorMapOption = ttk.Combobox(__self__.GeneralOptions, 
                 textvariable=__self__.ColorMapMode, 
-                values=("gray","jet","hot"),
+                values=("gray","jet","hot","Spectral"),
                 width=12,
                 state="readonly")
 
@@ -2854,8 +2865,9 @@ class Settings:
         # Peakmethod Option Frame #
         ###########################
 
+        # LABELS # 
         ToleranceLabel = Label(__self__.PeakOptions, 
-                text="Auto and simple roi peak tolerance:",
+                text="Auto and simple roi peak tolerance ",
                 relief=GROOVE)
         Tolerance1 = Label(__self__.PeakOptions, text="< 4 KeV")
         Tolerance2 = Label(__self__.PeakOptions, text="4-12 KeV")
@@ -2863,37 +2875,56 @@ class Settings:
         ToleranceDescription1 = Label(__self__.PeakOptions, text="*gain")
         ToleranceDescription2 = Label(__self__.PeakOptions, text="*gain")
         ToleranceDescription3 = Label(__self__.PeakOptions, text="*gain")
+        
+        # ENTRIES #
         ToleranceEntry1 = Entry(__self__.PeakOptions, 
                 textvariable=__self__.TolVar1,
-                width=6)
+                width=7)
         ToleranceEntry2 = Entry(__self__.PeakOptions, 
                 textvariable=__self__.TolVar2,
-                width=6)
+                width=7)
         ToleranceEntry3 = Entry(__self__.PeakOptions, 
                 textvariable=__self__.TolVar3,
-                width=6)
+                width=7)
 
         ToleranceLabel.grid(row=0,column=0,columnspan=3,sticky=N+S+W+E)
         Tolerance1.grid(row=1,column=0,sticky=W)
         Tolerance2.grid(row=2,column=0,sticky=W)
         Tolerance3.grid(row=3,column=0,sticky=W)
-        ToleranceEntry1.grid(row=1,column=1,sticky=E)
-        ToleranceEntry2.grid(row=2,column=1,sticky=E)
-        ToleranceEntry3.grid(row=3,column=1,sticky=E)
+        ToleranceEntry1.grid(row=1,column=1,sticky=W)
+        ToleranceEntry2.grid(row=2,column=1,sticky=W)
+        ToleranceEntry3.grid(row=3,column=1,sticky=W)
         ToleranceDescription1.grid(row=1,column=2,sticky=E)
         ToleranceDescription2.grid(row=2,column=2,sticky=E)
         ToleranceDescription3.grid(row=3,column=2,sticky=E)
 
-        AutoWizardLabel = Label(__self__.PeakOptions, text="Auto wizard parameters: ",
+        # LABELS #
+        AutoWizardLabel = Label(__self__.PeakOptions, text="Auto wizard parameters ",
                 relief=GROOVE)
-        FitCycles = Label(__self__.PeakOptions, text="Fit cycles/spectrum ")
+        FitCycles = Label(__self__.PeakOptions, text="Fit cycles/spectrum: ")
+        PeakFindTolerance = Label(__self__.PeakOptions, text="Peakfind sensitivity: ")
+        ContSupprLabel = Label(__self__.PeakOptions, 
+                text="Continuum suppression factor: ")
+        PeakCheckTolerance = Label(__self__.PeakOptions, text="Peakfind tolerance: ")
+        PeakCheckLabel = Label(__self__.PeakOptions, text="*gain")
         __self__.PlotSaveInterval = Label(__self__.PeakOptions, 
                 text="Save plots w/ interval: ")
         PlotSave = Label(__self__.PeakOptions, text="Save fit plots? ")
         PlotSaveYes = Label(__self__.PeakOptions, text="Yes")
+
+        # ENTRIES #
         FitCyclesEntry = Entry(__self__.PeakOptions, 
                 textvariable=__self__.CycVar,
                 width=13)
+        PeakFindEntry = Entry(__self__.PeakOptions,
+                textvariable=__self__.Sensitivity,
+                width=13)
+        ContSupprEntry = Entry(__self__.PeakOptions,
+                textvariable=__self__.ContSuppr,
+                width=13)
+        PeakCheckEntry = Entry(__self__.PeakOptions,
+                textvariable=__self__.WizTol,
+                width=7)
         __self__.PlotSaveIntervalEntry = Entry(__self__.PeakOptions, 
                 textvariable=__self__.PlotSaveVar,
                 width=13)
@@ -2903,12 +2934,19 @@ class Settings:
 
         AutoWizardLabel.grid(row=4,column=0,columnspan=3,sticky=N+S+W+E,pady=(8,0))
         FitCycles.grid(row=5,column=0,sticky=W)
-        __self__.PlotSaveInterval.grid(row=6,column=0,sticky=W)
-        PlotSave.grid(row=7,column=0,sticky=W)
+        PeakFindTolerance.grid(row=6,column=0,sticky=W)
+        ContSupprLabel.grid(row=7,column=0,sticky=W)
+        PeakCheckTolerance.grid(row=8,column=0,sticky=W)
+        PeakCheckLabel.grid(row=8,column=2,sticky=E)
+        __self__.PlotSaveInterval.grid(row=9,column=0,sticky=W)
+        PlotSave.grid(row=10,column=0,sticky=W)
         FitCyclesEntry.grid(row=5,column=1,columnspan=2,sticky=E)
-        __self__.PlotSaveIntervalEntry.grid(row=6,column=1,columnspan=2,sticky=E)
-        PlotSaveBool.grid(row=7,column=1,sticky=E)
-        PlotSaveYes.grid(row=7,column=2,sticky=E)
+        PeakFindEntry.grid(row=6,column=1,columnspan=2,sticky=E)
+        ContSupprEntry.grid(row=7,column=1,columnspan=2,sticky=E)
+        PeakCheckEntry.grid(row=8,column=1,sticky=W)
+        __self__.PlotSaveIntervalEntry.grid(row=9,column=1,columnspan=2,sticky=E)
+        PlotSaveBool.grid(row=10,column=1,sticky=E)
+        PlotSaveYes.grid(row=10,column=2,sticky=E)
 
         ###########################
         
@@ -2989,6 +3027,9 @@ class Settings:
             ini.write("<welcome>\t{}\n".format(__self__.WlcmMode.get()))
             ini.write("<Tolerance>\t{}\n".format(Constants.SETROI_TOLERANCE))
             ini.write("<Cycles>\t{}\n".format(int(__self__.CycVar.get())))
+            ini.write("<Sensitivity>\t{}\n".format(float(__self__.Sensitivity.get())))
+            ini.write("<Suppression>\t{}\n".format(float(__self__.ContSuppr.get())))
+            ini.write("<WizTolerance>\t{}\n".format(float(__self__.WizTol.get())))
             ini.write("<SaveInterval>\t{}\n".format(int(__self__.PlotSaveVar.get())))
             ini.write("<SavePlot>\t{}".format(__self__.PlotSaveBoolVar.get()))
             ini.close()
@@ -3019,6 +3060,9 @@ class Settings:
         Constants.SETROI_TOLERANCE = [__self__.TolVar1.get(),
                 __self__.TolVar2.get(),__self__.TolVar3.get()]
         Constants.FIT_CYCLES = int(__self__.CycVar.get())
+        Constants.PEAK_TOLERANCE = float(__self__.Sensitivity.get())
+        Constants.CONTINUUM_SUPPRESSION = float(__self__.ContSuppr.get())
+        Constants.CHECK_TOLERANCE = float(__self__.WizTol.get())
         Constants.SAVE_INTERVAL = int(__self__.PlotSaveVar.get())
         Constants.SAVE_FIT_FIGURES = __self__.PlotSaveBoolVar.get()
 
@@ -3182,6 +3226,7 @@ class MainGUI:
         """ This function invokes the auto wizard (BatchFitting)
 
         --------------------------------------------------------- """
+
         fit_path = SpecRead.output_path
         
         def call_table(elements):
@@ -3197,123 +3242,132 @@ class MainGUI:
             else: 
                 return frames
 
-        p0 = verify_existing_fit_chunks()
-        p01 = None
-        if p0:
-            p01 = messagebox.askquestion("Fit pieces found!",
-                    "We have detected few *.npy fit pieces in the output folder. Do you wish to erase them and fit again? (Fitting the data can take some considerable time. If you don't wish to re-fit the data, the existing *.npy files will be used to build elemental maps, replacing the existing ones).")    
-            if p01 == "yes":
-                try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
-                except: pass
-                for chunk in p0:
-                    try: os.remove(os.path.join(fit_path,chunk))
+        if Constants.USEXLIB:
+
+            p0 = verify_existing_fit_chunks()
+            p01 = None
+            if p0:
+                p01 = messagebox.askquestion("Fit pieces found!",
+                        "We have detected few *.npy fit pieces in the output folder. Do you wish to erase them and fit again? (Fitting the data can take some considerable time. If you don't wish to re-fit the data, the existing *.npy files will be used to build elemental maps, replacing the existing ones).")    
+                if p01 == "yes":
+                    try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
                     except: pass
+                    for chunk in p0:
+                        try: os.remove(os.path.join(fit_path,chunk))
+                        except: pass
+                else:
+                    root.bar = Busy(1,0)
+                    root.bar.update_text("Building images...")
+                    build_images(fit_path,bar=root.bar)
+                    wipe_list()
+                    __self__.toggle_(toggle="on")
+                    __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
+                    __self__.ButtonLoad.config(state=NORMAL)
+                    __self__.write_stat()
+                    refresh_plots()
+                    return
+            
+            if p0 and p01 == "yes":
+                p1="yes"
             else:
-                root.bar = Busy(1,0)
-                root.bar.update_text("Building images...")
-                build_images(fit_path,bar=root.bar)
+                p1 = messagebox.askquestion("Attention!",
+        "The wizard is going to look for elements in your sample. Do you want to proceed?")
+            if p1 == "yes":
+
+                ###########################################################
+                # Checks number of cores, starts MultiFitter class object #
+                # and verifies which elements were detected in findpeak   #
+                ###########################################################
+
+                if Constants.MULTICORE == True and \
+                        Constants.CPUS>1 and \
+                        Constants.MY_DATACUBE.img_size > 500:
+                    root.Fitter = MultiFit(fit_path)
+                else:
+                    root.Fitter = SingleFit(fit_path)
+                
+                save_path = os.path.join(SpecRead.output_path,"peak_find.png")
+                __self__.peaks, __self__.matches = root.Fitter.locate_peaks(path=save_path)
+
+                elements = [key for key in __self__.matches.keys()]
+                elements = [ElementList[int(i)] for i in elements[:-1]]
+
+                ###########################################################
+                
+                #########################
+                # create message string #
+                #########################
+                message1 = ""
+                for i in elements:
+                    if i == elements[-1]:
+                        message1 += "and {}".format(i)
+                    else: message1 += "{}, ".format(i)
+                #########################
+
+                p2 = messagebox.askyesnocancel("Attention!","We have found {} in your sample {}. Do you want to add more elements to the pool?".format(
+            message1,Constants.MY_DATACUBE.name))
+
+                if p2 == None:
+                    return
+
+                elif p2 == True:
+                    call_table(elements)
+                    return
+
+                elif p2 == False:
+
+                    start_time = time.time()
+                    if Constants.MULTICORE == True and \
+                            Constants.CPUS>1 and\
+                            Constants.MY_DATACUBE.img_size > 500:
+                        root.Fitter.launch_workers(
+                                Constants.FIT_CYCLES,
+                                Constants.SAVE_INTERVAL,
+                                Constants.SAVE_FIT_FIGURES)
+                    else: 
+                        root.Fitter.run_fit()
+
+                    root.bar = Busy(1,0)
+                    root.bar.update_text("Building images...")
+                    build_images(fit_path,bar=root.bar)
+
+                    timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+                    timestamps.write(
+                    "\n{4} - {5} WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
+                        elements,
+                        Constants.MY_DATACUBE.config["bgstrip"],
+                        Constants.MY_DATACUBE.config["enhance"],
+                        time.time()-start_time,
+                        time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+                        Constants.MY_DATACUBE.name))
+                    timestamps.close()
+
+                ######################################################
+
+                #################################################################### 
+                # Updates mainGUI panels when running without pooling new elements #
+                #################################################################### 
+                
                 wipe_list()
                 __self__.toggle_(toggle="on")
                 __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
                 __self__.ButtonLoad.config(state=NORMAL)
                 __self__.write_stat()
                 refresh_plots()
+
+                #################################################################### 
+            else: pass
+        else: 
+            install = messagebox.askquestion("Xraylib not installed!","Xraylib module is required to proceed with auto wizard method. Do you wish to install it?")
+            if install == "yes":
+                openURL("http://lvserver.ugent.be/xraylib/")
                 return
-        
-        if p0 and p01 == "yes":
-            p1="yes"
-        else:
-            p1 = messagebox.askquestion("Attention!",
-        "The wizard is going to look for elements in your sample. Do you want to proceed?")
-        if p1 == "yes":
-
-            ###########################################################
-            # Checks number of cores, starts MultiFitter class object #
-            # and verifies which elements were detected in findpeak   #
-            ###########################################################
-
-            if Constants.MULTICORE == True and \
-                    Constants.CPUS>1 and \
-                    Constants.MY_DATACUBE.img_size > 500:
-                root.Fitter = MultiFit(fit_path)
-            else:
-                root.Fitter = SingleFit(fit_path)
-            
-            save_path = os.path.join(SpecRead.output_path,"peak_find.png")
-            __self__.peaks, __self__.matches = root.Fitter.locate_peaks(path=save_path)
-
-            elements = [key for key in __self__.matches.keys()]
-            elements = [ElementList[int(i)] for i in elements[:-1]]
-
-            ###########################################################
-            
-            #########################
-            # create message string #
-            #########################
-            message1 = ""
-            for i in elements:
-                if i == elements[-1]:
-                    message1 += "and {}".format(i)
-                else: message1 += "{}, ".format(i)
-            #########################
-
-            p2 = messagebox.askyesnocancel("Attention!",
-"We have found {} in your sample {}. Do you want to add more elements to the pool?".format(
-        message1,Constants.MY_DATACUBE.name))
-
-            if p2 == None:
-                return
-
-            elif p2 == True:
-                call_table(elements)
-                return
-
-            elif p2 == False:
-
-                start_time = time.time()
-                if Constants.MULTICORE == True and \
-                        Constants.CPUS>1 and\
-                        Constants.MY_DATACUBE.img_size > 500:
-                    root.Fitter.launch_workers(
-                            Constants.FIT_CYCLES,
-                            Constants.SAVE_INTERVAL,
-                            Constants.SAVE_FIT_FIGURES)
-                else: 
-                    root.Fitter.run_fit()
-
-                root.bar = Busy(1,0)
-                root.bar.update_text("Building images...")
-                build_images(fit_path,bar=root.bar)
-
-                timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
-                timestamps.write(
-                    "\n{4} - {5} WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
-                    elements,
-                    Constants.MY_DATACUBE.config["bgstrip"],
-                    Constants.MY_DATACUBE.config["enhance"],
-                    time.time()-start_time,
-                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
-                    Constants.MY_DATACUBE.name))
-                timestamps.close()
-
-            ######################################################
-
-            #################################################################### 
-            # Updates mainGUI panels when running without pooling new elements #
-            #################################################################### 
-            
-            wipe_list()
-            __self__.toggle_(toggle="on")
-            __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
-            __self__.ButtonLoad.config(state=NORMAL)
-            __self__.write_stat()
-            refresh_plots()
-
-            #################################################################### 
-        else: pass
+            else: return
+            return
         root.master.mainloop()
 
     def find_elements(__self__):
+
         mode = Constants.MY_DATACUBE.config["peakmethod"]
         if mode == "auto_wizard":
             __self__.invoke_wizard()
@@ -3431,6 +3485,7 @@ class MainGUI:
             del Constants.USER_DATABASE[sample]["indexing"]
             del __self__.mca_extension[sample]
             del Constants.USER_DATABASE[sample]["extension"]
+            del Constants.USER_DATABASE[sample]
             __self__.list_samples()
 
             try: __self__.summation.master.destroy()
@@ -3440,6 +3495,7 @@ class MainGUI:
             try: __self__.combined.master.destroy()
             except: pass
 
+            remove_entry_from_database(sample)
             SpecRead.conditional_setup()
             load_cube()
             __self__.write_stat()
@@ -3880,7 +3936,7 @@ class MainGUI:
             __self__.config_xy = SpecRead.getdimension()
             __self__.ManualParam = []
         except:
-            dimension = dimension_diag(Constants.DIRECTORY)
+            dimension = DimensionDiag(Constants.DIRECTORY)
             __self__.master.wait_window(dimension.win) 
             if dimension.exit_code == "cancel":
                 __self__.wipe()
@@ -4376,7 +4432,7 @@ class MainGUI:
         try: 
             __self__.config_xy = SpecRead.getdimension()
         except:
-            dimension = dimension_diag(Constants.DIRECTORY)
+            dimension = DimensionDiag(Constants.DIRECTORY)
             __self__.master.wait_window(dimension.win) 
             if dimension.exit_code == "cancel":
                 __self__.wipe()
@@ -4936,6 +4992,11 @@ class PeriodicTable:
     
     def auto(__self__,elements):
 
+        def reload_cube():
+            load_cube()
+            __self__.master.grab_release()
+            __self__.master.destroy()
+
         #####################################################################
         # give attribute to avoid lambda function and call this list in run #
         #####################################################################
@@ -4947,11 +5008,13 @@ class PeriodicTable:
         #########################################################
 
         __self__.master.grab_set()
+        __self__.master.protocol("WM_DELETE_WINDOW",reload_cube)
         for btn in __self__.master.body.children.values():
                    
             if btn["text"] in elements:
                 __self__.add_element(btn)
                 btn.config(state=DISABLED)
+                btn.config(bg="limegreen")
             if "Custom" in btn["text"]: btn.config(state=DISABLED)
         __self__.low.config(state=DISABLED)
         __self__.high.config(state=DISABLED)
@@ -5478,7 +5541,8 @@ if __name__.endswith('__main__'):
     from ImgMath import LEVELS, apply_scaling
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from Decoder import *
-    from SpecMath import getstackplot, correlate, peakstrip, FN_reset, FN_set, FN_fit
+    from SpecMath import getstackplot, correlate, peakstrip
+    from SpecMath import FN_reset, FN_set, FN_fit_pseudoinv, FN_fit_gaus
     from SpecMath import datacube as Cube
     from ProgressBar import Busy, BusyManager
     from EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
