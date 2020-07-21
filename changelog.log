@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-Version v1.0.1
-
-- Added right-click menus for canvases in Image Analyzer and front panel
-- Added color map option to "Settings" menu
-
-Image Analyzer
-- Fixed issues with sliders in Image Analyzer
-- Fixed issue with image smoothing
-- Color map support added
-=======
 New in Version v1.1.0
 
 - Fixed Spectrum name converter when inputting dimension
@@ -30,4 +19,3 @@ New in Version v1.1.0
 
 - Fixed minor bugs to simple- and auto-roi FWHM criteria
 - Added peakmethod setup options to Settings menu
->>>>>>> dev

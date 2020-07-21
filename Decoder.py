@@ -23,11 +23,7 @@ def b64_to_array(uri):
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
     image_file = open(".\\images\\utils.tz","rb")
-<<<<<<< HEAD
-    IMG_SPLASH = image_file.read(501928)
-=======
     IMG_SPLASH = image_file.read(501972)
->>>>>>> dev
     no_data = image_file.read(38872) 
     IMG_NODATA = b64_to_array(no_data)
 
@@ -35,11 +31,7 @@ def unpack_icons():
     global ICO_ACCEPT, ICO_CCW, ICO_CW, ICO_DOWN
     global ICO_ERASE, ICO_EXPORT1, ICO_EXPORT2, ICO_EXPORT_MERGE, ICO_IMGANAL
     global ICO_LOAD, ICO_NEXT, ICO_PREVIOUS, ICO_QUIT, ICO_REFRESH, ICO_RESET
-<<<<<<< HEAD
-    global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP
-=======
     global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP, ICO_MAGNIFIER
->>>>>>> dev
 
     icons_file = open(".\\images\\icons\\icons.tz","rb")
     ICO_ACCEPT = icons_file.read(1548)
@@ -52,10 +44,7 @@ def unpack_icons():
     ICO_EXPORT_MERGE = icons_file.read(4664)
     ICO_IMGANAL = icons_file.read(2416)
     ICO_LOAD = icons_file.read(2184)
-<<<<<<< HEAD
-=======
     ICO_MAGNIFIER = icons_file.read(3876)
->>>>>>> dev
     ICO_NEXT = icons_file.read(4020)
     ICO_PREVIOUS = icons_file.read(4064)
     ICO_QUIT = icons_file.read(2476)

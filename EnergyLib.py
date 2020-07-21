@@ -1,40 +1,24 @@
 #################################################################
 #                                                               #
-<<<<<<< HEAD
-#          DATABASE FOR ELEMENTS (XRAYLIB BASED)                #
-#                        version: 1.0.0 - May - 2020            #
-=======
 #          DATABASE FOR ELEMENTS                                #
 #                        version: 1.1.0 - Jul - 2020            #
->>>>>>> dev
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import numpy as np
 import logging
 import random, os
-<<<<<<< HEAD
-=======
 import Constants
->>>>>>> dev
 logger = logging.getLogger("logfile")
 logger.debug("Importing module EnergyLib.py...")
 try: 
     import xraylib as xlib
-<<<<<<< HEAD
-    USEXLIB = True
-=======
     Constants.USEXLIB = True
->>>>>>> dev
     xlib.SetErrorMessages(0)
 except: 
     logger.warning("xraylib module not found!")
     print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.")
-<<<<<<< HEAD
-    USEXLIB = False
-=======
     Constants.USEXLIB = False
->>>>>>> dev
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"
 
@@ -187,11 +171,7 @@ def set_energies_from_xlib():
     elt = 0
     while elt in range(len(ElementList)):
         while ElementList[elt] != 'Mt': 
-<<<<<<< HEAD
-            if ElementList[elt] == 'Sb': L = True
-=======
             if ElementList[elt] == 'Xe': L = True
->>>>>>> dev
             if L == True:
                 while ElementList[elt] != 'Mt':
                     try: 
@@ -292,10 +272,6 @@ def set_densities_from_xlib():
         except: DensityDict["{0}".format(loc_element)] = np.nan
     return DensityDict
 
-<<<<<<< HEAD
-# Lists below uses the definition written manually in this file
-if USEXLIB == False:
-=======
 def which_macro(element):
     if element == "custom": return "" 
     idx = ElementList.index(element)
@@ -304,7 +280,6 @@ def which_macro(element):
 
 # Lists below uses the definition written manually in this file
 if Constants.USEXLIB == False:
->>>>>>> dev
     DensityDict = {index[0]:index[1] for index in ElementsInfo}
     Energies = [index[3] for index in ElementsInfo]
     kbEnergies = [index[4] for index in ElementsInfo]
@@ -314,14 +289,9 @@ if Constants.USEXLIB == False:
             kbEnergies[ElementList.index(elt)]]
 
 # Energy lists where updated to use xraylib values:
-<<<<<<< HEAD
-if USEXLIB == True: Energies, kbEnergies, plottables_dict = set_energies_from_xlib()
-if USEXLIB == True: DensityDict = set_densities_from_xlib()
-=======
 if Constants.USEXLIB == True: 
     Energies, kbEnergies, plottables_dict = set_energies_from_xlib()
     DensityDict = set_densities_from_xlib()
->>>>>>> dev
 
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}

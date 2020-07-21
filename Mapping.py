@@ -1,11 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-<<<<<<< HEAD
-#                        version: 1.0.1                         #
-=======
 #                        version: 1.1.0                         #
->>>>>>> dev
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -89,11 +85,7 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
 
         ka_map = np.zeros([cube.dimension[0],cube.dimension[1]])
         kb_map = np.zeros([cube.dimension[0],cube.dimension[1]])
-<<<<<<< HEAD
-        ka_idx = SpecMath.setROI(lines[0],cube.energyaxis,cube.mps,cube.config)
-=======
         ka_idx = SpecMath.setROI(lines[0],cube.energyaxis,cube.sum,cube.config)
->>>>>>> dev
         
         ######################################
         # verifies beta line for the element #
@@ -102,11 +94,6 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
         if cube.config["ratio"] == True:
             kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.mps,cube.config)
             if kb_idx[3] == False and ka_idx[3] == False:
-<<<<<<< HEAD
-                logger.info("No alpha {} nor beta {} lines found. Skipping...".format(lines[0],lines[1]))
-            elif kb_idx[3] == False: 
-                logger.warning("No beta line {} detected. Continuing with alpha only.".format(lines[1]))
-=======
                 logger.info(
                         "No alpha {} nor beta {} lines found. Skipping...".format(
                             lines[0],lines[1]))
@@ -114,7 +101,6 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
                 logger.warning(
                         "No beta line {} detected. Continuing with alpha only.".format(
                             lines[1]))
->>>>>>> dev
         else:
             pass
         
@@ -248,56 +234,6 @@ def getpeakmap(element_list,datacube):
         # starts the loading bar
         progressbar = ReadProgress(datacube.img_size,0) 
         
-<<<<<<< HEAD
-        ################################
-        #  SETS SIMPLE ROI PARAMETERS  #
-        ################################
-
-        stacksum = datacube.sum
-        conditional_ratio = np.zeros([len(element_list)])
-
-        for Element in range(len(element_list)):
-
-            if peakmethod == 'simple_roi':
-
-                ka_idx[Element] = SpecMath.setROI(
-                        kaenergy[Element],
-                        energyaxis,
-                        stacksum,
-                        configdict)
-                ka_peakdata[Element] = stacksum[ka_idx[Element][0]:ka_idx[Element][1]]
-
-                if ratio == True:
-
-                    conditional_ratio[Element] = True
-                    kb_idx[Element] = SpecMath.setROI(
-                            kbenergy[Element],
-                            energyaxis,
-                            stacksum,
-                            configdict)
-                    kb_peakdata[Element] = stacksum[kb_idx[Element][0]:kb_idx[Element][1]]
-                    
-                    if kb_idx[Element][3] == False and ka_idx[Element][3] == False:
-                        logger.info("No alpha nor beta lines found for {}. Aborting...".\
-                                format(element_list[Element]))
-                    elif kb_idx[Element][3] == False: 
-                        logger.warning("No beta line detected for {}. Continuing with alpha only.".\
-                                format(element_list[Element]))
-                        conditional_ratio[Element] = False
-                else:
-                    pass
-    
-        #############################################
-        #   STARTS ITERATION OVER SPECTRA BATCH     #
-        #############################################
-            
-        logger.info("Starting iteration over spectra...\n")
-        
-        # starts the loading bar
-        progressbar = ReadProgress(datacube.img_size,0) 
-        
-=======
->>>>>>> dev
         for ITERATION in range(dimension):
                
             spec = currentspectra  #updates the current file name / debug mode only
@@ -307,12 +243,7 @@ def getpeakmap(element_list,datacube):
             #     TO ADD MORE METHODS IN THE FUTURE     #
             #############################################
             
-<<<<<<< HEAD
-            if peakmethod == 'simple_roi': specdata = specdata
-            elif peakmethod == 'auto_roi': specdata = specdata
-=======
             if peakmethod == 'auto_roi': specdata = specdata
->>>>>>> dev
             else: 
                 raise Exception("peakmethod {0} not recognized.".format(peakmethod))
  
@@ -328,24 +259,15 @@ def getpeakmap(element_list,datacube):
                 for i in range(len(dif2)):
                     if dif2[i] < -1: dif2[i] = dif2[i]
                     elif dif2[i] > -1: dif2[i] = 0
-<<<<<<< HEAD
-            else: dif2 = np.zeros([specdata.shape[0]])
-
-=======
             else: dif2 = 0
->>>>>>> dev
 
             ###################################
             #  CALCULATE NET PEAKS AREAS AND  #
             #  ITERATE OVER LIST OF ELEMENTS  #
             ###################################
             
-<<<<<<< HEAD
-            logger.debug("current x = {0} / current y = {1}".format(currentx,currenty))
-=======
             logger.debug("----- current x = {0} / current y = {1} -----".format(
                 currentx,currenty))
->>>>>>> dev
             if debug == True: logger.info("Specfile being processed is: {0}\n".format(spec))
  
             for Element in range(len(element_list)):
@@ -392,7 +314,6 @@ def getpeakmap(element_list,datacube):
                             specdata[kb_info[1][0]:kb_info[1][1]]
 
                         elmap[currentx][currenty][1][Element] = kb
-<<<<<<< HEAD
                     
                     elmap[currentx][currenty][0][Element] = ka
 
@@ -400,57 +321,9 @@ def getpeakmap(element_list,datacube):
                         datacube.max_counts[element_list[Element]+"_a"] = ka
                     if datacube.max_counts[element_list[Element]+"_b"] < kb:
                         datacube.max_counts[element_list[Element]+"_b"] = kb
-
-                elif peakmethod == 'simple_roi':
-                    
-                    ################################################
-                    # Calculates ka and kb with simple roi method  #
-                    # simple_roi uses a conditional ratio to save  #
-                    # time when kb is not detected in the stacksum #
-                    # for the current element                      #
-                    ################################################
-                    
-                    # KA AND KB ARE 0 BY DEFAULT
-                    ka, kb = 0, 0
-                    ka_ROI = RAW[ka_idx[Element][0]:ka_idx[Element][1]]
-                    ka_bg = background[ka_idx[Element][0]:ka_idx[Element][1]]
-                    
-                    if conditional_ratio[Element] == True:
-                        kb_ROI = RAW[kb_idx[Element][0]:kb_idx[Element][1]]
-                        kb_bg = background[kb_idx[Element][0]:kb_idx[Element][1]]
-               
-                    # CALCULATES KA
-                    if ka_idx[Element][3] == True:
-                        datacube.ROI[element_list[Element]]\
-                                [ka_idx[Element][0]:ka_idx[Element][1]] += ka_ROI
-                        ka += ka_ROI.sum() - ka_bg.sum()
-                   
-                    # CALCULATES KB (MUST CHECK IF RATIO IS TRUE)
-                    # IF RATIO IS FALSE, KB REMAINS AS 0
-                    if conditional_ratio[Element] == True:
-                        datacube.ROI[element_list[Element]]\
-                                [kb_idx[Element][0]:kb_idx[Element][1]] += kb_ROI
-                        kb += kb_ROI.sum() - kb_bg.sum()
-
-                        elmap[currentx][currenty][1][Element] = kb
-
-                    logger.debug("ka {0}, kb {1}".format(ka,kb))
-                    elmap[currentx][currenty][0][Element] = ka
-=======
-                    
-                    elmap[currentx][currenty][0][Element] = ka
-
->>>>>>> dev
-                    if datacube.max_counts[element_list[Element]+"_a"] < ka:
-                        datacube.max_counts[element_list[Element]+"_a"] = ka
-                    if datacube.max_counts[element_list[Element]+"_b"] < kb:
-                        datacube.max_counts[element_list[Element]+"_b"] = kb
-<<<<<<< HEAD
-=======
 
                 elif peakmethod == "insert new spectra iterative methods here":
                     pass
->>>>>>> dev
                 
                 row = scan[0]
                 column = scan[1]
@@ -464,12 +337,8 @@ def getpeakmap(element_list,datacube):
                         r_file = open(ratiofiles[Element],'a')
                         if debug == True: 
                             r_file.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
-<<<<<<< HEAD
-                            logger.info("File {0} has net peaks of {1} and {2} for element {3}\n"\
-=======
                             logger.info(
                                     "File {0} has net peaks of {1} and {2} for element {3}\n"\
->>>>>>> dev
                                     .format(spec,ka,kb,element_list[Element]))
                         else:
                             if ka == 0: ka,kb,ka_kb = 0,0,0
@@ -505,10 +374,6 @@ def getpeakmap(element_list,datacube):
         
         timestamp = time.time() - partialtimer
         logger.info("Execution took %s seconds" % (timestamp))
-<<<<<<< HEAD
-        if peakmethod == 'PyMcaFit': logger.warning("Fit fail: {0}%".format(100*FITFAIL/dimension))
-=======
->>>>>>> dev
         
         timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
         timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n".format(Element,

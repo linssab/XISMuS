@@ -41,31 +41,6 @@ def getfirstfile():
     
     return Constants.FIRSTFILE_ABSPATH
 
-<<<<<<< HEAD
-def setup(prefix, indexing, extension):
-    
-    """ Reads config.cfg file and sets up the configuration according to what is
-    contained there """
-
-    logger.debug("Running setup from Config.cfg") 
-    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
-
-    Constants.CONFIG,Constants.CALIB = CONFIGURE()
-    Constants.DIRECTORY = Constants.CONFIG.get("directory")
-    
-    # build paths
-    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
-    workpath = __PERSONAL__
-    cube_path = os.path.join(workpath,"output",
-            Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
-    output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
-    dimension_file = os.path.join(selected_sample_folder,"colonneXrighe.txt")
-    
-    # builds path to first spectrum file
-    Constants.FILE_POOL = []
-    return np.nan
-
-=======
 
 def setup(prefix, indexing, extension):
     
@@ -89,84 +64,50 @@ def setup(prefix, indexing, extension):
     
     return np.nan
 
->>>>>>> dev
 def setup_from_datacube(datacube,sample_database):
     
     """ Read Cube class object configuration and sets up the application
     configuration parameters accordingly """
 
     logger.debug("Running setup from datacube {}".format(datacube.name)) 
-<<<<<<< HEAD
-    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
-=======
     global workpath, cube_path, output_path
->>>>>>> dev
     
     Constants.CONFIG,Constants.CALIB = datacube.config, datacube.calibration
     Constants.DIRECTORY = Constants.CONFIG.get("directory")
     
     # build sample paths
-<<<<<<< HEAD
-    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
-=======
     Constants.SAMPLE_PATH = datacube.path
->>>>>>> dev
     workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",
             Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
     output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
-<<<<<<< HEAD
-    dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
-    
-    try: Constants.FIRSTFILE_ABSPATH = sample_database[Constants.DIRECTORY]
-    except: Constants.FIRSTFILE_ABSPATH = selected_sample_folder+'void.mca'
-    
-    return np.nan 
-
-def conditional_setup(name='None'):
-=======
     Constants.DIMENSION_FILE = os.path.join(datacube.path, "colonneXrighe.txt")
     Constants.FIRSTFILE_ABSPATH = sample_database[Constants.DIRECTORY]
     
     return np.nan 
 
 def conditional_setup(name="None",path="auto"):
->>>>>>> dev
 
     """ Reads Config.cfg file configuration parameters and changes Constants.DIRECTORY
     parameter to input value. """
     
     logger.debug("Running conditional setup for {}".format(name)) 
-<<<<<<< HEAD
-    global selected_sample_folder, workpath, cube_path, output_path, dimension_file
-=======
     global workpath, cube_path, output_path
->>>>>>> dev
     
     Constants.CONFIG,Constants.CALIB = CONFIGURE()
     Constants.CONFIG['directory'] = name
     
     # build paths
     Constants.DIRECTORY = Constants.CONFIG.get("directory")
-<<<<<<< HEAD
-    selected_sample_folder = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
-=======
     if path=="auto":
         Constants.SAMPLE_PATH = os.path.join(Constants.SAMPLES_FOLDER,Constants.DIRECTORY)
     else: Constants.SAMPLE_PATH = path
->>>>>>> dev
     workpath = __PERSONAL__
     cube_path = os.path.join(workpath,"output",
             Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
     output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
-<<<<<<< HEAD
-    dimension_file = os.path.join(selected_sample_folder, "colonneXrighe.txt")
-    
-    Constants.FIRSTFILE_ABSPATH = os.path.join(selected_sample_folder, name)
-=======
     Constants.DIMENSION_FILE = os.path.join(Constants.SAMPLE_PATH, "colonneXrighe.txt")
     Constants.FIRSTFILE_ABSPATH = os.path.join(Constants.SAMPLE_PATH, name)
->>>>>>> dev
 
     return np.nan
 
@@ -304,11 +245,7 @@ def getdata(mca):
     name = name.replace('_',' ')
     
     # custom MC generated files
-<<<<<<< HEAD
-    if 'test' in name or 'obj' in name or 'newtest' in name:
-=======
     if '#XRMC#' in name:
->>>>>>> dev
         Data = []
         datafile = open(mca)
         lines = datafile.readlines()
@@ -323,45 +260,6 @@ def getdata(mca):
     # this works for mca extension files
     else:
         ObjectData=[]
-<<<<<<< HEAD
-        datafile = open(mca)
-        line = datafile.readline()
-        line = line.replace("\r","")
-        line = line.replace("\n","")
-
-        # AMPTEK files start with this tag
-        if "<<PMCA SPECTRUM>>" in line:
-            while "<<DATA>>" not in line:
-                line = datafile.readline()
-                if line == "": break
-            line = datafile.readline()
-            while "<<END>>" not in line:
-                try: ObjectData.append(int(line))
-                except ValueError as exception:
-                    datafile.close()
-                    raise exception.__class__.__name__
-                line = datafile.readline()
-                if line == "": break
-
-        # Works if file is just counts per line
-        elif line.isdigit():
-            while "<<END>>" not in line:
-                ObjectData.append(int(line))
-                line = datafile.readline()
-                if line == "": break
-        
-        # if file has two columns separated by space or tab
-        elif "\t" in line or " " in line: 
-            while "<<END>>" not in line:
-                counts = line.split("\t")[-1]
-                if counts.isdigit(): ObjectData.append(int(counts))
-                else:
-                    counts = line.split(" ")[-1]
-                    ObjectData.append(int(counts))
-                line = datafile.readline()
-                if line == "": break
-
-=======
         with open(mca) as datafile:
             line = datafile.readline()
             line = line.replace("\r","")
@@ -399,7 +297,6 @@ def getdata(mca):
                     line = datafile.readline()
                     if line == "": break
             del datafile
->>>>>>> dev
         Data = np.asarray(ObjectData)
     return Data
 
@@ -423,13 +320,9 @@ def calibrate(lead=0, tail=0):
     B=coefficients[1]
     R=coefficients[2]
     logger.info("Correlation coefficient R = %f!" % R)
-<<<<<<< HEAD
-    n = len(getdata(getfirstfile()))
-=======
     try: n = len(getdata(getfirstfile()))-lead-tail
     except:
         n = Constants.MY_DATACUBE.matrix.shape[2]
->>>>>>> dev
     curve = []
     for i in range(n):
         curve.append((GAIN*i)+B)
@@ -462,11 +355,7 @@ def updatespectra(specfile,size,from_list=False):
     
     try:
         index = Constants.FILE_POOL.index(specfile)
-<<<<<<< HEAD
-        newfile = Constants.FILE_POOL[index+1]
-=======
         return Constants.FILE_POOL[index+1]
->>>>>>> dev
     
     except (IndexError, ValueError): 
 
@@ -500,12 +389,8 @@ def getdimension():
         y; int
         user_input; bool """
 
-<<<<<<< HEAD
-    global dimension_file
-=======
     dimension_file = Constants.DIMENSION_FILE
 
->>>>>>> dev
     if not os.path.exists(dimension_file):
         dimension_file = os.path.join(Constants.SAMPLES_FOLDER,"colonneXrighe.txt")
         if not os.path.exists(dimension_file):

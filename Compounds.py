@@ -281,11 +281,6 @@ class compound:
         __self__.name = a_string
 
 
-<<<<<<< HEAD
-""" 
-if __name__.endswith('__main__'):         
-
-=======
 if __name__.endswith('__main__'):         
     import sys
     try:
@@ -293,7 +288,6 @@ if __name__.endswith('__main__'):
         else: pass
     except: pass
 """
->>>>>>> dev
     water = compound()
     water.set_compound([2,1],['H','O'],ctype='custom')
     

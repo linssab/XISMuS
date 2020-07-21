@@ -1,18 +1,12 @@
 #################################################################
 #                                                               #
 #          PROGRESS BARS AND LOADING MODULE                     #
-<<<<<<< HEAD
-#                        version: 1.0.1                         #
-=======
 #                        version: 1.1.0                         #
->>>>>>> dev
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 from tkinter import *
 from tkinter import ttk
-<<<<<<< HEAD
-=======
 import logging
 import Constants
 logger = logging.getLogger("logfile")
@@ -55,7 +49,6 @@ class BusyManager:
             except TclError:
                 pass
         __self__.widgets = {}
->>>>>>> dev
 
 
 class Busy:
@@ -64,26 +57,16 @@ class Busy:
     
     def __init__(__self__,max_,min_):
         __self__.master = Toplevel()
-<<<<<<< HEAD
-=======
         __self__.make_abortion = False
->>>>>>> dev
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
         x = __self__.master.winfo_screenwidth()
         y = __self__.master.winfo_screenheight()
-<<<<<<< HEAD
-        win_x = __self__.master.winfo_width()
-        win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(166, 49,\
-                int((x/2)-80), int((y/2)-23)))
-=======
         __self__.master.geometry("{}x{}+{}+{}".format(
             166, 49,
             int((x/2)-80), int((y/2)-23)))
         __self__.btnz = Frame(__self__.master)
         __self__.btnz.grid(row=1,column=0)
->>>>>>> dev
         __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
         __self__.outerframe.grid(row=0,column=0)
         __self__.master.label = Label(__self__.outerframe, text="Packing spectra...")
@@ -93,11 +76,8 @@ class Busy:
         __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
         __self__.progress.grid(row=0,column=0)
         __self__.master.grab_set()
-<<<<<<< HEAD
-=======
         __self__.win_x = __self__.master.winfo_width()
         __self__.win_y = __self__.master.winfo_height()
->>>>>>> dev
 
     def updatebar(__self__,value):
 
@@ -134,8 +114,6 @@ class Busy:
             time.sleep(1)
         __self__.destroybar()
 
-<<<<<<< HEAD
-=======
     def add_abort(__self__,workers=None,multiprocess=Constants.MULTICORE):
         __self__.workers = workers
         __self__.multiprocess = multiprocess
@@ -186,7 +164,6 @@ class Busy:
         __self__.destroybar()
         return 
 
->>>>>>> dev
 
 class ReadProgress:
     
@@ -225,11 +202,7 @@ class ThinkingWheel:
     
     def __init__(__self__,speed,x,y,auto=True,parent=None):
         if parent == None: auto = False
-<<<<<<< HEAD
-        __self__.master = Tk()
-=======
         __self__.master = Toplevel()
->>>>>>> dev
         __self__.parent = parent
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
@@ -239,11 +212,7 @@ class ThinkingWheel:
         spawn_y = __self__.master.winfo_screenheight()
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
-<<<<<<< HEAD
-        __self__.master.geometry('{}x{}+{}+{}'.format(x, y,\
-=======
         __self__.master.geometry('{}x{}+{}+{}'.format(x, y,
->>>>>>> dev
                 int((spawn_x/2)-x/2), int((spawn_y/2)-y/2)))
         __self__.gif = [PhotoImage(file="./tnk.gif",format = 'gif -index %i' %(i),
             master = __self__.master) for i in range(8)]
