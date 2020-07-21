@@ -24,7 +24,8 @@ You will have to compile the Cython code, by typing in the following command on 
 <br>
 `python .\setup_cy.py build_ext --inplace`<br>
 <br>
-You must have a GNU compiler to do so, as `stupy_cy.py` will compile the python code in `cy_funcs.pyx` into native C code.
+You must have a GNU compiler to do so, as `stupy_cy.py` will compile the python code in `cy_funcs.pyx` into native C code.<br>
+Finally, add `My Documents` content inside your user documents folder.<br>
 
 #### Dependencies
 
