@@ -1,7 +1,11 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
+<<<<<<< HEAD
 #                        version: 1.1.0 - May - 2020            #
+=======
+#                        version: 1.1.0 - Jul - 2020            #
+>>>>>>> dev
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -57,7 +61,11 @@ def load_cube(cube=""):
         except MemoryError as exception:
             messagebox.showerror("MemoryError",
                     "Unable to unpickle datacube {}.cube!".format(cube))
+<<<<<<< HEAD
             sys.exit()
+=======
+            sys.exit(1)
+>>>>>>> dev
         cube_file.close()
         return cube
     else:
@@ -823,9 +831,21 @@ class Mosaic_API:
         return layers
 
     def import_layers(__self__,loadfile=None):
+<<<<<<< HEAD
         global layers_dict
         layers_to_import = __self__.read_loadfile(loadfile)
         if layers_to_import == 0: return
+=======
+         
+
+        global layers_dict
+        layers_to_import = __self__.read_loadfile(loadfile)
+        if layers_to_import == 0: return
+        
+        __self__.bar = Busy(len(layers_to_import),0)
+        __self__.bar.update_text("Loading layers...")
+        count = 0
+>>>>>>> dev
 
         if __self__.layer_count > 0:
             del __self__.layer
@@ -838,6 +858,11 @@ class Mosaic_API:
             __self__.layer_numbering = {}
 
         for layer in layers_to_import.keys():
+<<<<<<< HEAD
+=======
+            count+=1
+            __self__.bar.updatebar(count)
+>>>>>>> dev
             success = __self__.load_layer(layers_to_import[layer])
             if success == 0: break
         
@@ -845,6 +870,10 @@ class Mosaic_API:
         __self__.reorder_layers()
         __self__.build_image()
         __self__.refocus()
+<<<<<<< HEAD
+=======
+        __self__.bar.destroybar()
+>>>>>>> dev
 
     def load_layer(__self__,layer):
         global layers_dict
@@ -1054,7 +1083,11 @@ class Mosaic_API:
             ######################################## 
 
             __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
+<<<<<<< HEAD
                     dtype="float32")
+=======
+                    dtype="int32")
+>>>>>>> dev
             __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                     dtype="float32")
             x, iteration = 0,0
@@ -1067,7 +1100,11 @@ class Mosaic_API:
             # attributed to the proper merge_matrix indexes                         #
             #########################################################################
 
+<<<<<<< HEAD
             void_array = np.zeros([specsize],dtype="float32")
+=======
+            void_array = np.zeros([specsize],dtype="int32")
+>>>>>>> dev
             cy_funcs.cy_build_merge_cube(layers_dict,
                     np.asarray(x_bounds,dtype="int32"),
                     np.asarray(y_bounds,dtype="int32"),
@@ -1094,9 +1131,13 @@ class Mosaic_API:
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
             new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
+<<<<<<< HEAD
             new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
                     new_cube.energyaxis.shape[0]],dtype='float32',order='C')
             new_cube.background = np.zeros([new_cube.dimension[0],new_cube.dimension[1],\
+=======
+            new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],
+>>>>>>> dev
                     new_cube.energyaxis.shape[0]],dtype='float32',order='C')
             new_cube.matrix = __self__.merge_matrix
             new_cube.background = __self__.merge_bg

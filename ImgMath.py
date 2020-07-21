@@ -99,7 +99,11 @@ def apply_scaling(datacube, scalemode=0):
             scalemode,
             scaled_matrix,
             np.asarray(datacube.matrix.shape,dtype="int32"))
+<<<<<<< HEAD
     datacube.matrix = scaled_matrix
+=======
+    datacube.matrix = scaled_matrix.astype("int32")
+>>>>>>> dev
     datacube.create_densemap()
     if scaled_matrix.max() > 0: 
         return 1
@@ -368,8 +372,8 @@ def colorize(elementmap,color=None):
     for line in range(imagex):    
         for i in range(imagey):
             if elmap[line][i] > 0:
-                pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],\
-                        dtype='float32'))
+                pixel.append(np.array([R[line][i],G[line][i],B[line][i],A[line][i]],
+                    dtype='float32'))
             else: pixel.append(np.array([0,0,0,A[line][i]],dtype='float32'))
             myimage[line]=np.asarray(pixel,dtype='uint8')
         pixel = []
@@ -475,7 +479,11 @@ def plotlastmap(image,name):
     ax.set_title(name)
     plt.show()
 
+<<<<<<< HEAD
 def split_and_save(datacube,map_array,element_list):
+=======
+def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
+>>>>>>> dev
     
     """ Sorts the element maps contained in map_array and packs them into the
     datacube cube class object prior pickling to disk. Saves each map as a grayscale png
@@ -488,7 +496,11 @@ def split_and_save(datacube,map_array,element_list):
         map_array; 4D-array
         element_list; list """
 
+<<<<<<< HEAD
     if datacube.config["ratio"] == True:
+=======
+    if datacube.config["ratio"] or force_alfa_and_beta:
+>>>>>>> dev
         lines = np.asarray(["a","b"])
     else: lines = np.asarray(["a"])
 
@@ -508,6 +520,7 @@ def split_and_save(datacube,map_array,element_list):
     fig_list = []
     for Element in range(len(element_list)):
         for line in range(lines.shape[0]):
+<<<<<<< HEAD
             image = map_array[:,:,line,Element]
             raw_image = map_array[:,:,line,Element]
             if image.max() > 0: image = image/image.max()*LEVELS
@@ -551,7 +564,56 @@ def split_and_save(datacube,map_array,element_list):
             # function test
             #checker = datacube.unpack_element('Cu')
             #plotlastmap(checker,element_list[Element])
+=======
 
+            if line == 0: siegbahn = "_a"
+            else: siegbahn = "_b"
+
+            image = map_array[:,:,line,Element]
+            raw_image = map_array[:,:,line,Element]
+>>>>>>> dev
+
+            Constants.MY_DATACUBE.max_counts[element_list[Element]+siegbahn] = image.max()
+            print(element_list[Element],image.max())
+
+            if image.max() > 0: image = image/image.max()*LEVELS
+             
+            histogram,bins = np.histogram(image.flatten(),LEVELS,[0,LEVELS])
+            datacube.pack_element(raw_image,element_list[Element],lines[line])
+            if lines[line] == "a": datacube.pack_hist(histogram,bins,element_list[Element])
+            
+            # test histogram
+            #plt.hist(datacube.__dict__[element_list[Element]],bins='auto')
+            #plt.show()
+            
+            if len(element_list) > 1: ax = axs[Element]
+            else: ax=axs
+            fig_list.append(ax.imshow(image,cmap='gray'))
+            colorbar(fig_list[Element])
+            if datacube.config['ratio'] == False:
+                ax.set_title(element_list[Element]+' alpha line')
+            else: ax.set_title(element_list[Element])
+            
+            if imagex > target_size or imagey > target_size: 
+                large_image = image/image.max()*255
+            else: 
+                if image.max() > 0: 
+                    large_image = image/image.max()*255
+                else:
+                    large_image = image
+                large_image = cv2.resize(
+                        large_image,
+                        (newY,newX),
+                        interpolation=cv2.INTER_NEAREST)
+            save_path = os.path.join(SpecRead.workpath,"output",Constants.DIRECTORY,       
+            "{0}_bgtrip={1}_ratio={2}_enhance={3}_peakmethod={4}.png".format(
+                    element_list[Element]+"_"+lines[line],
+                    datacube.config.get('bgstrip'),
+                    datacube.config.get('ratio'),
+                    datacube.config.get('enhance'),
+                    datacube.config.get('peakmethod')))
+            cv2.imwrite(save_path,large_image)
+            
     ##################################################
     
     fig.savefig(SpecRead.workpath+'/output/'+Constants.DIRECTORY+
@@ -559,13 +621,22 @@ def split_and_save(datacube,map_array,element_list):
             .format(datacube.config.get('bgstrip'),datacube.config.get('ratio')\
             ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
     
+    fig.clf()
     datacube.save_cube() 
     logger.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+Constants.DIRECTORY+'\\')
+<<<<<<< HEAD
     logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(IMAGE_PATH,(newY,newX)))
     return 0
 
 def write_image(image,resize,path,enhance=False):
+=======
+    logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(
+        IMAGE_PATH,(newY,newX)))
+    return
+
+def write_image(image,resize,path,enhance=False,merge=False,save=True):
+>>>>>>> dev
 
     """ Writes a 2D-array image to disk. Similar to split_and_save function.
     
@@ -595,11 +666,23 @@ def write_image(image,resize,path,enhance=False):
         else:
             large_image = image
         if enhance == False:
+<<<<<<< HEAD
             large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
         if enhance == True:
             large_image = cv2.resize(large_image,(newY,newX),interpolation=cv2.INTER_CUBIC)
     cv2.imwrite(path,large_image)
     return 0
+=======
+            large_image = cv2.resize(
+                large_image,(newY,newX),interpolation=cv2.INTER_NEAREST)
+        if enhance == True:
+            large_image = cv2.resize(
+                large_image,(newY,newX),interpolation=cv2.INTER_CUBIC)
+    if save:
+        if merge== False: plt.imsave(path,large_image,cmap=Constants.COLORMAP)
+        elif merge== True: cv2.imwrite(path,large_image)
+    return large_image
+>>>>>>> dev
 
 def stackimages(*args):
 
@@ -617,6 +700,7 @@ def stackimages(*args):
 
     imagex, imagey = args[0].shape[0], args[0].shape[1]
     imagelist = args
+<<<<<<< HEAD
     colorlist = ["green","blue","red"]
     color = 0
     blank = np.zeros([imagex, imagey])
@@ -625,6 +709,16 @@ def stackimages(*args):
         color += 1
         image = colorize(image,colorlist[color])
         stackedimage = cv2.addWeighted(stackedimage,1,image,1,0)
+=======
+    imagea = args[0]
+    imageb = args[1]
+    imagea = np.asarray(imagea,dtype="int32")
+    imageb = np.asarray(imageb,dtype="int32")
+    stackedimage = np.zeros([imagex,imagey,3],dtype="int32")
+     
+    cy_funcs.cy_stack(stackedimage,imagea,imageb,np.asarray([imagex,imagey],dtype="int32"))
+
+>>>>>>> dev
     return stackedimage
 
 def binary_thresh(image,thresh):
@@ -649,11 +743,16 @@ def binary_thresh(image,thresh):
             else: image[x][y] = 0
         return image, counts
 
+<<<<<<< HEAD
 def subtract(image1, image2):
+=======
+def subtract(image1, image2,norm=True):
+>>>>>>> dev
 
     """ Subtracts image2 from image1 """
 
     output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
+<<<<<<< HEAD
     hi1 = image1.max()
     hi2 = image2.max()
     lo1 = image1.min()
@@ -664,6 +763,19 @@ def subtract(image1, image2):
         image1 = (image1/hi1)*hi2
     else:
         pass
+=======
+    if norm == True:
+        hi1 = image1.max()
+        hi2 = image2.max()
+        lo1 = image1.min()
+        lo2 = image2.min()
+        if hi1 > hi2:
+            image2 = (image2/hi2)*hi1
+        elif hi2 > hi1:
+            image1 = (image1/hi1)*hi2
+        else:
+            pass
+>>>>>>> dev
     shape = [image1.shape[0], image1.shape[1]]
     shape = np.asarray(shape,dtype="int32")
             

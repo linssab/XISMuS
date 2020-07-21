@@ -26,8 +26,27 @@ cdef int cy_second_min(
                 if matrix[x][y] < TARGET[0]:
                     TARGET[0] = matrix[x][y]
 
+<<<<<<< HEAD
 def cy_apply_scaling(float[:,:] scale_matrix,
     float[:,:,:] cube_matrix,
+=======
+def cy_stack(int[:,:,:] stack, 
+        int[:,:] a, 
+        int[:,:] b,
+        int[:] shape):
+
+    cdef int i = 0
+    cdef int j = 0
+
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            stack[i][j][0] = a[i][j]
+            stack[i][j][1] = b[i][j]
+
+
+def cy_apply_scaling(float[:,:] scale_matrix,
+    int[:,:,:] cube_matrix,
+>>>>>>> dev
     int scale_mode,
     float[:,:,:] scaled_matrix,
     int[:] shape):
@@ -260,8 +279,13 @@ def cy_build_image(int[:,:] image, int[:,:] boundaries, dict all_layers):
 def cy_build_merge_cube(dict layers, 
         int[:] x_limit, 
         int[:] y_limit, 
+<<<<<<< HEAD
         float[:] spectrum,
         float[:,:,:] cube_matrix,
+=======
+        int[:] spectrum,
+        int[:,:,:] cube_matrix,
+>>>>>>> dev
         int size):
     
     cdef int total_iterations = 0
@@ -303,7 +327,11 @@ def cy_build_merge_cube(dict layers,
 def cy_pack_spectra(dict layers, 
         int i, 
         int j, 
+<<<<<<< HEAD
         float[:] specout, 
+=======
+        int[:] specout, 
+>>>>>>> dev
         int shape):
 
     """ Similar to pixel reader functions, but instead or returning one value,
@@ -336,7 +364,11 @@ def cy_pack_spectra(dict layers,
         return specout
     else: 
         for c in range(shape):
+<<<<<<< HEAD
             specout[c] = 0.0
+=======
+            specout[c] = 0
+>>>>>>> dev
         return specout
 
 cdef int cy_stretch(int r, int a, int b, int c, int d):
@@ -429,7 +461,11 @@ def cy_get_sum_scaling(dict layers, int i, int j, int gross):
             return scaling
     return scaling
 
+<<<<<<< HEAD
 def cy_MPS(float[:,:,:] matrix, int[:] m_size, float[:] mps_spec, int spec_size):
+=======
+def cy_MPS(int[:,:,:] matrix, int[:] m_size, int[:] mps_spec, int spec_size):
+>>>>>>> dev
     cdef int c = 0
     cdef int x = 0
     cdef int y = 0

@@ -1,7 +1,11 @@
 #################################################################
 #                                                               #
 #          CONFIGURATION PARSER                                 #
+<<<<<<< HEAD
 #                        version: 1.0.1                         #
+=======
+#                        version: 1.1.0                         #
+>>>>>>> dev
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -12,6 +16,7 @@ from win32com.shell import shell, shellcon
 def pop_error(title,message):
 
     """ Displays TK error message """
+<<<<<<< HEAD
 
     from tkinter import messagebox
     messagebox.showerror(title,message)
@@ -23,6 +28,19 @@ docs = shell.SHGetFolderPath(0, shellcon.CSIDL_PERSONAL, None, 0)
 __PERSONAL__ = os.path.join(docs,"XISMuS")
 __BIN__ = os.path.join(__PERSONAL__,"bin")
 
+=======
+
+    from tkinter import messagebox
+    messagebox.showerror(title,message)
+    return 0
+
+""" Get working path and config.cfg path """
+
+docs = shell.SHGetFolderPath(0, shellcon.CSIDL_PERSONAL, None, 0)
+__PERSONAL__ = os.path.join(docs,"XISMuS")
+__BIN__ = os.path.join(__PERSONAL__,"bin")
+
+>>>>>>> dev
 cfgfile = os.path.join(__BIN__,"config.cfg")
 logger = logging.getLogger("logfile")
 logger.debug("Importing module ReadConfig.py...")
@@ -203,6 +221,7 @@ def unpack_cfg():
     return CONFIG, CALIB
 
 def set_settings(inifile):
+<<<<<<< HEAD
         ini = open(inifile,"r")
         for line in ini:
             line = line.replace("\n","")
@@ -221,6 +240,66 @@ def set_settings(inifile):
         Constants.RAM_LIMIT = RAMMode
         Constants.WELCOME = WlcmMode
         return
+=======
+    ini = open(inifile,"r")
+    for line in ini:
+        line = line.replace("\n","")
+        line = line.replace("\r","")
+        if line.split("\t")[0] == "<ColorMap>": 
+            ColorMapMode = str(line.split("\t")[1])
+            ColorMapMode = ColorMapMode.replace("\n","")
+        elif line.split("\t")[0] == "<MultiCore>": 
+            if line.split("\t")[1] == "False":
+                CoreMode = False
+            else: CoreMode = True
+        elif line.split("\t")[0] == "<PlotMode>": 
+            PlotMode = str(line.split("\t")[1])
+        elif line.split("\t")[0] == "<RAMLimit>": 
+            if line.split("\t")[1] == "False":
+                RAMMode = False
+            else: RAMMode = True
+        elif line.split("\t")[0] == "<welcome>": 
+            if line.split("\t")[1] == "False":
+                WlcmMode = False
+            else: WlcmMode = True
+        elif line.split("\t")[0] == "<Tolerance>":
+            PeakTolerance=[]
+            line = line.split("\t")[1].replace("[","").replace("]","")
+            line = line.split(",")
+            for i in line:
+                PeakTolerance.append(float(i))
+        elif line.split("\t")[0] == "<Cycles>":
+            Cycles = int(line.split("\t")[1])
+        elif line.split("\t")[0] == "<Sensitivity>":
+            Sensitivity = float(line.split("\t")[1])
+        elif line.split("\t")[0] == "<Suppression>":
+            ContSuppr = float(line.split("\t")[1])
+        elif line.split("\t")[0] == "<WizTolerance>":
+            WizTol = float(line.split("\t")[1])
+        elif line.split("\t")[0] == "<SaveInterval>":
+            SaveInterval = int(line.split("\t")[1])
+        elif line.split("\t")[0] == "<SavePlot>":
+            if line.split("\t")[1] == "False":
+                SavePlot = False
+            else: SavePlot = True
+    ini.close() 
+    Constants.COLORMAP = ColorMapMode
+    Constants.MULTICORE = CoreMode
+    Constants.PLOTMODE = PlotMode
+    Constants.RAM_LIMIT = RAMMode
+    Constants.WELCOME = WlcmMode
+    Constants.SETROI_TOLERANCE = PeakTolerance
+    Constants.FIT_CYCLES = Cycles
+    Constants.PEAK_TOLERANCE = Sensitivity
+    Constants.CONTINUUM_SUPPRESSION = ContSuppr
+    Constants.CHECK_TOLERANCE = WizTol
+    Constants.SAVE_INTERVAL = SaveInterval
+    Constants.SAVE_FIT_FIGURES = SavePlot
+
+    output = Constants.list_all()
+
+    return
+>>>>>>> dev
 
 if __name__ == "__main__":
     logger.info("This is ReadConfig")

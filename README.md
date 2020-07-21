@@ -11,7 +11,11 @@ A comprehensive User Guide PDF is provided in [this link][UserGuide].
 To install XISMuS, simply double-click the executable downloaded from one of the links above (32- or 64-bit depending on your system), carefully read the license agreement and follow the instructions on screen.
 <br>
 **Note:** XISMuS uses xraylib version 3.3.0 but it is optional. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>It is strongly recommended that you install the xraylib package.</ins><br>
+<<<<<<< HEAD
 If xraylib is not installed, the program will still run, but chemical mapping will be limited to few elements.<br>
+=======
+If xraylib is not installed, the program will still run, but auto-wizard imaging method will not be available.<br>
+>>>>>>> dev
 Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
 
 ## From Source
@@ -20,6 +24,15 @@ If you rather run it from the source, on your local Python environment interpret
 `git clone https://github.com/linssab/XISMuS`<br>
 <br>
 Be sure to have all the required Python modules installed! They are listed in the section below.<br>
+<<<<<<< HEAD
+=======
+You will have to compile the Cython code, by typing in the following command on your terminal:<br>
+<br>
+`python .\setup_cy.py build_ext --inplace`<br>
+<br>
+You must have a GNU compiler to do so, as `stupy_cy.py` will compile the python code in `cy_funcs.pyx` into native C code.<br>
+Finally, add `My Documents` content inside your user documents folder.<br>
+>>>>>>> dev
 
 #### Dependencies
 
@@ -28,8 +41,14 @@ The packages whose versions are mentioned are the stable versions working with X
 * numpy _v 1.18.1_<br>
 * numba _v 0.45.1_<br>
 * llvmlite _v 0.31_<br>
+<<<<<<< HEAD
 * cython<br>
 * opencv-python<br>
+=======
+* cython (to run setup_cy.py)<br>
+* opencv-python<br>
+* SciPy
+>>>>>>> dev
 * psutil<br>
 * pywin32 (for 32-bit system builds)<br>
 * matplotlib<br>
@@ -41,8 +60,13 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 <br>
 
 [xraylib]: http://lvserver.ugent.be/xraylib/
+<<<<<<< HEAD
 [x64]: https://mega.nz/file/8XAwEABK#gmyI-yPspTo4-SQrh7jzkOBKNIBO_IAIyMX72lZ4zZ0
 [x86]: https://mega.nz/file/0a42xQSa#cDzo_trAbRz7IWvSRrIVQF5KBNaKYV8VA_mkdAGSXog
+=======
+[x64]: https://mega.nz/file/8Gx0WCoa#czn2vXqKPw6pRvtenvS7JrHNFfNivWrsVvyZPrT-JOE
+[x86]: https://mega.nz/file/5Gpn1QyY#eGkWrn-qRgqWlikrwZNg6gTp-RK-j6bmySeVyVPHO-0
+>>>>>>> dev
 [UserGuide]: https://mega.nz/file/Ebon0YhS#u6HiWwlbOa4AkEte6UxvEtB18btDiK97Au8xIToAToU
 
 ## Funding

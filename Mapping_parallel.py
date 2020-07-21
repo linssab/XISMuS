@@ -1,7 +1,11 @@
 #################################################################
 #                                                               #
 #          Mapping module for multi-core processing             #
+<<<<<<< HEAD
 #                        version: 1.0.1 - May - 2020            #
+=======
+#                        version: 1.1.0 - Jul - 2020            #
+>>>>>>> dev
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -20,6 +24,12 @@ from SpecRead import dump_ratios, setup, __BIN__, __PERSONAL__
 from matplotlib import pyplot as plt
 from EnergyLib import ElementList, Energies, kbEnergies
 from ImgMath import interpolate_zeros, split_and_save
+<<<<<<< HEAD
+=======
+import Constants
+
+lock = multiprocessing.Lock()
+>>>>>>> dev
 
 def convert_bytes(num):
 
@@ -76,7 +86,10 @@ def grab_line(cube,lines,iterator,Element):
 
     for pos in range(cube["img_size"]):
                
+<<<<<<< HEAD
         RAW = matrix[currentx][currenty]
+=======
+>>>>>>> dev
         specdata = matrix[currentx][currenty]
         
         if cube["config"]["peakmethod"] == 'auto_roi': specdata = specdata
@@ -97,7 +110,11 @@ def grab_line(cube,lines,iterator,Element):
             for i in range(len(dif2)):
                 if dif2[i] < -1: dif2[i] = dif2[i]
                 elif dif2[i] > -1: dif2[i] = 0
+<<<<<<< HEAD
         else: dif2 = np.zeros([specdata.shape[0]])
+=======
+        else: dif2 = 0
+>>>>>>> dev
 
         ###################################
         #  CALCULATE NET PEAKS AREAS AND  #
@@ -110,20 +127,46 @@ def grab_line(cube,lines,iterator,Element):
         #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
         ################################################################
             
+<<<<<<< HEAD
         ka_info = SpecMath.getpeakarea(lines[0],specdata,\
                 energyaxis,background,cube["config"],RAW,usedif2,dif2)
+=======
+        ka_info = SpecMath.getpeakarea(
+                lines[0],
+                specdata,
+                energyaxis,
+                background,
+                cube["config"],
+                usedif2,
+                dif2)
+>>>>>>> dev
         ka = ka_info[0]
         if ka>0: ROI[ka_info[1][0]:ka_info[1][1]] += specdata[ka_info[1][0]:ka_info[1][1]]
         el_dist_map[0][currentx][currenty] = ka
 
         if cube["config"]["ratio"]: 
+<<<<<<< HEAD
             kb_info = SpecMath.getpeakarea(lines[1],specdata,\
                     energyaxis,background,cube["config"],RAW,usedif2,dif2)
+=======
+            kb_info = SpecMath.getpeakarea(
+                    lines[1],
+                    specdata,
+                    energyaxis,
+                    background,
+                    cube["config"],
+                    usedif2,
+                    dif2)
+>>>>>>> dev
             kb = kb_info[0]
             if kb>0: ROI[kb_info[1][0]:kb_info[1][1]] += specdata[kb_info[1][0]:kb_info[1][1]]
             el_dist_map[1][currentx][currenty] = kb
         
+<<<<<<< HEAD
         iterator.value = iterator.value + 1
+=======
+        with lock: iterator.value = iterator.value + 1
+>>>>>>> dev
 
         #########################################
         #   UPDATE ELMAP POSITION AND SPECTRA   #
@@ -148,6 +191,10 @@ def grab_line(cube,lines,iterator,Element):
         cube["config"]["peakmethod"],
         timestamp,
         time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+<<<<<<< HEAD
+=======
+    timestamps.close()
+>>>>>>> dev
        
     logger.info("Finished map acquisition!")
     if cube["config"]["peakmethod"] == 'auto_roi': 
@@ -179,8 +226,16 @@ def sort_results(results,element_list):
                 sorted_results.append(results[packed])
     return sorted_results
 
+<<<<<<< HEAD
 def start_reader(cube,Element,iterator,results,F,N):
     SpecMath.FN_set(F,N)
+=======
+def start_reader(cube,Element,iterator,results,F,N,TOL):
+
+    SpecMath.FN_set(F,N)
+    Constants.SETROI_TOLERANCE = TOL
+    print("Fano {} Noise {} and Tolerance {} in autoroi-multicore".format(F,N,TOL))
+>>>>>>> dev
     
     def call_peakmethod(cube,Element,iterator,results):
         
@@ -219,6 +274,12 @@ def start_reader(cube,Element,iterator,results,F,N):
 
 class Cube_reader():
     
+<<<<<<< HEAD
+=======
+    """ To avoid unnecessarily copying all datacube information to each of the
+    workers, a dictionary is created with only the relevant information and passed on """
+
+>>>>>>> dev
     def __init__(__self__,matrix,energyaxis,background,config,element_list,instances):
         __self__.cube = {}
         __self__.cube["matrix"] = matrix
@@ -240,13 +301,20 @@ class Cube_reader():
         __self__.run_count = 0 
         __self__.chunks = break_list(__self__.element_list,instances)
     
+<<<<<<< HEAD
     def start_workers(__self__,N,F):
+=======
+    def start_workers(__self__,N,F,TOL):
+>>>>>>> dev
         __self__.p_bar.progress["maximum"] = __self__.cube["img_size"]\
                 *len(__self__.element_list)
         __self__.p_bar.update_text("Processing data...")
         __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dev
         partial_ = []
         for chunk in __self__.chunks:
             try:
@@ -260,7 +328,17 @@ class Cube_reader():
             for element in chunk:
                 p = multiprocessing.Process(target=start_reader,
                     name=element,
+<<<<<<< HEAD
                     args=(__self__.cube,element,__self__.p_bar_iterator,__self__.results,N,F))
+=======
+                    args=(__self__.cube,
+                        element,
+                        __self__.p_bar_iterator,
+                        __self__.results,
+                        N,
+                        F,
+                        TOL))
+>>>>>>> dev
                 __self__.processes.append(p)
                 __self__.process_names.append(p.name)
                 logger.info("Polling process {}".format(p))
@@ -286,6 +364,7 @@ class Cube_reader():
         return partial_ 
     
     def checkbar(__self__):
+<<<<<<< HEAD
         __self__.p_bar.update_text("Processing data...")
         while __self__.p_bar_iterator.value < \
                 int(len(__self__.chunks[__self__.run_count-1]*__self__.run_count)*\
@@ -293,6 +372,14 @@ class Cube_reader():
             __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
         if __self__.run_count == len(__self__.chunks):
             while __self__.p_bar_iterator.value < int(__self__.p_bar.progress["maximum"]*0.98):
+=======
+        f = 0.98 # account for increment losses (even with Lock)
+        __self__.p_bar.update_text("Processing data...")
+        while __self__.p_bar_iterator.value < int(len(__self__.chunks[__self__.run_count-1]*__self__.run_count)*__self__.cube["img_size"]*f):
+            __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
+        if __self__.run_count == len(__self__.chunks):
+            while __self__.p_bar_iterator.value < int(__self__.p_bar.progress["maximum"]*f):
+>>>>>>> dev
                 __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
         return 0
 

@@ -1,12 +1,61 @@
 #################################################################
 #                                                               #
 #          PROGRESS BARS AND LOADING MODULE                     #
+<<<<<<< HEAD
 #                        version: 1.0.1                         #
+=======
+#                        version: 1.1.0                         #
+>>>>>>> dev
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 from tkinter import *
 from tkinter import ttk
+<<<<<<< HEAD
+=======
+import logging
+import Constants
+logger = logging.getLogger("logfile")
+logger.info("Importing module BatchFitter.py...")
+
+
+class BusyManager:
+
+    def __init__(__self__, widget):
+        __self__.toplevel = widget.winfo_toplevel()
+        __self__.widgets = {}
+
+    def busy(__self__, widget=None):
+
+    # attach busy cursor to toplevel, plus all windows
+    # that define their own cursor.
+
+        if widget is None:
+            w = __self__.toplevel # myself
+        else:
+            w = widget
+
+        if not str(w) in __self__.widgets:
+            try:
+                # attach cursor to this widget
+                cursor = w.cget("cursor")
+                if cursor != "watch":
+                    __self__.widgets[str(w)] = (w, cursor)
+                    w.config(cursor="watch")
+            except TclError:
+                pass
+
+        for w in w.children.values():
+            __self__.busy(w)
+
+    def notbusy(__self__):
+        for w, cursor in __self__.widgets.values():
+            try:
+                w.config(cursor=cursor)
+            except TclError:
+                pass
+        __self__.widgets = {}
+>>>>>>> dev
 
 
 class Busy:
@@ -15,14 +64,26 @@ class Busy:
     
     def __init__(__self__,max_,min_):
         __self__.master = Toplevel()
+<<<<<<< HEAD
+=======
+        __self__.make_abortion = False
+>>>>>>> dev
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
         x = __self__.master.winfo_screenwidth()
         y = __self__.master.winfo_screenheight()
+<<<<<<< HEAD
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
         __self__.master.geometry('{}x{}+{}+{}'.format(166, 49,\
                 int((x/2)-80), int((y/2)-23)))
+=======
+        __self__.master.geometry("{}x{}+{}+{}".format(
+            166, 49,
+            int((x/2)-80), int((y/2)-23)))
+        __self__.btnz = Frame(__self__.master)
+        __self__.btnz.grid(row=1,column=0)
+>>>>>>> dev
         __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
         __self__.outerframe.grid(row=0,column=0)
         __self__.master.label = Label(__self__.outerframe, text="Packing spectra...")
@@ -32,6 +93,11 @@ class Busy:
         __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
         __self__.progress.grid(row=0,column=0)
         __self__.master.grab_set()
+<<<<<<< HEAD
+=======
+        __self__.win_x = __self__.master.winfo_width()
+        __self__.win_y = __self__.master.winfo_height()
+>>>>>>> dev
 
     def updatebar(__self__,value):
 
@@ -68,6 +134,59 @@ class Busy:
             time.sleep(1)
         __self__.destroybar()
 
+<<<<<<< HEAD
+=======
+    def add_abort(__self__,workers=None,multiprocess=Constants.MULTICORE):
+        __self__.workers = workers
+        __self__.multiprocess = multiprocess
+        __self__.master.geometry("{}x{}".format(166,81))
+        __self__.abort = Button(__self__.outerframe,
+                text="Abort",
+                width=7,
+                height=1,
+                command=__self__.abort)
+        __self__.abort.grid(row=2,column=0,pady=3)
+        __self__.btnz.update()
+
+    def abort(__self__):
+
+        import pickle, os
+        import Constants
+        import SpecRead
+        
+        def verify_existing_fit_chunks():
+            frames = [npy for npy in os.listdir(
+                fit_path) if npy.lower().endswith(".npy")]
+            if frames == []:
+                return 0
+            else: 
+                return frames
+
+        if __self__.multiprocess:
+            for p in __self__.workers:
+                p.terminate()
+            __self__.make_abortion = True
+        else: __self__.make_abortion = True
+        messagebox.showinfo("ABORTED!","The fitting process was aborted by the user.")
+
+        cube_file = open(SpecRead.cube_path,'rb')
+        del Constants.MY_DATACUBE
+        Constants.MY_DATACUBE = pickle.load(cube_file)
+        cube_file.close()
+
+        fit_path = SpecRead.output_path
+        frames = verify_existing_fit_chunks()
+
+        try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
+        except: pass
+        for chunk in frames:
+            try: os.remove(os.path.join(fit_path,chunk))
+            except: pass
+
+        __self__.destroybar()
+        return 
+
+>>>>>>> dev
 
 class ReadProgress:
     
@@ -106,7 +225,11 @@ class ThinkingWheel:
     
     def __init__(__self__,speed,x,y,auto=True,parent=None):
         if parent == None: auto = False
+<<<<<<< HEAD
         __self__.master = Tk()
+=======
+        __self__.master = Toplevel()
+>>>>>>> dev
         __self__.parent = parent
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
@@ -116,7 +239,11 @@ class ThinkingWheel:
         spawn_y = __self__.master.winfo_screenheight()
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
+<<<<<<< HEAD
         __self__.master.geometry('{}x{}+{}+{}'.format(x, y,\
+=======
+        __self__.master.geometry('{}x{}+{}+{}'.format(x, y,
+>>>>>>> dev
                 int((spawn_x/2)-x/2), int((spawn_y/2)-y/2)))
         __self__.gif = [PhotoImage(file="./tnk.gif",format = 'gif -index %i' %(i),
             master = __self__.master) for i in range(8)]
