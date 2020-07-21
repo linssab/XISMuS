@@ -1,16 +1,10 @@
 *.pyc
 *.rar
 *.zip
-*.log
 *.png
 *.ipynb
 *.svg
 *.ico
-converter.py
-timestamps.txt
-axis.txt
-output\
-\output
 .ipynb_checkpoints\
 \.ipynb_checkpoints
 build\
@@ -19,4 +13,3 @@ add-ons\
 \add-ons
 __pycache__\
 \__pycache\
-config.MC.cfg
