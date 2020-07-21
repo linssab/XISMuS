@@ -439,22 +439,22 @@ def _init_numpy_mkl():
         pass
 
 
-class Author:
+class About:
 
     """ Spawns author information """
     def __init__(__self__,root):
         __self__.master = Toplevel(master=root.master)
-        __self__.master.title("Author")
+        __self__.master.title("About")
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.master.destroy)
         icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
         __self__.master.iconbitmap(icon)  
-        infotext="Author: Sergio Lins\nSoftware version: {0}\nContact: sergio.lins@roma3.infn.it".format(Constants.VERSION)
+        infotext="Software version: {0}\nContact: sergio.lins@roma3.infn.it".format(Constants.VERSION)
         __self__.winFrame = Frame(__self__.master)
         __self__.winFrame.pack(padx=(16,16),pady=(16,16))
         __self__.Info = Label(__self__.winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
         __self__.Info.pack()
-        __self__.Link = Label(__self__.winFrame, text="RG Profile", fg="blue", cursor="hand2")
+        __self__.Link = Label(__self__.winFrame, text="Contact via ResearchGate", fg="blue", cursor="hand2")
         __self__.Link.bind("<Button-1>", __self__.go_to_RS)
         __self__.Link.pack(side=LEFT)
         place_center(root.master,__self__.master)
@@ -3985,10 +3985,10 @@ class MainGUI:
     
     def call_author(__self__):
         try:
-            if __self__.AuthorWin.master.state() == "normal":
-                __self__.AuthorWin.master.focus_force()
+            if __self__.AboutWin.master.state() == "normal":
+                __self__.AboutWin.master.focus_force()
         except:
-            __self__.AuthorWin = Author(__self__)
+            __self__.AboutWin = About(__self__)
 
     def call_settings(__self__):
         try:
@@ -4095,7 +4095,7 @@ class MainGUI:
         __self__.MenuBar.add_cascade(label="Toolbox", menu=__self__.Toolbox)
         __self__.MenuBar.add_command(label="Help", 
                 command=call_help)
-        __self__.MenuBar.add_command(label="Author", 
+        __self__.MenuBar.add_command(label="About", 
                 command=__self__.call_author)
         __self__.derived_spectra.add_command(label="Summation", 
                 command=__self__.call_summation)
