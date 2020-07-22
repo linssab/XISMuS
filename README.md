@@ -49,7 +49,7 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 
 [xraylib]: http://lvserver.ugent.be/xraylib/
 [x64]: https://mega.nz/file/lPBXnSha#ylkJkzJ_0htvVkayjB15QH02fCjtC6cmVOaV8fy7gdU
-[x86]: https://mega.nz/file/AO5nSKDb#IjmluJnlswGXl4TGGJsVs3TATDUdZodcZ2wlUp7U_a4
+[x86]: https://mega.nz/file/9e4BCKwL#OeUgelsCoxcijoUBpYkl91erH3SJMkEhT5fwqA0nhgQ
 [UserGuide]: https://mega.nz/file/BehBCDqD#es9lAsv2AUvMluBHnXRypR_vc0h5Ak3UwmCdE5gKU6A
 
 ## Funding
