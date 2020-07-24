@@ -1083,7 +1083,8 @@ def gaussianbuilder(E_axis,energy,A,F,N):
             gaus[i][j]=A[i]*(math.exp(-(((E_axis[j]-energy[i])**2)/(2*(s**2)))))
     return gaus
 
-def setROI(lookup,xarray,yarray,localconfig,tolerance=Constants.SETROI_TOLERANCE):
+def setROI(lookup,xarray,yarray,localconfig):
+    
     
     """
     INPUT: 
@@ -1112,10 +1113,12 @@ def setROI(lookup,xarray,yarray,localconfig,tolerance=Constants.SETROI_TOLERANCE
         idx = np.where(yarray==ymax)[0][0]
         return xarray[idx],ymax,idx
 
+    tolerance = Constants.SETROI_TOLERANCE
     lookup = int(lookup)
     if lookup < 4800: w_tolerance = tolerance[0]
-    elif lookup > 12000: w_tolerance = tolerance[1]
-    else: w_tolerance = tolerance[2]
+    elif lookup > 12000: 
+        w_tolerance = tolerance[2]
+    else: w_tolerance = tolerance[1]
     peak_corr = 0
     peak_center = 0
     shift = [0,0,0]
@@ -1167,6 +1170,7 @@ def setROI(lookup,xarray,yarray,localconfig,tolerance=Constants.SETROI_TOLERANCE
         ##########################################
 
         difference = abs((shift[0])-xarray[idx])*1000
+        print(int((w_tolerance)*localconfig["gain"]*1000))
         logger.debug("DIFFERENCE: {}, Tolerable: {}. Peak is at: {}".format(
             int(difference),
             int((w_tolerance)*localconfig["gain"]*1000),

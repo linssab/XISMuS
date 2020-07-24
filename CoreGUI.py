@@ -4018,11 +4018,11 @@ class MainGUI:
         # define the frame and layout
         __self__.ButtonsFrame = Frame(__self__.master)
         __self__.ButtonsFrame.grid_propagate(1)
-        __self__.ButtonsFrame.grid(row=0, column=0, rowspan=3, columnspan=2,padx=16)
+        __self__.ButtonsFrame.grid(row=0, column=0, rowspan=3, columnspan=2,padx=16,sticky="")
         __self__.ImageCanvas = Canvas(__self__.master,
                 width=200, height=200,
                 bg='black', relief=SUNKEN, bd=5)
-        __self__.ImageCanvas.grid(row=3, column=0, rowspan=3, columnspan=2, padx=(8,8))
+        __self__.ImageCanvas.grid(row=3, column=0, rowspan=3, columnspan=2, padx=(8,8),sticky="")
         __self__.ImageCanvas.propagate(1)
         __self__.magnifier = Button(__self__.master,
                 image=__self__.MAG_ICON,
@@ -4212,6 +4212,8 @@ class MainGUI:
                 bd=3, 
                 command=__self__.call_settings)
         __self__.SettingsButton.grid(row=2,column=0,sticky=W+E)
+
+        __self__.master.grid_columnconfigure(0,weight=1)
         
         #####
 
