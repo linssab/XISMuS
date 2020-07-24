@@ -10,8 +10,8 @@ A comprehensive User Guide PDF is provided in [this link][UserGuide].
 ## Installation
 To install XISMuS, simply double-click the executable downloaded from one of the links above (32- or 64-bit depending on your system), carefully read the license agreement and follow the instructions on screen.
 <br>
-**Note:** XISMuS uses xraylib version 3.3.0 but it is optional. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>It is strongly recommended that you install the xraylib package.</ins><br>
-If xraylib is not installed, the program will still run, but auto-wizard imaging method will not be available.<br>
+**Note:** XISMuS uses xraylib version 3.3.0. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture.<ins>Note: If XISMuS fails to launch due to missing DLL's, please install xraylib.</ins><br>
+If xraylib is not installed, the program may still run, but auto-wizard imaging method will not be available.<br>
 Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
 
 ## From Source
@@ -41,15 +41,15 @@ The packages whose versions are mentioned are the stable versions working with X
 * pywin32 (for 32-bit system builds)<br>
 * matplotlib<br>
 
-#### Optional: xraylib _v 3.3.0_
-XISMuS uses xraylib version 3.3.0 but it is optional. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>Note: It is strongly recommended that you install the xraylib package.</ins><br>
+#### xraylib _v 3.3.0_
+XISMuS uses xraylib version 3.3.0. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>Note: If XISMuS fails to launch due to missing DLL's, please install xraylib.</ins><br>
 If xraylib is not installed, the program will still run, but chemical mapping will be limited to few elements.<br>
 Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
 <br>
 
 [xraylib]: http://lvserver.ugent.be/xraylib/
-[x64]: https://mega.nz/file/sLw1EBbA#t9YpZyal2qh04kTsVPVVD50oQ6uR5q9gDZQ1zk849l4
-[x86]: https://mega.nz/file/lCpTwbiB#y16mZz88eycFEjdovVaKnYBRRxqtubE9M8NtyEVpk-g
+[x64]: https://mega.nz/file/AK4HzRxK#XHAvIWv8Oiv42tnYuH9qR-zMXd97Qmr4M4mT8Mr7ctA
+[x86]: https://mega.nz/file/IKp0GA6Q#vg6ANWapP6pRnyaGT3R3YRb28prfS1SNCpWFoU_caOM
 [UserGuide]: https://mega.nz/file/BehBCDqD#es9lAsv2AUvMluBHnXRypR_vc0h5Ak3UwmCdE5gKU6A
 
 ## Funding
