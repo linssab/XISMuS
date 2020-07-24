@@ -23,7 +23,13 @@ import SpecMath
 from ProgressBar import Busy
 #################
 
-import xraylib as xlib
+try:
+    import xraylib as xlib
+    xlib.SetErrorMessages(0)
+except: 
+    logger.warning("xraylib module not found!")
+    print("FAILED TO LOAD XRAYLIB MODULE\nCannot run module BatchFitter.py")
+
 import sys, os, multiprocessing, copy, pickle
 import numpy as np
 import matplotlib.pyplot as plt
