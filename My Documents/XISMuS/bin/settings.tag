@@ -1,9 +1,9 @@
-C:\Users\sergi\Desktop
+C:\
 <ColorMap>	gray
 <MultiCore>	True
 <PlotMode>	Logarithmic
 <RAMLimit>	False
-<welcome>	False
+<welcome>	True
 <Tolerance>	[3.0, 4.0, 3.0]
 <Cycles>	1000
 <Sensitivity>	9.0
