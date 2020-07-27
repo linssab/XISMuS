@@ -1170,7 +1170,7 @@ def setROI(lookup,xarray,yarray,localconfig):
         ##########################################
 
         difference = abs((shift[0])-xarray[idx])*1000
-        print(int((w_tolerance)*localconfig["gain"]*1000))
+        #print(int((w_tolerance)*localconfig["gain"]*1000))
         logger.debug("DIFFERENCE: {}, Tolerable: {}. Peak is at: {}".format(
             int(difference),
             int((w_tolerance)*localconfig["gain"]*1000),
