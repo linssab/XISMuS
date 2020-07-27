@@ -1,5 +1,6 @@
 New in Version v1.1.1
 
+- Bug fixes
 - Fixed issue with auto wizard when fitting fails
 - Fixed issue with simple and auto roi tolerance factors
 
