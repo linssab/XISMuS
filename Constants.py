@@ -7,7 +7,7 @@
 
 import logging
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 LOGLEVEL = logging.DEBUG
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None

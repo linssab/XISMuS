@@ -23,7 +23,7 @@ def b64_to_array(uri):
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
     image_file = open(".\\images\\utils.tz","rb")
-    IMG_SPLASH = image_file.read(501972)
+    IMG_SPLASH = image_file.read(501865)
     no_data = image_file.read(38872) 
     IMG_NODATA = b64_to_array(no_data)
 
