@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 1.1.0 - Jul - 2020            #
+#                        version: 1.1.1 - Jul - 2020            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -155,8 +155,13 @@ def gausfit(
 
     A0 = y_peak*np.sqrt((np.square(Noise0/2.3548))+(3.85*Fano0*E_peak))*np.sqrt(2*np.pi)/gain
     params_gaus = A0
+
+    ############################################################
+    # These lines are used when fitting fano and noise locally #
+    ############################################################
     #params_gaus = np.insert(A0,[0],[Noise0,Fano0],axis=1)
     #params_voigt = np.insert(A0,[0],[Noise0,Fano0,gamma0],axis=1)
+    ############################################################
 
     ############################
 
@@ -220,7 +225,7 @@ def gausfit(
                 maxfev=cycles) #Clean Gaus
         except:
             print("WARNING:\nFit failed for spec {}".format(it))
-            popt_gaus = np.zeros(E_peak.shape[0]+2,dtype="int32")
+            popt_gaus = np.zeros(E_peak.shape[0],dtype="int32")
         print("curve_fit time: {0:0.2f}".format(timeit.default_timer()-time_fit),end="\r")
         
         ######################################
@@ -247,7 +252,13 @@ def gausfit(
         
         else: 
             y_gaus_single = np.asarray(
+
+            #########################################################
+            # This line is used when fitting fano and noise locally #
+            #########################################################
             #        [gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
+            #########################################################
+
                     [gaus(x,E_peak[i],gain,Noise0,Fano0,popt_gaus[i]) for i in range(
                         E_peak.size)]) + y_cont[it]
             g_fit_path = fit_path.split(".")[0]
