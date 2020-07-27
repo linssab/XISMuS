@@ -1,21 +1,5 @@
-New in Version v1.1.0
+New in Version v1.1.1
 
-- Fixed Spectrum name converter when inputting dimension
-- Performance improvements in datacube packing
-- Performance improvements in multiprocessing
+- Fixed issue with auto wizard when fitting fails
+- Fixed issue with simple and auto roi tolerance factors
 
-
-- Changed right-click export mode now supports different color maps
-- Improved plot style
-- Significant improvements in element finding and Fano/Noise fitting
-- Fixed map merge functionality
-
-
-- Added "Wipe Maps" option under ListSamples dropdown menu
-- Implemented iterative database loading system
-- Implemented Fitting engine as "auto_wizard" peakmethod
-- Added magnification icon to sample image on main panel
-
-
-- Fixed minor bugs to simple- and auto-roi FWHM criteria
-- Added peakmethod setup options to Settings menu
