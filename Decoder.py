@@ -11,6 +11,7 @@ in the GUI """
 import base64
 import numpy as np
 import cv2
+import os
 
 global IMG_SPLASH
 global IMG_NODATA
@@ -22,7 +23,7 @@ def b64_to_array(uri):
 
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
-    image_file = open(".\\images\\utils.tz","rb")
+    image_file = open(os.path.join(os.getcwd(),"images","utils.tz"),"rb")
     IMG_SPLASH = image_file.read(501856)
     no_data = image_file.read(38872) 
     IMG_NODATA = b64_to_array(no_data)
@@ -33,7 +34,7 @@ def unpack_icons():
     global ICO_LOAD, ICO_NEXT, ICO_PREVIOUS, ICO_QUIT, ICO_REFRESH, ICO_RESET
     global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP, ICO_MAGNIFIER
 
-    icons_file = open(".\\images\\icons\\icons.tz","rb")
+    icons_file = open(os.path.join(os.getcwd(),"images","icons","icons.tz"),"rb")
     ICO_ACCEPT = icons_file.read(1548)
     ICO_CCW = icons_file.read(4364)
     ICO_CW = icons_file.read(4328)
