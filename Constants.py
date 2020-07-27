@@ -1,14 +1,14 @@
 #################################################################
 #                                                               #
 #          CONSTANTS                                            #
-#                        version: 1.1.9 - Jul - 2020            #
+#                        version: 1.1.1 - Jul - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import logging
 
 VERSION = "1.1.1"
-LOGLEVEL = logging.DEBUG
+LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None
 DEFAULTBTN_COLOR = "SystemButtonFace"
