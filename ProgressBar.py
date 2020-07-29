@@ -114,7 +114,8 @@ class Busy:
             time.sleep(1)
         __self__.destroybar()
 
-    def add_abort(__self__,workers=None,multiprocess=Constants.MULTICORE):
+    def add_abort(__self__,workers=None,multiprocess=Constants.MULTICORE,mode=None):
+        __self__.mode=mode
         __self__.workers = workers
         __self__.multiprocess = multiprocess
         __self__.master.geometry("{}x{}".format(166,81))
@@ -141,7 +142,7 @@ class Busy:
                 return frames
 
         __self__.make_abortion = True
-        messagebox.showinfo("ABORTED!","The fitting process was aborted by the user.")
+        messagebox.showinfo("ABORTED!","The process was aborted by the user.")
 
         cube_file = open(SpecRead.cube_path,'rb')
         del Constants.MY_DATACUBE
@@ -149,13 +150,13 @@ class Busy:
         cube_file.close()
 
         fit_path = SpecRead.output_path
-        frames = verify_existing_fit_chunks()
-
-        try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
-        except: pass
-        for chunk in frames:
-            try: os.remove(os.path.join(fit_path,chunk))
+        if __self__.mode=="auto_wizard": 
+            frames = verify_existing_fit_chunks()
+            try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
             except: pass
+            for chunk in frames:
+                try: os.remove(os.path.join(fit_path,chunk))
+                except: pass
 
         return 
 

@@ -5191,14 +5191,16 @@ class PeriodicTable:
                                 max_copies)
                         FANO, NOISE = Constants.MY_DATACUBE.FN
                         TOLERANCE = Constants.SETROI_TOLERANCE
-                        results = cuber.start_workers(FANO, NOISE, TOLERANCE)
-                        cuber.p_bar.update_text("Digesting results...")
-                        results = sort_results(results,Constants.FIND_ELEMENT_LIST)
-                        digest_results(
-                                Constants.MY_DATACUBE,
-                                results,
-                                Constants.FIND_ELEMENT_LIST)
+                        results, aborted = cuber.start_workers(FANO, NOISE, TOLERANCE)
+                        if not aborted:
+                            cuber.p_bar.update_text("Digesting results...")
+                            results = sort_results(results,Constants.FIND_ELEMENT_LIST)
+                            digest_results(
+                                    Constants.MY_DATACUBE,
+                                    results,
+                                    Constants.FIND_ELEMENT_LIST)
                         cuber.p_bar.destroybar()
+                        del cuber
 
                 # single-core mode
                 else: 
@@ -5228,6 +5230,7 @@ class PeriodicTable:
             root.ButtonLoad.config(state=NORMAL)
             root.write_stat()
             refresh_plots()
+            gc.collect()
 
     def draw_buttons(__self__):
         btnsize_w = 3

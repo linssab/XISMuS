@@ -251,6 +251,7 @@ def gausfit(
             percent = iterator/tot*100
             bar.updatebar(iterator)
             bar.update_text("Fitting data... {0:0.2f}%".format(percent))
+        elif bar!=None and bar.make_abortion: return
         else:
             with lock: iterator.value = iterator.value + 1
 
@@ -1021,7 +1022,7 @@ class SingleFit():
         peaks, matches = Constants.MATCHES
         percent = __self__.iterator/len(__self__.counts)*100
         __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.add_abort(multiprocess=False)
+        __self__.bar.add_abort(multiprocess=False,mode="auto_wizard")
         fitted_spec = gausfit(
                 __self__.energies,
                 __self__.counts,
@@ -1260,11 +1261,11 @@ class MultiFit():
             __self__.bar.update_text("Fitting data... {0:0.2f}%".format(percent))
         try: 
 
+            __self__.bar.destroybar()
             #########################################################################
             # For long processes, kill processes and move on if any data is hanging #
             #########################################################################
 
-            __self__.bar.destroybar()
             for p in __self__.workers:
                 print("shutting ",p)
                 __self__.shutdown_event.set()
@@ -1278,6 +1279,7 @@ class MultiFit():
             return 0
         except: 
             
+            __self__.bar.destroybar()
             #############
             # same here #
             #############
@@ -1386,7 +1388,7 @@ class MultiFit():
         ######################################
 
         workers_count=0
-        __self__.bar.add_abort(__self__.workers)
+        __self__.bar.add_abort(__self__.workers,mode="auto_wizard")
         __self__.bar.toggle_abort("off")
         for p in __self__.workers:
             workers_count+=1

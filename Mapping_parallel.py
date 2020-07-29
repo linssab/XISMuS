@@ -1,12 +1,13 @@
 #################################################################
 #                                                               #
 #          Mapping module for multi-core processing             #
-#                        version: 1.1.0 - Jul - 2020            #
+#                        version: 1.1.2 - Jul - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import numpy as np
 import os, sys, logging, multiprocessing
+import gc
 logger = logging.getLogger("logfile")
 from multiprocessing import freeze_support
 from psutil import cpu_count
@@ -254,6 +255,7 @@ class Cube_reader():
         __self__.p_bar = SpecMath.Busy(len(element_list),0)
         __self__.p_bar.update_text("Pre-loading data...")
         __self__.results = multiprocessing.Queue()
+        __self__.running = True
         __self__.p_bar_iterator = multiprocessing.Value('i',0)
         __self__.p_bar_iterator.value = 0
         __self__.processes = []
@@ -262,6 +264,7 @@ class Cube_reader():
         __self__.chunks = break_list(__self__.element_list,instances)
     
     def start_workers(__self__,N,F,TOL):
+        out = 0
         __self__.p_bar.progress["maximum"] = __self__.cube["img_size"]\
                 *len(__self__.element_list)
         __self__.p_bar.update_text("Processing data...")
@@ -269,11 +272,13 @@ class Cube_reader():
 
         partial_ = []
         for chunk in __self__.chunks:
+            if out: break
             try:
                 for p in __self__.processes:
                     p.terminate()
                     logger.info("Terminated {}".format(p))
             except: pass
+            __self__.running = True
             __self__.processes = []
             __self__.process_names = []
             i = 0
@@ -290,7 +295,6 @@ class Cube_reader():
                 __self__.processes.append(p)
                 __self__.process_names.append(p.name)
                 logger.info("Polling process {}".format(p))
-            
         
             for p in __self__.processes:
                 i = i + 1
@@ -299,27 +303,67 @@ class Cube_reader():
                 p.start()
                 
             __self__.run_count += 1
-            __self__.periodic_check()
+            __self__.p_bar.add_abort(__self__.processes,mode="auto_roi")
+            out = __self__.checkbar()
         
             for i in range(len(chunk)):
                 data = __self__.results.get()
                 partial_.append(data)
-            
+
             for p in __self__.processes:
                 if p.exitcode != 0:
                     p.join()
 
-        return partial_ 
+        __self__.results.close()
+        __self__.results.join_thread()
+
+        return partial_, out
     
     def checkbar(__self__):
         f = 0.98 # account for increment losses (even with Lock)
         __self__.p_bar.update_text("Processing data...")
-        while __self__.p_bar_iterator.value < int(len(__self__.chunks[__self__.run_count-1]*__self__.run_count)*__self__.cube["img_size"]*f):
+        while __self__.p_bar_iterator.value < int(len(__self__.chunks[__self__.run_count-1]*__self__.run_count)*__self__.cube["img_size"]*f) and not __self__.p_bar.make_abortion:
             __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
-        if __self__.run_count == len(__self__.chunks):
-            while __self__.p_bar_iterator.value < int(__self__.p_bar.progress["maximum"]*f):
-                __self__.p_bar.updatebar(__self__.p_bar_iterator.value)
-        return 0
+
+        if not __self__.p_bar.make_abortion:
+            __self__.running = False
+            return 0
+        else:
+            __self__.p_bar.destroybar()
+            try:
+
+                #########################################################################
+                # For long processes, kill processes and move on if any data is hanging #
+                #########################################################################
+
+                for p in __self__.processes:
+                    print("shutting ",p)
+                    __self__.running = False
+                    __self__.results.put(1)
+                    p.terminate()
+                    print(p,"SHUT")
+                gc.collect()
+
+                #########################################################################
+
+                return __self__.p_bar.make_abortion
+            except:
+
+                #############
+                # same here #
+                #############
+
+                for p in __self__.processes:
+                    print("shutting ",p)
+                    __self__.running = False
+                    __self__.results.put(1)
+                    p.terminate()
+                    print(p,"SHUT")
+                gc.collect()
+
+                #############
+
+                return __self__.p_bar.make_abortion
 
     def periodic_check(__self__):
         __self__.checkbar()
