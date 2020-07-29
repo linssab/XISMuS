@@ -3455,7 +3455,7 @@ class MainGUI:
                 label="Open output folder",
                 command=__self__.open_output_folder)
         __self__.SamplesWindow.popup.add_command(
-                label="Remove from list",
+                label="Remove from database",
                 command=__self__.remove_sample)
         __self__.SamplesWindow.popup.add_command(
                 label="Clear all maps",
@@ -3481,18 +3481,22 @@ class MainGUI:
         "Are you sure you want to remove sample {} from the list? It will not delete the sample data or the compiled datacube.".format(sample))
         
         if d=="yes":
-            del __self__.samples[sample]
-            del Constants.USER_DATABASE[sample]["prefix"]
-            del __self__.samples_path[sample]
-            del Constants.USER_DATABASE[sample]["path"]
-            del __self__.mcacount[sample]
-            del Constants.USER_DATABASE[sample]["mcacount"]
-            del __self__.mca_indexing[sample]
-            del Constants.USER_DATABASE[sample]["indexing"]
-            del __self__.mca_extension[sample]
-            del Constants.USER_DATABASE[sample]["extension"]
-            del Constants.USER_DATABASE[sample]
-            __self__.list_samples()
+            try:
+                del __self__.samples[sample]
+                del Constants.USER_DATABASE[sample]["prefix"]
+                del __self__.samples_path[sample]
+                del Constants.USER_DATABASE[sample]["path"]
+                del __self__.mcacount[sample]
+                del Constants.USER_DATABASE[sample]["mcacount"]
+                del __self__.mca_indexing[sample]
+                del Constants.USER_DATABASE[sample]["indexing"]
+                del __self__.mca_extension[sample]
+                del Constants.USER_DATABASE[sample]["extension"]
+                del Constants.USER_DATABASE[sample]
+                __self__.list_samples()
+            except KeyError:
+                messagebox.showinfo("Compiled cube","This sample is not in the database. The Datacube was added from \"XISMuS\\output\" folder. If you don't want to see this sample, remove it from the output folder manually.")
+                return
 
             try: __self__.summation.master.destroy()
             except: pass
@@ -3764,8 +3768,7 @@ class MainGUI:
 
     def sample_popup(__self__,event):
 
-        """Call SamplesWindow method to pop a loading screen
-        while it reads the mca files in the newly selected folder"""
+        """Call the right-click menu for SampleList"""
 
         __self__.SamplesWindow_TableLeft.select_clear(0,END)
         idx = __self__.SamplesWindow_TableLeft.nearest(event.y)
