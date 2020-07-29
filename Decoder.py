@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          DECODER                                              #
-#                        version: 1.1.1                         #
+#                        version: 1.1.2                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -24,7 +24,7 @@ def b64_to_array(uri):
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
     image_file = open(os.path.join(os.getcwd(),"images","utils.tz"),"rb")
-    IMG_SPLASH = image_file.read(501856)
+    IMG_SPLASH = image_file.read(501908)
     no_data = image_file.read(38872) 
     IMG_NODATA = b64_to_array(no_data)
 
