@@ -140,11 +140,7 @@ class Busy:
             else: 
                 return frames
 
-        #if __self__.multiprocess:
-            #for p in __self__.workers:
-            #    p.terminate()
         __self__.make_abortion = True
-        #else: __self__.make_abortion = True
         messagebox.showinfo("ABORTED!","The fitting process was aborted by the user.")
 
         cube_file = open(SpecRead.cube_path,'rb')
@@ -161,7 +157,6 @@ class Busy:
             try: os.remove(os.path.join(fit_path,chunk))
             except: pass
 
-        __self__.destroybar()
         return 
 
     def toggle_abort(__self__,state):

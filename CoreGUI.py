@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.1.1 - Jul - 2020            #
+#                        version: 1.1.2 - Jul - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -3311,6 +3311,7 @@ class MainGUI:
             message1,Constants.MY_DATACUBE.name))
 
                 if p2 == None:
+                    del root.Fitter
                     return
 
                 elif p2 == True:
@@ -3329,6 +3330,7 @@ class MainGUI:
                                 Constants.SAVE_FIT_FIGURES)
                     else: 
                         root.Fitter.run_fit()
+                        del root.Fitter
 
                     root.bar = Busy(1,0)
                     root.bar.update_text("Building images...")
@@ -3351,6 +3353,7 @@ class MainGUI:
                 # Updates mainGUI panels when running without pooling new elements #
                 #################################################################### 
                 
+                gc.collect()
                 wipe_list()
                 __self__.toggle_(toggle="on")
                 __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
@@ -3367,7 +3370,7 @@ class MainGUI:
                 return
             else: return
             return
-        root.master.mainloop()
+        #root.master.mainloop()
 
     def find_elements(__self__):
 
@@ -5065,6 +5068,7 @@ class PeriodicTable:
 
         root.bar = Busy(1,0)
         root.bar.update_text("Building images...")
+        del root.Fitter
 
         build_images(SpecRead.output_path,bar=root.bar)
 
@@ -5486,6 +5490,7 @@ if __name__ == "__main__":
     from psutil import cpu_count
     Constants.CPUS = cpu_count()
     import logging, time
+    import gc
     from multiprocessing import freeze_support
     freeze_support()
     

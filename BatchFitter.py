@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 1.1.1 - Jul - 2020            #
+#                        version: 1.1.2 - Jul - 2020            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -9,6 +9,7 @@
 # Utilities #
 #############
 import logging
+import gc
 logger = logging.getLogger("logfile")
 logger.info("Importing module BatchFitter.py...")
 import sys, os, multiprocessing, copy, pickle
@@ -1013,7 +1014,7 @@ class SingleFit():
 
 
     def run_fit(__self__):
-        
+        import gc
         figures_path = os.path.join(SpecRead.output_path,"Fit plots","Single")
         try: os.makedirs(figures_path)
         except: pass
@@ -1036,6 +1037,8 @@ class SingleFit():
                 __self__.iterator,
                 bar = __self__.bar)
         __self__.bar.destroybar()
+        del __self__
+        gc.collect()
 
     def locate_peaks(__self__,add_list=None,path="./"):
 
@@ -1267,6 +1270,8 @@ class MultiFit():
                 __self__.shutdown_event.set()
                 p.terminate()
                 print(p,"SHUT")
+            del __self__
+            gc.collect()
 
             #########################################################################
 
@@ -1282,6 +1287,8 @@ class MultiFit():
                 __self__.shutdown_event.set()
                 p.terminate()
                 print(p,"SHUT")
+            del __self__
+            gc.collect()
 
             #############
 
@@ -1291,7 +1298,6 @@ class MultiFit():
             cycles,
             plot_save_interval,
             save_plots):
-        import gc
 
         del Constants.MY_DATACUBE.matrix
         del Constants.MY_DATACUBE.background
