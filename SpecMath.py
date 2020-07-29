@@ -6,7 +6,9 @@
 #################################################################
 TESTFNC = False
 
-# import utilities
+#############
+# Utilities #
+#############
 import logging
 import threading
 logger = logging.getLogger("logfile")
@@ -16,23 +18,28 @@ import sys
 import numpy as np
 import pickle
 import random
+#############
 
-# import internal modules (only needed functions)
-from SpecRead import (getdata, 
-getdimension, 
-getcalibration, 
-getfirstfile, 
-calibrate, 
+#################
+# Local imports #
+#################
+from SpecRead import (getdata,
+getdimension,
+getcalibration,
+getfirstfile,
+calibrate,
 updatespectra)
-
 from EnergyLib import ElementList
 from ImgMath import LEVELS
 from Mapping import getdensitymap
 from ProgressBar import Busy
 import Constants
 import cy_funcs
+#################
 
-# import other modules
+####################
+# External modules #
+####################
 import matplotlib.pyplot as plt
 logger.debug("Importing numba jit...")
 try:
@@ -44,9 +51,9 @@ import math
 from math import factorial
 logger.info("Finished SpecMath imports.")
 lock = threading.Lock()
-
 from tkinter import *
 from tkinter import ttk
+####################
 
 iterator = 0
 
@@ -375,54 +382,6 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
     #plt.show()
 
     return popt_gaus[1], popt_gaus[0]
-
-def batch_continuum_for_wizard(
-        spectra_batch,
-        bgstrip=None,
-        bgparams=(24,5,5,3),
-        bar=None,
-        global_spectrum=None):
-
-    """ Used to fit a batch of spectra for auto_wizard method. Auto wizard requires
-    the data to be filtered, otherwise the peak detection and gaussian fit performs
-    very poorly. For tis reason, the continuum matrix must be recalculated everytime
-    the wizard is invoked. This avoid harming the data. The RAW data remains always
-    untouched in the datacube after fitting the data with auto wizard. """
-
-    continuum = np.zeros([spectra_batch.shape[0],spectra_batch.shape[1]],dtype="float32")
-    global_continuum = np.zeros([spectra_batch.shape[1]],dtype="float32")
-
-    if bgstrip == "None":
-        return continuum, global_continuum
-
-    elif bgstrip == "SNIPBG":
-        try: cycles, window, savgol, order = bgparams
-        except: cycles, window, savgol, order = 24,5,5,3
-        for i in range(spectra_batch.shape[0]):
-            if bar!= None: bar.updatebar(i)
-            stripped = peakstrip(spectra_batch[i],cycles,window,savgol,order)
-            continuum[i] = stripped
-        global_continuum = peakstrip(global_spectrum,cycles,window,savgol,order)
-        return continuum, global_continuum
-
-    elif bgstrip == "Polynomial":
-        ndegree_global, ndegree_single, r_fact = 6,0,2
-        attempt = 0
-        while continuum.sum()==0:
-            attempt += 1
-            continuum = polfit_batch(
-                spectra_batch,
-                ndegree_global=ndegree_global,
-                ndegree_single=ndegree_single,
-                r=r_fact,
-                custom_global_spec=global_spectrum)
-            r_fact+=1
-        for i in range(spectra_batch.shape[0]):
-            if i: continuum[i] = continuum[i]
-            else: global_continuum = continuum[i]
-            if bar!= None: bar.updatebar(i)
-        return continuum, global_continuum
-
 
 class datacube:
 
@@ -1632,8 +1591,4 @@ if __name__=="__main__":
     cube_file.close()
     data = Constants.MY_DATACUBE.sum
     e_axis = Constants.MY_DATACUBE.energyaxis
-    #getpeakarea(6441,data,Constants.MY_DATACUBE.energyaxis,
-    #        Constants.MY_DATACUBE.background,
-    #        Constants.MY_DATACUBE.config,True,
-    #        np.zeros([Constants.MY_DATACUBE.matrix.shape[2]]))
 

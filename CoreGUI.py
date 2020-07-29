@@ -3284,7 +3284,7 @@ class MainGUI:
 
                 if Constants.MULTICORE == True and \
                         Constants.CPUS>1 and \
-                        Constants.MY_DATACUBE.img_size > 500:
+                        Constants.MY_DATACUBE.img_size > 400:
                     root.Fitter = MultiFit(fit_path)
                 else:
                     root.Fitter = SingleFit(fit_path)
@@ -3322,7 +3322,7 @@ class MainGUI:
                     start_time = time.time()
                     if Constants.MULTICORE == True and \
                             Constants.CPUS>1 and\
-                            Constants.MY_DATACUBE.img_size > 500:
+                            Constants.MY_DATACUBE.img_size > 400:
                         root.Fitter.launch_workers(
                                 Constants.FIT_CYCLES,
                                 Constants.SAVE_INTERVAL,
@@ -5053,7 +5053,7 @@ class PeriodicTable:
         save_path = os.path.join(SpecRead.output_path,"peak_find.png")
         if Constants.MULTICORE == True and \
                 Constants.CPUS>1 and \
-                Constants.MY_DATACUBE.img_size > 500:
+                Constants.MY_DATACUBE.img_size > 400:
             root.Fitter.locate_peaks(add_list=__self__.elements,path=save_path)
             root.Fitter.launch_workers(
                             Constants.FIT_CYCLES,
@@ -5455,7 +5455,8 @@ class PeriodicTable:
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
 
 
-if __name__.endswith('__main__'):         
+#if __name__.endswith('__main__'):         
+if __name__ == "__main__":
     import Constants
     optimum_resolution = (1920,1080)
     _init_numpy_mkl()

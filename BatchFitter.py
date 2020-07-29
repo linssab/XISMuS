@@ -5,41 +5,42 @@
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
+#############
+# Utilities #
+#############
 import logging
 logger = logging.getLogger("logfile")
 logger.info("Importing module BatchFitter.py...")
+import sys, os, multiprocessing, copy, pickle
 from multiprocessing import freeze_support
+lock = multiprocessing.Lock()
 freeze_support()
+import numpy as np
+import time,timeit
+#############
 
 #################
 # Local imports #
 #################
 import Constants
 import SpecRead
-from SpecMath import savgol_filter, peakstrip, polfit_batch, refresh_position 
+from SpecMath import savgol_filter, peakstrip, polfit_batch, refresh_position, setROI 
 from ImgMath import split_and_save
 import EnergyLib
-import SpecMath
 from ProgressBar import Busy
 #################
 
+####################
+# External modules #
+####################
+import matplotlib.pyplot as plt
 try:
     import xraylib as xlib
     xlib.SetErrorMessages(0)
 except: 
     logger.warning("xraylib module not found!")
     print("FAILED TO LOAD XRAYLIB MODULE\nCannot run module BatchFitter.py")
-
-import sys, os, multiprocessing, copy, pickle
-import numpy as np
-import matplotlib.pyplot as plt
-
-#from scipy.special import erfc #Complementary errorfunction
-#from scipy.special import wofz #Faddeeva function defined as exp(-z**2) * erfc(-i*z)
-
-import time,timeit
-
-lock = multiprocessing.Lock()
+####################
 
 def convert_bytes(num):
 
@@ -49,6 +50,54 @@ def convert_bytes(num):
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
+
+
+def batch_continuum_for_wizard(
+        spectra_batch,
+        bgstrip=None,
+        bgparams=(24,5,5,3),
+        bar=None,
+        global_spectrum=None):
+
+    """ Used to fit a batch of spectra for auto_wizard method. Auto wizard requires
+    the data to be filtered, otherwise the peak detection and gaussian fit performs
+    very poorly. For tis reason, the continuum matrix must be recalculated everytime
+    the wizard is invoked. This avoid harming the data. The RAW data remains always
+    untouched in the datacube after fitting the data with auto wizard. """
+
+    continuum = np.zeros([spectra_batch.shape[0],spectra_batch.shape[1]],dtype="float32")
+    global_continuum = np.zeros([spectra_batch.shape[1]],dtype="float32")
+
+    if bgstrip == "None":
+        return continuum, global_continuum
+
+    elif bgstrip == "SNIPBG":
+        try: cycles, window, savgol, order = bgparams
+        except: cycles, window, savgol, order = 24,5,5,3
+        for i in range(spectra_batch.shape[0]):
+            if bar!= None: bar.updatebar(i)
+            stripped = peakstrip(spectra_batch[i],cycles,window,savgol,order)
+            continuum[i] = stripped
+        global_continuum = peakstrip(global_spectrum,cycles,window,savgol,order)
+        return continuum, global_continuum
+
+    elif bgstrip == "Polynomial":
+        ndegree_global, ndegree_single, r_fact = 6,0,2
+        attempt = 0
+        while continuum.sum()==0:
+            attempt += 1
+            continuum = polfit_batch(
+                spectra_batch,
+                ndegree_global=ndegree_global,
+                ndegree_single=ndegree_single,
+                r=r_fact,
+                custom_global_spec=global_spectrum)
+            r_fact+=1
+        for i in range(spectra_batch.shape[0]):
+            if i: continuum[i] = continuum[i]
+            else: global_continuum = continuum[i]
+            if bar!= None: bar.updatebar(i)
+        return continuum, global_continuum
 
 def gausfit(
         x,
@@ -91,6 +140,7 @@ def gausfit(
     """
 
     from scipy.optimize import curve_fit
+    import gc
     cycles = Constants.FIT_CYCLES
 
     #############################################################################
@@ -450,6 +500,7 @@ def gausfit(
         del residuals_gaus
         del ss_res_gaus
         del rchisq_gaus
+        gc.collect()
 
     np.save(fit_path,frame)
     print("Saved frame chunk to {}".format(fit_path))
@@ -463,6 +514,7 @@ def gausfit(
     del y_peak
     del A0
     del Area_dict_gaus
+    gc.collect()
 
     return 0
 
@@ -942,7 +994,7 @@ class SingleFit():
             __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
         __self__.SUM = np.sum(__self__.counts,0)
         __self__.bar.update_text("Adjusting continuum...")
-        __self__.continuum, __self__.global_continuum = SpecMath.batch_continuum_for_wizard(
+        __self__.continuum, __self__.global_continuum = batch_continuum_for_wizard(
                 __self__.counts,
                 bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
                 bgparams=Constants.MY_DATACUBE.config["bg_settings"],
@@ -1009,10 +1061,10 @@ class SingleFit():
 
                 logger.debug("Element {}, {}".format(element_a,element_b))
 
-                elka_peak = SpecMath.setROI(
+                elka_peak = setROI(
                         element_a,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-                elkb_peak = SpecMath.setROI(
+                elkb_peak = setROI(
                         element_b,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
 
@@ -1039,6 +1091,7 @@ class MultiFit():
         __self__.name = Constants.MY_DATACUBE.name
         __self__.save_plots_path = os.path.join(SpecRead.output_path,"Fit plots")
         __self__.results = multiprocessing.Queue()
+        __self__.shutdown_event = multiprocessing.Event()
         __self__.global_iterator = multiprocessing.Value('i',0)
         __self__.global_iterator.value = 0
         __self__.work_done = multiprocessing.Value('i',0)
@@ -1064,7 +1117,7 @@ class MultiFit():
             __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
         __self__.SUM = np.sum(__self__.counts,0)
         __self__.bar.update_text("Adjusting continuum...")
-        __self__.continuum, __self__.global_continuum = SpecMath.batch_continuum_for_wizard(
+        __self__.continuum, __self__.global_continuum = batch_continuum_for_wizard(
                 __self__.counts,
                 bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
                 bgparams=Constants.MY_DATACUBE.config["bg_settings"],
@@ -1093,7 +1146,7 @@ class MultiFit():
         else:
             __self__.cores -= 1
             bite_size = 0
-            while bite_size < 500:
+            while bite_size < 400:
                 bite_size = int(__self__.counts.shape[0]/__self__.cores)
                 leftovers = int(__self__.counts.shape[0]%__self__.cores)
                 print("bite size: ",bite_size,"leftovers ",leftovers)
@@ -1175,10 +1228,10 @@ class MultiFit():
 
                 logger.debug("Element {}, {}".format(element_a,element_b))
 
-                elka_peak = SpecMath.setROI(
+                elka_peak = setROI(
                         element_a,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-                elkb_peak = SpecMath.setROI(
+                elkb_peak = setROI(
                         element_b,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
 
@@ -1196,23 +1249,49 @@ class MultiFit():
         return peaks, matches
 
     def check_progress(__self__):
-        __self__.bar.update_text("Fitting data...")
         tot = int(__self__.cores*__self__.bite_size)+__self__.leftovers
-        while __self__.global_iterator.value < tot and \
-                __self__.work_done.value < len(__self__.workers):
+        while __self__.work_done.value < len(__self__.workers) \
+                and not __self__.bar.make_abortion:
             __self__.bar.updatebar(__self__.global_iterator.value)
             percent = __self__.global_iterator.value/tot*100
             __self__.bar.update_text("Fitting data... {0:0.2f}%".format(percent))
         try: 
+
+            #########################################################################
+            # For long processes, kill processes and move on if any data is hanging #
+            #########################################################################
+
             __self__.bar.destroybar()
+            for p in __self__.workers:
+                print("shutting ",p)
+                __self__.shutdown_event.set()
+                p.terminate()
+                print(p,"SHUT")
+
+            #########################################################################
+
             return 0
         except: 
+            
+            #############
+            # same here #
+            #############
+
+            for p in __self__.workers:
+                print("shutting ",p)
+                __self__.shutdown_event.set()
+                p.terminate()
+                print(p,"SHUT")
+
+            #############
+
             return 1
 
     def launch_workers(__self__,
             cycles,
             plot_save_interval,
             save_plots):
+        import gc
 
         del Constants.MY_DATACUBE.matrix
         del Constants.MY_DATACUBE.background
@@ -1236,7 +1315,6 @@ class MultiFit():
             __self__.bar.update_text("Polling chunks...")
 
             counts, continuum = np.asarray(copy.deepcopy(block),dtype="int32")
-            del block
             
             counts = np.asarray(counts,dtype="int32")
 
@@ -1262,8 +1340,10 @@ class MultiFit():
                         (cycles,plot_save_interval,save_plots)))
 
             __self__.workers.append(p)
+            del block
             del counts, continuum
         del bites
+        gc.collect()
 
         #########################
 
@@ -1301,6 +1381,7 @@ class MultiFit():
 
         workers_count=0
         __self__.bar.add_abort(__self__.workers)
+        __self__.bar.toggle_abort("off")
         for p in __self__.workers:
             workers_count+=1
             print("\nPolling chunk ", workers_count)
@@ -1311,16 +1392,24 @@ class MultiFit():
         __self__.bar.progress["max"]= \
                 int(__self__.cores*__self__.bite_size)+__self__.leftovers
         __self__.bar.updatebar(0)
+        __self__.bar.update_text("Fitting data...")
+        __self__.bar.toggle_abort("on")
         __self__.check_progress()
     
-        for i in range(chunk):
-            data = __self__.results.get()
-            partial_.append(data)
+        #for i in range(chunk):
+        while not __self__.shutdown_event.is_set():
+            try:
+                data = __self__.results.get(block=True)
+                partial_.append(data)
+            except queue.Empty:
+                continue
+            if data == "END": break
+        __self__.results.close()
+        __self__.results.join_thread()
         
         for p in __self__.workers:
             if p.exitcode !=0:
                 p.join()
-
         return partial_ 
 
 def find_and_fit(

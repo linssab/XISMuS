@@ -118,12 +118,12 @@ class Busy:
         __self__.workers = workers
         __self__.multiprocess = multiprocess
         __self__.master.geometry("{}x{}".format(166,81))
-        __self__.abort = Button(__self__.outerframe,
+        __self__.abort_btn = Button(__self__.outerframe,
                 text="Abort",
                 width=7,
                 height=1,
                 command=__self__.abort)
-        __self__.abort.grid(row=2,column=0,pady=3)
+        __self__.abort_btn.grid(row=2,column=0,pady=3)
         __self__.btnz.update()
 
     def abort(__self__):
@@ -140,11 +140,11 @@ class Busy:
             else: 
                 return frames
 
-        if __self__.multiprocess:
-            for p in __self__.workers:
-                p.terminate()
-            __self__.make_abortion = True
-        else: __self__.make_abortion = True
+        #if __self__.multiprocess:
+            #for p in __self__.workers:
+            #    p.terminate()
+        __self__.make_abortion = True
+        #else: __self__.make_abortion = True
         messagebox.showinfo("ABORTED!","The fitting process was aborted by the user.")
 
         cube_file = open(SpecRead.cube_path,'rb')
@@ -163,6 +163,10 @@ class Busy:
 
         __self__.destroybar()
         return 
+
+    def toggle_abort(__self__,state):
+        if state=="on": __self__.abort_btn.config(state=NORMAL)
+        elif state=="off": __self__.abort_btn.config(state=DISABLED)
 
 
 class ReadProgress:
