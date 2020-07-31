@@ -374,7 +374,8 @@ def refresh_plots(exclusive=""):
                 API.plot.draw_selective_sum(API.DATACUBE,
                         API.sum_spectrum,
                         display_mode = root.plot_display,
-                        lines = lines)
+                        lines = lines,
+                        refresh=True)
                 API.plot.master.update_idletasks()
             except: pass
     else:
@@ -398,7 +399,8 @@ def refresh_plots(exclusive=""):
                 API.plot.draw_selective_sum(API.DATACUBE,
                         API.sum_spectrum,
                         display_mode = root.plot_display,
-                        lines = lines)
+                        lines = lines,
+                        refresh=True)
                 API.plot.master.update_idletasks()
             except: pass
 
@@ -2207,6 +2209,7 @@ class PlotWin:
             __self__.canvas.draw()
     
     def draw_ROI(__self__):
+       
         __self__.master.tagged = True
         patches = []
         for element in Constants.MY_DATACUBE.ROI:
@@ -2341,8 +2344,61 @@ class PlotWin:
         __self__.plot.imshow(fixed_image, cmap=Constants.COLORMAP)
         place_topright(__self__.master.master,__self__.master)
 
-    def draw_selective_sum(__self__,DATACUBE,y_data,display_mode=None,lines=False):
+    def draw_selective_sum(__self__,
+            DATACUBE,
+            y_data,
+            display_mode=None,
+            lines=False,
+            refresh=False):
         
+        if not refresh:
+            
+            save_icon = PhotoImage(data=ICO_SAVE)
+            __self__.SAVE_ICO = save_icon.subsample(1,1)
+
+            __self__.add_ons = Frame(__self__.master)
+            __self__.add_ons.pack(side=RIGHT,fill=X)
+            __self__.save_raw_btn = Button(__self__.add_ons,
+                    text=" Save ROI spectrum",
+                    image=__self__.SAVE_ICO,
+                    compound=LEFT,
+                    width=180,
+                    bd=1,
+                    command=lambda: save_raw_spectrum())
+            __self__.save_raw_btn.grid(row=0,column=0,sticky="")
+
+        def save_raw_spectrum():
+            x,spec = __self__.DATA.get_data()
+            f = filedialog.asksaveasfile(mode='w',
+                        defaultextension=".mca",
+                        filetypes=[("MCA file", "*.mca")],
+                        title="Save as...")
+            if f is not None:
+                sum_file = open(f.name,'w+')
+                
+                #################
+                # writes header #
+                #################
+                sum_file.write(
+                        "<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - {} ROI\n".format(
+                            DATACUBE.name))
+                sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - OFF\n")
+                sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(
+                    time.strftime("%Y-%m-%d %H:%M:%S", 
+                        time.gmtime())))
+                sum_file.write("SERIAL_NUMBER - 00001\n<<CALIBRATION>>\nLABEL - Channel\n")
+                for pair in DATACUBE.calibration:
+                    sum_file.write("{0} {1}\n".format(pair[0],pair[1]))
+                sum_file.write("<<DATA>>\n")
+                ###############
+                
+                for counts in spec:
+                    sum_file.write("{}\n".format(int(counts)))
+                sum_file.write("<<END>>")
+                sum_file.close()
+                __self__.master.focus_set()
+            else: return
+   
         __self__.plot.clear()
         colors = ["blue","red","green"]
         __self__.plot.set_title('{0}'.format(DATACUBE.name),**__self__.plot_font)

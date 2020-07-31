@@ -494,7 +494,8 @@ class datacube:
         sum_file = open(os.path.join(output_path,"stacksum.mca"),'w+')
         
         #writes header
-        sum_file.write("<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - Piratininga SM Sum Spectrum\n")
+        sum_file.write("<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - {} Sum Spectrum\n".format(
+            __self__.name))
         sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - OFF\n")
         sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(
             time.strftime("%Y-%m-%d %H:%M:%S", 
