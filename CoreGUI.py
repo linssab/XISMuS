@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.1.2 - Jul - 2020            #
+#                        version: 1.2.0 - Jul - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -2362,7 +2362,7 @@ class PlotWin:
                     text=" Save ROI spectrum",
                     image=__self__.SAVE_ICO,
                     compound=LEFT,
-                    width=180,
+                    width=160,
                     bd=1,
                     command=lambda: save_raw_spectrum())
             __self__.save_raw_btn.grid(row=0,column=0,sticky="")
