@@ -39,7 +39,6 @@ def cy_stack(int[:,:,:] stack,
             stack[i][j][0] = a[i][j]
             stack[i][j][1] = b[i][j]
 
-
 def cy_apply_scaling(float[:,:] scale_matrix,
     int[:,:,:] cube_matrix,
     int scale_mode,
@@ -143,7 +142,6 @@ def cy_average(float[:,:] a_2D_array, int x, int y):
             a_2D_array[x][y-1] + a_2D_array[x-1][y-1] + a_2D_array[x+1][y-1] +\
             a_2D_array[x][y+1] + a_2D_array[x-1][y+1] + a_2D_array[x+1][y+1])/10
 
-
 def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
 
     """ Applies the median_filter funtion to all pixels within a 2D-array.
@@ -178,6 +176,18 @@ def cy_subtract(float[:,:] map1,
             if output[i][j] < 0: output[i][j] = 0
     return output
 
+def cy_add(float[:,:] map1, 
+        float[:,:] map2, 
+        int[:] shape,
+        float[:,:] output):
+
+    cdef int i = 0
+    cdef int j = 0
+
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            output[i][j] = map1[i][j] + map2[i][j]
+    return output
 
 def cy_read_densemap_pixels(dict layers, int i, int j):
 

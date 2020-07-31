@@ -911,6 +911,14 @@ class datacube:
         element_list = [i.split("_")[0] for i in __self__.check_packed_elements()]
         __self__.prepack_elements(element_list,wipe=True)
         __self__.save_cube()
+
+    def replace_map(__self__,image,element):
+        __self__.__dict__[element] = image
+        __self__.hist[element] = 0
+        __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]],
+                        dtype="float32")
+        __self__.max_counts[element] = image.max()
+        __self__.save_cube()
     
 def refresh_position(a,b,length):
     

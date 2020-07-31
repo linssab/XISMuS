@@ -680,7 +680,28 @@ def subtract(image1, image2,norm=True):
             
     cy_funcs.cy_subtract(image1,image2,shape,output)
     return output
-    
+ 
+def add(image1, image2,norm=True):
+
+    """ Subtracts image2 from image1 """
+
+    output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
+    if norm == True:
+        hi1 = image1.max()
+        hi2 = image2.max()
+        lo1 = image1.min()
+        lo2 = image2.min()
+        if hi1 > hi2:
+            image2 = (image2/hi2)*hi1
+        elif hi2 > hi1:
+            image1 = (image1/hi1)*hi2
+        else:
+            pass
+    shape = [image1.shape[0], image1.shape[1]]
+    shape = np.asarray(shape,dtype="int32")
+            
+    cy_funcs.cy_add(image1,image2,shape,output)
+    return output
 
 def large_pixel_smoother(image,iterations):
     

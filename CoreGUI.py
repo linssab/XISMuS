@@ -49,6 +49,7 @@ def load_user_database():
     db.close()
 
 def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
+
     path = os.path.join(SpecRead.__BIN__,"database.dat")
     db = open(path,"a+")
     db.write("\nSAMPLE\t{}\n".format(name))
@@ -66,6 +67,7 @@ def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
     db.close()
 
 def remove_entry_from_database(smpl_name):
+
     path = os.path.join(SpecRead.__BIN__,"database.dat")
     db = open(path,"r")
     lines = db.readlines()
@@ -87,6 +89,7 @@ def remove_entry_from_database(smpl_name):
     return
 
 def refresh_all_plots():
+
     try:
         root.draw_map()
     except: pass
@@ -403,6 +406,7 @@ def refresh_plots(exclusive=""):
     except: pass
 
 def check_screen_resolution(resolution_tuple):
+
     Constants.LOW_RES = None
     pop = Tk()
     pop.withdraw()
@@ -421,6 +425,7 @@ def check_screen_resolution(resolution_tuple):
     pop.destroy()
 
 def _init_numpy_mkl():
+
     import os
     import ctypes
     if os.name != 'nt':
@@ -986,8 +991,9 @@ class ExportDiag():
 
     def kill(__self__,e=""):
         __self__.master.grab_release()
-        __self__.parent.master.focus_force()
         __self__.master.destroy()
+        __self__.parent.master.focus_set()
+        __self__.parent.master.focus_force()
 
 
 class DimensionDiag():
@@ -1488,7 +1494,7 @@ class ImageAnalyzer:
         __self__.DATACUBE = datacube
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
         __self__.sum_spectrum = __self__.DATACUBE.sum
-        __self__.master = Toplevel(master=parent)
+        __self__.master = Toplevel(parent)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
         __self__.master.title("Image Analyzer")
@@ -1508,6 +1514,8 @@ class ImageAnalyzer:
         __self__.sliders.pack(side=BOTTOM,fill=X,anchor=CENTER,padx=(5,5),pady=(0,5))
         __self__.buttons = Frame(__self__.sliders)
         __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W+E)
+        __self__.buttons2 = Frame(__self__.sliders)
+        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30),sticky="")
         
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
@@ -1709,6 +1717,19 @@ class ImageAnalyzer:
                 command=__self__.export_maps,
                 width=round(__self__.annotate.winfo_width()/2))
         __self__.export.grid(row=3,column=1,sticky=W+E)
+        __self__.subtract_btn = Button(
+                __self__.buttons2,
+                text="Add Images",
+                command=__self__.add_images,
+                width=round(__self__.annotate.winfo_width()/2))
+        __self__.subtract_btn.grid(row=1,column=9,sticky=W+E)
+        __self__.add_btn = Button(
+                __self__.buttons2,
+                text="Subtract Images",
+                command=__self__.subtract_images,
+                width=round(__self__.annotate.winfo_width()/2))
+        __self__.add_btn.grid(row=2,column=9,sticky=W+E)
+
         
         # Disable sliders
         __self__.T1Slider.config(state=DISABLED)
@@ -1723,9 +1744,12 @@ class ImageAnalyzer:
         __self__.master.iconbitmap(icon)  
         
         # presents a first image. displays a "no data image if no packed element exists"
+        __self__.nomaps=False
         try: 
             try: __self__.Map1Combo.current(0)
-            except: pass
+            except: 
+                __self__.nomaps=True
+                pass
             try: __self__.Map2Combo.current(1)
             except: 
                 try: __self__.Map2Combo.current(0)
@@ -1742,8 +1766,30 @@ class ImageAnalyzer:
             pass
         x = __self__.master.winfo_width()
         y = __self__.master.winfo_height()
+
+        if __self__.nomaps==True:
+            __self__.add_btn.config(state=DISABLED)
+            __self__.subtract_btn.config(state=DISABLED)
+            __self__.annotate.config(state=DISABLED)
+            __self__.correlate.config(state=DISABLED)
+            __self__.export.config(state=DISABLED)
+        else:
+            __self__.add_btn.config(state=NORMAL)
+            __self__.subtract_btn.config(state=NORMAL)
+            __self__.annotate.config(state=NORMAL)
+            __self__.correlate.config(state=NORMAL)
+            __self__.export.config(state=NORMAL)
+
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+
+    def subtract_images(__self__,e=""):
+        __self__.OperationDiag = ImageOperationWarning(__self__,mode="subtract")
+        place_center(__self__.master,__self__.OperationDiag.master)
+
+    def add_images(__self__,e=""):
+        __self__.OperationDiag = ImageOperationWarning(__self__,mode="add")
+        place_center(__self__.master,__self__.OperationDiag.master)
     
     def AltOn(__self__,e=""):
         __self__.alt = True
@@ -4972,6 +5018,185 @@ class ConfigDiag:
         icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
         __self__.master.iconbitmap(icon)
         root.master.wait_window(__self__.master)
+
+
+class ImgageOperationOutput:
+
+    def __init__(__self__,image,el1,el2,operation):
+        __self__.image = image
+        __self__.master = Toplevel(master=root.master)
+        __self__.master.attributes("-alpha",0.0)
+        __self__.alt = False
+        __self__.master.bind("<Alt_L>",__self__.AltOn)
+        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
+        __self__.master.bind("<Return>",__self__.maximize)
+
+        __self__.master.title("Result: {} {} {}".format(el1,operation,el2))
+        __self__.master.tagged = None
+        __self__.master.minsize(width=600,height=480)
+        __self__.master.configure(bg='white')
+        __self__.master.resizable(True,True)
+        __self__.upper = Canvas(__self__.master)
+        __self__.upper.config(bg='white')
+        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)#, padx=(16,16),pady=(16,16))
+        __self__.lower = Frame(__self__.master,height=35)
+        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
+
+        # Save and replace buttons #
+        save_icon = PhotoImage(data=ICO_SAVE)
+        replace_icon = PhotoImage(data=ICO_RUBIK)
+        __self__.SAVE_ICO = save_icon.subsample(1,1)
+        __self__.REPLACE_ICO = replace_icon.subsample(1,1)
+
+        __self__.replace = Button(__self__.lower,
+                text=" Replace {} in Cube".format(el1),
+                image=__self__.REPLACE_ICO,
+                compound=LEFT,
+                command= lambda: __self__.replace_on_cube(image,el1),
+                width=180,
+                height=24,
+                bd=1,
+                pady=10)
+        __self__.replace.grid(row=0,column=0,sticky="")
+        __self__.save = Button(__self__.lower,
+                text=" Save output image",
+                image=__self__.SAVE_ICO,
+                compound=LEFT,
+                command=lambda: __self__.save_image(image),
+                width=180,
+                bd=1,
+                pady=10)
+        __self__.save.grid(row=0,column=1,sticky="")
+
+        __self__.figure = Figure(figsize=(5,4), dpi=75)
+        __self__.plot = __self__.figure.add_subplot(111)
+        __self__.plot.grid(which="both",axis="both")
+        __self__.plot.axis("Off")
+        __self__.plot.set_title("Result: {} {} {}".format(el1,operation,el2))
+        __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
+        __self__.canvas.draw()
+        __self__.mplCanvas = __self__.canvas.get_tk_widget()
+        __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
+        __self__.canvas._tkcanvas.pack()
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
+        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
+        __self__.master.iconbitmap(icon)
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+        __self__.draw(image)
+
+    def AltOn(__self__,e=""):
+        __self__.alt = True
+
+    def AltOff(__self__,e=""):
+        __self__.alt = False
+
+    def maximize(__self__,e=""):
+        maximize_window(__self__)
+
+    def draw(__self__,image=None):
+        __self__.plot.imshow(image, cmap=Constants.COLORMAP)
+        spawn_center(__self__.master)
+
+    def replace_on_cube(__self__,image,element):
+        p = messagebox.askquestion("Warning!","You are about to replace {} map in your datacube with the output image. This operation is irreversible. Do you want to proceed?".format(element))
+        if p =="yes":
+            Constants.MY_DATACUBE.replace_map(image,element)
+            return
+        else: 
+            __self__.master.focus_set()
+            return
+
+    def save_image(__self__,image):
+        f = filedialog.asksaveasfile(mode='w',
+                        defaultextension=".png",
+                        filetypes=[("Portable Network Graphic", "*.png")],
+                        title="Save as...")
+        if f is not None: 
+            from ImgMath import write_image
+            write_image(image,
+                Constants.TARGET_RES,
+                f.name,
+                enhance=Constants.MY_DATACUBE.config["enhance"],
+                save=True)
+        else: 
+            __self__.master.focus_set()
+            return
+
+    def wipe_plot(__self__):
+        __self__.master.destroy()
+        del __self__
+
+
+class ImageOperationWarning:
+
+    def __init__(__self__,parent,mode=None):
+        __self__.master = Toplevel(parent.master)
+        __self__.parent = parent
+        __self__.mode = mode
+        if mode == "add": 
+            __self__.gif_size = 8
+            text="Image 2 is going to be added to image 1. Click OK to proceed."
+            speed = 200
+        if mode == "subtract": 
+            text="Image 2 is going to be subtracted from image 1. Click OK to proceed."
+            speed = 125
+            __self__.gif_size = 11
+        __self__.master.geometry("380x320")
+        __self__.master.title("Operation Warning")
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+        __self__.master.resizable(False, False)
+        path=os.path.join(os.getcwd(),"images","animation_{}.gif".format(mode))
+        __self__.gif = [PhotoImage(file=path,format = 'gif -index %i' %(i),
+            master = __self__.master) for i in range(__self__.gif_size)]
+        __self__.frameno = 0
+        __self__.speed = speed
+        __self__.animation = Label(__self__.master, 
+                image=__self__.gif[__self__.frameno])
+        __self__.text = Label(__self__.master, 
+                text=text,
+                wraplength=300)
+        __self__.ok = Button(__self__.master,text="OK",width=13,
+                command = __self__.perform)
+        __self__.animation.pack(side=TOP,fill=BOTH,anchor=CENTER,padx=15,pady=15)
+        __self__.ok.pack(side=BOTTOM,anchor=CENTER,padx=15,pady=15)
+        __self__.text.pack(side=BOTTOM,fill=BOTH,anchor=CENTER,padx=15)
+        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
+        __self__.master.iconbitmap(icon)
+        __self__.master.grab_set()
+        __self__.master.after(__self__.speed, __self__.update_frame)
+
+    def update_frame(__self__):
+        __self__.frameno += 1
+        if __self__.frameno >= __self__.gif_size: __self__.frameno = 0
+        __self__.frame = __self__.gif[__self__.frameno]
+        __self__.animation.configure(image=__self__.frame)
+        __self__.master.update()
+        __self__.master.after(__self__.speed, __self__.update_frame)
+
+    def kill(__self__):
+        __self__.master.grab_release()
+        __self__.parent.master.focus_force()
+        __self__.master.destroy()
+        del __self__
+
+    def perform(__self__):
+
+        from ImgMath import subtract as sub_
+        from ImgMath import add as add_
+
+        if __self__.mode == "subtract": 
+            operation = "minus"
+            output = sub_(__self__.parent.newimage1,
+                    __self__.parent.newimage2,norm=True)
+        elif __self__.mode == "add":
+            operation = "plus"
+            output = add_(__self__.parent.newimage1,
+                    __self__.parent.newimage2,norm=True)
+        else: pass
+        ImgageOperationOutput(output,__self__.parent.Map1Var.get(),
+                __self__.parent.Map2Var.get(),operation)
+        __self__.master.grab_release()
+        __self__.master.destroy()
 
 
 class PeriodicTable:
