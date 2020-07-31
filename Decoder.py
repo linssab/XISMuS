@@ -33,6 +33,7 @@ def unpack_icons():
     global ICO_ERASE, ICO_EXPORT1, ICO_EXPORT2, ICO_EXPORT_MERGE, ICO_IMGANAL
     global ICO_LOAD, ICO_NEXT, ICO_PREVIOUS, ICO_QUIT, ICO_REFRESH, ICO_RESET
     global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP, ICO_MAGNIFIER
+    global ICO_SAVE
 
     icons_file = open(os.path.join(os.getcwd(),"images","icons","icons.tz"),"rb")
     ICO_ACCEPT = icons_file.read(1548)
@@ -53,6 +54,7 @@ def unpack_icons():
     ICO_REJECT = icons_file.read(1832)
     ICO_RESET = icons_file.read(2184)
     ICO_RUBIK = icons_file.read(4348)
+    ICO_SAVE = icons_file.read(928)
     ICO_SETTINGS = icons_file.read(3624)
     ICO_UP = icons_file.read(4064)
 
