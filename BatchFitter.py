@@ -44,14 +44,12 @@ except:
 ####################
 
 def convert_bytes(num):
-
     """ Obtained from https://stackoverflow.com/questions/210408 """
 
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
-
 
 def batch_continuum_for_wizard(
         spectra_batch,
@@ -974,7 +972,6 @@ class Interrupt(Exception):
 
 
 class SingleFit():
-
     def __init__(__self__,path):
         __self__.iterator = 0
         __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
@@ -1089,7 +1086,6 @@ class SingleFit():
 
 
 class MultiFit():
-        
     def __init__(__self__,path):
         __self__.workers = []
         __self__.name = Constants.MY_DATACUBE.name
@@ -1508,7 +1504,6 @@ def find_and_fit(
     return 0
 
 def add_elements(peaks,matches,element_list):
-    
     """ element: 2D list with element Z and peak position """
 
     print("INFO:\nAdding element...")
@@ -1530,7 +1525,6 @@ def add_elements(peaks,matches,element_list):
     return peaks, matches
 
 def recheck_peaks(peaks,matches):
-
     """ Must run always after the findpeak() function. This function re-checks the 
     outputs from findpeak() by verifiying how far the identified peaks are from the
     theoretical position. This solves issues with doubled peaks or mis-identification
@@ -1579,7 +1573,6 @@ def recheck_peaks(peaks,matches):
     return peaks, checked_matches
 
 def mock(data,intercept,slope,path,chunk,results,energies):
-
     counts, continuum = data[0], data[1]
 
     fit_path = os.path.join(path,"Fit_Chunk_{0}.npy".format(chunk))
@@ -1735,11 +1728,9 @@ def build_images(
     bar.destroybar()
     
 def add_roi_to_datacube():
-    
     #######################################
     # List all Global Fit files in output #
     #######################################
-
     spectra_paths = [i for i in os.listdir(SpecRead.output_path) if "Global_Fit" in i]
     elements_order_paths = [i for i in os.listdir(SpecRead.output_path) if "Global_Peak" in i]
     for i in range(len(spectra_paths)):
@@ -1783,7 +1774,6 @@ def add_roi_to_datacube():
     return 0
 
 if __name__.endswith('__main__'):
-
     """ Spectrum file path """
     #spectrum_path = Path(
     #os.path.join(SpecRead.__PERSONAL__,"Example_Data","Training Data 2"))
@@ -1883,9 +1873,3 @@ if __name__.endswith('__main__'):
 
     add_roi_to_datacube()
     build_images(fit_path)
-
-    #dimension = [110,130]
-    #start5 = timeit.default_timer()
-    #getImage(fit_path,dimension)
-    #stop5 = timeit.default_timer()
-    #print("Image: ", stop5 - start5)

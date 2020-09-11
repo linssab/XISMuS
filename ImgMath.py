@@ -32,12 +32,10 @@ logger.info("Finished ImgMath imports.")
 LEVELS = 255
 
 def colorbar(mappable):
-    
     ##############################################
     # FROM:                                      #
     # https://joseph-long.com/writing/colorbars/ #
     ##############################################
-    
     """ Adds a colorblar with correct colormap next to subplot axis """
     
     ax = mappable.axes
@@ -47,14 +45,12 @@ def colorbar(mappable):
     return fig.colorbar(mappable, cax=cax)
 
 def median_filter(array,x,y):
-
     """ Returns the average value of pixel x,y. Includes edges """
 
     average = cy_funcs.cy_average(array,x,y)
     return average
 
 def iteractive_median(img,iterations=1):
-
     """ Applies the median_filter funtion to all pixels within a 2D-array.
     iterations is the amount of times the operation will be performed.
     Returns a smoothed 2D-array """
@@ -64,7 +60,6 @@ def iteractive_median(img,iterations=1):
     return img
 
 def threshold(a_2D_array,t):
-    
     """ Applies a threshold filter cutting the values BELOW threshold.
     Returns a 2D-array """
 
@@ -75,7 +70,6 @@ def threshold(a_2D_array,t):
     return a_2D_array
 
 def low_pass(a_2D_array,t):
- 
     """ Applies a threshold filter cutting the values ABOVE threshold.
     Returns a 2D-array """
 
@@ -86,7 +80,6 @@ def low_pass(a_2D_array,t):
     return a_2D_array
 
 def apply_scaling(datacube, scalemode=0):
-
     """ scalemode:
     0 = Returns zero matrix
     1 = Applies scaling to datacube.matrix
@@ -107,7 +100,6 @@ def apply_scaling(datacube, scalemode=0):
         return 0
 
 def mask(a_datacube,a_compound,mask_threshold):
-
     """ Creates a mask to limit the heightmap calculation.
     
     ------------------------------------------------------
@@ -154,9 +146,7 @@ def mask(a_datacube,a_compound,mask_threshold):
 
     return id_element_matrix
 
-
 def getheightmap(depth_matrix,mask,thickratio,compound):
-
     """ Creates a heightmap of a given layer on top of the samples substrate through
     the differential attenuation method.
     The function writes the thickness values to a txt file.
@@ -233,12 +223,10 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     return heightmap, median, deviation
 
 def set_axes_equal(ax,z_lim):
-    
     #####################################################
     #   set_axes_equal(ax) FUNCTION OBTAINED FROM:      #
     #   https://stackoverflow.com/questions/13685386    #
     #####################################################
-
     """ Make axes of 3D plot have equal scale so that spheres appear as spheres,
     cubes as cubes, etc..  This is one possible solution to Matplotlib's
     ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
@@ -275,7 +263,6 @@ def set_axes_equal(ax,z_lim):
     else: ax.set_zlim3d([0, z_lim])
 
 def plot3D(depth_matrix,z_lim=None):
-    
     """ Displays a 3D-plot of a heightmap.
 
     --------------------------------------
@@ -307,7 +294,6 @@ def plot3D(depth_matrix,z_lim=None):
     return 0
 
 def colorize(elementmap,color=None):
-
     """ Adds a third dimension to a 2D-array image. Pixels becomes a 4 element list
     instead of being a single value.
 
@@ -377,7 +363,6 @@ def colorize(elementmap,color=None):
     return image
 
 def createcmap(color):
-    
     """ Creates a mappable colormap to be used with matplotlib.
 
     -----------------------------------------------------------
@@ -399,7 +384,6 @@ def createcmap(color):
     return cmap
 
 def flattenhistogram(image):
-
     """ test """
 
     hist,bins = np.histogram(image.flatten(),256,[0,256])
@@ -412,7 +396,6 @@ def flattenhistogram(image):
     return image
 
 def interpolate_zeros(map_array):
-
     """ Fills few dead pixels present in auto_roi elemental maps caused by low
     counts, peak identification failure or other issues while generating the map.
     The pixel is filled if any of its right and left neighbors is different than 0.
@@ -467,7 +450,6 @@ def interpolate_zeros(map_array):
     return new_map
 
 def plotlastmap(image,name):
-
     """ test """
 
     fig, ax = plt.subplots()
@@ -476,7 +458,6 @@ def plotlastmap(image,name):
     plt.show()
 
 def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
-    
     """ Sorts the element maps contained in map_array and packs them into the
     datacube cube class object prior pickling to disk. Saves each map as a grayscale png
     image, enlarged if the map dimension is smaller than target_size.
@@ -572,7 +553,6 @@ def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
     return
 
 def write_image(image,resize,path,enhance=False,merge=False,save=True):
-
     """ Writes a 2D-array image to disk. Similar to split_and_save function.
     
     ------------------------------------------------------------------------
@@ -612,7 +592,6 @@ def write_image(image,resize,path,enhance=False,merge=False,save=True):
     return large_image
 
 def stackimages(*args):
-
     """ Stack a series of images together with different colors.
     
     ------------------------------------------------------------
@@ -638,7 +617,6 @@ def stackimages(*args):
     return stackedimage
 
 def binary_thresh(image,thresh):
-    
     """ Thresholds image into a binary image.
     
     -----------------------------------------
@@ -660,7 +638,6 @@ def binary_thresh(image,thresh):
         return image, counts
 
 def subtract(image1, image2,norm=True):
-
     """ Subtracts image2 from image1 """
 
     output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
@@ -682,7 +659,6 @@ def subtract(image1, image2,norm=True):
     return output
  
 def add(image1, image2,norm=True):
-
     """ Subtracts image2 from image1 """
 
     output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
@@ -704,7 +680,6 @@ def add(image1, image2,norm=True):
     return output
 
 def large_pixel_smoother(image,iterations):
-    
     """ test """
     
     for i in range(iterations):

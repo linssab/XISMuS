@@ -57,334 +57,8 @@ from tkinter import ttk
 
 iterator = 0
 
-def FN_reset():
-    Constants.FANO = 0.114
-    Constants.NOISE = 80
-
-def FN_set(F, N):
-    Constants.FANO = F
-    Constants.NOISE = N
-
-def build_pool(size):
-    Constants.FILE_POOL = []
-    spec = getfirstfile()
-    
-    name=str(spec)
-    specfile_name = name.split("\\")[-1]
-    name = specfile_name.split(".")[0]
-    extension = specfile_name.split(".")[-1]
-    for i in range(len(name)):
-        if not name[-i-1].isdigit(): 
-            prefix = name[:-i]
-            index = name[-i:]
-            break
-    index = int(index)+1
-
-    Constants.FILE_POOL.append(spec)
-    for idx in range(index,size+index-1,1):
-        spec = os.path.join(Constants.SAMPLE_PATH,
-                str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
-        Constants.FILE_POOL.append(spec)
-
-def read_pool(start,end,pool,dimension,m):
-    
-    """ INPUT:
-        - start: int; starting row
-        - end: int; lower boundary row
-        - pool: list; contains the spectra to be read
-        - dimension: int; row length
-        - m: np.array (int); spectra matrix """
-        
-    global iterator
-    scan = (start,0)
-    x, y = scan[0], scan[1]
-    for spec in pool:
-        logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
-        with lock: m[x][y] = getdata(spec)
-        scan = refresh_position(scan[0],scan[1],dimension)
-        x,y = scan[0],scan[1]
-        with lock: iterator += 1
-
-def get_chunks(size):
-    max_chunks = Constants.CPUS*2
-    bites = int(((size[0]*size[1])/max_chunks)/size[1])
-    
-    ###################################################################
-    # missing lines at the end (cannot fit into more chunks or bites) #
-    ###################################################################
-
-    leftovers = size[0]-(bites*max_chunks) 
-
-    ###################################################################
-
-    return max_chunks, bites, leftovers
-
-def digest_psdinv(y,energies):
-    
-    """ -- y is an array with the measured FWHM.
-    -- energies is an array with the corresponding energies for the corresponding 
-    FWHM peaks
-
-    This function performs a pseudo inverse regression to equation 1 (see OSP article) 
-    with singular value decomposition (numpy.pinv()) to find FANO and NOISE values
-    that satisfies the equation """
-
-    x = [(2.3548**2)*3.85*en for en in energies]
-    Y = np.asarray([i**2 for i in y], dtype="float32")
-    X = np.array([np.ones(len(x)), x], dtype="float32")
-    C = np.dot(Y,np.linalg.pinv(X))
-
-    return abs(C)
-
-def digest_lstsq(y,energies):
-    
-    """ -- y is an array with the measured FWHM.
-    -- energies is an array with the corresponding energies for the corresponding 
-    FWHM peaks
-
-    This function performs a least-squares fitting to equation 1 (see OSP article) 
-    to find FANO and NOISE values that satisfies it """
-
-
-    x = [(2.3548**2)*3.85*en for en in energies]
-    Y = np.asarray([i**2 for i in y], dtype="float32")
-    X = np.vstack([np.ones(len(x)), x]).T
-    C = np.linalg.lstsq(X,Y,rcond=None)[0]
-
-    return abs(C)
-
-def FN_fit_pseudoinv(specdata,gain):
-
-    """ Finds suitable FANO and NOISE factors to the input spectrum using only 
-    the gain and no background.
-
-    --------------------------------------------------------------------------
-
-    INPUT:
-        specdata; <1D-array> - spectrum to be used
-        gain; <float> - calibration gain (eV)
-    OUTPUT:
-        1D-tuple (F, N) 
-        
-        --------------------------------------------------------
-
-    The fit is performed by changing the tophat filter parameters
-    (window and tolerance to the variance) iteratively. This is 
-    performed to automate the function to any input spectrum, since 
-    different parameters work differently for each spectrum profile.
-    The output is the averaged value, unless a reasonable value
-    (between 0.040 and 0.240) is found for the FANO factor. """
-
-    F, N = 0, 0
-    i, x = 0, 80
-    avg_F, avg_N = 0,0
-    data = savgol_filter(specdata,5,3)
-    w, r = 9,2
-    v = (w/2)+1
-    while i < x:
-        F, N = FN_iter(data,gain,v,w,r)
-        if 0.114-(2*0.0114) <= F <= 0.114+(2*0.0114): 
-            logger.warning("Fano and Noise matched: F:{} N:{}".format(F,N))
-            return F,N
-        avg_F += F
-        avg_N += N
-        r += 1
-        if r > 12:
-            r = 4
-            w += 2
-            v = int(w/2)+1
-            if w >= 13:
-                w = 2
-                v = int(w/2)+1
-        i += 1
-    N = avg_N/i
-    F = avg_F/i
-    return F, N
-
-def FN_iter(data,gain,v,w,r):
-
-    """ Verifies if the peak detected is greater than the 
-    variance. r is a tolerance factor that multiplies the variance coef. """
-
-    th, delt, pks = tophat(data,v,w)
-    widths = []
-    energies = []
-    for i in pks:
-        if th[i]>r*delt[i]:
-            try: lw, up, width = fwhm(data,i,r)
-            except: break
-            widths.append(width*gain*1000)
-            energies.append(gain*i*1000)
-    N, F = digest_psdinv(widths,energies)
-    return F, N**.5
-
-def tophat(y,v,w):
-
-
-    """ Applies a tophat filter to a 1D-array following the recipe
-    given reference below:
-    [1] Van Grieken, R.E.; Markowicz, A.A. Handbook of X-ray spectrometry, 
-    Marcel Dekker, Inc., 2002.
-    
-    --------------------------------------------------------------------
-
-    INPUT:
-        y; 1D-array
-        v; side window width (int)
-        w; central window width (int)
-    OUTPUT:
-        new_y; filtered pectrum (1D-array)
-        delta; variance (1D-array)
-        peaks; identified peaks indexes (1D-list)
-    """
-    
-    def hk_(k,v,w):
-
-        if -v-(w/2) <= k < -w/2: return -1/(2*v)
-        elif -w/2 <= k <= w/2: return 1/w
-        elif w/2 < k <= v+(w/2): return -1/(2*v)
-        else: return 0
-
-    new_y = np.zeros([y.shape[0]])
-    delta = np.zeros([y.shape[0]])
-    peaks = []
-    for i in range(y.shape[0]-(int(v+w/2))):
-        y_star = 0
-        y_delta = 0
-        for k in range(int(-v-w/2),int(v+w/2)):
-            hk = hk_(k,v,w)
-            y_star += hk*y[i+k]
-            y_delta += abs((hk**2)*y[i+k])
-        new_y[i] = y_star
-        delta[i] = y_delta**.5
-    for j in range(1,y.shape[0]-1):
-        if new_y[j-1] <= new_y[j] and new_y[j] > new_y[j+1]:
-            peaks.append(j)
-    return new_y, delta, peaks
-
-def fwhm(data,i,win):
-
-    """ Finds the indexes where half the peaks' height is
-    found for peak located at index i 
-    
-    INPUT:
-        data; 1D-array
-        i; peak index
-        win; tolearnce window
-    OUTPUT:
-        lw; lower index
-        up; upper index
-        up-lw; peak width """
-
-    half = data[i]/2
-    lw, up = 0, 0
-    for j in range(i-win,i):
-        if data[j]>=half: 
-            lw = j-1
-            break
-    j=0
-    for j in range(i,i+win):
-        if data[j]<=half: 
-            up = j-1
-            break
-    if lw >= up: return 0,0,0
-    return lw, up, up-lw
-
-def FN_fit_gaus(spec,spec_bg,e_axis,gain):
-
-    """ Finds a series of relevant peaks between 2100 and 30000 eV and fits them
-    with a gaussian fuction to obtain the global Fano and Noise factors.
-
-    ----------------------------------------------------------------------------
-    INPUT:
-        spec; <1D-array> - global spectrum to be used in the peak sampling and fit
-        spec_bg; <1D-array> - continuum of the above spectrum
-        e_axis; <1D-array> - calibrated energy axis in KeV
-        gain; <float> - calibration gain in KeV
-    OUTPU:
-        Fano; <float> - Fano factor of the input spectrum
-        Noise; <float> - Noise factor of the input spectrum """
-
-    from scipy.optimize import curve_fit
-    import copy
-
-    ####################################
-
-    Fano = 0.114
-    Noise = 80
-    gain = gain*1000
-    energyaxis = e_axis*1000
-    zero = energyaxis[0]
-    y_array, y_cont = spec, spec_bg
-
-    ####################################
-
-    #########################
-    # perform deconvolution #
-    #########################
-
-    w = Constants.PEAK_TOLERANCE
-    v = int(w/2)+1
-    r = 2 
-    peaks = []
-    y_conv, y_delta, pre_peaks = tophat(y_array,v,w)
-    for i in pre_peaks:
-        if y_conv[i-1]<=y_conv[i]>=y_conv[i+1]: 
-            if y_conv[i]>(r*y_delta[i]) and \
-                    y_conv[i]>y_cont[i]*Constants.CONTINUUM_SUPPRESSION: 
-                peaks.append(i)
-
-    #########################
-
-    ######################################
-    # filters peaks and exclude outliers #
-    ######################################
-
-    filtered_peaks, E_peaks, y_peaks = [],[],[]
-    for i in peaks:
-        if 2100<=energyaxis[i]<=30000:
-            E_peaks.append(energyaxis[i])
-            filtered_peaks.append(i)
-            y_peaks.append(y_array[i])
-
-    peaks = np.asarray(filtered_peaks)
-    E_peaks = np.asarray(E_peaks) 
-    y_peaks = np.asarray(y_peaks)
-
-    ######################################
-
-    guess = y_peaks*np.sqrt(
-            (np.square(Noise/2.3548))+(3.85*Noise*E_peaks))*np.sqrt(2*np.pi)/gain
-    guess = np.insert(guess,0,[Noise,Fano],axis=0)
-    uncertainty = np.sqrt(y_array).clip(1)
-    
-    popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
-            energyaxis,E_peaks,gain,Noise,Fano,
-                *A) + y_cont,
-            energyaxis,
-            y_array,
-            p0=guess,
-            sigma=uncertainty,
-            maxfev=Constants.FIT_CYCLES)
-
-    #print(popt_gaus.shape)
-    #print("NOISE",popt_gaus[0])
-    #print("FANO",popt_gaus[1])
-
-    #y_gaus = np.asarray(
-    #        [gaus(energyaxis,E_peaks[i],gain,*popt_gaus[[0,1,2+i]]) \
-    #                for i in range(E_peaks.size)])+ y_cont
-    #for i in y_gaus:
-    #    plt.semilogy(energyaxis,i,label="Fit")
-    #plt.semilogy(energyaxis,y_array,label="Data")
-    #plt.semilogy(energyaxis,y_cont,label="Continuum")
-    #plt.legend()
-    #plt.show()
-
-    return popt_gaus[1], popt_gaus[0]
 
 class datacube:
-
     """ Cube class. Comprises all data read from spectra, elemental maps created,
     background extracted (as a separate xy matrix), derived spectra, image size, image
     dimension, datacube configuration, calibrated energy axis """
@@ -920,9 +594,325 @@ class datacube:
                         dtype="float32")
         __self__.max_counts[element] = image.max()
         __self__.save_cube()
+
+def FN_reset():
+    Constants.FANO = 0.114
+    Constants.NOISE = 80
+
+def FN_set(F, N):
+    Constants.FANO = F
+    Constants.NOISE = N
+
+def build_pool(size):
+    Constants.FILE_POOL = []
+    spec = getfirstfile()
+    
+    name=str(spec)
+    specfile_name = name.split("\\")[-1]
+    name = specfile_name.split(".")[0]
+    extension = specfile_name.split(".")[-1]
+    for i in range(len(name)):
+        if not name[-i-1].isdigit(): 
+            prefix = name[:-i]
+            index = name[-i:]
+            break
+    index = int(index)+1
+
+    Constants.FILE_POOL.append(spec)
+    for idx in range(index,size+index-1,1):
+        spec = os.path.join(Constants.SAMPLE_PATH,
+                str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
+        Constants.FILE_POOL.append(spec)
+
+def read_pool(start,end,pool,dimension,m):
+    """ INPUT:
+        - start: int; starting row
+        - end: int; lower boundary row
+        - pool: list; contains the spectra to be read
+        - dimension: int; row length
+        - m: np.array (int); spectra matrix """
+        
+    global iterator
+    scan = (start,0)
+    x, y = scan[0], scan[1]
+    for spec in pool:
+        logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+        with lock: m[x][y] = getdata(spec)
+        scan = refresh_position(scan[0],scan[1],dimension)
+        x,y = scan[0],scan[1]
+        with lock: iterator += 1
+
+def get_chunks(size):
+    max_chunks = Constants.CPUS*2
+    bites = int(((size[0]*size[1])/max_chunks)/size[1])
+    
+    ###################################################################
+    # missing lines at the end (cannot fit into more chunks or bites) #
+    ###################################################################
+
+    leftovers = size[0]-(bites*max_chunks) 
+
+    ###################################################################
+
+    return max_chunks, bites, leftovers
+
+def digest_psdinv(y,energies):
+    """ -- y is an array with the measured FWHM.
+    -- energies is an array with the corresponding energies for the corresponding 
+    FWHM peaks
+
+    This function performs a pseudo inverse regression to equation 1 (see OSP article) 
+    with singular value decomposition (numpy.pinv()) to find FANO and NOISE values
+    that satisfies the equation """
+
+    x = [(2.3548**2)*3.85*en for en in energies]
+    Y = np.asarray([i**2 for i in y], dtype="float32")
+    X = np.array([np.ones(len(x)), x], dtype="float32")
+    C = np.dot(Y,np.linalg.pinv(X))
+
+    return abs(C)
+
+def digest_lstsq(y,energies):
+    """ -- y is an array with the measured FWHM.
+    -- energies is an array with the corresponding energies for the corresponding 
+    FWHM peaks
+
+    This function performs a least-squares fitting to equation 1 (see OSP article) 
+    to find FANO and NOISE values that satisfies it """
+
+
+    x = [(2.3548**2)*3.85*en for en in energies]
+    Y = np.asarray([i**2 for i in y], dtype="float32")
+    X = np.vstack([np.ones(len(x)), x]).T
+    C = np.linalg.lstsq(X,Y,rcond=None)[0]
+
+    return abs(C)
+
+def FN_fit_pseudoinv(specdata,gain):
+    """ Finds suitable FANO and NOISE factors to the input spectrum using only 
+    the gain and no background.
+
+    --------------------------------------------------------------------------
+
+    INPUT:
+        specdata; <1D-array> - spectrum to be used
+        gain; <float> - calibration gain (eV)
+    OUTPUT:
+        1D-tuple (F, N) 
+        
+        --------------------------------------------------------
+
+    The fit is performed by changing the tophat filter parameters
+    (window and tolerance to the variance) iteratively. This is 
+    performed to automate the function to any input spectrum, since 
+    different parameters work differently for each spectrum profile.
+    The output is the averaged value, unless a reasonable value
+    (between 0.040 and 0.240) is found for the FANO factor. """
+
+    F, N = 0, 0
+    i, x = 0, 80
+    avg_F, avg_N = 0,0
+    data = savgol_filter(specdata,5,3)
+    w, r = 9,2
+    v = (w/2)+1
+    while i < x:
+        F, N = FN_iter(data,gain,v,w,r)
+        if 0.114-(2*0.0114) <= F <= 0.114+(2*0.0114): 
+            logger.warning("Fano and Noise matched: F:{} N:{}".format(F,N))
+            return F,N
+        avg_F += F
+        avg_N += N
+        r += 1
+        if r > 12:
+            r = 4
+            w += 2
+            v = int(w/2)+1
+            if w >= 13:
+                w = 2
+                v = int(w/2)+1
+        i += 1
+    N = avg_N/i
+    F = avg_F/i
+    return F, N
+
+def FN_iter(data,gain,v,w,r):
+    """ Verifies if the peak detected is greater than the 
+    variance. r is a tolerance factor that multiplies the variance coef. """
+
+    th, delt, pks = tophat(data,v,w)
+    widths = []
+    energies = []
+    for i in pks:
+        if th[i]>r*delt[i]:
+            try: lw, up, width = fwhm(data,i,r)
+            except: break
+            widths.append(width*gain*1000)
+            energies.append(gain*i*1000)
+    N, F = digest_psdinv(widths,energies)
+    return F, N**.5
+
+def tophat(y,v,w):
+    """ Applies a tophat filter to a 1D-array following the recipe
+    given reference below:
+    [1] Van Grieken, R.E.; Markowicz, A.A. Handbook of X-ray spectrometry, 
+    Marcel Dekker, Inc., 2002.
+    
+    --------------------------------------------------------------------
+
+    INPUT:
+        y; 1D-array
+        v; side window width (int)
+        w; central window width (int)
+    OUTPUT:
+        new_y; filtered pectrum (1D-array)
+        delta; variance (1D-array)
+        peaks; identified peaks indexes (1D-list)
+    """
+    
+    def hk_(k,v,w):
+
+        if -v-(w/2) <= k < -w/2: return -1/(2*v)
+        elif -w/2 <= k <= w/2: return 1/w
+        elif w/2 < k <= v+(w/2): return -1/(2*v)
+        else: return 0
+
+    new_y = np.zeros([y.shape[0]])
+    delta = np.zeros([y.shape[0]])
+    peaks = []
+    for i in range(y.shape[0]-(int(v+w/2))):
+        y_star = 0
+        y_delta = 0
+        for k in range(int(-v-w/2),int(v+w/2)):
+            hk = hk_(k,v,w)
+            y_star += hk*y[i+k]
+            y_delta += abs((hk**2)*y[i+k])
+        new_y[i] = y_star
+        delta[i] = y_delta**.5
+    for j in range(1,y.shape[0]-1):
+        if new_y[j-1] <= new_y[j] and new_y[j] > new_y[j+1]:
+            peaks.append(j)
+    return new_y, delta, peaks
+
+def fwhm(data,i,win):
+    """ Finds the indexes where half the peaks' height is
+    found for peak located at index i 
+    
+    INPUT:
+        data; 1D-array
+        i; peak index
+        win; tolearnce window
+    OUTPUT:
+        lw; lower index
+        up; upper index
+        up-lw; peak width """
+
+    half = data[i]/2
+    lw, up = 0, 0
+    for j in range(i-win,i):
+        if data[j]>=half: 
+            lw = j-1
+            break
+    j=0
+    for j in range(i,i+win):
+        if data[j]<=half: 
+            up = j-1
+            break
+    if lw >= up: return 0,0,0
+    return lw, up, up-lw
+
+def FN_fit_gaus(spec,spec_bg,e_axis,gain):
+    """ Finds a series of relevant peaks between 2100 and 30000 eV and fits them
+    with a gaussian fuction to obtain the global Fano and Noise factors.
+
+    ----------------------------------------------------------------------------
+    INPUT:
+        spec; <1D-array> - global spectrum to be used in the peak sampling and fit
+        spec_bg; <1D-array> - continuum of the above spectrum
+        e_axis; <1D-array> - calibrated energy axis in KeV
+        gain; <float> - calibration gain in KeV
+    OUTPU:
+        Fano; <float> - Fano factor of the input spectrum
+        Noise; <float> - Noise factor of the input spectrum """
+
+    from scipy.optimize import curve_fit
+    import copy
+
+    ####################################
+
+    Fano = 0.114
+    Noise = 80
+    gain = gain*1000
+    energyaxis = e_axis*1000
+    zero = energyaxis[0]
+    y_array, y_cont = spec, spec_bg
+
+    ####################################
+
+    #########################
+    # perform deconvolution #
+    #########################
+
+    w = Constants.PEAK_TOLERANCE
+    v = int(w/2)+1
+    r = 2 
+    peaks = []
+    y_conv, y_delta, pre_peaks = tophat(y_array,v,w)
+    for i in pre_peaks:
+        if y_conv[i-1]<=y_conv[i]>=y_conv[i+1]: 
+            if y_conv[i]>(r*y_delta[i]) and \
+                    y_conv[i]>y_cont[i]*Constants.CONTINUUM_SUPPRESSION: 
+                peaks.append(i)
+
+    #########################
+
+    ######################################
+    # filters peaks and exclude outliers #
+    ######################################
+
+    filtered_peaks, E_peaks, y_peaks = [],[],[]
+    for i in peaks:
+        if 2100<=energyaxis[i]<=30000:
+            E_peaks.append(energyaxis[i])
+            filtered_peaks.append(i)
+            y_peaks.append(y_array[i])
+
+    peaks = np.asarray(filtered_peaks)
+    E_peaks = np.asarray(E_peaks) 
+    y_peaks = np.asarray(y_peaks)
+
+    ######################################
+
+    guess = y_peaks*np.sqrt(
+            (np.square(Noise/2.3548))+(3.85*Noise*E_peaks))*np.sqrt(2*np.pi)/gain
+    guess = np.insert(guess,0,[Noise,Fano],axis=0)
+    uncertainty = np.sqrt(y_array).clip(1)
+    
+    popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
+            energyaxis,E_peaks,gain,Noise,Fano,
+                *A) + y_cont,
+            energyaxis,
+            y_array,
+            p0=guess,
+            sigma=uncertainty,
+            maxfev=Constants.FIT_CYCLES)
+
+    #print(popt_gaus.shape)
+    #print("NOISE",popt_gaus[0])
+    #print("FANO",popt_gaus[1])
+
+    #y_gaus = np.asarray(
+    #        [gaus(energyaxis,E_peaks[i],gain,*popt_gaus[[0,1,2+i]]) \
+    #                for i in range(E_peaks.size)])+ y_cont
+    #for i in y_gaus:
+    #    plt.semilogy(energyaxis,i,label="Fit")
+    #plt.semilogy(energyaxis,y_array,label="Data")
+    #plt.semilogy(energyaxis,y_cont,label="Continuum")
+    #plt.legend()
+    #plt.show()
+
+    return popt_gaus[1], popt_gaus[0]
     
 def refresh_position(a,b,length):
-    
     """ Returns the next pixel position """
 
     imagex = length[0]
@@ -943,14 +933,12 @@ def refresh_position(a,b,length):
     return actual
 
 def dif2(ydata,x,gain):
-    
     """ Complementary function to getdif2 """
     
     value = (ydata[x + 2*gain] - 2*ydata[x + gain] + ydata[x]) / (gain * gain)
     return value
 
 def getdif2(ydata,gain):
-    
     """ Returns the second differential of ydata """
     
     yinterval = np.pad(ydata,2,'edge')
@@ -962,7 +950,6 @@ def getdif2(ydata,gain):
     return dif2curve
 
 def savgol_filter(y, window_size, order, deriv=0, rate=1):
-   
     """ This function was taken from https://gist.github.com/krvajal 
     and compared to scipy.signal package, a reliable widely known package
     for signal analysis.
@@ -994,14 +981,12 @@ def savgol_filter(y, window_size, order, deriv=0, rate=1):
     return np.convolve( m[::-1], y, mode='valid')
 
 def energyaxis():
-    
     """ Returns the energyaxis array according to input calibration parameters (anchors) """
     
     calibration = calibrate()
     return calibration[0]
 
 def getstackplot(datacube,mode=None):
-    
     """ Returns the requested derived spectrum from datacube object """
     
     stack = datacube.sum
@@ -1017,7 +1002,6 @@ def getstackplot(datacube,mode=None):
     return output
 
 def sigma(energy,F=Constants.FANO,N=Constants.NOISE):
-
     """ Calculates sigma value based on energy input 
     Reference:
     [1] V.A. Solé, E. Papillon, M. Cotte, Ph. Walter, J. Susini, A multiplatform 
@@ -1034,7 +1018,6 @@ def sigma(energy,F=Constants.FANO,N=Constants.NOISE):
     return np.sqrt(((N/2.3548)**2)+(3.85*F*energy))
 
 def gaussianbuilder(E_axis,energy,A,F,N):
-
     """ Deprecated, to be removed in future updates.
     
     ---------------------------------------------------------------------
@@ -1052,8 +1035,6 @@ def gaussianbuilder(E_axis,energy,A,F,N):
     return gaus
 
 def setROI(lookup,xarray,yarray,localconfig):
-    
-    
     """
     INPUT: 
         lookup; <int> - eV energy of peak being searched for
@@ -1177,7 +1158,6 @@ def setROI(lookup,xarray,yarray,localconfig):
     return lw,hi,peak_center,isapeak
 
 def getpeakarea(lookup,data,energyaxis,continuum,localconfig,usedif2,dif2):
-
     """ Calculates the netpeak area of a given lookup energy.
 
     ---------------------------------------------------------
@@ -1256,7 +1236,6 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,usedif2,dif2):
 
 @jit
 def strip(an_array,cycles,width):
-
     """
     Strips the peaks contained in the input array following an
     iteractive peak clipping method.
@@ -1296,9 +1275,7 @@ def strip(an_array,cycles,width):
             if an_array[l] > m: an_array[l] = m
     return an_array
 
-
 def peakstrip(an_array,cycles,width,*args):
-    
     """
     Calculates the continuum/background contribution of the input spectrum following
     the SNIPBG method.
@@ -1543,7 +1520,6 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
     return y_cont_global
 
 def correlate(map1,map2):
-
     """ Correlates the pixels of two bi-dimensional arrays
     - This function is deprecated and will be replaced in future releases """
 
@@ -1573,7 +1549,6 @@ def findpeaks(spectrum,v=4,w=9,r=1):
     return selected_peaks
 
 def gaus(x, E_peak, gain, Noise, Fano, *A):
-
     """ Model function to be fitted.
 
     ---------------------------------------------
@@ -1589,7 +1564,6 @@ def gaus(x, E_peak, gain, Noise, Fano, *A):
     s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
     return gain*np.sum(
             A/(s*np.sqrt(2*np.pi))*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
-
 
 if __name__=="__main__":
     logger.info("This is SpecMath")

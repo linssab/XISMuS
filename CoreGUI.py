@@ -12,7 +12,6 @@ Constants.FIND_ELEMENT_LIST: list of elements to be mapped from the datacube. It
 passed to Mapping or Mapping_parallel module. """
 
 def start_up():
-    
     """ Initializes SpecRead global variables and paths """
 
     SpecRead.conditional_setup()
@@ -23,7 +22,6 @@ def start_up():
     Constants.FIND_ELEMENT_LIST = []
 
 def load_user_database():
-
     """ Read database file and load all entries to global variable """    
 
     path = os.path.join(SpecRead.__BIN__,"database.dat")
@@ -49,7 +47,6 @@ def load_user_database():
     db.close()
 
 def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
-
     path = os.path.join(SpecRead.__BIN__,"database.dat")
     db = open(path,"a+")
     db.write("\nSAMPLE\t{}\n".format(name))
@@ -67,7 +64,6 @@ def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
     db.close()
 
 def remove_entry_from_database(smpl_name):
-
     path = os.path.join(SpecRead.__BIN__,"database.dat")
     db = open(path,"r")
     lines = db.readlines()
@@ -89,7 +85,6 @@ def remove_entry_from_database(smpl_name):
     return
 
 def refresh_all_plots():
-
     try:
         root.draw_map()
     except: pass
@@ -104,7 +99,6 @@ def refresh_all_plots():
     return
 
 def wipe_list():
-    
     """ Self-explanatory. Clears the global variable and
     destroys the Periodic Table Tk.Toplevel window """
 
@@ -124,7 +118,6 @@ def maximize_window(window,e=""):
             window.master.state("zoomed")
 
 def place_topright(window1,window2):
-    
     import ctypes
     user32 = ctypes.windll.user32
     user32.SetProcessDPIAware()
@@ -165,7 +158,6 @@ def place_topright(window1,window2):
         window2.deiconify()
 
 def place_center(window1,window2):
-    
     """ Places window2 on center of window1 """
 
     window1.update_idletasks()
@@ -188,7 +180,6 @@ def place_center(window1,window2):
     window2.focus_force()
 
 def spawn_center(window):
-
     """ Spawns the window on center of screen. There are known issues
     with multiple monitors, specially of different dpi """
 
@@ -203,7 +194,6 @@ def spawn_center(window):
     window.focus_force() 
 
 def convert_bytes(num):
-
     """ Obtained from https://stackoverflow.com/questions/210408 """
 
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
@@ -212,7 +202,6 @@ def convert_bytes(num):
         num /= 1024.0
         
 def restore_bytes(num,unit):
-    
     """ Reverse operation of convert_bytes function """
 
     units = ['KB', 'MB', 'GB', 'TB']
@@ -221,7 +210,6 @@ def restore_bytes(num,unit):
             return num * (1024**(units.index(x)+1))
 
 def call_help():
-
     """ Spawns help dialogue """
     proceed = messagebox.askquestion("Attention!","You are about to be redirected to github webpage.\nDo you want to proceed?")
     if proceed == "yes":
@@ -231,7 +219,6 @@ def call_help():
         return 0
 
 def call_compilecube():
-    
     """ Tries to create output folder (name is Constants.CONFIG['directory']) 
     and calls SpecMath to compile the data. Spectra to compile are looked under the directory
     set by the user (default is C:/samples/) and inside a directory named 
@@ -297,7 +284,6 @@ def call_compilecube():
             shutil.rmtree(SpecRead.output_path) 
 
 def prompt_folder():
-
     """ Opens dialogue to change the samples folder """
 
     folder = filedialog.askdirectory(title="Select the samples folder")
@@ -312,7 +298,6 @@ def prompt_folder():
     return 0
 
 def load_cube():
-
     """ Loads cube to memory (unpickle). Cube name is passed according to
     latest SpecRead parameters. See setup conditions inside SpecRead module.
     Returns the datacube object """
@@ -342,7 +327,6 @@ def load_cube():
     return Constants.MY_DATACUBE
 
 def refresh_plots(exclusive=""):
-
     """refresh one plot window exclusively or all open windows"""
 
     if len(Constants.FIND_ELEMENT_LIST) > 0: 
@@ -408,7 +392,6 @@ def refresh_plots(exclusive=""):
     except: pass
 
 def check_screen_resolution(resolution_tuple):
-
     Constants.LOW_RES = None
     pop = Tk()
     pop.withdraw()
@@ -427,7 +410,6 @@ def check_screen_resolution(resolution_tuple):
     pop.destroy()
 
 def _init_numpy_mkl():
-
     import os
     import ctypes
     if os.name != 'nt':
@@ -447,7 +429,6 @@ def _init_numpy_mkl():
 
 
 class About:
-
     """ Spawns author information """
     def __init__(__self__,root):
         __self__.master = Toplevel(master=root.master)
@@ -472,7 +453,6 @@ class About:
 
 
 class CanvasSizeDialog:
-    
     def __init__(__self__):
         __self__.win = Toplevel(root.master)
         __self__.win.bind("<Escape>",__self__.kill)
@@ -540,7 +520,6 @@ class CanvasSizeDialog:
 
 
 class Convert_File_Name:
-
     def __init__(__self__,parent):
         __self__.master = Toplevel(master=parent)
         __self__.master.withdraw()
@@ -705,7 +684,6 @@ class Convert_File_Name:
 
 
 class Welcome:
-
     """ Welcome window class. Spawns a window with given texts at the center
     of MainGUI window """
 
@@ -883,7 +861,6 @@ class Welcome:
 
 
 class ExportDiag():
-
     """ Creates a dialog to export ImageAnalyzer API images.
     Target is the desired output image size. If enhance configuration is True,
     image is interpolated """
@@ -999,7 +976,6 @@ class ExportDiag():
 
 
 class DimensionDiag():
-
     """ Creates a pop-up dialog to prompt the datacube dimension
     if no colonneXrighe.txt file is found for the data selected.
     It writes a custom colonneXrighe.txt file to the sample output
@@ -1095,7 +1071,6 @@ class DimensionDiag():
 
 
 class PeakClipper:
-
     """Creates a dialog to set-up SNIPBG parameters"""
     
     def __init__(__self__,parent,mode=None):
@@ -1342,7 +1317,6 @@ class PeakClipper:
 
 
 class Annotator:
-
     """ Creates an annotator to select areas on matplotlib canvases
     Annotator is invoked from Image Analyzer and is destroyed when Set ROI
     button is toggled off """
@@ -1491,7 +1465,6 @@ class Annotator:
 
 
 class ImageAnalyzer:
-
     def __init__(__self__,parent,datacube):
         __self__.DATACUBE = datacube
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
@@ -2049,7 +2022,6 @@ class ImageAnalyzer:
 
 
 class PlotWin:
-
     def __init__(__self__,master):
         __self__.plot_font = {'fontname':'Arial','fontsize':14}
         __self__.lw = 3
@@ -2452,7 +2424,6 @@ class PlotWin:
 
 
 class Samples:
-
     def __init__(__self__):
         __self__.samples_database = {}
         __self__.samples_path = {}
@@ -2838,7 +2809,6 @@ class Samples:
        
 
 class Settings:        
-        
     def __init__(__self__,parent):
 
         __self__.Settings = Toplevel(master=parent.master)
@@ -3179,7 +3149,6 @@ class Settings:
 
 
 class MainGUI:
-
     def __init__(__self__):
 
         if Constants.LOW_RES == "extreme": 
@@ -4559,7 +4528,6 @@ class MainGUI:
         
 
 class ReConfigDiag:
-
     def __init__(__self__, master):
         __self__.master = Toplevel(master = master)
         __self__.master.grab_set()
@@ -4714,7 +4682,6 @@ class ReConfigDiag:
 
 
 class ConfigDiag:
-
     def __init__(__self__, master):
         __self__.master = Toplevel(master = master)
         __self__.master.grab_set()
@@ -5077,7 +5044,6 @@ class ConfigDiag:
 
 
 class ImgageOperationOutput:
-
     def __init__(__self__,image,el1,el2,operation):
         __self__.image = image
         __self__.master = Toplevel(master=root.master)
@@ -5184,7 +5150,6 @@ class ImgageOperationOutput:
 
 
 class ImageOperationWarning:
-
     def __init__(__self__,parent,mode=None):
         __self__.master = Toplevel(parent.master)
         __self__.parent = parent
@@ -5256,9 +5221,7 @@ class ImageOperationWarning:
 
 
 class PeriodicTable:
-
     # Creates the periodic table and starts find_elements module from Mapping.py
-
     def __init__(__self__,parent):
         __self__.master = Toplevel(parent.master)
         __self__.master.tagged = True
