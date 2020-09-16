@@ -1,10 +1,4 @@
-New in Version v1.2.0
+New in Version v1.2.1
 
-- Bug fixes
-- Stability improvements
-
-In Image Analyzer:
-
-- Added Add/Subtract images to main panel
-- Added ROI spectrum export to ROI plots
+- Fixed Fano and Noise calculation when compiling a datacube
 
