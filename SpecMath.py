@@ -293,8 +293,8 @@ class datacube:
     def digest_merge(__self__,bar=None):
         if bar != None: 
             bar.progress["maximum"] = 6
-            bar.updatebar(1)
             bar.update_text("1/6 Calculating MPS...")
+            bar.updatebar(1)
         mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
         __self__.MPS(mps)
         __self__.mps = mps
@@ -830,7 +830,7 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
         spec_bg; <1D-array> - continuum of the above spectrum
         e_axis; <1D-array> - calibrated energy axis in KeV
         gain; <float> - calibration gain in KeV
-    OUTPU:
+    OUTPUT:
         Fano; <float> - Fano factor of the input spectrum
         Noise; <float> - Noise factor of the input spectrum """
 
@@ -887,14 +887,18 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
     guess = np.insert(guess,0,[Noise,Fano],axis=0)
     uncertainty = np.sqrt(y_array).clip(1)
     
-    popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
-            energyaxis,E_peaks,gain,Noise,Fano,
-                *A) + y_cont,
-            energyaxis,
-            y_array,
-            p0=guess,
-            sigma=uncertainty,
-            maxfev=Constants.FIT_CYCLES)
+    try:
+        popt_gaus, pcov_gaus = curve_fit(lambda x,Noise,Fano,*A: gaus(
+                energyaxis,E_peaks,gain,Noise,Fano,
+                    *A) + y_cont,
+                energyaxis,
+                y_array,
+                p0=guess,
+                sigma=uncertainty,
+                maxfev=Constants.FIT_CYCLES)
+    except: 
+        logger.warning("Failed to fit fano and noise. Continuiung with default")
+        return Fano, Noise
 
     #print(popt_gaus.shape)
     #print("NOISE",popt_gaus[0])
