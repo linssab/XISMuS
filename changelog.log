@@ -1,4 +1,5 @@
 New in Version v1.2.1
 
+- Performance improvements
 - Fixed Fano and Noise calculation when compiling a datacube
 

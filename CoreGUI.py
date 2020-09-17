@@ -172,12 +172,28 @@ def place_center(window1,window2):
     titlebar_height = window1.winfo_rooty() - window1.winfo_y()
     win_height = height + titlebar_height + frm_width
     height2 = window2.winfo_height()
-    
+
+    ##############################
+    # GETS USER SCREEN DIMENSION #
+    ##############################
+
+    import ctypes
+    user32 = ctypes.windll.user32
+    user32.SetProcessDPIAware()
+    w_user, h_user = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)   
+
+    ##############################
+
     x = window1.winfo_rootx() + (int(win_width/2)) - (int(width2/2))
     y = window1.winfo_rooty() - titlebar_height + (int(height/2)) - (int(height2/2))
-    window2.geometry('{}x{}+{}+{}'.format(width2, height2, x, y))
-    window2.deiconify()
-    window2.focus_force()
+    
+    if y < 0 or y + height2 > h_user: spawn_center(window2)
+    elif x > w_user or x + width2 > w_user or x < 0: spawn_center(window2)
+    else:
+        window2.geometry('{}x{}+{}+{}'.format(width2, height2, x, y))
+        window2.deiconify()
+        window2.focus_force()
+    return
 
 def spawn_center(window):
     """ Spawns the window on center of screen. There are known issues
