@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: 1.2.0 - Jul - 2020            #
+#                        version: 1.2.1 - Sep - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -85,16 +85,16 @@ def apply_scaling(datacube, scalemode=0):
     1 = Applies scaling to datacube.matrix
     -1 = Reverse scaling applied to datacube.matrix """
     
-    scaled_matrix = np.zeros([datacube.matrix.shape[0],
-        datacube.matrix.shape[1],datacube.matrix.shape[2]],dtype="float32")
+    #scaled_matrix = np.zeros([datacube.matrix.shape[0],
+    #    datacube.matrix.shape[1],datacube.matrix.shape[2]],dtype="float32")
     cy_funcs.cy_apply_scaling(datacube.scale_matrix,
             datacube.matrix,
             scalemode,
-            scaled_matrix,
+            #scaled_matrix,
             np.asarray(datacube.matrix.shape,dtype="int32"))
-    datacube.matrix = scaled_matrix.astype("int32")
+    #datacube.matrix = scaled_matrix.astype("int32")
     datacube.create_densemap()
-    if scaled_matrix.max() > 0: 
+    if datacube.matrix.max() > 0: 
         return 1
     else: 
         return 0

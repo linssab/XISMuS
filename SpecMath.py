@@ -69,6 +69,10 @@ class datacube:
         if mode == "merge": 
             __self__.name = name
             __self__.path = name
+            __self__.config = {}
+            __self__.config["directory"] = name
+            for key in configuration:
+                if key != "directory": __self__.config[key] = configuration[key]
         else:
             from Constants import SAMPLE_PATH
             __self__.name = configuration["directory"]
@@ -205,6 +209,8 @@ class datacube:
         if recalculating == True: 
             bgstrip = bgstrip
             progressbar = progressbar
+            progressbar.progress["maximum"] = __self__.img_size
+            progressbar.updatebar(0)
         else: 
             bgstrip = __self__.config['bgstrip']
             progressbar = __self__.progressbar
@@ -240,7 +246,7 @@ class datacube:
             
             y_cont, attempt = np.zeros([__self__.matrix.shape[2]]), 0
             progressbar.update_text(
-                    "Fitting continuum. Trial: {}".format(attempt))
+                    "Preparing to fit continuum.".format(attempt))
             while y_cont.sum()==0:
                 attempt += 1
                 y_cont = polfit_batch(
@@ -256,6 +262,7 @@ class datacube:
                 r_fact+=1
 
             __self__.sum_bg = y_cont[0]
+            progressbar.updatebar(0)
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
                     counter += 1 #ignores first continuum which is the global one
@@ -292,35 +299,36 @@ class datacube:
 
     def digest_merge(__self__,bar=None):
         if bar != None: 
-            bar.progress["maximum"] = 6
-            bar.update_text("1/6 Calculating MPS...")
-            bar.updatebar(1)
+            time.sleep(0.5)
+            bar.update_text("6/11 Calculating MPS...")
+            bar.updatebar(6)
         mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
         __self__.MPS(mps)
         __self__.mps = mps
         if bar != None: 
-            bar.update_text("2/6 Calculating Stacksum...")
-            bar.updatebar(2)
+            bar.update_text("7/11 Calculating Stacksum...")
+            bar.updatebar(7)
         __self__.stacksum()
         __self__.write_sum()
         if bar != None:
-            bar.update_text("3/6 Creating densemap...")
-            bar.updatebar(3)
+            bar.update_text("8/11 Creating densemap...")
+            bar.updatebar(8)
         __self__.create_densemap()
         if bar != None:
-            bar.update_text("4/6 Calculating continuum...")
-            bar.updatebar(4)
+            bar.update_text("9/11 Calculating continuum...")
+            bar.updatebar(9)
         __self__.strip_background(
                 recalculating=True,
                 bgstrip=__self__.config["bgstrip"],
                 progressbar=bar)
         if bar != None:
-            bar.update_text("5/6 Finding Fano and Noise...")
-            bar.updatebar(5)
+            bar.progress["maximum"] = 11
+            bar.update_text("10/11 Fitting F & N...")
+            bar.updatebar(10)
         __self__.fit_fano_and_noise()
         if bar != None:
-            bar.update_text("6/6 Writing to disk...")
-            bar.updatebar(6)
+            bar.update_text("11/11 Writing to disk...")
+            bar.updatebar(11)
         __self__.save_cube()
 
     def compile_cube(__self__):

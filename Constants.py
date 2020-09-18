@@ -8,6 +8,7 @@
 import logging
 
 VERSION = "1.2.1"
+VERSION_MOS = "1.1.1"
 LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None

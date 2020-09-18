@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          CYTHON FUNCTIONS                                     #
-#                        version: 1.2.0 - Jul - 2020            #
+#                        version: 1.2.1 - Sep - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -40,19 +40,24 @@ def cy_stack(int[:,:,:] stack,
             stack[i][j][1] = b[i][j]
 
 def cy_apply_scaling(float[:,:] scale_matrix,
-    int[:,:,:] cube_matrix,
+    float[:,:,:] cube_matrix,
     int scale_mode,
-    float[:,:,:] scaled_matrix,
+    #float[:,:,:] scaled_matrix,
     int[:] shape):
     
+    mec = Busy(shape[0],0)
+    mec.update_text("4/11 Applying scale factor...")
     for i in range(shape[0]):
         for j in range(shape[1]):
             for c in range(shape[2]):
                 if scale_mode == 1:
-                    scaled_matrix[i][j][c] = cube_matrix[i][j][c]*scale_matrix[i][j]
+                    cube_matrix[i][j][c] = cube_matrix[i][j][c]*scale_matrix[i][j]
                 elif scale_mode == -1:
-                    scaled_matrix[i][j][c] = cube_matrix[i][j][c]/scale_matrix[i][j]
-    return scaled_matrix
+                    cube_matrix[i][j][c] = cube_matrix[i][j][c]/scale_matrix[i][j]
+        mec.updatebar(i)
+    mec.destroybar()
+    #return scaled_matrix
+    #return cube_matrix
 
 def cy_img_linear_contrast_expansion(int[:,:] grayimg, int a, int b,
         int[:] shape, int c, int d):
@@ -285,7 +290,7 @@ def cy_build_merge_cube(dict layers,
         int[:] x_limit, 
         int[:] y_limit, 
         int[:] spectrum,
-        int[:,:,:] cube_matrix,
+        float[:,:,:] cube_matrix,
         int size):
     
     cdef int total_iterations = 0
@@ -303,6 +308,7 @@ def cy_build_merge_cube(dict layers,
     
     print("Started packing")
     mec = Busy(total_iterations,0)
+    mec.update_text("3/11 Merging...")
     for i in range(x_limit[0],x_limit[1]):
         for j in range(y_limit[0],y_limit[1]):
             cy_pack_spectra(
@@ -379,16 +385,22 @@ def cy_build_scaling_matrix(float[:,:] scale_matrix,
         int gross,
         int mode):
     
+    mec = Busy(size[0],0)
+    mec.update_text("2/11 Creating scale matrix...")
     cdef int i = 0
     cdef int j = 0
+    cdef int iterator = 0
     for i in range(size[0]):
         for j in range(size[1]):
+            iterator += 1
             if mode == 1:
                 scale_matrix[i][j] = cy_get_linstr_scaling(all_layers,i,j,target)
             elif mode == 2:
                 scale_matrix[i][j] = cy_get_sum_scaling(all_layers,i,j,gross)
             else:
                 return scale_matrix
+        mec.updatebar(i)
+    mec.destroybar()
     return scale_matrix
 
 def cy_get_linstr_scaling(dict layers, int i, int j,int[:] target):

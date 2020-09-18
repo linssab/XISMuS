@@ -1,11 +1,10 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 1.1.0 - Jul - 2020            #
+#                        version: 1.1.1 - Sep - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-VERSION = "1.0.1"
 global layers_dict
 layers_dict = {}
 
@@ -19,6 +18,7 @@ from tkinter import filedialog
 import threading
 import numpy as np
 import cv2
+import gc
 import sys, os, copy, pickle, stat, random
 import logging, time
 from Decoder import *
@@ -47,6 +47,7 @@ from EnergyLib import plottables_dict
 from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
 from Mapping_parallel import Cube_reader, sort_results, digest_results
 import cy_funcs
+VERSION = Constants.VERSION_MOS
 
 def load_cube(cube=""):
     path = os.path.join(SpecRead.__PERSONAL__,
@@ -442,7 +443,7 @@ class Mosaic_API:
             new_start_y = __self__.y1 - __self__.y0  + __self__.layer[name].start[1]
             if new_start_y < 0: 
                 __self__.layer[name].start[1] = 0
-            elif new_start_y + __self__.layer[name].img.shape[1] > __self__.image.shape[1]: 
+            elif new_start_y + __self__.layer[name].img.shape[1] >= __self__.image.shape[1]: 
                 pass
             else: 
                 __self__.layer[name].start[1] = new_start_y
@@ -451,7 +452,7 @@ class Mosaic_API:
             new_start_x = __self__.x1 - __self__.x0  + __self__.layer[name].start[0]
             if new_start_x < 0: 
                 __self__.layer[name].start[0] = 0
-            elif new_start_x + __self__.layer[name].img.shape[0] > __self__.image.shape[0]: 
+            elif new_start_x + __self__.layer[name].img.shape[0] >= __self__.image.shape[0]: 
                 pass 
             else: 
                 __self__.layer[name].start[0] = new_start_x
@@ -460,8 +461,8 @@ class Mosaic_API:
             new_end_y = __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
             if new_start_y < 0: 
                 __self__.layer[name].end[1] = __self__.layer[name].img.shape[1]
-            elif new_end_y > __self__.image.shape[1]:
-                __self__.layer[name].end[1] = __self__.image.shape[1]
+            elif new_end_y >= __self__.image.shape[1]:
+                __self__.layer[name].end[1] = __self__.image.shape[1]-1
             else: 
                 __self__.layer[name].end[1] = \
                         __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
@@ -470,8 +471,8 @@ class Mosaic_API:
             new_end_x = __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
             if new_start_x < 0: 
                 __self__.layer[name].end[0] = __self__.layer[name].img.shape[0]
-            elif new_end_x > __self__.image.shape[0]: 
-                __self__.layer[name].end[0] = __self__.image.shape[0]
+            elif new_end_x >= __self__.image.shape[0]: 
+                __self__.layer[name].end[0] = __self__.image.shape[0]-1
             else: 
                 __self__.layer[name].end[0] = \
                         __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
@@ -655,8 +656,8 @@ class Mosaic_API:
         proceed, merge_config, divergence = True, "", []
         candidate = cube.config
         for layer in __self__.layer:
-            if __self__.layer[layer].layer == 0: 
-                __self__.zero_config = copy.deepcopy(__self__.layer[layer].config)
+            #if __self__.layer[layer].layer == 0: 
+            #    __self__.zero_config = copy.deepcopy(__self__.layer[layer].config)
             loaded = __self__.layer[layer].config
             for key in loaded:
                 if candidate[key] != loaded[key] and key != "directory": 
@@ -664,9 +665,12 @@ class Mosaic_API:
         if divergence != []: 
             __self__.zero_config.pop("directory")
             for key in __self__.zero_config:
+                if key == "gain": merge_config = merge_config+str(key)+": {:2f}".format(__self__.zero_config[key])+", "
                 merge_config = merge_config+str(key)+": "+str(__self__.zero_config[key])+", "
             proceed = messagebox.askquestion("Diverging configuration!","The cube you are trying to add has a different configuration from the layers already imported {}!\nDo you want to add it anyways? (Resulting merged cube configuration will be: {})".format(divergence, merge_config))
-            if proceed == "yes": return True
+            if proceed == "yes": 
+                Constants.CONFIG = __self__.zero_config
+                return True
             else: return False
         else: return True
 
@@ -697,7 +701,10 @@ class Mosaic_API:
                     "Cabn't add same cube twice!")
             __self__.refocus()
             return
-        elif __self__.layer_count == 0: can_import = True
+        elif __self__.layer_count == 0: 
+            Constants.CONFIG = cube.config
+            __self__.zero_config = cube.config
+            can_import = True
         else: can_import = __self__.check_calibration(cube)
         if can_import == True and __self__.layer_count > 0: 
             can_import = __self__.check_configuration(cube)
@@ -868,6 +875,8 @@ class Mosaic_API:
         # loads cube to extract the matrix and all metadata
 
         cube = load_cube(layer["name"])
+        Constants.CONFIG = cube.config
+        __self__.zero_config = cube.config
         if cube == None: 
             messagebox.showerror("Cube not found!",
                     "Cannot find cube {}! Aborting operation.".format(layer["name"]))
@@ -993,8 +1002,13 @@ class Mosaic_API:
                 return
             proceed = messagebox.askquestion("Cube merge!","You are about to merge datacubes. This procedure may take a while depending on the size of the final image. Are you sure you want to proceed?")
         if proceed == "yes":
+            __self__.progress_bar = Busy(3,0)
+            __self__.progress_bar.update_text("1/11 Reading layers...")
+
             global layers_dict
             layers_dict = convert_layers_to_dict(__self__)
+            time.sleep(0.5)
+            __self__.progress_bar.updatebar(1)
 
             #########################################
             # Calculates the global densemap        #
@@ -1009,6 +1023,8 @@ class Mosaic_API:
                     np.asarray(__self__.image.shape,dtype="int32"),
                     layers_dict,
                     TARGET)
+            time.sleep(0.5)
+            __self__.progress_bar.updatebar(2)
             
             gross = 0
             for layer in layers_dict:
@@ -1018,6 +1034,9 @@ class Mosaic_API:
                 inst_gross = val/tot_pix
                 if inst_gross > gross:
                     gross = int(inst_gross)
+            __self__.progress_bar.updatebar(3)
+            time.sleep(0.5)
+            __self__.progress_bar.destroybar()
 
             ######################################################################
             # Builds the scaling matrix with a linear contrast stretching method #
@@ -1028,6 +1047,11 @@ class Mosaic_API:
             elif __self__.ScaleVarSum.get() == True:
                 mode = 2
             else: mode = 0
+
+            #################################################
+            # LOADING BAR IS CREATED INSIDE CYTHON FUNCTION #
+            #################################################
+
             scale_matrix = np.zeros([__self__.image.shape[0],__self__.image.shape[1]],
                     dtype="float32")
             cy_funcs.cy_build_scaling_matrix(
@@ -1037,6 +1061,8 @@ class Mosaic_API:
                     TARGET,
                     gross,
                     mode)
+
+            #################################################
 
             start_x, start_y = __self__.image.shape
             end_x, end_y = 0, 0
@@ -1057,13 +1083,15 @@ class Mosaic_API:
 
             if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
                 __self__.cropped = scale_matrix[start_x:end_x,start_y:end_y]
+                del scale_matrix
+                gc.collect()
 
             ######################################## 
             # allocate memory for the new datacube #
             ######################################## 
 
             __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
-                    dtype="int32")
+                    dtype="float32")
             __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                     dtype="float32")
             x, iteration = 0,0
@@ -1076,6 +1104,10 @@ class Mosaic_API:
             # attributed to the proper merge_matrix indexes                         #
             #########################################################################
 
+            #################################################
+            # LOADING BAR IS CREATED INSIDE CYTHON FUNCTION #
+            #################################################
+
             void_array = np.zeros([specsize],dtype="int32")
             cy_funcs.cy_build_merge_cube(layers_dict,
                     np.asarray(x_bounds,dtype="int32"),
@@ -1083,6 +1115,8 @@ class Mosaic_API:
                     void_array,
                     __self__.merge_matrix,
                     specsize)
+
+            #################################################
 
             layers = list(__self__.layer.keys())
             
@@ -1098,7 +1132,7 @@ class Mosaic_API:
             # than in the __init__ method                                           #
             #########################################################################
             
-            new_cube = Cube(["xrf"],Constants.CONFIG,mode="merge",name=NAME)
+            new_cube = Cube(["xrf"],__self__.zero_config,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
@@ -1107,24 +1141,30 @@ class Mosaic_API:
                     new_cube.energyaxis.shape[0]],dtype='float32',order='C')
             new_cube.matrix = __self__.merge_matrix
             new_cube.background = __self__.merge_bg
-            __self__.progress_bar = Busy(2,0)
-            __self__.progress_bar.updatebar(1)
-            __self__.progress_bar.update_text("Scaling data...")
+            del __self__.merge_matrix
+            del __self__.merge_bg
+            gc.collect()
+            
             if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
                 new_cube.scale_matrix = __self__.cropped
-                __self__.thread2 = threading.Thread(target=apply_scaling, args=(new_cube,1,))
-                __self__.thread2.start()
-                __self__.thread2.join()
+                #__self__.thread2 = threading.Thread(target=apply_scaling, args=(new_cube,1,))
+                #__self__.thread2.start()
+                #__self__.thread2.join()
+                apply_scaling(new_cube,1)
+                new_cube.matrix = new_cube.matrix.astype("int32")
                 new_cube.scalable = True
+            else: new_cube.matrix = new_cube.matrix.astype("int32")
+
+            __self__.progress_bar = Busy(11,0)
+            __self__.progress_bar.updatebar(5)
+            __self__.progress_bar.update_text("5/11 Digesting...")
+            time.sleep(1)
             new_cube.calibration = __self__.layer[layers[0]].calibration
-            new_cube.config = Constants.CONFIG
             new_cube.config["gain"] = new_cube.gain
-            __self__.progress_bar.updatebar(2)
-            __self__.progress_bar.update_text("Digesting...")
             new_cube.digest_merge(bar=__self__.progress_bar)
 
             if __self__.ScaleVarLinStr.get() == True or __self__.ScaleVarSum.get() == True:
-                __self__.cropped = scale_matrix[start_x:end_x,start_y:end_y]
+                #__self__.cropped = scale_matrix[start_x:end_x,start_y:end_y]
                 cv2.imwrite(os.path.join(SpecRead.__PERSONAL__,"output",NAME,
                     "{}_scaling_matrix.png".format(NAME)),
                     __self__.cropped/__self__.cropped.max()*255)

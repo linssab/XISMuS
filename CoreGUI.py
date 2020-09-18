@@ -1486,6 +1486,7 @@ class ImageAnalyzer:
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
         __self__.sum_spectrum = __self__.DATACUBE.sum
         __self__.master = Toplevel(parent)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
         __self__.master.title("Image Analyzer")
@@ -1774,6 +1775,16 @@ class ImageAnalyzer:
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
+    def kill(__self__):
+        for widget in __self__.master.winfo_children():
+            widget.destroy()
+            checkout_config()
+            __self__.master.destroy()   
+        try: __self__.plot.wipe_plot()
+        except: pass
+        gc.collect()
+        del __self__
+
     def subtract_images(__self__,e=""):
         __self__.OperationDiag = ImageOperationWarning(__self__,mode="subtract")
         place_center(__self__.master,__self__.OperationDiag.master)
@@ -1837,7 +1848,7 @@ class ImageAnalyzer:
             #color button is pointing to an existing button that never changes its color
             __self__.annotate.config(bg=__self__.correlate.cget("background"))
             __self__.annotator.wipe_annotator()
-            del __self__.plot
+            __self__.plot.wipe_plot()
  
     def update_sample1(__self__,event):
         label1 = "Maximum net counts: {}".format(
@@ -4662,10 +4673,14 @@ class ReConfigDiag:
         if hasattr(Constants.MY_DATACUBE,"scalable"):
             if Constants.MY_DATACUBE.scalable == False and __self__.ScaleVar.get() == True:
                 Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("float32")
                 apply_scaling(Constants.MY_DATACUBE,1)
+                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
             if Constants.MY_DATACUBE.scalable == True and __self__.ScaleVar.get() == False:
                 Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("float32")
                 apply_scaling(Constants.MY_DATACUBE,-1)
+                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
             if __self__.ContVar.get() == True:
                 bar = Busy(Constants.MY_DATACUBE.img_size,0)
                 bar.update_text("Stripping background")
