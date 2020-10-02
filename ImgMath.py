@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          IMAGE MATH	                                        #
-#                        version: 1.2.1 - Sep - 2020            #
+#                        version: 1.3.0 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -44,6 +44,12 @@ def colorbar(mappable):
     cax = divider.append_axes("right", size="5%", pad=0.05)
     return fig.colorbar(mappable, cax=cax)
 
+def mse(img1, img2):
+    """ Returns the mean-squared error between two images """
+    error = np.sum((img1.astype("float") - img2.astype("float")) ** 2)
+    error = error/float(img1.shape[0] * img2.shape[1])
+    return error
+
 def median_filter(array,x,y):
     """ Returns the average value of pixel x,y. Includes edges """
 
@@ -79,25 +85,21 @@ def low_pass(a_2D_array,t):
     cy_funcs.cy_threshold_low(a_2D_array, shape, t)
     return a_2D_array
 
-def apply_scaling(datacube, scalemode=0):
+def apply_scaling(datacube, image, scalemode=0, mask=np.zeros(0)):
     """ scalemode:
-    0 = Returns zero matrix
+    0 = Returns
     1 = Applies scaling to datacube.matrix
     -1 = Reverse scaling applied to datacube.matrix """
-    
-    #scaled_matrix = np.zeros([datacube.matrix.shape[0],
-    #    datacube.matrix.shape[1],datacube.matrix.shape[2]],dtype="float32")
-    cy_funcs.cy_apply_scaling(datacube.scale_matrix,
-            datacube.matrix,
-            scalemode,
-            #scaled_matrix,
-            np.asarray(datacube.matrix.shape,dtype="int32"))
-    #datacube.matrix = scaled_matrix.astype("int32")
-    datacube.create_densemap()
-    if datacube.matrix.max() > 0: 
-        return 1
-    else: 
-        return 0
+
+    if scalemode == 0: return
+    else:
+        if mask.any(): scaling_matrix = mask
+        else: scaling_matrix = datacube.scale_matrix
+        cy_funcs.cy_apply_scaling(scaling_matrix,
+                image,
+                scalemode,
+                np.asarray(image.shape,dtype="int32"))
+        return image
 
 def mask(a_datacube,a_compound,mask_threshold):
     """ Creates a mask to limit the heightmap calculation.
@@ -394,6 +396,49 @@ def flattenhistogram(image):
     cdf = np.ma.filled(cdf_mask,0).astype('uint8')
     image = cdf[image]
     return image
+
+def hist_match(source, template):
+    """
+    TAKEN FROM: https://stackoverflow.com/questions/32655686/histogram-matching-of-two-images-in-python-2-x
+    Adjust the pixel values of a grayscale image such that its histogram
+    matches that of a target image
+
+    Arguments:
+    -----------
+        source: np.ndarray
+            Image to transform; the histogram is computed over the flattened
+            array
+        template: np.ndarray
+            Template image; can have different dimensions to source
+    Returns:
+    -----------
+        matched: np.ndarray
+            The transformed output image
+    """
+
+    oldshape = source.shape
+    source = source.ravel()
+    template = template.ravel()
+
+    # get the set of unique pixel values and their corresponding indices and
+    # counts
+    s_values, bin_idx, s_counts = np.unique(source, return_inverse=True,
+                                            return_counts=True)
+    t_values, t_counts = np.unique(template, return_counts=True)
+
+    # take the cumsum of the counts and normalize by the number of pixels to
+    # get the empirical cumulative distribution functions for the source and
+    # template images (maps pixel value --> quantile)
+    s_quantiles = np.cumsum(s_counts).astype(np.float64)
+    s_quantiles /= s_quantiles[-1]
+    t_quantiles = np.cumsum(t_counts).astype(np.float64)
+    t_quantiles /= t_quantiles[-1]
+
+    # interpolate linearly to find the pixel values in the template image
+    # that correspond most closely to the quantiles in the source image
+    interp_t_values = np.interp(s_quantiles, t_quantiles, t_values)
+
+    return interp_t_values[bin_idx].reshape(oldshape)
 
 def interpolate_zeros(map_array):
     """ Fills few dead pixels present in auto_roi elemental maps caused by low

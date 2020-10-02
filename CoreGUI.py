@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.2.1 - Sep - 2020            #
+#                        version: 1.3.0 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -328,6 +328,7 @@ def load_cube():
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
         logger.debug("Loaded cube {} to memory.".format(cube_file))
+        Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
         root_busy.notbusy()
     elif os.path.exists(os.path.join(SpecRead.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
@@ -1503,11 +1504,24 @@ class ImageAnalyzer:
         __self__.RightCanvas = Canvas(__self__.SampleFrame)
         __self__.RightCanvas.pack(side=RIGHT,expand=True,fill=BOTH)
         __self__.sliders = LabelFrame(__self__.master,text="Control Panel")
-        __self__.sliders.pack(side=BOTTOM,fill=X,anchor=CENTER,padx=(5,5),pady=(0,5))
+        __self__.sliders.pack(side=TOP,fill=X,anchor=CENTER,padx=(5,5),pady=(0,5))
         __self__.buttons = Frame(__self__.sliders)
         __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W+E)
         __self__.buttons2 = Frame(__self__.sliders)
-        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30),sticky="")
+        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30),sticky=E)
+        __self__.build_widgets()
+
+    def get_version(__self__):
+        if hasattr(__self__.DATACUBE,"version"):
+            __self__.cube_version = "Cube version: "+__self__.DATACUBE.version
+            __self__.scale.config(state=NORMAL)
+            __self__.scaleLabel.config(state=NORMAL)
+        else:
+            __self__.cube_version = "Cube version: pre-1.3"
+            __self__.scale.config(state=DISABLED)
+            __self__.scaleLabel.config(state=DISABLED)
+
+    def build_widgets(__self__):
         
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
@@ -1515,6 +1529,7 @@ class ImageAnalyzer:
         __self__.Map2Var = StringVar()
         __self__.Map2Counts = StringVar()
         __self__.Map2Counts.set("Select an element")
+        __self__.apply_scale_mask = BooleanVar()
         
         try:
             __self__.ElementalMap1 = np.zeros([__self__.DATACUBE.dimension[0],
@@ -1714,13 +1729,28 @@ class ImageAnalyzer:
                 text="Add Images",
                 command=__self__.add_images,
                 width=round(__self__.annotate.winfo_width()/2))
-        __self__.subtract_btn.grid(row=1,column=9,sticky=W+E)
+        __self__.subtract_btn.grid(row=0,column=9,sticky=W+E)
         __self__.add_btn = Button(
                 __self__.buttons2,
                 text="Subtract Images",
                 command=__self__.subtract_images,
                 width=round(__self__.annotate.winfo_width()/2))
-        __self__.add_btn.grid(row=2,column=9,sticky=W+E)
+        __self__.add_btn.grid(row=1,column=9,sticky=W+E)
+
+        __self__.scale = Checkbutton(
+                __self__.buttons2, 
+                variable=__self__.apply_scale_mask,
+                command=__self__.refresh)
+        __self__.scaleLabel = Label(__self__.buttons2, text="Apply scaling mask")
+        __self__.scale.grid(row=3,column=9, sticky=W)
+        __self__.scaleLabel.grid(row=3,column=9, sticky=E, padx=(25,0))
+        __self__.get_version()
+        __self__.CubeVersionLabel = Label(__self__.master,
+                text=__self__.cube_version,
+                bd=1,
+                relief=SUNKEN,
+                anchor=W)
+        __self__.CubeVersionLabel.pack(side=BOTTOM, expand=False, fill=X, anchor=W)
 
         
         # Disable sliders
@@ -1785,12 +1815,22 @@ class ImageAnalyzer:
         gc.collect()
         del __self__
 
+    def refresh(__self__,e=""):
+        __self__.draw_image1(0)
+        __self__.draw_image2(0)
+
     def subtract_images(__self__,e=""):
-        __self__.OperationDiag = ImageOperationWarning(__self__,mode="subtract")
+        __self__.OperationDiag = ImageOperationWarning(
+                __self__,
+                mode="subtract",
+                scaled=__self__.apply_scale_mask.get())
         place_center(__self__.master,__self__.OperationDiag.master)
 
     def add_images(__self__,e=""):
-        __self__.OperationDiag = ImageOperationWarning(__self__,mode="add")
+        __self__.OperationDiag = ImageOperationWarning(
+                __self__,
+                mode="add",
+                scaled=__self__.apply_scale_mask.get())
         place_center(__self__.master,__self__.OperationDiag.master)
     
     def AltOn(__self__,e=""):
@@ -1965,19 +2005,27 @@ class ImageAnalyzer:
     # argument i is there just to make it work. The value passed doesn't change a thing
 
     def draw_image1(__self__,i):
+        scalemode = __self__.apply_scale_mask.get()
+        if scalemode: scalemode = 1
+        else: scalemode = 0
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
         __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
         del __self__.CACHEMAP1
         __self__.plot1.clear()
+        apply_scaling(__self__.DATACUBE,__self__.newimage1, scalemode) 
         __self__.plot1.imshow(__self__.newimage1, cmap=Constants.COLORMAP)
         __self__.plot1.grid(b=None)
         __self__.canvas1.draw()
     
     def draw_image2(__self__,i):
+        scalemode = __self__.apply_scale_mask.get()
+        if scalemode: scalemode = 1
+        else: scalemode = 0
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
         __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
         del __self__.CACHEMAP2
         __self__.plot2.clear()
+        apply_scaling(__self__.DATACUBE,__self__.newimage2, scalemode) 
         __self__.plot2.imshow(__self__.newimage2, cmap=Constants.COLORMAP)
         __self__.plot2.grid(b=None)
         __self__.canvas2.draw()
@@ -2493,12 +2541,14 @@ class Samples:
     def splash_kill(__self__):
         try: 
             __self__.splash.destroy()
+            __self__.popup.grab_set()
             __self__.popup.destroy()
         except:
             pass
 
     def pop_loader(__self__):
         __self__.popup = Toplevel(master=root.master)
+        __self__.popup.grab_set()
         __self__.popup.resizable(False,False)
         __self__.popup.overrideredirect(True)
         x = __self__.popup.winfo_screenwidth()
@@ -3476,6 +3526,9 @@ class MainGUI:
         if mode == "auto_wizard":
             __self__.invoke_wizard()
         else: 
+            if mode == "simple_roi":
+                messagebox.showinfo("Attention!",
+                "Simple roi method does NOT separate peaks. Always verify the Calculated ROI data in the Toolbox menu.")
             try:
                 if __self__.find_elements_diag.master.winfo_exists() == False:
                     __self__.find_elements_diag = PeriodicTable(__self__)
@@ -3963,7 +4016,10 @@ class MainGUI:
 
     def export_density_map(__self__,event=""):
         try: 
-            __self__.sample_select(event)
+            if  e.cget("text") == "Save density map as . . .":
+                pass
+            else:
+                __self__.sample_select(event)
         except: 
             if Constants.MY_DATACUBE == None:
                 messagebox.showerror("No datacube!","Please load a datacube first.")
@@ -3977,7 +4033,11 @@ class MainGUI:
             return
         if f is None: 
             return
-        __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
+        if Constants.MY_DATACUBE.config["enhance"]:
+            __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
+        else:
+            cv2.imwrite(f.name,
+                (Constants.MY_DATACUBE.densitymap/Constants.MY_DATACUBE.densitymap.max()*255))
         return 0
 
     def wipe(__self__,e=""):
@@ -4670,17 +4730,14 @@ class ReConfigDiag:
         Constants.MY_DATACUBE.config["enhance"] = __self__.EnhanceVar.get()
         Constants.MY_DATACUBE.config["peakmethod"] = __self__.MethodVar.get()
         Constants.MY_DATACUBE.config["ratio"] = __self__.RatioVar.get()
+
         if hasattr(Constants.MY_DATACUBE,"scalable"):
-            if Constants.MY_DATACUBE.scalable == False and __self__.ScaleVar.get() == True:
-                Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
-                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("float32")
-                apply_scaling(Constants.MY_DATACUBE,1)
-                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
-            if Constants.MY_DATACUBE.scalable == True and __self__.ScaleVar.get() == False:
-                Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
-                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("float32")
-                apply_scaling(Constants.MY_DATACUBE,-1)
-                Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
+
+            recalculatedbg = False
+            ##############################
+            # Reclaculates the bg matrix #
+            ##############################
+
             if __self__.ContVar.get() == True:
                 bar = Busy(Constants.MY_DATACUBE.img_size,0)
                 bar.update_text("Stripping background")
@@ -4689,9 +4746,57 @@ class ReConfigDiag:
                         recalculating=True,
                         progressbar=bar)
                 bar.destroybar()
-            Constants.MY_DATACUBE.create_densemap()
-            Constants.MY_DATACUBE.save_cube()
+                recalculatedbg = True
+
+                ##############################
+
+                #####################################
+                # Rebuilds all datacube information #
+                #####################################
+
+                Constants.MY_DATACUBE.MPS(Constants.MY_DATACUBE.mps)
+                Constants.MY_DATACUBE.stacksum()
+                Constants.MY_DATACUBE.write_sum()
+                Constants.MY_DATACUBE.create_densemap()
+                #####################################
+
+            ###############################################################################
+            # Apply scaling (if needed) to the densemap to display properly on main panel #
+            ###############################################################################
+
+
+            if recalculatedbg:
+                if Constants.MY_DATACUBE.scalable and __self__.ScaleVar.get():
+                    Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype(
+                            "float32")
+                    Constants.MY_DATACUBE.densitymap = apply_scaling(
+                            Constants.MY_DATACUBE, Constants.MY_DATACUBE.densitymap, 1)
+                    Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
+                elif Constants.MY_DATACUBE.scalable and not __self__.ScaleVar.get():
+                    Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                    # NOTE: densemap already modified by create_densemap() function #
+                    pass
+            else:
+                if Constants.MY_DATACUBE.scalable == False and __self__.ScaleVar.get():
+                    Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                    Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype(
+                            "float32")
+                    Constants.MY_DATACUBE.densitymap = apply_scaling(
+                            Constants.MY_DATACUBE,
+                            Constants.MY_DATACUBE.densitymap, 1)
+                    Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
+                elif Constants.MY_DATACUBE.scalable and not __self__.ScaleVar.get():
+                    Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
+                    Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype(
+                            "float32")
+                    Constants.MY_DATACUBE.densitymap = apply_scaling(
+                            Constants.MY_DATACUBE, Constants.MY_DATACUBE.densitymap, -1)
+                    Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
+
+            ###############################################################################
+
             root.draw_map()
+
         Constants.MY_DATACUBE.save_cube()
         root.write_stat()
         __self__.kill()
@@ -5181,9 +5286,10 @@ class ImgageOperationOutput:
 
 
 class ImageOperationWarning:
-    def __init__(__self__,parent,mode=None):
+    def __init__(__self__,parent,mode=None,scaled=False):
         __self__.master = Toplevel(parent.master)
         __self__.parent = parent
+        __self__.scaled = scaled
         __self__.mode = mode
         if mode == "add": 
             __self__.gif_size = 8
@@ -5245,6 +5351,8 @@ class ImageOperationWarning:
             output = add_(__self__.parent.newimage1,
                     __self__.parent.newimage2,norm=True)
         else: pass
+        if __self__.scaled:
+            apply_scaling(__self__.parent.DATACUBE, output, -1)
         ImgageOperationOutput(output,__self__.parent.Map1Var.get(),
                 __self__.parent.Map2Var.get(),operation)
         __self__.master.grab_release()

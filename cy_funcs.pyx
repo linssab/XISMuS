@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          CYTHON FUNCTIONS                                     #
-#                        version: 1.2.1 - Sep - 2020            #
+#                        version: 1.3.0 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -13,12 +13,11 @@ from ProgressBar import Busy
 # utils
 
 cdef int cy_second_min(
-        int[:,:] matrix, 
+        float[:,:] matrix, 
         int[:] shape, 
-        int[:] TARGET):
+        float[:] TARGET):
     cdef int x = 0
     cdef int y = 0
-    cdef int min2 = 0
 
     for x in range(shape[0]):
         for y in range(shape[1]):
@@ -40,9 +39,26 @@ def cy_stack(int[:,:,:] stack,
             stack[i][j][1] = b[i][j]
 
 def cy_apply_scaling(float[:,:] scale_matrix,
+    float[:,:] image,
+    int scale_mode,
+    int[:] shape):
+ 
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            if scale_mode == 1:
+                image[i][j] = image[i][j]*scale_matrix[i][j]
+            elif scale_mode == -1 and scale_matrix[i][j] != 0:
+                image[i][j] = image[i][j]/scale_matrix[i][j]
+    return
+
+###################################################################
+# Now the mask is applied to IMAGES only, not the dataset anymore #
+# The function below has been replaced by that above              #
+###################################################################
+"""
+def cy_apply_scaling(float[:,:] scale_matrix,
     float[:,:,:] cube_matrix,
     int scale_mode,
-    #float[:,:,:] scaled_matrix,
     int[:] shape):
     
     mec = Busy(shape[0],0)
@@ -52,14 +68,13 @@ def cy_apply_scaling(float[:,:] scale_matrix,
             for c in range(shape[2]):
                 if scale_mode == 1:
                     cube_matrix[i][j][c] = cube_matrix[i][j][c]*scale_matrix[i][j]
-                elif scale_mode == -1:
+                elif scale_mode == -1 and scale_matrix[i][j] != 0:
                     cube_matrix[i][j][c] = cube_matrix[i][j][c]/scale_matrix[i][j]
         mec.updatebar(i)
     mec.destroybar()
-    #return scaled_matrix
-    #return cube_matrix
+"""
 
-def cy_img_linear_contrast_expansion(int[:,:] grayimg, int a, int b,
+def cy_img_linear_contrast_expansion(float[:,:] grayimg, int a, int b,
         int[:] shape, int c, int d):
     
     cdef int i = 0
@@ -70,7 +85,6 @@ def cy_img_linear_contrast_expansion(int[:,:] grayimg, int a, int b,
     return 0
 
 def cy_threshold(float[:,:] a_2D_array, int[:] shape, int t):
-    
     """ Applies a threshold filter cutting the values BELOW threshold.
     Returns a 2D-array """
 
@@ -87,7 +101,6 @@ def cy_threshold(float[:,:] a_2D_array, int[:] shape, int t):
     return new_array
 
 def cy_threshold_low(float[:,:] a_2D_array, int[:] shape, int t):
-    
     """ Applies a threshold filter cutting the values ABOVE threshold.
     Returns a 2D-array """
 
@@ -104,7 +117,6 @@ def cy_threshold_low(float[:,:] a_2D_array, int[:] shape, int t):
     return new_array
 
 cdef float cy_simple_median(float[:,:] m, int x, int y, list shape):
-
     """ Returns the average value of pixel x,y. """
     """ For use with Cython exclusively """
 
@@ -139,7 +151,6 @@ cdef float cy_simple_median(float[:,:] m, int x, int y, list shape):
             m[x][y+1] + m[x-1][y+1] + m[x+1][y+1])/10
 
 def cy_average(float[:,:] a_2D_array, int x, int y):
-
     """ Returns the average value of pixel x,y. Ignores edges """
     """ This function can be called by pure python modules """ 
     cdef float average = 0.0
@@ -148,7 +159,6 @@ def cy_average(float[:,:] a_2D_array, int x, int y):
             a_2D_array[x][y+1] + a_2D_array[x-1][y+1] + a_2D_array[x+1][y+1])/10
 
 def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
-
     """ Applies the median_filter funtion to all pixels within a 2D-array.
     iterations is the amount of times the operation will be performed.
     Returns a smoothed 2D-array """
@@ -194,13 +204,12 @@ def cy_add(float[:,:] map1,
             output[i][j] = map1[i][j] + map2[i][j]
     return output
 
-def cy_read_densemap_pixels(dict layers, int i, int j):
-
+def cy_read_densemap_pixels(dict layers, int i, int j, int mode):
     """ Operates over single pixels at a time.
     Reads all layers and returns the uppermost value for the DENSEMAP matrix """
 
     cdef int front_layer = -1 
-    cdef int pixel = 0
+    cdef float pixel = 0
 
     cdef int x = 0
     cdef int y = 0
@@ -219,14 +228,43 @@ def cy_read_densemap_pixels(dict layers, int i, int j):
         #        "index",i,j,"start",x,y,"end",x_,y_,"conv",conv_x,conv_y)
         if x <= i < x_ and y <= j < y_ \
                 and layers[layer]["layer"] > front_layer:
-            pixel = layers[layer]["dense"][conv_x][conv_y]
+            if mode == 1: pixel = layers[layer]["dense"][conv_x][conv_y]
+            else: 
+                pixel = layers[layer]["mask"][conv_x][conv_y]
             front_layer = layers[layer]["layer"]
     return pixel
 
-def cy_build_densemap(int[:,:] image, 
+def cy_iterate_img_and_mask(
+        float[:,:] img,
+        float[:,:] mask,
+        int[:] shape,
+        float[:,:] xy,
+        float a,
+        float b):
+
+    cdef int i = 0
+    cdef int j = 0
+    cdef float x1 = xy[0][0]
+    cdef float y1 = xy[1][0]
+    cdef float x2 = xy[0][1]
+    cdef float y2 = xy[1][1]
+
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            if img[i][j] <= x1:
+                mask[i][j] = y1/img[i][j]
+            elif img[i][j] >= x2:
+                mask[i][j] = y2/img[i][j]
+            else:
+                mask[i][j] = (img[i][j]*a + b)/img[i][j]
+    return
+
+
+def cy_build_densemap(float[:,:] image, 
         int[:] size, 
         dict all_layers, 
-        int[:] TARGET):
+        float[:] TARGET,
+        int mode):
 
     """ DENSEMAP image constructor """
 
@@ -234,16 +272,14 @@ def cy_build_densemap(int[:,:] image,
     cdef int j = 0
     for i in range(size[0]):
         for j in range(size[1]):
-            image[i][j] = cy_read_densemap_pixels(all_layers,i,j)
+            image[i][j] = cy_read_densemap_pixels(all_layers,i,j,mode)
             if image[i][j] > TARGET[1]:
                 TARGET[0] = image[i][j]
                 TARGET[1] = image[i][j]
     cy_second_min(image, size, TARGET)
     return image
 
-
 def cy_read_pixels(dict layers, int i, int j):
-
     """ Operates over single pixels at a time.
     Reads all layers and returns the uppermost PIXEL value """
 
@@ -273,7 +309,6 @@ def cy_read_pixels(dict layers, int i, int j):
     return pixel
 
 def cy_build_image(int[:,:] image, int[:,:] boundaries, dict all_layers):
-
     """ Display image constructor.
     Builds the image to be shown at Mosaic screen """
         
@@ -369,19 +404,59 @@ def cy_pack_spectra(dict layers,
             specout[c] = 0
         return specout
 
-cdef int cy_stretch(int r, int a, int b, int c, int d):
+cdef float cy_stretch(float r, float a, float b, float c, float d):
     # b and d are the target and local maxima respectively
     # if the maximum is zero, than the whole image is zero
-    cdef int toss = 0
+    cdef float toss = 0
     if b == 0 or d == 0: return r
     else: 
-        toss = int(((r-c)*((b-a)/(d-c)))+a)
+        toss = ((r-c)*((b-a)/(d-c)))+a
     return toss
+
+def cy_build_intense_scaling_matrix(
+        float[:,:] m,
+        int[:] shape,
+        dict all_layers):
+
+    def read_value(dict layers, int i, int j):
+        """ Operates over single pixels at a time.
+        Reads all layers and returns the uppermost PIXEL value """
+
+        cdef int front_layer = -1
+        cdef float pixel = 0.0
+
+        cdef int x = 0
+        cdef int y = 0
+        cdef int x_ = 0
+        cdef int y_ = 0
+        cdef int conv_x = 0
+        cdef int conv_y = 0
+
+        for layer in layers.keys():
+            try:
+                x = layers[layer]["start"][0]
+                y = layers[layer]["start"][1]
+                x_ = layers[layer]["end"][0]
+                y_ = layers[layer]["end"][1]
+                conv_x, conv_y = i-x, j-y
+                if x <= i < x_ and y <= j < y_ \
+                        and layers[layer]["layer"] > front_layer:
+                    pixel = layers[layer]["max"]
+                    front_layer = layers[layer]["layer"]
+            except:
+                return pixel
+        return pixel
+
+    cdef int i = 0
+    cdef int j = 0
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            m[i][j] = read_value(all_layers,i,j)
 
 def cy_build_scaling_matrix(float[:,:] scale_matrix, 
         int[:] size, 
         dict all_layers,
-        int[:] target,
+        float[:] target,
         int gross,
         int mode):
     
@@ -403,7 +478,7 @@ def cy_build_scaling_matrix(float[:,:] scale_matrix,
     mec.destroybar()
     return scale_matrix
 
-def cy_get_linstr_scaling(dict layers, int i, int j,int[:] target):
+def cy_get_linstr_scaling(dict layers, int i, int j, float[:] target):
     cdef int front_layer = -1 
     cdef float scaling = 1.0
 

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: 1.2.0                         #
+#                        version: 1.3.0 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -28,7 +28,6 @@ from tkinter import ttk
 
 
 def select_lines(element,ratio):
-    
     """ Returns the theoretical peak position (in eV)
     for the alpha and beta energy macros """
 
@@ -47,8 +46,6 @@ def select_lines(element,ratio):
     return lines
 
 def grab_simple_roi_image(cube,lines,custom_energy=False):
-    
-    
     """ Prepare the variables to pass into the matrix slicer.
     Using SpecMath function setROI it calculates the start and
     end position of the peaks in lines variable
@@ -122,7 +119,6 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
     return results, ROI
 
 def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
-
     """ Slices the matrix """
 
     c = 0
@@ -137,7 +133,6 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
     return new_image
 
 def getpeakmap(element_list,datacube):
-
     """ Iterates the datacube objects and return a matrix with 
     shape: [X][Y][MACROS][ELEMENT] """
 
@@ -408,7 +403,7 @@ def getdensitymap(datacube):
     timer = time.time()
     logger.info("Started acquisition of density map")
     
-    density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]],dtype="int32")
+    density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]],dtype="float32")
     for x in range(datacube.dimension[0]):
         for y in range(datacube.dimension[1]):
             spec = datacube.matrix[x][y]

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          PROGRESS BARS AND LOADING MODULE                     #
-#                        version: 1.1.0                         #
+#                        version: 1.3.0 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -14,7 +14,6 @@ logger.info("Importing module BatchFitter.py...")
 
 
 class BusyManager:
-
     def __init__(__self__, widget):
         __self__.toplevel = widget.winfo_toplevel()
         __self__.widgets = {}
@@ -52,10 +51,9 @@ class BusyManager:
 
 
 class Busy:
-    
     """ Progress bar class. """
     
-    def __init__(__self__,max_,min_):
+    def __init__(__self__,max_,min_,grab=True):
         __self__.master = Toplevel()
         __self__.make_abortion = False
         __self__.master.resizable(False,False)
@@ -75,7 +73,7 @@ class Busy:
         __self__.master.body.grid(row=1,column=0)
         __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
         __self__.progress.grid(row=0,column=0)
-        __self__.master.grab_set()
+        if grab: __self__.master.grab_set()
         __self__.win_x = __self__.master.winfo_width()
         __self__.win_y = __self__.master.winfo_height()
 
@@ -166,7 +164,6 @@ class Busy:
 
 
 class ReadProgress:
-    
     def __init__(__self__,max_,min_):
         __self__.master = Toplevel()
         __self__.master.resizable(False,False)
@@ -199,7 +196,6 @@ class ReadProgress:
 
 
 class ThinkingWheel:
-    
     def __init__(__self__,speed,x,y,auto=True,parent=None):
         if parent == None: auto = False
         __self__.master = Toplevel()

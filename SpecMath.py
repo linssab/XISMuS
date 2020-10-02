@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.2.1 - Sep - 2020            #
+#                        version: 1.3.0 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -66,6 +66,7 @@ class datacube:
     ndim = 0
     
     def __init__(__self__,dtypes,configuration,mode="",name=""):
+        __self__.version = Constants.VERSION
         if mode == "merge": 
             __self__.name = name
             __self__.path = name
@@ -96,7 +97,6 @@ class datacube:
         __self__.max_counts = {}
 
     def MPS(__self__,mps):
-
         """ Read all data in datacube.matrix and returns a spectrum where each index
         is the maximum value found in the matrix for that same index.
         MPS stands for Maximum Pixel Spectrum """
@@ -106,7 +106,6 @@ class datacube:
         cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
 
     def stacksum(__self__):
-
         """ Reall all data in datacube.matrix and return the summation derived spectrum """
 
         __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype="int32")
@@ -160,7 +159,6 @@ class datacube:
                 print("{:0.2f} percent complete...".format(percent),end="\r")
     
     def write_sum(__self__):
-
         """ Saves the summation derived spectrum as an mca file to disk """
 
         # import internal variables.
@@ -273,13 +271,11 @@ class datacube:
         return
 
     def create_densemap(__self__):
-
         """ Calls getdensitymap and attributes the 2D-array output to the object """
 
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
-
         """ Writes (pickle) the datacube object to memory, if the cube already exists, it is
         replaced (updated) """ 
 
@@ -329,10 +325,9 @@ class datacube:
         if bar != None:
             bar.update_text("11/11 Writing to disk...")
             bar.updatebar(11)
-        __self__.save_cube()
+        #__self__.save_cube()
 
     def compile_cube(__self__):
-
         """ Iterate over the spectra dataset, reading each spectrum file saving it to the 
         proper xy matrix indexes and calculating the background contribution as well. 
         This method saves all derived spectra, writes summation mca to disk and calculates
@@ -470,7 +465,6 @@ class datacube:
         return 0
 
     def cut_zeros(__self__):
-        
         """ Sliced the data cutting off the necessary lead and tail zeros.
         Lead and tail are verified through the sum spectrum to avoid data loss """
 
@@ -501,10 +495,8 @@ class datacube:
         print(len(__self__.mps),"mps")
         print(len(__self__.energyaxis),"energy")
         return lead_zeros, tail_zeros
-
         
     def pack_element(__self__,image,element,line):
-
         """ Saves elemental distribution image to datacibe object 
         image; a 2d-array
         element; a string
@@ -515,7 +507,6 @@ class datacube:
         logger.info("Packed {0} map to datacube {1}".format(element,cube_path))
     
     def pack_hist(__self__,hist,bins,element):
-        
         """ Saves the histogram of the last calculated elemental distribution map. 
         This method is called by ImgMath.py while saving the maps """
 
@@ -530,7 +521,6 @@ class datacube:
         __self__.hist[element] = [hist,bins]
      
     def unpack_element(__self__,element,line):
-
         """ Retrieves a 2d-array elemental distribution map from the datacube.
         element; a string
         line; a string """
@@ -541,7 +531,6 @@ class datacube:
         return unpacked
 
     def check_packed_elements(__self__):
-        
         """ Returns a list with all elemental distribution maps packed into the
         datacube object """
 
@@ -561,7 +550,6 @@ class datacube:
         return packed
 
     def prepack_elements(__self__,element_list,wipe=False):
-
         """ Allocates keys in the datacube object to store the elemental distribution maps """
         for element in set(element_list):
 
@@ -598,9 +586,9 @@ class datacube:
     def replace_map(__self__,image,element):
         __self__.__dict__[element] = image
         __self__.hist[element] = 0
-        __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]],
+        __self__.ROI[element.split("_")[0]] = np.zeros([__self__.energyaxis.shape[0]],
                         dtype="float32")
-        __self__.max_counts[element] = image.max()
+        __self__.max_counts[element.split("_")[0]] = image.max()
         __self__.save_cube()
 
 def FN_reset():
