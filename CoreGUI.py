@@ -5252,7 +5252,7 @@ class ImgageOperationOutput:
         maximize_window(__self__)
 
     def draw(__self__,image=None):
-        __self__.plot.imshow(image, cmap=Constants.COLORMAP)
+        __self__.plot.imshow(image, vmin=0, vmax=LEVELS, cmap=Constants.COLORMAP)
         spawn_center(__self__.master)
 
     def replace_on_cube(__self__,image,element):

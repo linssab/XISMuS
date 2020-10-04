@@ -104,9 +104,23 @@ def normalize(scale_matrix):
     global layers_dict
 
     intensity = [layers_dict[i]["max"] for i in layers_dict.keys()]
+    intensity_min = [layers_dict[i]["min"] for i in layers_dict.keys()]
+    print("MINIMA;", intensity_min)
     max_out = max(intensity)
 
     for layer in layers_dict.keys():
+
+        #############################################################################
+        #NOTE: Technically, expanding the whites and blacks is the correct way      #
+        # to perform every image transformation here. However, they tend to yield   #
+        # much worst results, sometimes almost inverting the elemental map imag     #
+        #############################################################################
+        #normalized_map = (layers_dict[layer]["dense"]-layers_dict[layer]["dense"].min())*\
+        #        LEVELS/(layers_dict[layer]["dense"].max()-layers_dict[layer]["dense"].min())
+        #layers_dict[layer]["intense"] = \
+        #        intense_mask = normalized_map/layers_dict[layer]["dense"]
+        #############################################################################
+
         layers_dict[layer]["max"] = max_out/layers_dict[layer]["max"]
 
     intensity_scaling = np.zeros(scale_matrix.shape,dtype="float32")
@@ -114,8 +128,10 @@ def normalize(scale_matrix):
             intensity_scaling,
             np.asarray(scale_matrix.shape,dtype="int32"),
             layers_dict)
+
+    print("Intense scaling max:", intensity_scaling.max())
     
-    output =  scale_matrix + intensity_scaling
+    output =  scale_matrix * intensity_scaling
 
     #print("intensity ", intensity_scaling.max(), intensity_scaling.min())
     #print("scale_matrix ", scale_matrix.max(), scale_matrix.min())
@@ -171,8 +187,6 @@ def histogram_matching(max_avg, mode=None, scale=False, matchto=None):
     ############################################################################
 
     print("Matching datacubes to: ", ref)
-
-    #normalize_layers(max_avg)
 
     ###############################
     # First matches the histogram #
@@ -241,7 +255,8 @@ class Layer:
         __self__.config = cube.config
         if element == "": 
             __self__.element = None
-            __self__.img = cube.densitymap/cube.densitymap.max()*LEVELS
+            #__self__.img = (cube.densitymap-cube.densitymap.min())*LEVELS/((cube.densitymap.max()-cube.densitymap.min()))
+            __self__.img = cube.densitymap*LEVELS/cube.densitymap.max()
             __self__.img = __self__.img.astype("float32")
         else: 
             __self__.element = element
@@ -602,12 +617,17 @@ class Mosaic_API:
         __self__.build_image()
 
     def on_press(__self__,event):
+        __self__.layers_list.selection_clear(0, END)
         __self__.press = True
         try: __self__.x0 = int(event.ydata)
         except: pass
         try: __self__.y0 = int(event.xdata)
         except: pass
-        try: __self__.selection = __self__.read_pixels(__self__.x0,__self__.y0)[1].name
+        try: 
+            __self__.selection = __self__.read_pixels(__self__.x0,__self__.y0)[1].name
+            for layer in __self__.layer.keys():
+                if layer == __self__.selection: idx = __self__.layer[layer].layer
+            __self__.layers_list.selection_set(idx)
         except: __self__.selection = None
         
     def on_drag(__self__,event):
@@ -1334,9 +1354,8 @@ class Mosaic_API:
             scale_matrix = np.ones([__self__.image.shape[0],
                     __self__.image.shape[1]],dtype="float32")
 
-            #NOTE: make this transformation ALWAYS even before proceeding with
-            # other methods
             if mode == 0:
+                # MANUAL
 
                 TARGET = np.zeros([2],dtype="float32")
                 cy_funcs.cy_build_densemap(scale_matrix,
@@ -1344,10 +1363,12 @@ class Mosaic_API:
                     layers_dict,
                     TARGET,
                     2)
-
+            
                 scale_matrix = normalize(scale_matrix)
 
             if mode == 1 or mode == 2:
+                # LINEAR STRETCH = 1
+                # AVG COUNTS-PER-PIXEL = 2
                 
                 cy_funcs.cy_build_scaling_matrix(
                         scale_matrix,
@@ -1360,6 +1381,7 @@ class Mosaic_API:
             #################################################
 
             if mode == 3:
+                # HISTOGRAM MATCHING
                
                 #########################################
                 # MATHCHES HISTOGRAMS BETWEEN DATACUBES #
@@ -1408,6 +1430,7 @@ class Mosaic_API:
                 print("Scaling max and min", scale_matrix.max(), scale_matrix.min())
 
             #################################################
+            
            
             ############################################################################
             # cut the scale_matrix image (it is calculated for the entire canvas size) #
@@ -1758,14 +1781,14 @@ class LineAnchors:
         "motion_notify_event", __self__.on_drag2)
 
     def on_press1(__self__,event):
-        if __self__.point1.contains_point((event.x,event.y),radius=2):
+        if __self__.point1.contains_point((event.x,event.y),radius=4):
             __self__.press1 = True
         else:
             __self__.press1 = False
             return
 
     def on_press2(__self__,event):
-        if __self__.point2.contains_point((event.x,event.y),radius=2):
+        if __self__.point2.contains_point((event.x,event.y),radius=4):
             __self__.press2 = True
         else:
             __self__.press2 = False
