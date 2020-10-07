@@ -1542,12 +1542,13 @@ class Mosaic_API:
         __self__.kill()
 
 class HistogramWindow:
-
     def __init__(__self__,parent,layer_object):
         __self__.master = Toplevel(parent.master)
         __self__.master.title("Histogram for {}".format(layer_object.name))
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.revert_and_die)
         __self__.master.resizable(False,False)
+        icon = os.getcwd()+"\\images\\icons\\icon.ico"
+        __self__.maps_window.iconbitmap(icon)
         __self__.parent = parent
         __self__.layer = layer_object
         __self__.img = layer_object.img
@@ -1679,7 +1680,6 @@ class HistogramWindow:
 
 
 class LineAnchors:
-
     def __init__(__self__, parent, x=0, y=0):
         __self__.parent = parent
         __self__.point1 = patches.Circle(
@@ -1844,7 +1844,6 @@ class LineAnchors:
 
    
 if __name__.endswith('__main__'):         
-    
     """ This is an independent module, which can be run separately from CoreGUI.py """
 
     optimum_resolution = (1920,1080)

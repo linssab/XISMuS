@@ -1514,8 +1514,13 @@ class ImageAnalyzer:
     def get_version(__self__):
         if hasattr(__self__.DATACUBE,"version"):
             __self__.cube_version = "Cube version: "+__self__.DATACUBE.version
-            __self__.scale.config(state=NORMAL)
-            __self__.scaleLabel.config(state=NORMAL)
+            if hasattr(__self__.DATACUBE,"scalable"):
+                print(__self__.DATACUBE.scalable)
+                __self__.scale.config(state=NORMAL)
+                __self__.scaleLabel.config(state=NORMAL)
+            else:
+                __self__.scale.config(state=DISABLED)
+                __self__.scaleLabel.config(state=DISABLED)
         else:
             __self__.cube_version = "Cube version: pre-1.3"
             __self__.scale.config(state=DISABLED)
@@ -1751,7 +1756,6 @@ class ImageAnalyzer:
                 relief=SUNKEN,
                 anchor=W)
         __self__.CubeVersionLabel.pack(side=BOTTOM, expand=False, fill=X, anchor=W)
-
         
         # Disable sliders
         __self__.T1Slider.config(state=DISABLED)
