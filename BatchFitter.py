@@ -1096,7 +1096,7 @@ class MultiFit():
         __self__.global_iterator.value = 0
         __self__.work_done = multiprocessing.Value('i',0)
         __self__.work_done.value = 0
-        __self__.cores = int(Constants.CPUS)-1
+        __self__.cores = Constants.CPUS
         __self__.path = path
         __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
         __self__.intercept = __self__.energies[0]
@@ -1144,7 +1144,6 @@ class MultiFit():
             print("Only one core")
             return
         else:
-            __self__.cores -= 1
             bite_size = 0
             while bite_size < 400:
                 bite_size = int(__self__.counts.shape[0]/__self__.cores)

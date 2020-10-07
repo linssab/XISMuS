@@ -6,6 +6,7 @@
 #################################################################
 
 import logging
+from psutil import cpu_count
 
 VERSION = "1.3.0"
 VERSION_MOS = "1.3.0"
@@ -40,7 +41,7 @@ MULTICORE = True
 PLOTMODE = "Logarithmic"
 RAM_LIMIT = None
 WELCOME = False
-CPUS = 12
+CPUS = cpu_count(logical=False)
 
 def list_all():
     return {"version":VERSION,

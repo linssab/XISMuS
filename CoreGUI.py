@@ -5596,6 +5596,7 @@ class PeriodicTable:
 
             else:
                 results = []
+                partialtimer = time.time()
                 for element in Constants.FIND_ELEMENT_LIST:
                     if element == "custom":
                         lines = [__self__.cvar1.get(),__self__.cvar2.get()]
@@ -5608,6 +5609,22 @@ class PeriodicTable:
                         results.append((elmap, ROI, element))
                 sort_results(results,Constants.FIND_ELEMENT_LIST)
                 digest_results(Constants.MY_DATACUBE,results,Constants.FIND_ELEMENT_LIST)
+                logger.info("Finished iteration process for element(s) {0}".format(
+                    Constants.FIND_ELEMENT_LIST))
+
+                timestamp = time.time() - partialtimer
+                logger.info("Execution took %s seconds" % (timestamp))
+                timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+                timestamps.write("\n{5} - {7}\nbgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n".format(
+                    Constants.FIND_ELEMENT_LIST,
+                    Constants.MY_DATACUBE.config["bgstrip"],
+                    Constants.MY_DATACUBE.config["enhance"],
+                    Constants.MY_DATACUBE.config["peakmethod"],
+                    timestamp,
+                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+                    len(Constants.FIND_ELEMENT_LIST),
+                    Constants.MY_DATACUBE.name))
+                logger.info("Finished map acquisition!")
 
             # reactivate widgets
             wipe_list()
@@ -5876,8 +5893,6 @@ if __name__ == "__main__":
     import shutil
     import webbrowser
     from psutil import virtual_memory
-    from psutil import cpu_count
-    Constants.CPUS = cpu_count()
     import logging, time
     import gc
     from multiprocessing import freeze_support
