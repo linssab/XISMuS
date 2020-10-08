@@ -1548,7 +1548,7 @@ class HistogramWindow:
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.revert_and_die)
         __self__.master.resizable(False,False)
         icon = os.getcwd()+"\\images\\icons\\icon.ico"
-        __self__.maps_window.iconbitmap(icon)
+        __self__.master.iconbitmap(icon)
         __self__.parent = parent
         __self__.layer = layer_object
         __self__.img = layer_object.img

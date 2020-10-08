@@ -5599,9 +5599,16 @@ class PeriodicTable:
                     else: pass
 
             else:
+                __self__.progress = Busy(len(Constants.FIND_ELEMENT_LIST),0)
                 results = []
                 partialtimer = time.time()
+                iterator = 0
                 for element in Constants.FIND_ELEMENT_LIST:
+                    iterator += 1
+                    __self__.progress.update_text(
+                            "Grabbing element {}...".format(element))
+                    __self__.progress.updatebar(iterator)
+
                     if element == "custom":
                         lines = [__self__.cvar1.get(),__self__.cvar2.get()]
                         elmap, ROI = (grab_simple_roi_image(Constants.MY_DATACUBE,lines,\
@@ -5611,10 +5618,15 @@ class PeriodicTable:
                         lines = select_lines(element,Constants.MY_DATACUBE.config["ratio"])
                         elmap, ROI = (grab_simple_roi_image(Constants.MY_DATACUBE,lines))
                         results.append((elmap, ROI, element))
+                __self__.progress.update_text("Sorting...")
                 sort_results(results,Constants.FIND_ELEMENT_LIST)
+                __self__.progress.update_text("Digesting maps...")
                 digest_results(Constants.MY_DATACUBE,results,Constants.FIND_ELEMENT_LIST)
                 logger.info("Finished iteration process for element(s) {0}".format(
                     Constants.FIND_ELEMENT_LIST))
+                __self__.progress.destroybar()
+                del __self__.progress
+                gc.collect()
 
                 timestamp = time.time() - partialtimer
                 logger.info("Execution took %s seconds" % (timestamp))
