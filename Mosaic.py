@@ -137,12 +137,6 @@ def normalize(scale_matrix):
     #print("scale_matrix ", scale_matrix.max(), scale_matrix.min())
     #print("sum_matrix ", output.max(), output.min())
 
-    plt.imsave(os.path.join(os.getcwd(),"scale__.png"),
-                    scale_matrix, cmap="gray")
-    plt.imsave(os.path.join(os.getcwd(),"intense__.png"),
-                    intensity_scaling, cmap="gray")
-    plt.imsave(os.path.join(os.getcwd(),"combo__.png"),
-                    output, cmap="gray")
     return output
 
 def histogram_matching(max_avg, mode=None, scale=False, matchto=None):
@@ -154,10 +148,6 @@ def histogram_matching(max_avg, mode=None, scale=False, matchto=None):
                 layers_dict[layer]["dense"] =\
                 hist_match(layers_dict[layer]["dense"],matchto)
 
-                #plt.imsave(os.path.join(os.getcwd(),"match_{}.png".format(layer)),
-                #    layers_dict[layer]["dense"])
-                #print(layers_dict[layer]["dense"].shape)
-                #print("Matched",layer)
         return layers_dict
 
     # reads every layer and get the largest dataset name
@@ -195,11 +185,6 @@ def histogram_matching(max_avg, mode=None, scale=False, matchto=None):
             
             layers_dict[layer]["dense"] =\
             hist_match(layers_dict[layer]["dense"],layers_dict[ref]["dense"])
-
-            #plt.imsave(os.path.join(os.getcwd(),"match_{}.png".format(layer)),
-            #    layers_dict[layer]["dense"])
-            #print(layers_dict[layer]["dense"].shape)
-            #print("Matched",layer)
 
     ###############################
 
@@ -709,10 +694,6 @@ class Mosaic_API:
         __self__.layer[layer].mask = mask
         layers_dict = convert_layers_to_dict(__self__)
         
-        #plt.imsave(os.path.join(os.getcwd(),"mask_{}.png".format(layer)),
-        #            layers_dict[layer]["mask"],cmap="gray")
-
-
         __self__.build_image(bound=True, limit=[limits_x,limits_y])
 
     def add_layer(__self__):
