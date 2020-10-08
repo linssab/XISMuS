@@ -1039,6 +1039,12 @@ class SingleFit():
         gc.collect()
 
     def locate_peaks(__self__,add_list=None,path="./"):
+        """ Locate peaks """
+
+        def find_nearest(array, value):
+            array = np.asarray(array)
+            idx = (np.abs(array - value)).argmin()
+            return array[idx]
 
         peaks, matches = findpeak(
                 __self__.counts,
@@ -1061,7 +1067,21 @@ class SingleFit():
                 element_b = EnergyLib.kbEnergies[el]*1000
 
                 logger.debug("Element {}, {}".format(element_a,element_b))
+                
+                #############################################
+                #NOTE: uses the theoretical energies to fit #
+                #############################################
+                idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
+                idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
+                el = [[el, idx_a[0][0], idx_b[0][0]]]
+                print(el)
+                #############################################
 
+                #####################################################################
+                #NOTE: uses setROI function. This returns the index of the nearest  #
+                # peak to the theoretical value                                     #
+                #####################################################################
+                """
                 elka_peak = setROI(
                         element_a,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
@@ -1074,6 +1094,8 @@ class SingleFit():
 
                 el = [[el,int((elka_peak[0]+elka_peak[1])/2),
                         int((elkb_peak[0]+elkb_peak[1])/2)]]
+                """
+                #####################################################################
 
                 peaks, matches = add_elements(peaks,matches,el)
                 #except: logger.warning("Could not add element {} to chunk".format(el))
@@ -1196,6 +1218,11 @@ class MultiFit():
     
     def locate_peaks(__self__,add_list=None,path="./"):
 
+        def find_nearest(array, value):
+            array = np.asarray(array)
+            idx = (np.abs(array - value)).argmin()
+            return array[idx]
+
         ######################################################################
         # The global continuum of the filtered spectra is parsed to findpeak #
         # function. It uses this background as a criteria to select peaks    #
@@ -1224,9 +1251,22 @@ class MultiFit():
             
                 element_a = EnergyLib.Energies[el]*1000
                 element_b = EnergyLib.kbEnergies[el]*1000
+                
+                #############################################
+                #NOTE: uses the theoretical energies to fit #
+                #############################################
+                idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
+                idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
+                el = [[el, idx_a[0][0], idx_b[0][0]]]
+                print(el,"Theoretical",element_a,"Matched",__self__.energies[idx_a],
+                        "Theoretical",element_b,"Matched",__self__.energies[idx_b])
+                #############################################
 
-                logger.debug("Element {}, {}".format(element_a,element_b))
-
+                #####################################################################
+                #NOTE: uses setROI function. This returns the index of the nearest  #
+                # peak to the theoretical value                                     #
+                #####################################################################
+                """
                 elka_peak = setROI(
                         element_a,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
@@ -1239,6 +1279,8 @@ class MultiFit():
 
                 el = [[el,int((elka_peak[0]+elka_peak[1])/2),
                         int((elkb_peak[0]+elkb_peak[1])/2)]]
+                """
+                #####################################################################
 
                 try: peaks, matches = add_elements(peaks,matches,el)
                 except: logger.warning("Could not add element {} to chunk".format(el))
@@ -1503,12 +1545,17 @@ def find_and_fit(
     return 0
 
 def add_elements(peaks,matches,element_list):
-    """ element: 2D list with element Z and peak position """
+    """ element_list: 2D list with element Z and peak position """
 
-    print("INFO:\nAdding element...")
+    print("INFO:\nAdding element {}...".format(element_list[0][0]))
+
+
     iterator = 0
     for element in element_list:
         if element[0] not in matches:
+            print("Trying to insert on peaks array")
+            print(element[1])
+            print(element[2])
             peaks = np.insert(peaks,-1,element[1])
             peaks = np.insert(peaks,-1,element[2])
             matches[element[0]] = [
@@ -1520,7 +1567,6 @@ def add_elements(peaks,matches,element_list):
         matches["Unmatched"] = un_
 
     peaks, matches = recheck_peaks(peaks,matches)
-
     return peaks, matches
 
 def recheck_peaks(peaks,matches):
