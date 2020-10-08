@@ -1257,8 +1257,8 @@ class MultiFit():
                 idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
                 idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
                 el = [[el, idx_a[0][0], idx_b[0][0]]]
-                logger.info("{} alpha, Theoretical: {}, Matched: {}".format(el,element_a,__self__.energies[idx_a]
-                logger.info("{} beta, Theoretical: {}, Matched: {}".format(el,element_b,__self__.energies[idx_b]
+                logger.info("{} alpha, Theoretical: {}, Matched: {}".format(el,element_a,__self__.energies[idx_a]))
+                logger.info("{} beta, Theoretical: {}, Matched: {}".format(el,element_b,__self__.energies[idx_b]))
                 #############################################
 
                 #####################################################################
