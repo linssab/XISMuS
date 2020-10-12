@@ -5,14 +5,28 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-def startup():
+if __name__.endswith('__main__'):         
+    import sys
+    try: mode = sys.argv[1]
+    except: 
+        mode = "-help"
+
+    #############
+    # HELP MODE #    
+    #############
+    if mode == "-help":
+        print("\npython .\\ExampleScript.py [mode] [cube name] [agr1] [arg2] [arg3]")
+        print("\nIn \"-multiply\" mode arg1, arg2 and arg3 are element1 element2 and color mode. If element1 == element2, the method will be applied in maps a and b of the element.\n")
+        sys.exit(0)
+    #############
+
     print("Starting up module...")
     print("Importing libraries...",end=" ")
     import SpecRead
     import SpecMath
     import ImgMath
     import Constants
-    import os, sys, copy
+    import os, copy
     import pickle
     import matplotlib.pyplot as plt
     import numpy as np
@@ -22,23 +36,6 @@ def startup():
     SpecRead.conditional_setup()
     print("Done.")
 
-if __name__.endswith('__main__'):         
-    
-    try: mode = sys.argv[1]
-    except: 
-        mode = "-help"
-
-    #############
-    # HELP MODE #    
-    #############
-    if mode == "-help":
-        print("python .\\ExampleScript.py [mode] [cube name] [agr1] [arg2] [arg3]")
-        print("In \"-multiply\" mode arg1, arg2 and arg3 are element1 element2 and color mode. If element1 == element2, the method will be applied in maps a and b of the element.")
-        sys.exit(0)
-    #############
-
-    startup()
-   
     ###############
     # CUSTOM MODE #
     ###############
@@ -98,5 +95,3 @@ if __name__.endswith('__main__'):
         print("Image saved at: ",path_)
         sys.exit(0)
     ########################
-    
-    
