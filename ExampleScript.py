@@ -47,8 +47,16 @@ if __name__.endswith('__main__'):
     # MULTIPLY IMAGES MODE # 
     ########################
     if mode == "-multiply":
-        name = sys.argv[2]
-        el1, el2 = sys.argv[3], sys.argv[4]
+        try:
+            name = sys.argv[2]
+        except: 
+            print("No datacube input. Exiting...")
+            sys.exit(1)
+        try:
+            el1, el2 = sys.argv[3], sys.argv[4]
+        except:
+            print("No element input. Exiting...")
+            sys.exit(1)
         try: 
             Constants.COLORMAP = sys.argv[5]
         except: 
