@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: 1.1.2                         #
+#                        version: 1.3.0                         #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -23,7 +23,6 @@ __PERSONAL__ = __PERSONAL__
 __BIN__ = __BIN__
 
 def get_samples_folder(inifile):
-
     """ Returns the last set samples folder input by the user in the GUI """
 
     ini = open(inifile,"r")
@@ -35,15 +34,12 @@ Constants.SAMPLES_FOLDER = get_samples_folder(os.path.join(__BIN__,"folder.ini")
 logger.info("Samples path: {0}".format(Constants.SAMPLES_FOLDER))
 
 def getfirstfile():
-    
     """ This function is called to get the last updated value of
     Constants.FIRSTFILE_ABSPATH """
     
     return Constants.FIRSTFILE_ABSPATH
 
-
 def setup(prefix, indexing, extension):
-    
     """ Reads config.cfg file and sets up the configuration according to what is
     contained there """
 
@@ -65,7 +61,6 @@ def setup(prefix, indexing, extension):
     return np.nan
 
 def setup_from_datacube(datacube,sample_database):
-    
     """ Read Cube class object configuration and sets up the application
     configuration parameters accordingly """
 
@@ -87,7 +82,6 @@ def setup_from_datacube(datacube,sample_database):
     return np.nan 
 
 def conditional_setup(name="None",path="auto"):
-
     """ Reads Config.cfg file configuration parameters and changes Constants.DIRECTORY
     parameter to input value. """
     
@@ -112,7 +106,6 @@ def conditional_setup(name="None",path="auto"):
     return np.nan
 
 def RatioMatrixReadFile(ratiofile):
-
     """ Reads a ratio file created by any mapping module and transforms into
     a 2D-array.
 
@@ -160,7 +153,6 @@ def RatioMatrixReadFile(ratiofile):
     return RatesMatrix
 
 def getheader(mca):
-
     """ Gets PMCA spectra file (*.mca) header
     
     -----------------------------------------
@@ -182,7 +174,6 @@ def getheader(mca):
     return ObjectHeader
 
 def getcalibration():
-
     """ Extracts the calibration anchors from source 
     if configuration is set to manual, returns the anchors input by
     user via GUI. """
@@ -230,7 +221,6 @@ def getcalibration():
     return param
 
 def getdata(mca):
-    
     """ Extract the data contained in spectrum files 
 
     ------------------------------------------------ 
@@ -301,7 +291,6 @@ def getdata(mca):
     return Data
 
 def calibrate(lead=0, tail=0):
-    
     """ Returns the energy axis and gain of the calibrated axis
     The parameters are taken from config.cfg if calibration is set to manual
     or from the mca files if calibration is set to from_source """
@@ -330,7 +319,6 @@ def calibrate(lead=0, tail=0):
     return curve,GAIN,B
 
 def getgain():
-
     """ Calculates the energy axis and returns only the gain """
 
     calibration = calibrate()
@@ -342,7 +330,6 @@ def getgain():
     return GAIN/n
    
 def updatespectra(specfile,size,from_list=False):
-
     """ Returns the next spectrum file to be read
 
     ---------------------------------------------
@@ -378,7 +365,6 @@ def updatespectra(specfile,size,from_list=False):
     return newfile
 
 def getdimension():
-
     """ Gets the sample image dimension
     from colonneXrighe file
 
@@ -424,7 +410,6 @@ def getdimension():
     return x,y,user_input
 
 def dump_ratios(maps_list,element_list):
-
     """ Writes all ratio files to disk 
 
     ----------------------------------
@@ -464,10 +449,8 @@ def dump_ratios(maps_list,element_list):
     return 0
 
 def linregress(x, y, sigmay=None, full_output=False):
-
     # DISCLAIMER #
     # function extracted from PyMca5.PyMcaMath.fitting.RateLaw script
-
     """
     Linear fit to a straight line following P.R. Bevington:
     "Data Reduction and Error Analysis for the Physical Sciences"
