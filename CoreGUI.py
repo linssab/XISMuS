@@ -2054,10 +2054,17 @@ class ImageAnalyzer:
 
         """ Correlation region must now be limited according to the transformed area
         (any applied filter) and to selected area made with set ROI tool (Annotator class) """
+        dim = 2*__self__.newimage1.shape[0]
+        bar = Busy(dim,0)
+        bar.update_text("Thinking...")
+        
+        i = 0 
         for x in range(__self__.newimage1.shape[0]):
             for y in range(__self__.newimage1.shape[1]):
-                if __self__.newimage1[x,y] <= 1: Map1[x,y] = 0
-                if __self__.newimage2[x,y] <= 1: Map2[x,y] = 0
+                if __self__.newimage1[x,y] <= 0: Map1[x,y] = 0
+                if __self__.newimage2[x,y] <= 0: Map2[x,y] = 0
+            bar.updatebar(i)
+            i = i+1
         
         if __self__.annotate.config("relief")[-1] == "sunken":
             x = [__self__.annotator.x0, __self__.annotator.x1]
@@ -2067,12 +2074,16 @@ class ImageAnalyzer:
             Map1 = Map1[y[0]:y[1],x[0]:x[1]]
             Map2 = Map2[y[0]:y[1],x[0]:x[1]]
 
-        corr = correlate(Map1,Map2)
+        corr = correlate(Map1,Map2,bar=bar)
         if not corr: 
             messagebox.showerror("Error","Cannot correlate an empty image!")
+            bar.destroybar()
             return
+        bar.update_text("Loading plot...")
+        bar.updatebar(dim/2)
         corr_plot = PlotWin(__self__.master)
         corr_plot.draw_correlation(corr,labels)
+        bar.destroybar()
 
     def export_clicked(__self__):
         f = filedialog.asksaveasfile(mode='w', 
