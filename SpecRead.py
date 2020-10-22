@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: 1.3.0                         #
+#                        version: 1.3.1 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -184,7 +184,14 @@ def getcalibration():
         param = []
         try: mca_file = open(getfirstfile(),'r')
         except:
-            return Constants.MY_DATACUBE.calibration
+            try: 
+                calib = Constants.MY_DATACUBE.calibration
+            except:
+                pop_error("Calibration Error",
+                    "Could not fetch calibration from source! Retry with manual calibration")
+                raise ValueError("Couldn't fetch calibration from source!")
+            return
+
         line = mca_file.readline()
         while line != "":
             while "<<CALIBRATION>>" not in line:
@@ -290,7 +297,7 @@ def getdata(mca):
         Data = np.asarray(ObjectData)
     return Data
 
-def calibrate(lead=0, tail=0):
+def calibrate(lead=0, tail=0, specsize=None):
     """ Returns the energy axis and gain of the calibrated axis
     The parameters are taken from config.cfg if calibration is set to manual
     or from the mca files if calibration is set to from_source """
@@ -311,7 +318,10 @@ def calibrate(lead=0, tail=0):
     logger.info("Correlation coefficient R = %f!" % R)
     try: n = len(getdata(getfirstfile()))-lead-tail
     except:
-        n = Constants.MY_DATACUBE.matrix.shape[2]
+        try:
+            n = Constants.MY_DATACUBE.matrix.shape[2]
+        except:
+            n = specsize
     curve = []
     for i in range(n):
         curve.append((GAIN*i)+B)

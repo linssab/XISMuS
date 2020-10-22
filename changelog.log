@@ -1,19 +1,5 @@
-New in Version v1.3.0
+New in Version v1.3.1
 
-- Performance improvements
-- Fixed Fano and Noise calculation when compiling a datacube
-- Fixed issue when replacing element maps through sum/subtraction
-
-New in Image Analyzer
-
-- Scaling method available for indiviual images
-(Only for new version datacubes)
-
-New in Mosaic
-
-- Scaling matrix is now applied directly on images
-- Stability improvements
-- Included a new scaling method
-
-- New manual histogram manipulation tool
-- Mosaics are now saved in two files. Older versions are compatible
+- Added support to "*.h5" files
+- Image Analyzer now loads the densemap if no elemental maps are available
+- Bug fixes

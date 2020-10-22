@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.3.0 - Oct - 2020            #
+#                        version: 1.3.1 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -15,6 +15,7 @@ logger = logging.getLogger("logfile")
 logger.debug("Importing module SpecMath.py...")
 import os, time
 import sys
+import gc
 import numpy as np
 import pickle
 import random
@@ -80,18 +81,34 @@ class datacube:
             __self__.path = SAMPLE_PATH
         logger.debug("Initializing cube file")
         
-        try: specsize = getdata(getfirstfile()) 
-        except: specsize = 0
         __self__.datatypes = np.array(["{0}".format(
             dtypes[type]) for type in range(len(dtypes))])
-        if mode != "merge":
+        try: specsize = getdata(getfirstfile())
+        except:
+            if "h5" in __self__.datatypes:
+                specsize = Constants.MY_DATACUBE.shape[2]
+                __self__.path = ""
+            else:
+                specsize = 0
+
+        if mode != "merge" and "mca" in __self__.datatypes:
             __self__.dimension = getdimension()
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
-            __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],\
+            __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],
                 specsize.shape[0]],dtype="int32",order='C')
             __self__.config = configuration
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
+
+        elif "h5" in __self__.datatypes:
+            __self__.matrix = Constants.MY_DATACUBE
+            __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
+            __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+            __self__.config = configuration
+            __self__.calibration = getcalibration()
+            __self__.mps = np.zeros(specsize,dtype="int32")
+            gc.collect()
+
         __self__.ROI = {}
         __self__.hist = {}
         __self__.max_counts = {}
@@ -211,7 +228,8 @@ class datacube:
             progressbar.updatebar(0)
         else: 
             bgstrip = __self__.config['bgstrip']
-            progressbar = __self__.progressbar
+            try: progressbar = __self__.progressbar
+            except: progressbar = progressbar
         counter = 0
         
         ##########################
@@ -333,127 +351,147 @@ class datacube:
         This method saves all derived spectra, writes summation mca to disk and calculates
         the density map. """
 
-        global iterator
-        iterator = 0
-
-        logger.debug("Started mca compilation")
-        timer = time.time()
-        __self__.progressbar = Busy(__self__.img_size,0)
-        x,y,scan = 0,0,(0,0)
-        if not isinstance(Constants.FILE_POOL,tuple):
-            build_pool(__self__.img_size)
-        else: pass
+        if "h5" in __self__.datatypes:
+            __self__.progressbar = Busy(__self__.img_size,0)
+            pass
         
-        chunks, bite, leftovers = get_chunks(__self__.dimension)
-        if Constants.CPUS > 1 and bite > 4:
-            running_chunks = []
-            for chunk in range(chunks):
-                
-                ############################
-                # matrix iteration indexes #
-                ############################
-
-                start = (chunk*bite)
-                end = start+bite
-
-                ############################
-
-                ################
-                # pool indexes #
-                ################
-
-                a = (bite*__self__.dimension[1])*chunk
-                b = a+(bite*__self__.dimension[1])
-
-                ################
-
-                pool_chunk = Constants.FILE_POOL[a:b]
-
-                t = threading.Thread(target=read_pool, 
-                        args=(start,
-                            end,
-                            pool_chunk,
-                            __self__.dimension,
-                            __self__.matrix,))
-                running_chunks.append(t)
-                logger.info("Polling chunk {}. Leftovers: {}".format(chunk,leftovers))
-
-            if leftovers > 0:
-
-                start = (__self__.dimension[0]-leftovers)
-                end = __self__.dimension[0]
-                a = (__self__.img_size - (leftovers*__self__.dimension[1]))
-                pool_chunk = Constants.FILE_POOL[a:]
-                t = threading.Thread(target=read_pool, 
-                        args=(start,
-                            end,
-                            pool_chunk,
-                            __self__.dimension,
-                            __self__.matrix,))
-                running_chunks.append(t)
-                logger.info("Polling Leftovers")
-
-            for thread in running_chunks:
-                thread.start()
-
-            __self__.periodic_check()
-
-            for thread in running_chunks:
-                thread.join()
-
         else:
-            for spec in Constants.FILE_POOL:
-                try: specdata = getdata(spec)
-                except: 
-                    __self__.progressbar.destroybar()
-                    return 1, spec
-                if isinstance(specdata,np.ndarray) == False: 
-                    __self__.progressbar.interrupt(specdata,5)
-                    __self__.progressbar.destroybar()
-                    return 1,specdata
-                __self__.matrix[x][y] = specdata
-                scan = refresh_position(scan[0],scan[1],__self__.dimension)
-                x,y = scan[0],scan[1]
-                __self__.progressbar.updatebar(iterator)
-                iterator += 1
-        logger.info("Packed spectra in {} seconds".format(time.time()-timer))
+
+            ######################
+            # PACK ALL MCA FILES #
+            ######################
+            
+            global iterator
+            iterator = 0
+
+            logger.debug("Started mca compilation")
+            timer = time.time()
+            __self__.progressbar = Busy(__self__.img_size,0)
+            x,y,scan = 0,0,(0,0)
+            if not isinstance(Constants.FILE_POOL,tuple):
+                build_pool(__self__.img_size)
+            else: pass
+            
+            chunks, bite, leftovers = get_chunks(__self__.dimension)
+            if Constants.CPUS > 1 and bite > 4:
+                running_chunks = []
+                for chunk in range(chunks):
+                    
+                    ############################
+                    # matrix iteration indexes #
+                    ############################
+
+                    start = (chunk*bite)
+                    end = start+bite
+
+                    ############################
+
+                    ################
+                    # pool indexes #
+                    ################
+
+                    a = (bite*__self__.dimension[1])*chunk
+                    b = a+(bite*__self__.dimension[1])
+
+                    ################
+
+                    pool_chunk = Constants.FILE_POOL[a:b]
+
+                    t = threading.Thread(target=read_pool, 
+                            args=(start,
+                                end,
+                                pool_chunk,
+                                __self__.dimension,
+                                __self__.matrix,))
+                    running_chunks.append(t)
+                    logger.info("Polling chunk {}. Leftovers: {}".format(chunk,leftovers))
+
+                if leftovers > 0:
+
+                    start = (__self__.dimension[0]-leftovers)
+                    end = __self__.dimension[0]
+                    a = (__self__.img_size - (leftovers*__self__.dimension[1]))
+                    pool_chunk = Constants.FILE_POOL[a:]
+                    t = threading.Thread(target=read_pool, 
+                            args=(start,
+                                end,
+                                pool_chunk,
+                                __self__.dimension,
+                                __self__.matrix,))
+                    running_chunks.append(t)
+                    logger.info("Polling Leftovers")
+
+                for thread in running_chunks:
+                    thread.start()
+
+                __self__.periodic_check()
+
+                for thread in running_chunks:
+                    thread.join()
+
+            else:
+                for spec in Constants.FILE_POOL:
+                    try: specdata = getdata(spec)
+                    except: 
+                        __self__.progressbar.destroybar()
+                        return 1, spec
+                    if isinstance(specdata,np.ndarray) == False: 
+                        __self__.progressbar.interrupt(specdata,5)
+                        __self__.progressbar.destroybar()
+                        return 1,specdata
+                    __self__.matrix[x][y] = specdata
+                    scan = refresh_position(scan[0],scan[1],__self__.dimension)
+                    x,y = scan[0],scan[1]
+                    __self__.progressbar.updatebar(iterator)
+                    iterator += 1
+            logger.info("Packed spectra in {} seconds".format(time.time()-timer))
+            ######################
 
 
         logger.debug("Calculating MPS...")
-        __self__.progressbar.update_text("Calculating MPS...")
+        __self__.progressbar.progress["maximum"] = 6
+        __self__.progressbar.update_text("1/6 Calculating MPS...")
+        __self__.progressbar.updatebar(1)
         mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
         datacube.MPS(__self__,mps)
         __self__.mps = mps
 
         logger.debug("Calculating summation spectrum...")
-        __self__.progressbar.update_text("Calculating sum spec...")
+        __self__.progressbar.update_text("2/6 Calculating sum spec...")
+        __self__.progressbar.updatebar(2)
         datacube.stacksum(__self__)
         #datacube.cut_zeros(__self__)
-        __self__.energyaxis, __self__.gain, __self__.zero = calibrate()
+        __self__.energyaxis, __self__.gain, __self__.zero = calibrate(
+                specsize=__self__.matrix.shape[2])
         __self__.config["gain"] = __self__.gain
         
         logger.debug("Stripping background...")
-        __self__.progressbar.update_text("Stripping background...")
+        __self__.progressbar.update_text("3/6 Stripping background...")
+        __self__.progressbar.updatebar(3)
         datacube.strip_background(__self__)
+        __self__.progressbar.progress["maximum"] = 6
         
         logger.debug("Calculating sum map...")
-        __self__.progressbar.update_text("Calculating sum map...")
+        __self__.progressbar.update_text("4/6 Calculating sum map...")
+        __self__.progressbar.updatebar(4)
         datacube.create_densemap(__self__)
         
         logger.debug("Writing summation mca and ANSII files...")
         datacube.write_sum(__self__)
 
-        __self__.progressbar.update_text("Finding Noise and Fano...")
+        __self__.progressbar.update_text("5/6 Finding Noise and Fano...")
+        __self__.progressbar.updatebar(5)
         datacube.fit_fano_and_noise(__self__)
 
         logger.debug("Saving cube file to disk...")
-        __self__.progressbar.update_text("Writing to disk...")
+        __self__.progressbar.update_text("6/6 Writing to disk...")
+        __self__.progressbar.updatebar(6)
         __self__.progressbar.destroybar()
         del __self__.progressbar 
         datacube.save_cube(__self__)
         logger.debug("Finished packing.")
         return 0,None
-
+    
     def periodic_check(__self__):
         __self__.check()
 
@@ -598,6 +636,43 @@ def FN_reset():
 def FN_set(F, N):
     Constants.FANO = F
     Constants.NOISE = N
+
+def converth5():
+    cube = datacube(["h5"],Constants.CONFIG)
+    progressbar = Busy(5,0)
+
+    logger.debug("Calculating MPS...")
+    progressbar.update_text("1/5 Calculating MPS...")
+    progressbar.updatebar(1)
+    mps = np.zeros([cube.matrix.shape[2]],dtype="int32")
+    cube.MPS(mps)
+    cube.mps = mps
+
+    logger.debug("Calculating summation spectrum...")
+    progressbar.update_text("2/5 Calculating sum spec...")
+    progressbar.updatebar(2)
+    cube.stacksum()
+    cube.energyaxis, cube.gain, cube.zero = calibrate(specsize=cube.matrix.shape[2])
+    cube.config["gain"] = cube.gain
+
+    logger.debug("Stripping background...")
+    progressbar.update_text("3/5 Stripping background...")
+    progressbar.updatebar(3)
+    progressbar.progress["maximum"] = cube.img_size
+    cube.strip_background(progressbar=progressbar)
+
+    logger.debug("Calculating sum map...")
+    progressbar.update_text("4/5 Calculating sum map...")
+    progressbar.progress["maximum"] = 5
+    progressbar.updatebar(4)
+    cube.create_densemap()
+
+    progressbar.update_text("5/5 Finding Noise and Fano...")
+    progressbar.updatebar(5)
+    cube.fit_fano_and_noise()
+    progressbar.destroybar()
+    del progressbar
+    return cube
 
 def build_pool(size):
     Constants.FILE_POOL = []

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.3.0 - Oct - 2020            #
+#                        version: 1.3.1 - Oct - 2020            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -271,33 +271,55 @@ def call_compilecube():
             root.mcacount[Constants.CONFIG["directory"]]))
         logger.warning("Starting cube {} compilation!".format(Constants.CONFIG["directory"]))
         
-        ############################################################
-        # Fills the file pool in case spectra were loaded manually #
-        ############################################################
+        ##########################################################################
+        # IF LOADING AN H5 FILE, USER CAN COMPILE A DATACUBE OR USE THE H5 AS IS #
+        ##########################################################################
+        if root.mca_extension[Constants.CONFIG["directory"]] == ".h5":
+            m = messagebox.askquestion("Attention!",
+                    "You can proceed without compiling the H5 file into a datacube, however, it won't be saved to the database nor will be recognized by Mosaic. It is recommended that you COMPILE it into a datacube. To save disk space, you can compress the H5 file later. DO YOU WANT TO CREATE A DATACUBE FILE?")
+            if m == "yes":
+                specbatch = Cube(["h5"],Constants.CONFIG)
+                fail = specbatch.compile_cube()
+                root.ButtonLoad.config(state=NORMAL)
+                root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+            elif m == "no":
+                Constants.MY_DATACUBE = converth5() 
+                root.samples[Constants.CONFIG["directory"]] = "temp .h5"
+                root.ButtonLoad.config(state=NORMAL)
+                root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+                root.temporaryh5 = Constants.CONFIG["directory"]
 
-        Constants.FILE_POOL = root.samples[Constants.CONFIG["directory"]]
-
-        ############################################################
-
-        specbatch = Cube(['xrf'],Constants.CONFIG)
-        fail = specbatch.compile_cube()
-        root.ButtonLoad.config(state=NORMAL)
-        root.MenuBar.entryconfig("Toolbox", state=NORMAL)
-
-        ####################################################
-        # changes the prefix if sample was loaded manually #
-        ####################################################
-
-        if isinstance(Constants.FILE_POOL,tuple):
-            root.samples[Constants.CONFIG["directory"]] = \
-            root.samples[Constants.CONFIG["directory"]][0].split("/")[-1].split(".")[0]
+        ##########################################################################
         
-        ####################################################
-        
-        if fail[0] == True:
-            messagebox.showerror("Error!",
-                    "Could not read {} file! Aborting compilation".format(fail[1]))
-            shutil.rmtree(SpecRead.output_path) 
+        else:
+
+            ############################################################
+            # Fills the file pool in case spectra were loaded manually #
+            ############################################################
+
+            Constants.FILE_POOL = root.samples[Constants.CONFIG["directory"]]
+
+            ############################################################
+
+            specbatch = Cube(["mca"],Constants.CONFIG)
+            fail = specbatch.compile_cube()
+            root.ButtonLoad.config(state=NORMAL)
+            root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+
+            ####################################################
+            # changes the prefix if sample was loaded manually #
+            ####################################################
+
+            if isinstance(Constants.FILE_POOL,tuple):
+                root.samples[Constants.CONFIG["directory"]] = \
+                root.samples[Constants.CONFIG["directory"]][0].split("/")[-1].split(".")[0]
+            
+            ####################################################
+            
+            if fail[0] == True:
+                messagebox.showerror("Error!",
+                        "Could not read {} file! Aborting compilation".format(fail[1]))
+                shutil.rmtree(SpecRead.output_path) 
 
 def prompt_folder():
     """ Opens dialogue to change the samples folder """
@@ -1091,7 +1113,7 @@ class PeakClipper:
     """Creates a dialog to set-up SNIPBG parameters"""
     
     def __init__(__self__,parent,mode=None):
-        __self__.master = Toplevel(parent)
+        __self__.master = Toplevel(parent.master)
         __self__.mode = mode
         __self__.master.tagged = True
         __self__.parent = parent
@@ -1224,7 +1246,7 @@ class PeakClipper:
         __self__.button_cancel.grid(row=1,column=0,columnspan=2)
 
         __self__.master.update()
-        place_center(__self__.parent,__self__.master)
+        place_center(__self__.parent.master,__self__.master)
         __self__.master.focus_set()
         icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
         __self__.master.iconbitmap(icon)
@@ -1291,24 +1313,38 @@ class PeakClipper:
     def random_sample(__self__):
         folder = Constants.CONFIG.get("directory")
         spec_no = root.mcacount[folder]
+
+        ################################################
+        # IF PARENT HAS A MATRIX, IT LOADED AN H5 FILE #
+        ################################################
+        if __self__.parent.matrix.shape[2] > 1:
+            __self__.sample = random.randint(1,spec_no-1)
+            __self__.spectrum = __self__.parent.matrix.reshape(-1,__self__.parent.matrix.shape[-1])[__self__.sample]
+        ################################################
         
-        """ When loading a list of files - when the sample is manually loaded by the user,
-        not detected automatically - root.samples carries the list of all mca's path """
-        if folder == "Training Data 1" or folder == "Training Data 2":
-            __self__.sample = random.randint(1,spec_no-1)
-            mca = os.path.join(SpecRead.__PERSONAL__,"Example Data",folder,
-                    root.samples[folder]+"{0}.{1}".format(__self__.sample,
-                        root.mca_extension[folder]))
-        elif isinstance(root.samples[folder],tuple):
-            __self__.sample = random.randint(1,len(root.samples[folder]))
-            mca = root.samples[folder][__self__.sample]
+        ####################################################################
+        # ELSE, IT IS READING MCA EITHER FROM USER LIST OR DETECTED FOLDER #
+        ####################################################################
         else:
-            __self__.sample = random.randint(1,spec_no-1)
-            mca = os.path.join(Constants.SAMPLE_PATH,
-                    root.samples[folder]+"{0}.{1}".format(__self__.sample,
-                        root.mca_extension[folder]))
-            
-        __self__.spectrum = SpecRead.getdata(mca)
+            """ When loading a list of files - when the sample is manually loaded by the user,
+            not detected automatically - root.samples carries the list of all mca's path """
+            if folder == "Training Data 1" or folder == "Training Data 2":
+                __self__.sample = random.randint(1,spec_no-1)
+                mca = os.path.join(SpecRead.__PERSONAL__,"Example Data",folder,
+                        root.samples[folder]+"{0}.{1}".format(__self__.sample,
+                            root.mca_extension[folder]))
+            elif isinstance(root.samples[folder],tuple):
+                __self__.sample = random.randint(1,len(root.samples[folder]))
+                mca = root.samples[folder][__self__.sample]
+            else:
+                __self__.sample = random.randint(1,spec_no-1)
+                mca = os.path.join(Constants.SAMPLE_PATH,
+                        root.samples[folder]+"{0}.{1}".format(__self__.sample,
+                            root.mca_extension[folder]))
+                
+            __self__.spectrum = SpecRead.getdata(mca)
+        ####################################################################
+
         if isinstance(__self__.spectrum,np.ndarray):
             __self__.refresh_plot() 
         else:
@@ -1459,15 +1495,31 @@ class Annotator:
         unpacker1 = __self__.element1.split("_")
         unpacker2 = __self__.element2.split("_")
         
-        # unpacks raw image, notice no normalization is done to match LEVELS levels of gray
-        image1 = __self__.parent.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
-        image2 = __self__.parent.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
-        
         x_ = [__self__.x0,__self__.x1]
         y_ = [__self__.y0,__self__.y1]
         x_.sort()
         y_.sort()
+        
+        ###############################################################################
+        # unpacks raw image, notice no normalization is done to match LEVELS          # 
+        # levels of gray. If NO MAPS are available at the cube, the sum image appears #
+        ###############################################################################
 
+        if unpacker1 != [""] or unpacker2 != [""]:
+            image1 = __self__.parent.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
+            image2 = __self__.parent.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
+         
+        ################################################################
+        # IF NO MAPS ARE AVAILABLE, ONLY ITERATES TO SHOW THE ROI PLOT #
+        ################################################################
+        else:
+            for x in range(y_[0],y_[1]):
+                for y in range(x_[0],x_[1]):
+                    __self__.parent.sum_spectrum += __self__.parent.DATACUBE.matrix[x][y]
+                    __self__.spec_no += 1
+            return
+        ################################################################
+        
         for x in range(y_[0],y_[1]):
            for y in range(x_[0],x_[1]):
                __self__.area1_sum += image1[x][y]
@@ -1515,7 +1567,6 @@ class ImageAnalyzer:
         if hasattr(__self__.DATACUBE,"version"):
             __self__.cube_version = "Cube version: "+__self__.DATACUBE.version
             if hasattr(__self__.DATACUBE,"scalable"):
-                print(__self__.DATACUBE.scalable)
                 __self__.scale.config(state=NORMAL)
                 __self__.scaleLabel.config(state=NORMAL)
             else:
@@ -1781,10 +1832,10 @@ class ImageAnalyzer:
                 try: __self__.Map2Combo.current(0)
                 except: pass
             if __self__.ElementalMap1.max() == 0:
-                __self__.ElementalMap1 = IMG_NODATA
+                __self__.ElementalMap1 = Constants.MY_DATACUBE.densitymap
                 __self__.draw_image1(0)
             if __self__.ElementalMap2.max() == 0:
-                __self__.ElementalMap2 = IMG_NODATA
+                __self__.ElementalMap2 =  Constants.MY_DATACUBE.densitymap
                 __self__.draw_image2(0)
             __self__.update_sample1(None)
             __self__.update_sample2(None)
@@ -1796,7 +1847,7 @@ class ImageAnalyzer:
         if __self__.nomaps==True:
             __self__.add_btn.config(state=DISABLED)
             __self__.subtract_btn.config(state=DISABLED)
-            __self__.annotate.config(state=DISABLED)
+            #__self__.annotate.config(state=DISABLED)
             __self__.correlate.config(state=DISABLED)
             __self__.export.config(state=DISABLED)
         else:
@@ -2162,11 +2213,13 @@ class PlotWin:
 
         """clears and destroy plot"""
 
-        __self__.plot.clear()
-        __self__.figure.clf()
-        del __self__.plot
-        __self__.master.destroy()
-        del __self__
+        try: 
+            __self__.plot.clear()
+            __self__.figure.clf()
+            del __self__.plot
+            __self__.master.destroy()
+            del __self__
+        except: pass
 
     def draw_calibration(__self__):
         __self__.master.tagged = True
@@ -3307,6 +3360,7 @@ class MainGUI:
         __self__.mcacount = __self__.SampleLoader.mcacount
         __self__.mca_indexing = __self__.SampleLoader.mca_indexing
         __self__.mca_extension = __self__.SampleLoader.mca_extension
+        __self__.temporaryh5 = "None"
 
         #############################################
 
@@ -3372,6 +3426,7 @@ class MainGUI:
             y = __self__.master.winfo_pointery()
             abs_coord_x = __self__.master.winfo_pointerx() - __self__.master.winfo_vrootx()
             abs_coord_y = __self__.master.winfo_pointery() - __self__.master.winfo_vrooty()
+            
             try: __self__.plot_canvas_popup.tk_popup(
                     int(abs_coord_x), int(abs_coord_y), entry="")
             finally: __self__.plot_canvas_popup.grab_release()
@@ -3648,21 +3703,21 @@ class MainGUI:
         
         if d=="yes":
             try:
-                del __self__.samples[sample]
                 del Constants.USER_DATABASE[sample]["prefix"]
-                del __self__.samples_path[sample]
                 del Constants.USER_DATABASE[sample]["path"]
-                del __self__.mcacount[sample]
                 del Constants.USER_DATABASE[sample]["mcacount"]
-                del __self__.mca_indexing[sample]
                 del Constants.USER_DATABASE[sample]["indexing"]
-                del __self__.mca_extension[sample]
                 del Constants.USER_DATABASE[sample]["extension"]
                 del Constants.USER_DATABASE[sample]
                 __self__.list_samples()
             except KeyError:
                 messagebox.showinfo("Compiled cube","This sample is not in the database. The Datacube was added from \"XISMuS\\output\" folder. If you don't want to see this sample, remove it from the output folder manually.")
                 return
+            del __self__.samples[sample]
+            del __self__.samples_path[sample]
+            del __self__.mcacount[sample]
+            del __self__.mca_indexing[sample]
+            del __self__.mca_extension[sample]
 
             try: __self__.summation.master.destroy()
             except: pass
@@ -3830,10 +3885,10 @@ class MainGUI:
             __self__.SamplesWindow_TableRight.yview_scroll(1,"units") 
 
     def sample_select(__self__,event="",override=False):
-    
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
         
+                
         if override  == False:
             # name of selected sample
             try: 
@@ -3841,8 +3896,38 @@ class MainGUI:
             except:
                 value = event
             if value == "": return
+            
+            #############################################################
+            # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
+            # GET RID OF IT                                             #
+            #############################################################
+            try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
+                if root.samples[Constants.MY_DATACUBE.name] == "temp .h5" and \
+                        value != Constants.MY_DATACUBE.name:
+                    idx = __self__.SamplesWindow_TableLeft.get(0, END).index(
+                            Constants.MY_DATACUBE.name)
+                    del root.samples[Constants.MY_DATACUBE.name]
+                    del root.samples_path[Constants.MY_DATACUBE.name]
+                    del root.mcacount[Constants.MY_DATACUBE.name]
+                    del root.mca_indexing[Constants.MY_DATACUBE.name]
+                    del root.mca_extension[Constants.MY_DATACUBE.name]
+                    root.temporaryh5 = "None"
+                    gc.collect()
+                    __self__.SamplesWindow_TableLeft.delete(idx)
+                    __self__.SamplesWindow_TableRight.config(state=NORMAL)
+                    __self__.SamplesWindow_TableRight.delete(idx)
+                    __self__.SamplesWindow_TableRight.config(state=DISABLED)
+                    __self__.SamplesWindow_TableRight.update_idletasks()
+                    temp_path = os.path.join(
+                        SpecRead.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
+                    if os.path.exists(temp_path):
+                        shutil.rmtree(temp_path)
+            except: pass
+            #############################################################
+
         else: 
             value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+            
 
             """ If cube clicked is not the one in memory, load it and configure variables """
             try: in_memory = Constants.MY_DATACUBE.name
@@ -3865,6 +3950,8 @@ class MainGUI:
 
         __self__.master.deiconify()
         __self__.master.focus_set()
+        if root.samples[value] == "temp .h5":
+            return
         for widget in __self__.master.winfo_children():
             if isinstance(widget, Toplevel): 
                 try: 
@@ -3940,6 +4027,19 @@ class MainGUI:
         idx = __self__.SamplesWindow_TableLeft.nearest(event.y)
         __self__.SamplesWindow_TableLeft.select_set(idx)
         __self__.SamplesWindow_TableLeft.activate(idx)
+
+        name = __self__.SamplesWindow_TableRight.get(idx)
+        if "temp" in name:
+            __self__.SamplesWindow.popup.entryconfig("Load", state=DISABLED)
+            __self__.SamplesWindow.popup.entryconfig("Clear all maps", state=DISABLED)
+            __self__.SamplesWindow.popup.entryconfig("Remove from database", state=DISABLED)
+            __self__.SamplesWindow.popup.entryconfig("Save density map", state=DISABLED)
+        else:
+            __self__.SamplesWindow.popup.entryconfig("Load", state=NORMAL)
+            __self__.SamplesWindow.popup.entryconfig("Clear all maps", state=NORMAL)
+            __self__.SamplesWindow.popup.entryconfig("Remove from database", state=NORMAL)
+            __self__.SamplesWindow.popup.entryconfig("Save density map", state=NORMAL)
+
         try: __self__.SamplesWindow.popup.tk_popup(event.x_root, event.y_root, entry="")
         finally: __self__.SamplesWindow.popup.grab_release()
     
@@ -4039,7 +4139,7 @@ class MainGUI:
             if Constants.MY_DATACUBE == None:
                 messagebox.showerror("No datacube!","Please load a datacube first.")
                 return
-        if os.path.exists(SpecRead.cube_path): 
+        if os.path.exists(SpecRead.cube_path) or hasattr(Constants.MY_DATACUBE,"densitymap"): 
             f = filedialog.asksaveasfile(mode='w', 
                     defaultextension=".png",
                     filetypes=[("Portable Network Graphic", "*.png")],
@@ -4082,7 +4182,77 @@ class MainGUI:
     
     def converter(__self__):
         __self__.converterGUI = Convert_File_Name(__self__.master) 
-            
+
+    def h5loader(__self__):
+        def readh5(name):
+            with h5py.File(name, "r") as f:
+                a_group_key = list(f.keys())[0]
+                data = list(f[a_group_key])
+                matrix = np.asarray(data, dtype="int32", order="C")
+                del data
+                gc.collect()
+            return matrix
+
+        h5f = filedialog.askopenfilename(parent=__self__.master,
+                title="Select h5 file",
+                filetypes=(
+                    ("H5 Files", "*.h5"),
+                    ("All files", "*.*")))
+        if h5f == "": return
+ 
+        sample_name = str(h5f).split("/")[-1].split(".")[0]
+
+        ##################################
+        # Verifies if h5 datacube exists #
+        ##################################
+        if os.path.exists(os.path.join(
+            SpecRead.__PERSONAL__,"output",sample_name,sample_name+".cube")):
+            messagebox.showinfo("Cube exists","Datacube for {} already exist!".format(
+                sample_name))
+            return
+        else: 
+            ##############################################
+            # Verifies if h5 is loaded as a temporary h5 #
+            ##############################################
+            if sample_name == root.temporaryh5:
+                messagebox.showinfo("Info!","Sample {} is already loaded as a temporary h5 file. Select another sample and try again!".fornat(sample_name))
+                return
+            ##############################################
+        ##################################
+
+        path = str(h5f).split("/")
+        path.pop(-1)
+        conc_path = ""
+        for i in path:
+            conc_path += i+"\\"
+        conc_path = os.path.abspath(conc_path)
+        SpecRead.conditional_setup(name=sample_name,path=conc_path)
+        Constants.MY_DATACUBE = readh5(h5f)
+        img_size = Constants.MY_DATACUBE.shape[0]*Constants.MY_DATACUBE.shape[1]
+        specsize = Constants.MY_DATACUBE.shape[2]
+        __self__.mcacount[sample_name] = img_size
+        __self__.samples[sample_name] = ".h5"
+        __self__.samples_path[sample_name] = conc_path
+        __self__.mca_indexing[sample_name] = ".h5"
+        __self__.mca_extension[sample_name] = ".h5"
+        Constants.FIRSTFILE_ABSPATH = h5f
+
+        #3 ask for a sample name and dimension (modified dimension diag)
+        try:
+            __self__.config_xy = (Constants.MY_DATACUBE.shape[0],Constants.MY_DATACUBE.shape[1])
+            __self__.ManualParam = []
+        except:
+            dimension = (Constants.MY_DATACUBE.shape[0],Constants.MY_DATACUBE.shape[1])
+            __self__.master.wait_window(dimension.win)
+            if dimension.exit_code == "cancel":
+                __self__.wipe()
+                return 0
+            __self__.ManualParam = []
+
+        # calls the configuration window
+        __self__.ConfigDiag = ConfigDiag(__self__.master,matrix=Constants.MY_DATACUBE)
+        __self__.ConfigDiag.build_widgets()
+
     def batch(__self__):
         #1 prompt for files
         file_batch = filedialog.askopenfilenames(parent=__self__.master, 
@@ -4126,7 +4296,8 @@ class MainGUI:
             __self__.ManualParam = []
                 
         # calls the configuration window
-        __self__.ConfigDiag = ConfigDiag(__self__.master)
+        __self__.ConfigDiag = ConfigDiag(__self__.master,
+                matrix=np.zeros([1,1,1],dtype="int32"))
         __self__.ConfigDiag.build_widgets()
         
     def plot_ROI(__self__):
@@ -4294,6 +4465,8 @@ class MainGUI:
                 command=prompt_folder)
         __self__.Toolbox.add_command(label="Load file selection . . .",
                 command=__self__.batch)
+        __self__.Toolbox.add_command(label="Load h5 file . . .",
+                command=__self__.h5loader)
         __self__.Toolbox.add_command(label="Convert spectra name . . .",
                 command=__self__.converter)
         __self__.Toolbox.add_separator()
@@ -4428,7 +4601,7 @@ class MainGUI:
         __self__.StatusBox.delete(0,END)
         __self__.TableMiddle.delete(0,END)
         __self__.TableLeft.delete(0,END)
-         
+        
         if Constants.MY_DATACUBE != None and not os.path.exists(Constants.SAMPLE_PATH): 
             if os.path.exists(Constants.MY_DATACUBE.path):
                 files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
@@ -4453,7 +4626,7 @@ class MainGUI:
                             Constants.MY_DATACUBE.img_size))
                 __self__.no_sample = False
 
-        if os.path.exists(Constants.SAMPLE_PATH):
+        elif os.path.exists(Constants.SAMPLE_PATH):
             if Constants.MY_DATACUBE != None:
                 if os.path.exists(Constants.MY_DATACUBE.path):
                     files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
@@ -4477,6 +4650,28 @@ class MainGUI:
                             "\nDatacube loaded with {} spectra packed\n".format(
                                 Constants.MY_DATACUBE.img_size))
                     __self__.no_sample = False
+
+                    if "h5" in Constants.MY_DATACUBE.datatypes and \
+                            not os.path.exists(SpecRead.cube_path):
+
+                        ########################################
+                        # WRITES THE CONFIGURATION TO SUBPANEL #
+                        ########################################
+                        values_cube, values_cfg, values_keys = [],[],[]
+                        for key in Constants.MY_DATACUBE.config:
+                            values_keys.append(str(key))
+                            if key == "gain":
+                                values_cube.append(str(int(float(
+                                    Constants.MY_DATACUBE.config[key])*1000))+" eV")
+                            elif key == "bg_settings" and \
+                                    Constants.MY_DATACUBE.config[key] == []:
+                                values_cube.append("Default values")
+                            else:
+                                values_cube.append(str(Constants.MY_DATACUBE.config[key]))
+                        for item in range(len(values_cube)):
+                            __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
+                            __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+                        ########################################
 
             else: 
                 files = [f for f in os.listdir(Constants.SAMPLE_PATH) \
@@ -4564,6 +4759,7 @@ class MainGUI:
             __self__.ResetWindow.grab_release()
             __self__.wipe()
             if __self__.mca_extension[sample] == "---": __self__.samples.pop(sample,None)
+            elif __self__.mca_extension[sample] == ".h5": __self__.samples.pop(sample,None)
             __self__.list_samples()
             __self__.draw_map()
             __self__.ResetWindow.destroy()
@@ -4625,7 +4821,8 @@ class MainGUI:
         __self__.ManualParam = []
         try: __self__.ConfigDiag.master.destroy()
         except: pass
-        __self__.ConfigDiag = ConfigDiag(__self__.master)
+        __self__.ConfigDiag = ConfigDiag(__self__.master,
+                matrix=np.zeros([1,1,1],dtype="int32"))
         __self__.ConfigDiag.build_widgets()
         
 
@@ -4812,7 +5009,8 @@ class ReConfigDiag:
 
             root.draw_map()
 
-        Constants.MY_DATACUBE.save_cube()
+        if "mca" in Constants.MY_DATACUBE.datatypes:
+            Constants.MY_DATACUBE.save_cube()
         root.write_stat()
         __self__.kill()
 
@@ -4833,7 +5031,7 @@ class ReConfigDiag:
 
 
 class ConfigDiag:
-    def __init__(__self__, master):
+    def __init__(__self__, master, matrix=None):
         __self__.master = Toplevel(master = master)
         __self__.master.grab_set()
         __self__.master.resizable(False,False)
@@ -4845,6 +5043,8 @@ class ConfigDiag:
         __self__.Labels = Frame(__self__.master,padx=15,pady=15)
         __self__.Frame.grid(row=0, column=1)
         __self__.Labels.grid(row=0, column=0)
+        __self__.matrix = matrix
+        __self__.specsize = matrix.shape[2]
 
     def check_method_and_save(__self__,e=""):
         if __self__.CalibVar.get() == 'manual':
@@ -4875,7 +5075,35 @@ class ConfigDiag:
             __self__.master.grab_release()
             __self__.master.destroy()
         except: pass
+
+        #############################################################
+        # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
+        # GET RID OF IT                                             #
+        #############################################################
+        try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
+            if Constants.MY_DATACUBE.name == root.temporaryh5:
+                del root.samples[Constants.MY_DATACUBE.name]
+                del root.samples_path[Constants.MY_DATACUBE.name]
+                del root.mcacount[Constants.MY_DATACUBE.name]
+                del root.mca_indexing[Constants.MY_DATACUBE.name]
+                del root.mca_extension[Constants.MY_DATACUBE.name]
+                root.temporaryh5 = "None"
+                gc.collect()
+                try:
+                    __self__.SamplesWindow_TableLeft.delete(temph5_idx)
+                    __self__.SamplesWindow_TableRight.config(state=NORMAL)
+                    __self__.SamplesWindow_TableRight.delete(temph5_idx)
+                    __self__.SamplesWindow_TableRight.config(state=DISABLED)
+                    __self__.SamplesWindow_TableRight.update_idletasks()
+                except: pass
+                temp_path = os.path.join(
+                    SpecRead.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
+                if os.path.exists(temp_path):
+                    shutil.rmtree(temp_path)
+        except: pass
+
         Constants.MY_DATACUBE = None
+        gc.collect()
         if isinstance(root.samples[Constants.CONFIG["directory"]],tuple):
             root.samples.pop(Constants.CONFIG["directory"])
         load_cube()
@@ -4952,11 +5180,11 @@ class ConfigDiag:
             return
         elif __self__.BgstripVar.get() == "SNIPBG":
             __self__.master.grab_release()
-            __self__.clipper = PeakClipper(root.master,mode="SNIPBG")
+            __self__.clipper = PeakClipper(__self__,mode="SNIPBG")
             __self__.clipper.master.grab_set()
         elif __self__.BgstripVar.get() == "Polynomial":
             __self__.master.grab_release()
-            __self__.clipper = PeakClipper(root.master,mode="Polynomial")
+            __self__.clipper = PeakClipper(__self__,mode="Polynomial")
             __self__.clipper.master.grab_set()
 
     def focus_grab(__self__):
@@ -5520,6 +5748,10 @@ class PeriodicTable:
             refresh_plots()
      
     def save_and_run(__self__,mode=None):
+        try: cube_status = os.stat(SpecRead.cube_path)
+        except: 
+            messagebox.showerror("Error","No datacube found! Cannot proceed.")
+            return
         mode = Constants.MY_DATACUBE.config["peakmethod"]
         if mode == "auto_wizard": 
             __self__.master.destroy()
@@ -5915,6 +6147,7 @@ if __name__ == "__main__":
 
     # general utilities
     import numpy as np
+    import h5py
     import cv2
     import sys, os, copy, pickle, stat, random, base64
     import shutil
@@ -5986,6 +6219,7 @@ if __name__ == "__main__":
     from SpecMath import getstackplot, correlate, peakstrip
     from SpecMath import FN_reset, FN_set, FN_fit_pseudoinv, FN_fit_gaus
     from SpecMath import datacube as Cube
+    from SpecMath import converth5
     from ProgressBar import Busy, BusyManager
     from EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
