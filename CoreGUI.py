@@ -4130,30 +4130,38 @@ class MainGUI:
                     "Sample may be uncompiled. Output directory for sample {} not found.".format(value))
 
     def export_density_map(__self__,event=""):
-        try: 
-            if  e.cget("text") == "Save density map as . . .":
+        try:
+            actv = root.SamplesWindow_TableLeft.get(ACTIVE)
+            curr = Constants.MY_DATACUBE.name
+            if actv == curr:
                 pass
             else:
                 __self__.sample_select(event)
-        except: 
-            if Constants.MY_DATACUBE == None:
-                messagebox.showerror("No datacube!","Please load a datacube first.")
+        finally: 
+            try: 
+                if  e.cget("text") == "Save density map as . . .":
+                    pass
+                else:
+                    __self__.sample_select(event)
+            except: 
+                if Constants.MY_DATACUBE == None:
+                    messagebox.showerror("No datacube!","Please load a datacube first.")
+                    return
+            if os.path.exists(SpecRead.cube_path) or hasattr(Constants.MY_DATACUBE,"densitymap"): 
+                f = filedialog.asksaveasfile(mode='w', 
+                        defaultextension=".png",
+                        filetypes=[("Portable Network Graphic", "*.png")],
+                        title="Save as...")
+            else: 
                 return
-        if os.path.exists(SpecRead.cube_path) or hasattr(Constants.MY_DATACUBE,"densitymap"): 
-            f = filedialog.asksaveasfile(mode='w', 
-                    defaultextension=".png",
-                    filetypes=[("Portable Network Graphic", "*.png")],
-                    title="Save as...")
-        else: 
-            return
-        if f is None: 
-            return
-        if Constants.MY_DATACUBE.config["enhance"]:
-            __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
-        else:
-            cv2.imwrite(f.name,
-                (Constants.MY_DATACUBE.densitymap/Constants.MY_DATACUBE.densitymap.max()*255))
-        return 0
+            if f is None: 
+                return
+            if Constants.MY_DATACUBE.config["enhance"]:
+                __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
+            else:
+                cv2.imwrite(f.name,
+                    (Constants.MY_DATACUBE.densitymap/Constants.MY_DATACUBE.densitymap.max()*255))
+            return 0
 
     def wipe(__self__,e=""):
         try: 
