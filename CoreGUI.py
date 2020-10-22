@@ -282,6 +282,7 @@ def call_compilecube():
                 fail = specbatch.compile_cube()
                 root.ButtonLoad.config(state=NORMAL)
                 root.MenuBar.entryconfig("Toolbox", state=NORMAL)
+                root.temporaryh5 = "None"
             elif m == "no":
                 Constants.MY_DATACUBE = converth5() 
                 root.samples[Constants.CONFIG["directory"]] = "temp .h5"
@@ -4243,6 +4244,7 @@ class MainGUI:
         __self__.samples_path[sample_name] = conc_path
         __self__.mca_indexing[sample_name] = ".h5"
         __self__.mca_extension[sample_name] = ".h5"
+        __self__.temporaryh5 = sample_name
         Constants.FIRSTFILE_ABSPATH = h5f
 
         #3 ask for a sample name and dimension (modified dimension diag)
@@ -5089,25 +5091,55 @@ class ConfigDiag:
         # GET RID OF IT                                             #
         #############################################################
         try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
-            if Constants.MY_DATACUBE.name == root.temporaryh5:
-                del root.samples[Constants.MY_DATACUBE.name]
-                del root.samples_path[Constants.MY_DATACUBE.name]
-                del root.mcacount[Constants.MY_DATACUBE.name]
-                del root.mca_indexing[Constants.MY_DATACUBE.name]
-                del root.mca_extension[Constants.MY_DATACUBE.name]
+            if Constants.CONFIG["directory"] == root.temporaryh5:
+
+                ##################################################
+                # Update status boxes without using write_stat() #
+                ##################################################
+                root.TableMiddle.config(state=NORMAL)
+                root.TableMiddle.delete(0,END)
+                root.StatusBox.delete(0,END)
+                root.StatusBox.insert(END,
+                        "Aborted configuration of {}{}".format(
+                            Constants.CONFIG["directory"],root.mca_extension[Constants.CONFIG["directory"]]))
+                root.StatusBox.insert(END, 
+                        "Spectra count: {}".format(
+                            root.mcacount[Constants.CONFIG["directory"]]))
+                root.TableMiddle.config(state=DISABLED)
+                root.TableMiddle.update_idletasks()
+                root.StatusBox.update_idletasks()
+                ##################################################
+
+                del root.samples[Constants.CONFIG["directory"]]
+                del root.samples_path[Constants.CONFIG["directory"]]
+                del root.mcacount[Constants.CONFIG["directory"]]
+                del root.mca_indexing[Constants.CONFIG["directory"]]
+                del root.mca_extension[Constants.CONFIG["directory"]]
                 root.temporaryh5 = "None"
                 gc.collect()
                 try:
-                    __self__.SamplesWindow_TableLeft.delete(temph5_idx)
                     __self__.SamplesWindow_TableRight.config(state=NORMAL)
                     __self__.SamplesWindow_TableRight.delete(temph5_idx)
+                    __self__.SamplesWindow_TableLeft.delete(temph5_idx)
                     __self__.SamplesWindow_TableRight.config(state=DISABLED)
                     __self__.SamplesWindow_TableRight.update_idletasks()
                 except: pass
                 temp_path = os.path.join(
-                    SpecRead.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
+                    SpecRead.__PERSONAL__,"output",Constants.CONFIG["directory"])
                 if os.path.exists(temp_path):
                     shutil.rmtree(temp_path)
+                Constants.MY_DATACUBE = None
+                gc.collect()
+                load_cube()
+                root.draw_map()
+                root.toggle_(toggle="off")
+                root.SampleVar.set("Sample on memory: None")
+                try:
+                    if root.SamplesWindow.state() == "normal":
+                        root.SamplesWindow.deiconify()
+                        root.SamplesWindow_TableLeft.focus_set()
+                except: pass
+                return
         except: pass
 
         Constants.MY_DATACUBE = None
