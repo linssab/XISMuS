@@ -83,9 +83,10 @@ class datacube:
         
         __self__.datatypes = np.array(["{0}".format(
             dtypes[type]) for type in range(len(dtypes))])
+
         try: specsize = getdata(getfirstfile())
         except:
-            if "h5" in __self__.datatypes:
+            if any("h5" in x for x in __self__.datatypes):
                 specsize = Constants.MY_DATACUBE.shape[2]
                 __self__.path = ""
             else:
@@ -100,7 +101,7 @@ class datacube:
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
 
-        elif "h5" in __self__.datatypes:
+        elif any("h5" in x for x in __self__.datatypes):
             __self__.matrix = Constants.MY_DATACUBE
             __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
@@ -564,9 +565,14 @@ class datacube:
         line; a string """
 
         from SpecRead import output_path, cube_path
-        unpacked = __self__.__dict__[element+"_"+line]
-        logger.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
-        return unpacked
+        try:
+            unpacked = __self__.__dict__[element+"_"+line]
+            logger.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
+            return unpacked
+        except KeyError as exception:
+            logger.info("Failed to unpack {}{} map from {}".format(element,line,__self__.name))
+            return np.zeros([__self__.dimension[0],
+                    __self__.dimension[1]],dtype="float32")
 
     def check_packed_elements(__self__):
         """ Returns a list with all elemental distribution maps packed into the
@@ -638,7 +644,7 @@ def FN_set(F, N):
     Constants.NOISE = N
 
 def converth5():
-    cube = datacube(["h5"],Constants.CONFIG)
+    cube = datacube(["h5-temp"],Constants.CONFIG)
     progressbar = Busy(5,0)
 
     logger.debug("Calculating MPS...")

@@ -589,7 +589,8 @@ def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
             .format(datacube.config.get('bgstrip'),datacube.config.get('ratio')\
             ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
     
-    datacube.save_cube() 
+    if any("temp" in x for x in datacube.datatypes): pass
+    else: datacube.save_cube() 
     logger.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+Constants.DIRECTORY+'\\')
     logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(

@@ -286,6 +286,7 @@ def call_compilecube():
             elif m == "no":
                 Constants.MY_DATACUBE = converth5() 
                 root.samples[Constants.CONFIG["directory"]] = "temp .h5"
+                SpecRead.cube_path = ""
                 root.ButtonLoad.config(state=NORMAL)
                 root.MenuBar.entryconfig("Toolbox", state=NORMAL)
                 root.temporaryh5 = Constants.CONFIG["directory"]
@@ -3470,7 +3471,7 @@ class MainGUI:
             p01 = None
             if p0:
                 p01 = messagebox.askquestion("Fit pieces found!",
-                        "We have detected few *.npy fit pieces in the output folder. Do you wish to erase them and fit again? (Fitting the data can take some considerable time. If you don't wish to re-fit the data, the existing *.npy files will be used to build elemental maps, replacing the existing ones).")    
+                        "We have detected few *.npy fit pieces in the output folder. Do you wish to ERASE them and fit again? (Fitting the data can take some considerable time. If you don't wish to re-fit the data, the existing *.npy files will be used to build elemental maps, replacing the existing ones).\n\nClicking YES will ERASE the existing fitted data!")    
                 if p01 == "yes":
                     try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))
                     except: pass
@@ -3594,7 +3595,12 @@ class MainGUI:
     def find_elements(__self__):
 
         mode = Constants.MY_DATACUBE.config["peakmethod"]
-        if mode == "auto_wizard":
+        if Constants.MY_DATACUBE.config["peakmethod"] == "auto_wizard" and\
+                any("temp" in x for x in Constants.MY_DATACUBE.datatypes):
+                    messagebox.showerror("Error",
+                    "Temporarily loaded *.h5 files cannot be fitted! To use this method, reload the corresponding file and try again.")
+                    return __self__.master.focus_force()
+        elif mode == "auto_wizard":
             __self__.invoke_wizard()
         else: 
             if mode == "simple_roi":
@@ -3903,7 +3909,7 @@ class MainGUI:
             # GET RID OF IT                                             #
             #############################################################
             try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
-                if root.samples[Constants.MY_DATACUBE.name] == "temp .h5" and \
+                if any("temp" in x for x in Constants.MY_DATACUBE.datatypes) and \
                         value != Constants.MY_DATACUBE.name:
                     idx = __self__.SamplesWindow_TableLeft.get(0, END).index(
                             Constants.MY_DATACUBE.name)
@@ -4209,6 +4215,7 @@ class MainGUI:
                     ("All files", "*.*")))
         if h5f == "": return
  
+        root.h5path = h5f
         sample_name = str(h5f).split("/")[-1].split(".")[0]
 
         ##################################
@@ -4224,7 +4231,7 @@ class MainGUI:
             # Verifies if h5 is loaded as a temporary h5 #
             ##############################################
             if sample_name == root.temporaryh5:
-                messagebox.showinfo("Info!","Sample {} is already loaded as a temporary h5 file. Select another sample and try again!".fornat(sample_name))
+                messagebox.showinfo("Info!","Sample {} is already loaded as a temporary h5 file. Select another sample and try again!".format(sample_name))
                 return
             ##############################################
         ##################################
@@ -4236,6 +4243,14 @@ class MainGUI:
             conc_path += i+"\\"
         conc_path = os.path.abspath(conc_path)
         SpecRead.conditional_setup(name=sample_name,path=conc_path)
+
+        ###############################
+        # EXTRACT INFORMATION FROM h5 #
+        ###############################
+        #NOTE: Attention to root.images_dict, that exists to hold any previously existing
+        # images in the h5 file to parse them to the SpecMath.datacube.__init__
+
+        root.images_dict = {}
         Constants.MY_DATACUBE = readh5(h5f)
         img_size = Constants.MY_DATACUBE.shape[0]*Constants.MY_DATACUBE.shape[1]
         specsize = Constants.MY_DATACUBE.shape[2]
@@ -4246,6 +4261,7 @@ class MainGUI:
         __self__.mca_extension[sample_name] = ".h5"
         __self__.temporaryh5 = sample_name
         Constants.FIRSTFILE_ABSPATH = h5f
+        ###############################
 
         #3 ask for a sample name and dimension (modified dimension diag)
         try:
@@ -4661,9 +4677,9 @@ class MainGUI:
                                 Constants.MY_DATACUBE.img_size))
                     __self__.no_sample = False
 
-                    if "h5" in Constants.MY_DATACUBE.datatypes and \
+                    if any("h5" in x for x in Constants.MY_DATACUBE.datatypes) and \
                             not os.path.exists(SpecRead.cube_path):
-
+                    
                         ########################################
                         # WRITES THE CONFIGURATION TO SUBPANEL #
                         ########################################
@@ -4681,6 +4697,7 @@ class MainGUI:
                         for item in range(len(values_cube)):
                             __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
                             __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+                        __self__.no_sample = False
                         ########################################
 
             else: 
@@ -4731,11 +4748,13 @@ class MainGUI:
             for key in Constants.CONFIG:
                 __self__.TableLeft.insert(END,key)
 
-        else: 
+        elif __self__.no_sample == False and root.temporaryh5 == "None": 
+            print("Inserting keys")
             __self__.StatusBox.insert(END, "Datacube not compiled.") 
             __self__.StatusBox.insert(END, "Please compile the cube first.")
             for key in Constants.CONFIG:
                 __self__.TableLeft.insert(END,key)
+        else: pass
 
         __self__.TableLeft.config(state=DISABLED)
         __self__.TableMiddle.config(state=DISABLED)
@@ -5108,6 +5127,7 @@ class ConfigDiag:
                 root.TableMiddle.config(state=DISABLED)
                 root.TableMiddle.update_idletasks()
                 root.StatusBox.update_idletasks()
+                print("Wiped configuration subpanels")
                 ##################################################
 
                 del root.samples[Constants.CONFIG["directory"]]
@@ -5143,6 +5163,7 @@ class ConfigDiag:
         except: pass
 
         Constants.MY_DATACUBE = None
+        root.h5path = "None"
         gc.collect()
         if isinstance(root.samples[Constants.CONFIG["directory"]],tuple):
             root.samples.pop(Constants.CONFIG["directory"])
@@ -5463,7 +5484,7 @@ class ConfigDiag:
 
 
 class ImgageOperationOutput:
-    def __init__(__self__,image,el1,el2,operation):
+    def __init__(__self__,image,el1,el2,operation,cube_datatypes):
         __self__.image = image
         __self__.master = Toplevel(master=root.master)
         __self__.master.attributes("-alpha",0.0)
@@ -5521,6 +5542,10 @@ class ImgageOperationOutput:
         __self__.canvas._tkcanvas.pack()
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
         icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
+
+        if any("temp" in x for x in cube_datatypes):
+            __self__.replace.config(state=DISABLED)
+
         __self__.master.iconbitmap(icon)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
         __self__.draw(image)
@@ -5637,7 +5662,7 @@ class ImageOperationWarning:
         if __self__.scaled:
             apply_scaling(__self__.parent.DATACUBE, output, -1)
         ImgageOperationOutput(output,__self__.parent.Map1Var.get(),
-                __self__.parent.Map2Var.get(),operation)
+                __self__.parent.Map2Var.get(),operation, __self__.parent.DATACUBE.datatypes)
         __self__.master.grab_release()
         __self__.master.destroy()
 
@@ -5788,10 +5813,13 @@ class PeriodicTable:
             refresh_plots()
      
     def save_and_run(__self__,mode=None):
+        
         try: cube_status = os.stat(SpecRead.cube_path)
         except: 
-            messagebox.showerror("Error","No datacube found! Cannot proceed.")
-            return
+            try: cube_status = os.stat(root.h5path)
+            except:
+                messagebox.showerror("Error","No datacube found! Cannot proceed.")
+                return
         mode = Constants.MY_DATACUBE.config["peakmethod"]
         if mode == "auto_wizard": 
             __self__.master.destroy()
@@ -5821,7 +5849,6 @@ class PeriodicTable:
                 except: pass
             __self__.go.config(state=DISABLED)
             
-            cube_status = os.stat(SpecRead.cube_path)
             cube_size = cube_status.st_size
             sys_mem = dict(virtual_memory()._asdict())
             rnt_mem = [(cube_size*len(Constants.FIND_ELEMENT_LIST)),sys_mem["available"]]
