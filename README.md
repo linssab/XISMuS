@@ -35,6 +35,7 @@ The packages whose versions are mentioned are the stable versions working with X
 * numba _v 0.45.1_<br>
 * llvmlite _v 0.31_<br>
 * cython (to run setup_cy.py)<br>
+* h5py<br>
 * opencv-python<br>
 * SciPy
 * psutil<br>
@@ -48,8 +49,8 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 <br>
 
 [xraylib]: http://lvserver.ugent.be/xraylib/
-[x64]: https://sourceforge.net/projects/xismus/files/XISMuSx64_1.3.0_Setup.exe/download
-[x86]: https://sourceforge.net/projects/xismus/files/XISMuSx86_1.3.0_Setup.exe/download
+[x64]: https://sourceforge.net/projects/xismus/files/XISMuSx64_1.3.1_Setup.exe/download
+[x86]: https://sourceforge.net/projects/xismus/files/XISMuSx86_1.3.1_Setup.exe/download
 [UserGuide]: https://sourceforge.net/projects/xismus/files/XISMuS_User_Manual_1.3.0.pdf/download
 
 ## Funding
