@@ -139,11 +139,12 @@ def mask(a_datacube,a_compound,mask_threshold):
         id_element_matrix = a_datacube.unpack_element(id_element,"a")
     except:
         try: 
-            id_element_ratio = SpecRead.output_path + '{1}_ratio_{0}.txt'\
-                .format(id_element,Constants.DIRECTORY)
+            id_element_ratio = os.path.join(SpecRead.output_path,"{1}_ratio_{0}.txt".format(
+                    id_element,Constants.DIRECTORY))
             id_element_matrix = SpecRead.RatioMatrixReadFile(id_element_ratio)
         except: raise FileNotFoundError("{0} ratio file not found!".format(id_element))
     
+    id_element_matrix = id_element_matrix/id_element_matrix.max()*LEVELS
     id_element_matrix = threshold(id_element_matrix,mask_threshold)
 
     return id_element_matrix
@@ -185,22 +186,19 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     heightmap = np.zeros([imagex,imagey])
     coefficients = compound.lin_att
     
-    heightfile = open(SpecRead.output_path + '{0}_heightmap.txt'\
-            .format(Constants.DIRECTORY),'w+')
-    heightfile.write("-"*10 + " Thickness Values (um) of {0} "\
-            .format(compound.name) + 10*"-" + '\n')
+    heightfile = open(os.path.join(SpecRead.output_path,f"{Constants.DIRECTORY}_heightmap.txt"),'w+')
+    heightfile.write("-"*10 + f" Thickness Values (um) of {compound.name} " + 10*"-" + '\n')
     heightfile.write("row\tcolumn\tthickness\n")
 
     mu1 = coefficients[0]
     mu2 = coefficients[1]
-    logger.warning("mu1 = {0} / mu2 = {1}".format(mu1,mu2))
+    logger.warning(f"mu1 = {mu1} / mu2 = {mu2}")
     
-    ANGLE = 73
+    ANGLE = 90
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0.001:
-                d = (math.sin(math.radians(ANGLE))/(-mu1+mu2))*\
-                        (math.log((depth_matrix[i][j]/thickratio)))
+                d = (math.sin(math.radians(ANGLE))/(-mu1+mu2))*(math.log((depth_matrix[i][j]/thickratio)))
             else: d = 0
             
             #############################################
@@ -211,15 +209,15 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
             else: heightmap[i][j] = 10000 * d
              
             if d > 0: 
-                heightfile.write("%d\t%d\t%f\n" % (i, j, heightmap[i][j]))
+                heightfile.write(f"{i}\t{j}\t{heightmap[i][j]}\n")
                 average[0].append(d)
                 average[1] = average[1]+1  #counts how many values are
     
     median = sum(average[0])/(average[1])*10000  #calculates the average (mean) value
     deviation = np.std(average[0])*10000         #calculates the standard deviation
 
-    print("Deviation {}".format(deviation))
-    print("Average {}".format(median))
+    print(f"Deviation {deviation}")
+    print(f"Average {median}")
     print("max: {0} min: {1}".format(max(average[0])*10000,min(average[0])*10000))
     heightfile.write("Average: {0}um, sampled points: {1}".format(median,average[1]))
     return heightmap, median, deviation

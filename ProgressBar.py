@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          PROGRESS BARS AND LOADING MODULE                     #
-#                        version: 1.3.1 - Oct - 2020            #
+#                        version: 1.3.2 - Jan - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -140,6 +140,7 @@ class Busy:
                 return frames
 
         __self__.make_abortion = True
+        __self__.abort_btn.config(state=DISABLED)
         messagebox.showinfo("ABORTED!","The process was aborted by the user.")
 
         cube_file = open(SpecRead.cube_path,'rb')

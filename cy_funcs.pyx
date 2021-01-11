@@ -76,6 +76,9 @@ def cy_apply_scaling(float[:,:] scale_matrix,
 
 def cy_img_linear_contrast_expansion(float[:,:] grayimg, int a, int b,
         int[:] shape, int c, int d):
+
+    # b and d are the target and local maxima respectively
+    # if the maximum is zero, than the whole image is zero
     
     cdef int i = 0
     cdef int j = 0

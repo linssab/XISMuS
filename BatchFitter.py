@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 1.3.1 - Oct - 2020            #
+#                        version: 1.3.2 - Jan - 2021            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -202,7 +202,7 @@ def gausfit(
     # Parameters initial guess #
     ############################
 
-    A0 = y_peak*np.sqrt((np.square(Noise0/2.3548))+(3.85*Fano0*E_peak))*np.sqrt(2*np.pi)/gain
+    A0 = y_peak*np.sqrt(((Noise0/2.3548)**2)+(3.85*Fano0*E_peak))*2.5066282746310002/gain
     params_gaus = A0
 
     ############################################################
@@ -527,8 +527,8 @@ in solo tuple, so not ndarray within tuple like when calling specifically
 funcs and hence does not need to be unpacked """
 
 def gaus(x, E_peak, gain, Noise, Fano, *A):
-    s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
-    return gain*np.sum(A/(s*np.sqrt(2*np.pi))*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
+    s = np.sqrt(((Noise/2.3548200450309493)**2)+3.85*Fano*E_peak) #np.sqrt works for arrays
+    return gain*np.sum(A/(s*2.5066282746310002)*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
 
 """-----------------------------------------------------------------------------"""
     

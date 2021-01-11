@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.3.1 - Oct - 2020            #
+#                        version: 1.3.2 - Jan - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -242,6 +242,7 @@ def call_compilecube():
     
     If a certain file cannot be read, an error is raised. SpecMath returns the name 
     of the file. """
+
     try: 
         os.mkdir(SpecRead.output_path)
     except IOError as exception:
@@ -2212,7 +2213,6 @@ class PlotWin:
         maximize_window(__self__)
     
     def wipe_plot(__self__):
-
         """clears and destroy plot"""
 
         try: 
@@ -2326,7 +2326,6 @@ class PlotWin:
             __self__.canvas.draw()
     
     def draw_ROI(__self__):
-       
         __self__.master.tagged = True
         patches = []
         for element in Constants.MY_DATACUBE.ROI:
@@ -5891,18 +5890,7 @@ class PeriodicTable:
                                 max_copies)
                         FANO, NOISE = Constants.MY_DATACUBE.FN
                         TOLERANCE = Constants.SETROI_TOLERANCE
-                        results, aborted = cuber.start_workers(FANO, NOISE, TOLERANCE)
-                        if not aborted:
-                            cuber.p_bar.update_text("Digesting results...")
-                            results = sort_results(results,Constants.FIND_ELEMENT_LIST)
-                            digest_results(
-                                    Constants.MY_DATACUBE,
-                                    results,
-                                    Constants.FIND_ELEMENT_LIST)
-                        cuber.p_bar.destroybar()
-                        del cuber
-
-                # single-core mode
+                        results, 
                 else: 
                     if len(Constants.FIND_ELEMENT_LIST) > 0:
                         MAPS = getpeakmap(Constants.FIND_ELEMENT_LIST,Constants.MY_DATACUBE)

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.3.1 - Oct - 2020            #
+#                        version: 1.3.2 - Jan - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -229,7 +229,9 @@ class datacube:
             progressbar.updatebar(0)
         else: 
             bgstrip = __self__.config['bgstrip']
-            try: progressbar = __self__.progressbar
+            try: 
+                progressbar = __self__.progressbar
+                progressbar.progress["maximum"] = __self__.img_size
             except: progressbar = progressbar
         counter = 0
         
@@ -469,7 +471,7 @@ class datacube:
         logger.debug("Stripping background...")
         __self__.progressbar.update_text("3/6 Stripping background...")
         __self__.progressbar.updatebar(3)
-        datacube.strip_background(__self__)
+        __self__.strip_background()
         __self__.progressbar.progress["maximum"] = 6
         
         logger.debug("Calculating sum map...")
@@ -960,7 +962,7 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
     ######################################
 
     guess = y_peaks*np.sqrt(
-            (np.square(Noise/2.3548))+(3.85*Noise*E_peaks))*np.sqrt(2*np.pi)/gain
+            ((Noise/2.3548)**2)+(3.85*Noise*E_peaks))*np.sqrt(2*np.pi)/gain
     guess = np.insert(guess,0,[Noise,Fano],axis=0)
     uncertainty = np.sqrt(y_array).clip(1)
     
@@ -1096,7 +1098,7 @@ def sigma(energy,F=Constants.FANO,N=Constants.NOISE):
     OUTPUT:
         float """
 
-    return np.sqrt(((N/2.3548)**2)+(3.85*F*energy))
+    return math.sqrt(((N/2.3548200450309493)**2)+(3.85*F*energy))
 
 def gaussianbuilder(E_axis,energy,A,F,N):
     """ Deprecated, to be removed in future updates.
@@ -1345,13 +1347,13 @@ def strip(an_array,cycles,width):
     size = an_array.shape[0]
     for k in range(cycles):
         if k >= cycles-8:
-            width = int(width/np.sqrt(2))
+            width = int(width/1.4142135623730950) #square root of 2
         for l in range(0, size):
             if l-width < 0: low = 0
             else: low = l-width
             if l+width >= size: high = size-1
             else: high = l+width
-            m = (an_array[low] + an_array[high])/2
+            m = (an_array[low] + an_array[high])*0.5
             if m < 1: m = 1
             if an_array[l] > m: an_array[l] = m
     return an_array
@@ -1645,9 +1647,9 @@ def gaus(x, E_peak, gain, Noise, Fano, *A):
         Fano; <float> - Fano factor
         A; <1D-array> - Gaussian amplitude array """
 
-    s = np.sqrt(np.square(Noise/(2*np.sqrt(2*np.log(2))))+3.85*Fano*E_peak)
+    s = np.sqrt(((Noise/2.3548200450309493)**2)+3.85*Fano*E_peak) #np.sqrt works for arrays
     return gain*np.sum(
-            A/(s*np.sqrt(2*np.pi))*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
+            A/(s*2.5066282746310002)*np.exp(-np.square(x[:,None]-E_peak)/(2*(s**2))),1)
 
 if __name__=="__main__":
     logger.info("This is SpecMath")
