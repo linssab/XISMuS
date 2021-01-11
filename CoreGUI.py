@@ -5890,7 +5890,18 @@ class PeriodicTable:
                                 max_copies)
                         FANO, NOISE = Constants.MY_DATACUBE.FN
                         TOLERANCE = Constants.SETROI_TOLERANCE
-                        results, 
+                        results, aborted = cuber.start_workers(FANO, NOISE, TOLERANCE)
+                        if not aborted:
+                            cuber.p_bar.update_text("Digesting results...")
+                            results = sort_results(results,Constants.FIND_ELEMENT_LIST)
+                            digest_results(
+                                    Constants.MY_DATACUBE,
+                                    results,
+                                    Constants.FIND_ELEMENT_LIST)
+                        cuber.p_bar.destroybar()
+                        del cuber
+
+                # single-core mode
                 else: 
                     if len(Constants.FIND_ELEMENT_LIST) > 0:
                         MAPS = getpeakmap(Constants.FIND_ELEMENT_LIST,Constants.MY_DATACUBE)
