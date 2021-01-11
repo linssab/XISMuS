@@ -121,26 +121,26 @@ def RatioMatrixReadFile(ratiofile):
         for line in in_file:
             reader.append(line.strip("\n"))
         for i in range(len(reader)): 
-            reader[i] = MatrixArray[i].split()
+            reader[i] = reader[i].split()
         for j in range(len(reader)):
             for k in range(len(reader[j])):
                 if reader[j][k].isdigit() == True: 
-                    reader[j][k]=int(MatrixArray[j][k])
+                    reader[j][k]=int(reader[j][k])
                 else: reader[j][k]=1
-        if len(reader[-1]) == 0: MatrixArray[-1]=[1, 1, 1, 1]
-    reader = np.asarray(MatrixArray)
+        if len(reader[-1]) == 0: reader[-1]=[1, 1, 1, 1]
+    reader = np.asarray(reader)
     iterx=0
     itery=0
     
     for i in range(len(reader)):
         if len(reader[i]) > 1:
             if reader[i][0] > 0\
-                    and reader[i][0] > MatrixArray[i-1][0]\
-                    and reader[i][0] > iterx: iterx=int(MatrixArray[i][0])
+                    and reader[i][0] > reader[i-1][0]\
+                    and reader[i][0] > iterx: iterx=int(reader[i][0])
         if len(reader[i]) > 1:
             if reader[i][1] > 0\
-                    and reader[i][1] > MatrixArray[i-1][1]\
-                    and reader[i][1] > itery: itery=int(MatrixArray[i][1])
+                    and reader[i][1] > reader[i-1][1]\
+                    and reader[i][1] > itery: itery=int(reader[i][1])
 
     RatesMatrix=np.zeros((iterx+1,itery+1))
     for i in range(len(reader)):
