@@ -3526,6 +3526,7 @@ class MainGUI:
                     else: message1 += "{}, ".format(i)
                 #########################
 
+                root.Fitter.bar.destroybar()
                 p2 = messagebox.askyesnocancel("Attention!","We have found {} in your sample {}. Do you want to add more elements to the pool?".format(
             message1,Constants.MY_DATACUBE.name))
 
@@ -3743,7 +3744,6 @@ class MainGUI:
         else: return
 
     def select_multiple(__self__):
-
         """ Toggles the multiple selection mode """
 
         if __self__.SamplesWindow_multi.config("relief")[-1] == "raised":
@@ -3758,7 +3758,6 @@ class MainGUI:
             __self__.SamplesWindow_ok.config(state=DISABLED)
 
     def digestmaps(__self__):
-
         """ Lists all cubes in output folder, matches to the selected 
         samples in Samples List and normalizes all density maps to maximum detected
         value in detected (and compiled) cube maps. Files are saved to the promted 
@@ -3816,6 +3815,7 @@ class MainGUI:
             __self__.maps_list = Listbox(__self__.maps_window)
             __self__.maps_list.pack(side=TOP, fill=X)
             __self__.maps_list.config(selectmode=MULTIPLE)
+            element_maps = sorted(list(element_maps))
             for item in element_maps:
                 __self__.maps_list.insert(END,"{}".format(item))
             __self__.ok_btn = Button(__self__.maps_window, text="Export!", bd=3, width=13, \
@@ -3849,7 +3849,6 @@ class MainGUI:
         __self__.maps_window.destroy()
 
     def list_samples(__self__):
-
         """ Function invoked by the UI widget. It verifies the exitence
         of any running instance of samples window and call the function which
         draws it accordingly """
@@ -4017,7 +4016,6 @@ class MainGUI:
             __self__.call_configure()
 
     def pop_welcome(__self__):
-        
         """Displays a pop-up window with information on the software"""
         if Constants.WELCOME == True:
             __self__.welcome_window = Welcome(__self__.master)
@@ -4026,7 +4024,6 @@ class MainGUI:
         else: pass
 
     def sample_popup(__self__,event):
-
         """Call the right-click menu for SampleList"""
 
         __self__.SamplesWindow_TableLeft.select_clear(0,END)

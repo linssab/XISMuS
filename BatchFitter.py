@@ -51,6 +51,19 @@ def convert_bytes(num):
             return "%3.1f %s" % (num, x)
         num /= 1024.0
 
+def prepare_data(FitClassObject):
+    for i in range(len(FitClassObject.counts)):
+        FitClassObject.bar.updatebar(i)
+        FitClassObject.counts[i] = savgol_filter(FitClassObject.counts[i],5,3).clip(0)
+    FitClassObject.SUM = np.sum(FitClassObject.counts.clip(1),0)
+    FitClassObject.global_continuum = batch_continuum_for_wizard(
+            FitClassObject.counts,
+            bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
+            bgparams=Constants.MY_DATACUBE.config["bg_settings"],
+            bar=FitClassObject.bar,
+            global_spectrum=FitClassObject.SUM)
+    return
+
 def batch_continuum_for_wizard(
         spectra_batch,
         bgstrip=None,
@@ -63,40 +76,47 @@ def batch_continuum_for_wizard(
     very poorly. For tis reason, the continuum matrix must be recalculated everytime
     the wizard is invoked. This avoid harming the data. The RAW data remains always
     untouched in the datacube after fitting the data with auto wizard. """
+    # NOTE: Commented lines were used in previous versions to recalculate the 
+    # entire continuum array. Since the SavGol filter doesn't alter significantly
+    # the spectra, recalculating tenths of thousands of continuums is a waste of time.
 
-    continuum = np.zeros([spectra_batch.shape[0],spectra_batch.shape[1]],dtype="float32")
+    #continuum = np.zeros([spectra_batch.shape[0],spectra_batch.shape[1]],dtype="float32")
     global_continuum = np.zeros([spectra_batch.shape[1]],dtype="float32")
 
     if bgstrip == "None":
-        return continuum, global_continuum
+        #return continuum, global_continuum
+        return global_continuum
 
     elif bgstrip == "SNIPBG":
         try: cycles, window, savgol, order = bgparams
         except: cycles, window, savgol, order = 24,5,5,3
-        for i in range(spectra_batch.shape[0]):
-            if bar!= None: bar.updatebar(i)
-            stripped = peakstrip(spectra_batch[i],cycles,window,savgol,order)
-            continuum[i] = stripped
+        #for i in range(spectra_batch.shape[0]):
+        #    if bar!= None: bar.updatebar(i)
+        #    stripped = peakstrip(spectra_batch[i],cycles,window,savgol,order)
+        #    continuum[i] = stripped
         global_continuum = peakstrip(global_spectrum,cycles,window,savgol,order)
-        return continuum, global_continuum
+        #return continuum, global_continuum
+        return global_continuum
 
     elif bgstrip == "Polynomial":
         ndegree_global, ndegree_single, r_fact = 6,0,2
         attempt = 0
-        while continuum.sum()==0:
+        while global_continuum.sum()==0:
             attempt += 1
-            continuum = polfit_batch(
-                spectra_batch,
+            global_continuum = polfit_batch(
+                #spectra_batch,
+                np.asarray([global_spectrum]),
                 ndegree_global=ndegree_global,
                 ndegree_single=ndegree_single,
                 r=r_fact,
-                custom_global_spec=global_spectrum)
+                custom_global_spec=global_spectrum)[0]
             r_fact+=1
-        for i in range(spectra_batch.shape[0]):
-            if i: continuum[i] = continuum[i]
-            else: global_continuum = continuum[i]
-            if bar!= None: bar.updatebar(i)
-        return continuum, global_continuum
+        #for i in range(spectra_batch.shape[0]):
+        #    if i: continuum[i] = continuum[i]
+        #    else: global_continuum = continuum[i]
+        #    if bar!= None: bar.updatebar(i)
+        #return continuum, global_continuum
+        return global_continuum
 
 def gausfit(
         x,
@@ -693,8 +713,11 @@ def findpeak(
     # Insert Element to disregard, keeping in mind Z_true is index+5 #
     ##################################################################
     E_lib[50:,:2]=False #Set elements K-alpha & K-beta lines to zero after Xenon (Z=54)
+    #E_lib[45:,:2]=False #Set elements K-alpha & K-beta lines to zero after Xenon (Z=54)
     E_lib[:51,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
+    #E_lib[:46,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
     E_lib[52:74,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
+    #E_lib[46:74,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
     ##################################################################
 
     #####################################################################
@@ -988,6 +1011,8 @@ class SingleFit():
 
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.update_text("Filtering data...")
+        prepare_data(__self__)
+        """
         for i in range(len(__self__.counts)):
             __self__.bar.updatebar(i)
             __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
@@ -999,15 +1024,17 @@ class SingleFit():
                 bgparams=Constants.MY_DATACUBE.config["bg_settings"],
                 bar=__self__.bar,
                 global_spectrum=__self__.SUM)
-
+        """
+        
+        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
+                -1,Constants.MY_DATACUBE.background.shape[-1])
         __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
         __self__.continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
 
         del Constants.MY_DATACUBE.matrix
         del Constants.MY_DATACUBE.background
 
-        __self__.bar.destroybar()
-
+        __self__.bar.update_text("Thinking...")
         __self__.fit_path = os.path.join(path,"Fit_Chunk_1.npy")
 
 
@@ -1125,14 +1152,16 @@ class MultiFit():
         __self__.FN = Constants.MY_DATACUBE.FN
         __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
             -1,Constants.MY_DATACUBE.matrix.shape[-1])
-        __self__.bar = Busy(len(__self__.counts),0)
         
         ###################################################################################
         # Prepare the data. Spectra are filtered with a savgol filter and the global      #
         # spectrum must be recalculated for the filtered data. The same for the continuum #
         ###################################################################################
-        
+
+        __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.update_text("Filtering data...")
+        prepare_data(__self__)
+        """
         for i in range(len(__self__.counts)):
             __self__.bar.updatebar(i)
             __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
@@ -1144,9 +1173,11 @@ class MultiFit():
                 bgparams=Constants.MY_DATACUBE.config["bg_settings"],
                 bar=__self__.bar,
                 global_spectrum=__self__.SUM)
+        """
+        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
+            -1,Constants.MY_DATACUBE.background.shape[-1])
         __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
-        
-        __self__.bar.destroybar()
+        __self__.bar.update_text("Thinking...")
 
         ###################################################################################
 
