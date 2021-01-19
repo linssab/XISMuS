@@ -49,7 +49,6 @@ except:
     print("Failed to load numba")
 logger.debug("Importing module math...")
 import math
-from math import factorial
 logger.info("Finished SpecMath imports.")
 lock = threading.Lock()
 from tkinter import *
@@ -1033,6 +1032,8 @@ def getdif2(ydata,gain):
     return dif2curve
 
 def savgol_filter(y, window_size, order, deriv=0, rate=1):
+    from math import factorial
+
     """ This function was taken from https://gist.github.com/krvajal 
     and compared to scipy.signal package, a reliable widely known package
     for signal analysis.
@@ -1043,7 +1044,7 @@ def savgol_filter(y, window_size, order, deriv=0, rate=1):
        Chemistry, 1964, 36 (8), pp 1627-1639.
     [2] Numerical Recipes 3rd Edition: The Art of Scientific Computing
        W.H. Press, S.A. Teukolsky, W.T. Vetterling, B.P. Flannery
-       Cambridge University Press ISBN-13: 9780521880688 """
+       Cambridge University Press ISBN-13: 9780521880688 """ 
 
     try:
         window_size = np.abs(np.int(window_size))
@@ -1054,6 +1055,7 @@ def savgol_filter(y, window_size, order, deriv=0, rate=1):
         raise TypeError("window_size size must be a positive odd number")
     if window_size < order + 2:
         raise TypeError("window_size is too small for the polynomials order")
+
     order_range = range(order+1)
     half_window = (window_size -1) // 2
     b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])

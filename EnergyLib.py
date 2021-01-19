@@ -169,11 +169,14 @@ def set_energies_from_xlib():
     EnergyList, EnergyListKb, plottables_, plottables_dict = [],[],[],{}
     L = False
     elt = 0
+
+    # Sets the L and K lines limits #
+
     while elt in range(len(ElementList)):
-        while ElementList[elt] != 'Mt': 
-            if ElementList[elt] == 'Xe': L = True
+        while ElementList[elt] != "Mt": 
+            if ElementList[elt] == "Xe": L = True
             if L == True:
-                while ElementList[elt] != 'Mt':
+                while ElementList[elt] != "Mt":
                     try: 
                         EnergyList.append(xlib.LineEnergy(elt,2))
                         EnergyListKb.append(xlib.LineEnergy(elt,3))

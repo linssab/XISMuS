@@ -651,7 +651,7 @@ class Mosaic_API:
             new_end_y = __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
             if new_start_y < 0: 
                 __self__.layer[name].end[1] = __self__.layer[name].img.shape[1]
-            elif new_end_y >= __self__.image.shape[1]:
+            elif new_end_y  >= __self__.image.shape[1]:
                 __self__.layer[name].end[1] = __self__.image.shape[1]-1
             else: 
                 __self__.layer[name].end[1] = \
