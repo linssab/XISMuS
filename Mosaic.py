@@ -276,8 +276,6 @@ class Layer:
             __self__.img = image*LEVELS/__self__.img_max
             __self__.img = __self__.img.astype("float32")
 
-        print("CREATING LAYER",__self__.img_max)
-        
         """ Get rid of 0 values in grayscale image. This is done to
         facilitate detecting if a pixel belongs or not to a Layer """
 
@@ -298,7 +296,7 @@ class Layer:
 
 
 class Mosaic_API:
-    def __init__(__self__, size, root):
+    def __init__(__self__, size, root, loadfile=""):
         pad = 16
         zbar = 35
         __self__.master = Toplevel()
@@ -354,8 +352,10 @@ class Mosaic_API:
         __self__.master.rowconfigure(0, weight=1)
         __self__.master.rowconfigure(1, weight=1)
         __self__.build_widgets()
+        if loadfile:
+            __self__.prompt_loadfile(f=loadfile)
         __self__.root.master.wait_window(__self__.master)
-    
+            
     def build_widgets(__self__):
         pad = 16
         zbar = 35
@@ -648,9 +648,9 @@ class Mosaic_API:
 
         layer = __self__.layer[active_layer]
 
-        print("rotation", layer.rotation)
+        #print("rotation", layer.rotation)
         fine = float(truncate(layer.rotation-(int(layer.rotation)),2))
-        print("starting rotation", direction, layer.rotation, fine)
+        #print("starting rotation", direction, layer.rotation, fine)
 
         if int(direction) == 1:
             img = layer.img[:]
@@ -684,7 +684,6 @@ class Mosaic_API:
             if int(layer.rotation) >= 3: layer.rotation = -1 - fine
             elif int(layer.rotation) <= -3: layer.rotation = 1 + fine
 
-        print("starting rotation", direction, layer.rotation, fine)
         LAYERS_DICT = convert_layers_to_dict(__self__)
         __self__.build_image()
 
@@ -1064,7 +1063,6 @@ class Mosaic_API:
         def unrotate_mask(mask, rotation):
             fine = float(truncate(rotation-int(rotation),2))
             rotation = int(rotation)
-            print("SAVING MOSAIC",rotation, fine)
 
             if rotation == 1:
                 mask = cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -1114,10 +1112,11 @@ class Mosaic_API:
     ############### LOAD SECTION ###############
     ############################################
 
-    def prompt_loadfile(__self__,e=""):
-        f = filedialog.askopenfilename(title="Open mosaic",
-                filetypes=[("Mosaic files","*.mosaic")])
-        if f == "": return
+    def prompt_loadfile(__self__,e="",f=""):
+        if not f:
+            f = filedialog.askopenfilename(title="Open mosaic",
+                    filetypes=[("Mosaic files","*.mosaic")])
+            if f == "": return
         else: 
             global VMAX
             VMAX = 0
@@ -1160,7 +1159,6 @@ class Mosaic_API:
                 layers[name]["rotate"] = int(string[4])
                 try: 
                     layers[name]["rotate"] += float(string[5])
-                    print("loaded rotation:", layers[name]["rotate"])
                 except: pass
             f.close()
             if os.path.exists(npz):
@@ -1208,7 +1206,6 @@ class Mosaic_API:
     def load_layer(__self__,layer):
         global LAYERS_DICT
         global VMAX
-        print("LOAD_LAYER",VMAX)
 
         # first, verify if layer was an element image
         

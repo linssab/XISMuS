@@ -4387,6 +4387,15 @@ class MainGUI:
 
     def open_mosaic(__self__):
         CanvasSizeDialog()
+    
+    def prompt_mosaic_load_file(__self__):
+        f = filedialog.askopenfilename(title="Open mosaic",
+                    filetypes=[("Mosaic files","*.mosaic")])
+        if f == "": return
+        else:
+            s = open(f,"r") 
+            size = [int(i) for i in s.readlines()[0].split("shape:")[-1].split("x")]
+            Mosaic_API(size, root, loadfile=f)
 
     def open_analyzer(__self__):
         API = ImageAnalyzer(__self__.master,Constants.MY_DATACUBE)
@@ -4509,8 +4518,10 @@ class MainGUI:
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Map elements", 
                 command=__self__.find_elements)
-        __self__.Toolbox.add_command(label="Open Mosaic...", 
+        __self__.Toolbox.add_command(label="Create Mosaic...", 
                 command=__self__.open_mosaic)
+        __self__.Toolbox.add_command(label="Load Mosaic...", 
+                command=__self__.prompt_mosaic_load_file)
         __self__.Toolbox.add_command(label="Image Analyzer . . .", 
                 command=__self__.open_analyzer)
         __self__.Toolbox.add_separator()
