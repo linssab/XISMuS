@@ -12,6 +12,46 @@ import Constants
 logger = logging.getLogger("logfile")
 logger.info("Importing module BatchFitter.py...")
 
+def create_tooltip(widget, text):
+    toolTip = ToolTip(widget)
+    def enter(event):
+        toolTip.showtip(text)
+    def leave(event):
+        toolTip.hidetip()
+    widget.bind('<Enter>', enter)
+    widget.bind('<Leave>', leave)
+
+class ToolTip(object):
+    """ taken from https://stackoverflow.com/questions/20399243/display-message-when-hovering-over-something-with-mouse-cursor-in-python """
+
+    def __init__(__self__, widget):
+        __self__.widget = widget
+        __self__.tipwindow = None
+        __self__.id = None
+        __self__.x = __self__.y = 0
+
+    def showtip(__self__, text):
+        "Display text in tooltip window"
+        __self__.text = text
+        if __self__.tipwindow or not __self__.text:
+            return
+        x, y, cx, cy = __self__.widget.bbox("insert")
+        x = x + __self__.widget.winfo_rootx() + 57
+        y = y + cy + __self__.widget.winfo_rooty() +27
+        __self__.tipwindow = tw = Toplevel(__self__.widget)
+        tw.wm_overrideredirect(1)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        label = Label(tw, text=__self__.text, justify=LEFT,
+                      background="#ffffe0", relief=SOLID, borderwidth=1,
+                      font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(__self__):
+        tw = __self__.tipwindow
+        __self__.tipwindow = None
+        if tw:
+            tw.destroy()
+
 
 class BusyManager:
     def __init__(__self__, widget):

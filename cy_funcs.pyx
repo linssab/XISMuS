@@ -45,7 +45,7 @@ def cy_apply_scaling(float[:,:] scale_matrix,
  
     for i in range(shape[0]):
         for j in range(shape[1]):
-            if scale_mode == 1:
+            if scale_mode == 1 and scale_matrix[i][j] != 0:
                 image[i][j] = image[i][j]*scale_matrix[i][j]
             elif scale_mode == -1 and scale_matrix[i][j] != 0:
                 image[i][j] = image[i][j]/scale_matrix[i][j]
@@ -227,13 +227,21 @@ def cy_read_densemap_pixels(dict layers, int i, int j, int mode):
         x_ = layers[layer]["end"][0]
         y_ = layers[layer]["end"][1]
         conv_x, conv_y = i-x, j-y
-        #print(layers[layer]["layer"],
-        #        "index",i,j,"start",x,y,"end",x_,y_,"conv",conv_x,conv_y)
         if x <= i < x_ and y <= j < y_ \
                 and layers[layer]["layer"] > front_layer:
-            if mode == 1: pixel = layers[layer]["dense"][conv_x][conv_y]
-            else: 
-                pixel = layers[layer]["mask"][conv_x][conv_y]
+            if mode == 1: 
+                pixel = layers[layer]["dense"][conv_x][conv_y]
+            elif mode == 2: 
+
+                # To avoid ZeroDivision when creating the mask, each img pixel has
+                # its value increased by one. Therefore, "empty" pixels are equal to 1
+
+                if layers[layer]["img"][conv_x][conv_y] > 1.001:
+                    pixel = layers[layer]["mask"][conv_x][conv_y]
+                else: pixel = 0
+                
+                #####################################################################
+
             front_layer = layers[layer]["layer"]
     return pixel
 
@@ -262,7 +270,6 @@ def cy_iterate_img_and_mask(
                 mask[i][j] = (img[i][j]*a + b)/img[i][j]
     return
 
-
 def cy_build_densemap(float[:,:] image, 
         int[:] size, 
         dict all_layers, 
@@ -287,7 +294,8 @@ def cy_read_pixels(dict layers, int i, int j):
     Reads all layers and returns the uppermost PIXEL value """
 
     cdef int front_layer = -1 
-    cdef int pixel = 59
+    cdef float pixel = 59.0
+    cdef int v = 0
 
     cdef int x = 0
     cdef int y = 0
@@ -305,19 +313,22 @@ def cy_read_pixels(dict layers, int i, int j):
             conv_x, conv_y = i-x, j-y
             if x <= i < x_ and y <= j < y_ \
                     and layers[layer]["layer"] > front_layer:
-                pixel = layers[layer]["img"][conv_x][conv_y]
-                front_layer = layers[layer]["layer"]
+                v = layers[layer]["img"][conv_x][conv_y]
+                if v > 0:
+                    pixel = v
+                    front_layer = layers[layer]["layer"]
+                else: pass
         except:
             return pixel
     return pixel
 
-def cy_build_image(int[:,:] image, int[:,:] boundaries, dict all_layers):
+def cy_build_image(float[:,:] image, int[:,:] boundaries, dict all_layers):
     """ Display image constructor.
     Builds the image to be shown at Mosaic screen """
         
     cdef int i = 0
     cdef int j = 0
-    cdef int[:,:] new_image = image
+    cdef float[:,:] new_image = image
 
     for i in range(boundaries[0][0],boundaries[0][1]):
         for j in range(boundaries[1][0],boundaries[1][1]):
@@ -388,6 +399,7 @@ def cy_pack_spectra(dict layers,
     cdef int conv_x = 0
     cdef int conv_y = 0
     cdef int c = 0
+    cdef int v = 0
     
     for layer in layers.keys():
         x = layers[layer]["start"][0]
@@ -397,9 +409,11 @@ def cy_pack_spectra(dict layers,
         conv_x, conv_y = i-x, j-y
         if x <= i < x_ and y <= j < y_ \
             and layers[layer]["layer"] > front_layer:
-                for c in range(shape):
-                    specout[c] = layers[layer]["matrix"][conv_x][conv_y][c]
-                    front_layer = layers[layer]["layer"]
+                v = layers[layer]["img"][conv_x][conv_y]
+                if v != 0:
+                    for c in range(shape):
+                        specout[c] = layers[layer]["matrix"][conv_x][conv_y][c]
+                        front_layer = layers[layer]["layer"]
     if front_layer >= 0: 
         return specout
     else: 

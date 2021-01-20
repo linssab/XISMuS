@@ -548,17 +548,12 @@ class CanvasSizeDialog:
             return
         try:
             size = (__self__.x.get(),__self__.y.get())
-            if root.Mosaic.master.state == "normal": return
-            else: 
-                __self__.kill()
-                root.Mosaic = Mosaic_API(size)
-                root.Mosaic.master.focus_set()
-                root.master.wait_window(root.Mosaic.master)
-        except: 
             __self__.kill()
-            root.Mosaic = Mosaic_API(size)
-            root.Mosaic.master.focus_set()
-            root.master.wait_window(root.Mosaic.master)
+            Mosaic_API(size, root)
+        except: 
+            messagebox.showerror("Ivalid dimension!",
+                    "Can't create {}x{} canvas!".format(__self__.x.get(),__self__.y.get()))
+            return
 
 
 class Convert_File_Name:
@@ -3328,7 +3323,6 @@ class MainGUI:
         __self__.sample_plot.grid(b=None)
         __self__.sample_plot.axis('off')
         mapfont = {'fontname':'Arial','fontsize':10}
-        #__self__.sample_plot.set_title('Sample Counts Map',**mapfont)
 
         sys_mem = dict(virtual_memory()._asdict())
         inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
@@ -4049,11 +4043,14 @@ class MainGUI:
     def draw_map(__self__):
         try: 
             __self__.sample_plot.imshow(Constants.MY_DATACUBE.densitymap, 
-                    cmap=Constants.COLORMAP)
+                    cmap=Constants.COLORMAP, 
+                    vmin=Constants.MY_DATACUBE.densitymap.min(),
+                    vmax=Constants.MY_DATACUBE.densitymap.max(),)
             __self__.plot_canvas.draw()
         except: 
-            blank = np.zeros([20,20])
-            __self__.sample_plot.imshow(blank, cmap=Constants.COLORMAP)
+            __self__.sample_plot.imshow(np.ones([20,20]), cmap=Constants.COLORMAP,
+                    vmin=0,
+                    vmax=1)
             __self__.plot_canvas.draw()
     
     def open_files_location_from_cube(__self__,event=""):
@@ -4187,9 +4184,13 @@ class MainGUI:
         try: 
             __self__.sample_plot.imshow(__self__.densitymap,
                     cmap=Constants.COLORMAP,
-                    label='Counts Map')
+                    label='Counts Map',
+                    vmin=__self__.densitymap.min(),
+                    vmax=__self__.densitymap.max())
         except: 
-            __self__.sample_plot.imshow(np.zeros([20,20]))
+            __self__.sample_plot.imshow(np.ones([20,20]),
+                    vmin=0,
+                    vmax=1)
     
     def converter(__self__):
         __self__.converterGUI = Convert_File_Name(__self__.master) 
@@ -6283,7 +6284,7 @@ if __name__ == "__main__":
     from SpecMath import FN_reset, FN_set, FN_fit_pseudoinv, FN_fit_gaus
     from SpecMath import datacube as Cube
     from SpecMath import converth5
-    from ProgressBar import Busy, BusyManager
+    from ProgressBar import Busy, BusyManager, create_tooltip
     from EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Mapping_parallel import Cube_reader, sort_results, digest_results
