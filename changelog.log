@@ -1,5 +1,7 @@
 New in Version v1.3.2
 
 - Performance improvements in auto_wizard
-- Mosaic now displays datacubes with their proper brightness
+- Mosaic now displays datacubes with their proper brightnesses
+- Included option to load *.mosaic files from Toolbox menu
 - Several bug fixes and improvements to Mosaic engine
+- Maps are now normalized when exporting as "merged"

@@ -652,8 +652,8 @@ def stackimages(*args):
     imagelist = args
     imagea = args[0]
     imageb = args[1]
-    imagea = np.asarray(imagea,dtype="int32")
-    imageb = np.asarray(imageb,dtype="int32")
+    imagea = np.asarray(imagea*LEVELS/imagea.max(), dtype="int32")
+    imageb = np.asarray(imageb*LEVELS/imageb.max(), dtype="int32")
     stackedimage = np.zeros([imagex,imagey,3],dtype="int32")
      
     cy_funcs.cy_stack(stackedimage,imagea,imageb,np.asarray([imagex,imagey],dtype="int32"))
