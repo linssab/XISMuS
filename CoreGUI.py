@@ -1562,6 +1562,9 @@ class ImageAnalyzer:
         __self__.build_widgets()
 
     def get_version(__self__):
+        """ version attribute was implemented in XISMuS 1.3.0, 
+        any cube prior to this version has no version attribute """
+
         if hasattr(__self__.DATACUBE,"version"):
             __self__.cube_version = "Cube version: "+__self__.DATACUBE.version
             if hasattr(__self__.DATACUBE,"scalable"):
@@ -1818,12 +1821,12 @@ class ImageAnalyzer:
         icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
         __self__.master.iconbitmap(icon)  
         
-        # presents a first image. displays a "no data image if no packed element exists"
-        __self__.nomaps=False
+        # presents a first image, if no element maps exist, displays the sum map. 
+        __self__.nomaps = False
         try: 
             try: __self__.Map1Combo.current(0)
             except: 
-                __self__.nomaps=True
+                __self__.nomaps = True
                 pass
             try: __self__.Map2Combo.current(1)
             except: 
@@ -1842,12 +1845,13 @@ class ImageAnalyzer:
         x = __self__.master.winfo_width()
         y = __self__.master.winfo_height()
 
-        if __self__.nomaps==True:
+        if __self__.nomaps == True:
             __self__.add_btn.config(state=DISABLED)
             __self__.subtract_btn.config(state=DISABLED)
-            #__self__.annotate.config(state=DISABLED)
             __self__.correlate.config(state=DISABLED)
             __self__.export.config(state=DISABLED)
+            __self__.scale.config(state=DISABLED)
+            __self__.scaleLabel.config(state=DISABLED)
         else:
             __self__.add_btn.config(state=NORMAL)
             __self__.subtract_btn.config(state=NORMAL)
@@ -3135,9 +3139,13 @@ class Settings:
         PeakFindEntry = Entry(__self__.PeakOptions,
                 textvariable=__self__.Sensitivity,
                 width=13)
+        create_tooltip(PeakFindTolerance,"Works best when set closer to the peaks FWHM average.\nLower values usually yield more peaks.")
+        create_tooltip(PeakFindEntry,"Works best when set closer to the peaks FWHM average.\nLower values usually yield more peaks.")
         ContSupprEntry = Entry(__self__.PeakOptions,
                 textvariable=__self__.ContSuppr,
                 width=13)
+        create_tooltip(ContSupprLabel,"Spuppress misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
+        create_tooltip(ContSupprEntry,"Spuppress misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
         PeakCheckEntry = Entry(__self__.PeakOptions,
                 textvariable=__self__.WizTol,
                 width=7)
@@ -4869,17 +4877,36 @@ class ReConfigDiag:
         __self__.Frame.grid(row=0, column=1)
         __self__.Labels.grid(row=0, column=0)
         __self__.build_widgets()
+
+    def get_version(__self__):
+        """ version attribute was implemented in XISMuS 1.3.0,
+        any cube prior to this version has no version attribute """
+
+        if hasattr(Constants.MY_DATACUBE,"version"):
+            if hasattr(Constants.MY_DATACUBE,"scalable"):
+                version = [int(i) for i in Constants.MY_DATACUBE.version.split("v")[-1].split(".")]
+                version[0] = version[0]*100
+                version[1] = version[1]*10
+                version[2] = version[2]*1
+                version = sum(version)
+                if version >= 130:
+                    __self__.scale.config(state=DISABLED)
+                    __self__.Label5.config(state=DISABLED)
+        else:
+            if hasattr(Constants.MY_DATACUBE,"scalable"):
+                __self__.scale.config(state=NORMAL)
+                __self__.Label5.config(state=NORMAL)
+            else:
+                __self__.scale.config(state=DISABLED)
+                __self__.Label5.config(state=DISABLED)
     
     def build_widgets(__self__):
-
-        #Label1 = Label(__self__.Labels, text="Thick ratio:")
         Label2 = Label(__self__.Labels, text="Area method:")
         Label3 = Label(__self__.Labels, text="Enhance image?")
         Label4 = Label(__self__.Labels, text="Calculate ratios?")
-        __self__.Label5 = Label(__self__.MergeSettings, text="Scale data?")
+        __self__.Label5 = Label(__self__.MergeSettings, text="Scale data? (for versions < 1.3)")
         __self__.Label6 = Label(__self__.MergeSettings, text="Re-calculate continuum?")
         
-        #Label1.grid(row=1,column=0,sticky=W,pady=2)
         Label2.grid(row=2,column=0,sticky=W,pady=2)
         Label3.grid(row=3,column=0,sticky=W,pady=2)
         Label4.grid(row=4,column=0,sticky=W,pady=2)
@@ -4894,7 +4921,6 @@ class ReConfigDiag:
         __self__.BgstripVar = StringVar()
         __self__.DirectoryVar = StringVar()
         __self__.RatioVar = BooleanVar()
-        #__self__.ThickVar = DoubleVar()
         __self__.EnhanceVar = BooleanVar()
         __self__.MethodVar = StringVar()
         __self__.ScaleVar = BooleanVar()
@@ -4902,16 +4928,10 @@ class ReConfigDiag:
         __self__.DirectoryVar.set(Constants.MY_DATACUBE.config.get('directory'))
         __self__.BgstripVar.set(Constants.MY_DATACUBE.config.get('bgstrip'))
         __self__.RatioVar.set(Constants.MY_DATACUBE.config.get('ratio'))
-        #__self__.ThickVar.set(Constants.MY_DATACUBE.config.get('thickratio'))
         __self__.MethodVar.set(Constants.MY_DATACUBE.config.get('peakmethod'))
         __self__.EnhanceVar.set(Constants.MY_DATACUBE.config.get('enhance'))
         
         __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
-        
-        #__self__.ConfigDiagThick = Entry(
-        #        __self__.Frame, 
-        #        textvariable=__self__.ThickVar,
-        #        width=15)
         
         __self__.ConfigDiagEnhance = Checkbutton(__self__.Frame, variable=__self__.EnhanceVar)
         
@@ -4922,8 +4942,6 @@ class ReConfigDiag:
                 state="readonly",
                 width=13)
         
-        
-        #__self__.ConfigDiagThick.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
         __self__.ConfigDiagMethod.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
         __self__.ConfigDiagEnhance.grid(row=3,column=0,sticky=E,pady=2)
         __self__.ConfigDiagRatio.grid(row=4,column=0,sticky=E,pady=2)
@@ -4955,10 +4973,13 @@ class ReConfigDiag:
                 width=10,
                 command=__self__.kill)
         CancelButton.grid(row=5,column=1,sticky=S)
+
         if hasattr(Constants.MY_DATACUBE,"scalable"):
             __self__.toggle("on")
             __self__.ScaleVar.set(Constants.MY_DATACUBE.scalable)
         else: __self__.toggle("off")
+        __self__.get_version()
+
         place_center(root.master,__self__.master)
         icon = os.path.join(os.getcwd(),"images","icons","refresh.ico")
         __self__.master.iconbitmap(icon)
