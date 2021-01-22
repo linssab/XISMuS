@@ -222,6 +222,23 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     heightfile.write("Average: {0}um, sampled points: {1}".format(median,average[1]))
     return heightmap, median, deviation
 
+def correlate(map1,map2,bar=None):
+    """ Correlates the pixels of two bi-dimensional arrays
+    - This function is deprecated and will be replaced in future releases """
+    corr_x, corr_y = [],[]
+    i = 0
+    for x in range(map1.shape[0]):
+        for y in range(map2.shape[1]):
+            if map1[x][y] > 0 and map2[x][y] > 0:
+                corr_x.append(map1[x][y])
+                corr_y.append(map2[x][y])
+        bar.updatebar(i)
+        i = i+1
+    if corr_x == [] or corr_y == []:
+        return
+    corr_x, corr_y = np.asarray(corr_x), np.asarray(corr_y)
+    return corr_x, corr_y
+
 def set_axes_equal(ax,z_lim):
     #####################################################
     #   set_axes_equal(ax) FUNCTION OBTAINED FROM:      #
@@ -596,7 +613,7 @@ def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
     fig.clf()
     return
 
-def write_image(image,resize,path,enhance=False,merge=False,save=True):
+def write_image(image, resize, path, enhance=False, merge=False, save=True):
     """ Writes a 2D-array image to disk. Similar to split_and_save function.
     
     ------------------------------------------------------------------------
@@ -618,10 +635,10 @@ def write_image(image,resize,path,enhance=False,merge=False,save=True):
     newX,newY = int(factor*imagex),int(factor*imagey)
     
     if imagex > resize or imagey > resize: 
-        large_image = image/image.max()*255
+        large_image = image*255/image.max()
     else: 
         if image.max() > 0: 
-            large_image = image/image.max()*255
+            large_image = image*255/image.max()
         else:
             large_image = image
         if enhance == False:

@@ -40,15 +40,10 @@ style.use('ggplot')
 # internal imports
 import SpecRead
 import Constants
-from ReadConfig import checkout_config
 from ImgMath import LEVELS, apply_scaling, hist_match
-from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
-from SpecMath import getstackplot, correlate, peakstrip
 from ProgressBar import Busy, create_tooltip 
 from SpecMath import datacube as Cube
 from EnergyLib import plottables_dict
-from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
-from Mapping_parallel import Cube_reader, sort_results, digest_results
 import cy_funcs
 VERSION = Constants.VERSION_MOS
 

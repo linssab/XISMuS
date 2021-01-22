@@ -1604,24 +1604,6 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
 
     return y_cont_global
 
-def correlate(map1,map2,bar=None):
-    """ Correlates the pixels of two bi-dimensional arrays
-    - This function is deprecated and will be replaced in future releases """
-
-    corr_x, corr_y = [],[]
-    i = map1.shape[0]
-    for x in range(map1.shape[0]):
-        for y in range(map2.shape[1]):
-            if map1[x][y] > 0 and map2[x][y] > 0:
-                corr_x.append(map1[x][y])
-                corr_y.append(map2[x][y])
-        bar.updatebar(i)
-        i = i+1
-    if corr_x == [] or corr_y == []:
-        return
-    corr_x, corr_y = np.asarray(corr_x), np.asarray(corr_y)
-    return corr_x, corr_y
-
 def findpeaks(spectrum,v=4,w=9,r=1):
     y,var,indexes = tophat(spectrum,v,w)
     selected_peaks = []

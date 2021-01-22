@@ -562,7 +562,7 @@ def voigt(x, E_peak, Noise, Fano, gamma, *A):
 """-----------------------------------------------------------------------------"""
 
 def findpeak(
-        y_savgol,
+        y_global,
         y_cont,
         zero,
         gain,
@@ -573,7 +573,7 @@ def findpeak(
 
     """
     Input:
-        y_savgol        (files,channels)       <class 'numpy.ndarray'>     
+        y_global        (channels)             <class 'numpy.ndarray'>     
         Counts spectra with Savitzky-Golay filter
         width:          ()                     <class 'int'>               
         Width of filter: (default = 9)
@@ -595,8 +595,9 @@ def findpeak(
         Z-number to matched peak indices 
     """
 
-    """ Pay attention to pass to findpeak function the CLIPPED sum spectrum 
-    Obtained by summing each spectrum in the dataset by clipping them at 1 """
+    """ Pay attention to pass to findpeak function the PREPARED sum spectrum 
+    Obtained by summing each spectrum in the dataset by clipping them at 0.
+    y_savgol is clipped to 1 in this function """
 
     #################################################################
     # Findpeaks from y_savgol to avoid redundant significant        #
@@ -611,7 +612,6 @@ def findpeak(
     # mostly dependend on intensity spectrum.                       #
     #################################################################
 
-    y_global = np.sum(y_savgol.clip(1),0)
     width=int(Constants.PEAK_TOLERANCE)
     continuum_tol = Constants.CONTINUUM_SUPPRESSION
 
@@ -1011,20 +1011,8 @@ class SingleFit():
 
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.update_text("Filtering data...")
+
         prepare_data(__self__)
-        """
-        for i in range(len(__self__.counts)):
-            __self__.bar.updatebar(i)
-            __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
-        __self__.SUM = np.sum(__self__.counts,0)
-        __self__.bar.update_text("Adjusting continuum...")
-        __self__.continuum, __self__.global_continuum = batch_continuum_for_wizard(
-                __self__.counts,
-                bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
-                bgparams=Constants.MY_DATACUBE.config["bg_settings"],
-                bar=__self__.bar,
-                global_spectrum=__self__.SUM)
-        """
         
         __self__.continuum = Constants.MY_DATACUBE.background.reshape(
                 -1,Constants.MY_DATACUBE.background.shape[-1])
@@ -1074,7 +1062,7 @@ class SingleFit():
             return array[idx]
 
         peaks, matches = findpeak(
-                __self__.counts,
+                __self__.SUM,
                 __self__.continuum,
                 __self__.intercept,
                 __self__.slope,
@@ -1160,20 +1148,9 @@ class MultiFit():
 
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.update_text("Filtering data...")
+
         prepare_data(__self__)
-        """
-        for i in range(len(__self__.counts)):
-            __self__.bar.updatebar(i)
-            __self__.counts[i] = savgol_filter(__self__.counts[i],5,3).clip(0)
-        __self__.SUM = np.sum(__self__.counts,0)
-        __self__.bar.update_text("Adjusting continuum...")
-        __self__.continuum, __self__.global_continuum = batch_continuum_for_wizard(
-                __self__.counts,
-                bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
-                bgparams=Constants.MY_DATACUBE.config["bg_settings"],
-                bar=__self__.bar,
-                global_spectrum=__self__.SUM)
-        """
+
         __self__.continuum = Constants.MY_DATACUBE.background.reshape(
             -1,Constants.MY_DATACUBE.background.shape[-1])
         __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
@@ -1263,7 +1240,7 @@ class MultiFit():
         ######################################################################
 
         peaks, matches = findpeak(
-                __self__.counts,
+                __self__.SUM,
                 continuum,
                 __self__.intercept,
                 __self__.slope,

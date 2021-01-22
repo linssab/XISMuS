@@ -2098,19 +2098,22 @@ class ImageAnalyzer:
         iterations), the gain in performance is more important in filtering than correlating
         maps """
 
-        unpacker1 = __self__.Map1Var.get()
-        unpacker1 = unpacker1.split("_")
-        Map1 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1]))
-        unpacker2 = __self__.Map2Var.get()
-        unpacker2 = unpacker2.split("_")
-        Map2 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1]))
+        #unpacker1 = __self__.Map1Var.get()
+        #unpacker1 = unpacker1.split("_")
+        #Map1 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1]))
+        #unpacker2 = __self__.Map2Var.get()
+        #unpacker2 = unpacker2.split("_")
+        #Map2 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1]))
+
+        Map1 = copy.deepcopy(__self__.newimage1)
+        Map2 = copy.deepcopy(__self__.newimage2)
 
         """ Correlation region must now be limited according to the transformed area
         (any applied filter) and to selected area made with set ROI tool (Annotator class) """
-        dim = 2*__self__.newimage1.shape[0]
-        bar = Busy(dim,0)
+        bar = Busy(1,0)
         bar.update_text("Thinking...")
         
+        """
         i = 0 
         for x in range(__self__.newimage1.shape[0]):
             for y in range(__self__.newimage1.shape[1]):
@@ -2118,7 +2121,8 @@ class ImageAnalyzer:
                 if __self__.newimage2[x,y] <= 0: Map2[x,y] = 0
             bar.updatebar(i)
             i = i+1
-        
+        """
+
         if __self__.annotate.config("relief")[-1] == "sunken":
             x = [__self__.annotator.x0, __self__.annotator.x1]
             y = [__self__.annotator.y0, __self__.annotator.y1]
@@ -2126,6 +2130,8 @@ class ImageAnalyzer:
             y.sort()
             Map1 = Map1[y[0]:y[1],x[0]:x[1]]
             Map2 = Map2[y[0]:y[1],x[0]:x[1]]
+        dim = Map1.shape[0]
+        bar.progress["maximum"] = dim
 
         corr = correlate(Map1,Map2,bar=bar)
         if not corr: 
@@ -2133,7 +2139,6 @@ class ImageAnalyzer:
             bar.destroybar()
             return
         bar.update_text("Loading plot...")
-        bar.updatebar(dim/2)
         corr_plot = PlotWin(__self__.master)
         corr_plot.draw_correlation(corr,labels)
         bar.destroybar()
@@ -4164,11 +4169,17 @@ class MainGUI:
                 return
             if f is None: 
                 return
+            image = Constants.MY_DATACUBE.densitymap
+            factor = Constants.TARGET_RES/max(image.shape)
+            newX, newY = int(factor*image.shape[0]),int(factor*image.shape[1])
             if Constants.MY_DATACUBE.config["enhance"]:
-                __self__.sample_figure.savefig(f.name, format="png",dpi=600) 
+                image = cv2.resize(image*255/image.max(),
+                        (newY,newX),interpolation=cv2.INTER_CUBIC)
+                plt.imsave(f.name, image, cmap=Constants.COLORMAP)
             else:
-                cv2.imwrite(f.name,
-                    (Constants.MY_DATACUBE.densitymap/Constants.MY_DATACUBE.densitymap.max()*255))
+                image = cv2.resize(image*255/image.max(),
+                        (newY,newX),interpolation=cv2.INTER_NEAREST)
+                plt.imsave(f.name, image, cmap=Constants.COLORMAP)
             return 0
 
     def wipe(__self__,e=""):
@@ -6309,10 +6320,10 @@ if __name__ == "__main__":
     import SpecRead
     from Mosaic import Mosaic_API
     from ReadConfig import checkout_config, set_settings 
-    from ImgMath import LEVELS, apply_scaling
+    from ImgMath import LEVELS, apply_scaling, correlate
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from Decoder import *
-    from SpecMath import getstackplot, correlate, peakstrip
+    from SpecMath import getstackplot, peakstrip
     from SpecMath import FN_reset, FN_set, FN_fit_pseudoinv, FN_fit_gaus
     from SpecMath import datacube as Cube
     from SpecMath import converth5
