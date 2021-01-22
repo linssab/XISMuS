@@ -10,7 +10,7 @@ A comprehensive User Guide PDF is provided in [this link][UserGuide].
 ## Installation
 To install XISMuS, simply double-click the executable downloaded from one of the links above (32- or 64-bit depending on your system), carefully read the license agreement and follow the instructions on screen.
 <br>
-**Note:** XISMuS uses xraylib version 3.3.0. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture.<ins>Note: If XISMuS fails to launch due to missing DLL's, please install xraylib.</ins><br>
+**Note:** XISMuS uses xraylib version 3.3.0. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture.<ins> Note: If XISMuS fails to launch due to missing DLL's, please install xraylib.</ins><br>
 If xraylib is not installed, the program may still run, but auto-wizard imaging method will not be available.<br>
 Xraylib is used to ensure more precise experimental X-rays data are used. Its absence will cause XISMuS to use its internal database, which may be outdated and may be missing information for low-Z or high-Z elements.
 
@@ -49,8 +49,8 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 <br>
 
 [xraylib]: http://lvserver.ugent.be/xraylib/
-[x64]: https://sourceforge.net/projects/xismus/files/XISMuSx64_1.3.1_Setup.exe/download
-[x86]: https://sourceforge.net/projects/xismus/files/XISMuSx86_1.3.1_Setup.exe/download
+[x64]: https://sourceforge.net/projects/xismus/files/XISMuSx64_1.3.2_Setup.exe/download
+[x86]: https://sourceforge.net/projects/xismus/files/XISMuSx86_1.3.2_Setup.exe/download
 [UserGuide]: https://sourceforge.net/projects/xismus/files/XISMuS_User_Manual_1.3.0.pdf/download
 
 ## Funding
