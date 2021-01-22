@@ -1212,13 +1212,15 @@ class Mosaic_API:
         # loads cube to extract the matrix and all metadata
 
         cube = load_cube(layer["name"])
-        Constants.CONFIG = cube.config
-        __self__.zero_config = cube.config
+        
         if cube == None: 
             messagebox.showerror("Cube not found!",
                     "Cannot find cube {}! Aborting operation.".format(layer["name"]))
             return 0
-        
+
+        Constants.CONFIG = cube.config
+        __self__.zero_config = cube.config        
+
         #increase layer counter
         __self__.layer_count += 1 
         
