@@ -4057,7 +4057,7 @@ class MainGUI:
         try: 
             __self__.sample_plot.imshow(Constants.MY_DATACUBE.densitymap, 
                     cmap=Constants.COLORMAP, 
-                    vmin=Constants.MY_DATACUBE.densitymap.min(),
+                    vmin=0,
                     vmax=Constants.MY_DATACUBE.densitymap.max(),)
             __self__.plot_canvas.draw()
         except: 
@@ -4204,7 +4204,7 @@ class MainGUI:
             __self__.sample_plot.imshow(__self__.densitymap,
                     cmap=Constants.COLORMAP,
                     label='Counts Map',
-                    vmin=__self__.densitymap.min(),
+                    vmin=0,
                     vmax=__self__.densitymap.max())
         except: 
             __self__.sample_plot.imshow(np.ones([20,20]),

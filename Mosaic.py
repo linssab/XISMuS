@@ -1107,13 +1107,17 @@ class Mosaic_API:
     ############### LOAD SECTION ###############
     ############################################
 
-    def prompt_loadfile(__self__,e="",f=""):
-        if not f:
+    def prompt_loadfile(__self__,e="",f=None):
+        global VMAX
+        if f == None:
             f = filedialog.askopenfilename(title="Open mosaic",
                     filetypes=[("Mosaic files","*.mosaic")])
             if f == "": return
+            else:
+                VMAX = 0
+                npz = f.split(".mosaic")[0]+".npz"
+                __self__.import_layers(loadfile=os.path.abspath(f),npz=npz)
         else: 
-            global VMAX
             VMAX = 0
             npz = f.split(".mosaic")[0]+".npz"
             __self__.import_layers(loadfile=os.path.abspath(f),npz=npz)
