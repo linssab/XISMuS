@@ -1604,18 +1604,20 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
 
     return y_cont_global
 
-def findpeaks(spectrum,v=4,w=9,r=1):
+def findpeaks(spectrum,w=9,r=1):
+    v = int(w/2)+1
     y,var,indexes = tophat(spectrum,v,w)
+    r*=(np.max(y)/(np.max(np.sqrt(var)*r)))/130
     selected_peaks = []
     for i in indexes:
-        if y[i]>r*var[i]:
+        if y[i]>r*(var[i]**0.5):
             selected_peaks.append(i)
-    plt.semilogy(spectrum)
-    plt.semilogy(y,color="green")
-    plt.semilogy(var,color="tomato")
-    for idx in indexes:
-        plt.axvline(x=idx)
-    plt.show()
+    #plt.semilogy(spectrum)
+    #plt.semilogy(y,color="green")
+    #plt.semilogy(var,color="tomato")
+    #for idx in indexes:
+    #    plt.axvline(x=idx)
+    #plt.show()
     return selected_peaks
 
 def gaus(x, E_peak, gain, Noise, Fano, *A):

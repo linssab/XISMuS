@@ -1111,6 +1111,7 @@ class PeakClipper:
     """Creates a dialog to set-up SNIPBG parameters"""
     
     def __init__(__self__,parent,mode=None):
+        """ Parent is ConfigDiag class """
         __self__.master = Toplevel(parent.master)
         __self__.mode = mode
         __self__.master.tagged = True
@@ -1135,7 +1136,6 @@ class PeakClipper:
         __self__.right_panel.grid(row=0,rowspan=2,column=1,padx=10,sticky="") 
         __self__.frame1.grid(row=0,rowspan=3,column=0,sticky=N+E+W+S)
         __self__.frame2.grid(row=1,column=1,padx=15,sticky="")
-        #__self__.frame3.grid(row=2,column=1,padx=15,sticky=W+E)
         __self__.frame4.grid(row=3,column=1,columnspan=2,padx=15,pady=15,sticky="")
         
         __self__.master.grid_columnconfigure(0,weight=1)
@@ -5116,26 +5116,51 @@ class ConfigDiag:
         __self__.specsize = matrix.shape[2]
 
     def check_method_and_save(__self__,e=""):
-        if __self__.CalibVar.get() == 'manual':
+        if __self__.CalibVar.get() == "simple":
             __self__.manual_calib()
+        elif __self__.CalibVar.get() == "advanced":
+            AdvCalib(__self__, root)
         else: __self__.save_config()
 
-    def save_param(__self__):
-        EntryParam = [
-                [__self__.ch1.get(),__self__.en1.get()],
-                [__self__.ch2.get(),__self__.en2.get()],
-                [__self__.ch3.get(),__self__.en3.get()],
-                [__self__.ch4.get(),__self__.en4.get()]]
+    def save_param(__self__, advparams=None):
+        if __self__.CalibVar.get() == "simple":
+            EntryParam = [
+                    [__self__.ch1.get(),__self__.en1.get()],
+                    [__self__.ch2.get(),__self__.en2.get()],
+                    [__self__.ch3.get(),__self__.en3.get()],
+                    [__self__.ch4.get(),__self__.en4.get()]]
+        elif __self__.CalibVar.get() == "advanced":
+            EntryParam = advparams
+
+        ##############################
+        # VERIFIES CALIBRATION INPUT #
+        ##############################
+        if EntryParam == []:
+            messagebox.showerror("Calibration Error",
+                    "No acceptable parameters passed!")
+            try: __self__.CalibDiag.focus_set()
+            except: pass
+            root.ManualParam = []
+            raise ValueError("No acceptable parameters passed!")
+        elif len(EntryParam) <= 1:
+            messagebox.showerror("Calibration Error",
+                    "Need at least two anchors!")
+            try: __self__.CalibDiag.focus_set()
+            except: pass
+            root.ManualParam = []
+            raise ValueError("Calibration need at least two anchors!")
         for index in range(len(EntryParam)):
             if EntryParam[index][0] > 0 and EntryParam[index][1] > 0:
                 root.ManualParam.append(EntryParam[index])
-            elif EntryParam[index][0] < 0 or EntryParam[index][1] < 0:
+            elif EntryParam[index][0] <= 0 or EntryParam[index][1] <= 0:
                 messagebox.showerror("Calibration Error",
-                        "Can't receive negative values!")
+                        "Can't receive negative or zero values!")
                 __self__.CalibDiag.focus_set()
                 root.ManualParam = []
                 raise ValueError("Manual calibration can't receive negative values!")
-        __self__.CalibDiag.grab_release()
+        ##############################
+
+        if __self__.CalibVar.get() == "simple": __self__.CalibDiag.grab_release()
         __self__.save_config()
     
     def wipe(__self__,e=""):
@@ -5225,7 +5250,7 @@ class ConfigDiag:
         __self__.CalibDiag.resizable(False,False)
         __self__.CalibDiag.protocol("WM_DELETE_WINDOW",__self__.focus_grab)
         __self__.CalibDiag.grab_set()
-        icon = ".\\images\\icons\\settings.ico"
+        icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
         __self__.CalibDiag.iconbitmap(icon)
         ParamFrame = Frame(__self__.CalibDiag)
         ParamFrame.pack()
@@ -5245,7 +5270,8 @@ class ConfigDiag:
         try: 
             # gets calibration parameters read while performing last 
             # setup or conditional setup and fills entries
-            Constants.CONFIG['calibration'] = 'manual'
+
+            Constants.CONFIG['calibration'] = 'simple'
             calibparam = SpecRead.getcalibration()
             __self__.ch1.set(calibparam[0][0])
             __self__.en1.set(calibparam[0][1])
@@ -5339,8 +5365,6 @@ class ConfigDiag:
         if os.path.exists(root.samples_path[Constants.DIRECTORY])\
                 or isinstance(root.samples[configdict["directory"]],tuple):
             Constants.DIRECTORY = configdict["directory"]
-            #Constants.SAMPLE_PATH = os.path.join(Constants.SAMPLES_FOLDER, 
-            #        Constants.DIRECTORY)
             Constants.SAMPLE_PATH = root.samples_path[configdict["directory"]]
             if not isinstance(root.samples[configdict["directory"]],tuple):
                 Constants.FIRSTFILE_ABSPATH = os.path.join(Constants.SAMPLE_PATH,
@@ -5349,26 +5373,19 @@ class ConfigDiag:
                     "."+root.mca_extension[configdict["directory"]])
 
             # reads configuration integrity prior opening config.cfg for writing
-            if configdict['calibration'] == 'manual': 
+            if configdict["calibration"] == "simple" \
+                    or\
+                    configdict["calibration"] == "manual"\
+                    or\
+                    configdict["calibration"] == "advanced":
                 calibparam = root.ManualParam
-                # save_config only passes positive integers forward
-                # in the case other data is received as user input, this will be filtered
-                # absence of acceptable parameters returns an empty list
-                if calibparam == []: 
-                    messagebox.showerror("Calibration Error",
-                            "No acceptable parameters passed!")
-                    __self__.CalibDiag.focus_set()
-                    root.ManualParam = []
-                    raise ValueError("No acceptable parameters passed!")
-                elif len(calibparam) <= 1: 
-                    messagebox.showerror("Calibration Error",
-                            "Need at least two anchors!")
-                    __self__.CalibDiag.focus_set()
-                    root.ManualParam = []
-                    raise ValueError("Calibration need at least two anchors!")
-            else: 
+                
+            elif configdict["calibration"] == "from_source": 
                 Constants.CONFIG["calibration"] = "from_source"
                 calibparam = SpecRead.getcalibration()
+            else: 
+                raise ValueError("Didn't understand caibration method {0} input".format(configdict["calibration"]))
+                return
 
             cfgpath = os.path.join(SpecRead.__PERSONAL__,"bin","config.cfg")
             cfgfile = open(cfgpath,"w+")
@@ -5405,7 +5422,7 @@ class ConfigDiag:
                 cfgfile.write("{} = {}\r".format(key,configdict[key]))
             cfgfile.write("<<CALIBRATION>>\r")
             
-            if configdict['calibration'] == 'manual': 
+            if configdict['calibration'] == 'simple': 
                 calibparam = root.ManualParam
             else: 
                 calibparam = [[0,0],[0,0],[0,0]]
@@ -5469,7 +5486,7 @@ class ConfigDiag:
         __self__.ConfigDiagCalib = ttk.Combobox(
                 __self__.Frame, 
                 textvariable=__self__.CalibVar, 
-                values=("from_source","manual"),
+                values=("from_source","simple","advanced"),
                 state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
 
         __self__.EnhanceVar = BooleanVar()
@@ -6327,6 +6344,7 @@ if __name__ == "__main__":
     from SpecMath import FN_reset, FN_set, FN_fit_pseudoinv, FN_fit_gaus
     from SpecMath import datacube as Cube
     from SpecMath import converth5
+    from AdvCalibration import AdvCalib
     from ProgressBar import Busy, BusyManager, create_tooltip
     from EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
     from Mapping import getpeakmap, grab_simple_roi_image, select_lines 

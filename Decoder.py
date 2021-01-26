@@ -33,10 +33,11 @@ def unpack_icons():
     global ICO_ERASE, ICO_EXPORT1, ICO_EXPORT2, ICO_EXPORT_MERGE, ICO_IMGANAL
     global ICO_LOAD, ICO_NEXT, ICO_PREVIOUS, ICO_QUIT, ICO_REFRESH, ICO_RESET
     global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP, ICO_MAGNIFIER
-    global ICO_SAVE
+    global ICO_SAVE, ICO_LOG, ICO_LIN, ICO_ADVCALIB
 
     icons_file = open(os.path.join(os.getcwd(),"images","icons","icons.tz"),"rb")
     ICO_ACCEPT = icons_file.read(1548)
+    ICO_ADVCALIB = icons_file.read(4324)
     ICO_CCW = icons_file.read(4364)
     ICO_CW = icons_file.read(4328)
     ICO_DOWN = icons_file.read(4028)
@@ -45,7 +46,9 @@ def unpack_icons():
     ICO_EXPORT2 = icons_file.read(4512)
     ICO_EXPORT_MERGE = icons_file.read(4664)
     ICO_IMGANAL = icons_file.read(2416)
+    ICO_LIN = icons_file.read(4020)
     ICO_LOAD = icons_file.read(2184)
+    ICO_LOG = icons_file.read(4004)
     ICO_MAGNIFIER = icons_file.read(3876)
     ICO_NEXT = icons_file.read(4020)
     ICO_PREVIOUS = icons_file.read(4064)

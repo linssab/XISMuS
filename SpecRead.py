@@ -178,9 +178,8 @@ def getcalibration():
     if configuration is set to manual, returns the anchors input by
     user via GUI. """
 
-    if Constants.CONFIG['calibration'] == 'manual':
-        param = Constants.CALIB 
-    elif Constants.CONFIG['calibration'] == 'from_source':
+   
+    if Constants.CONFIG['calibration'] == 'from_source':
         param = []
         try: mca_file = open(getfirstfile(),'r')
         except:
@@ -223,8 +222,10 @@ def getcalibration():
                 pop_error("Calibration Error","Can't receive zero as parameter!")
                 raise ValueError("Cant receive zero as parameter!")
         else: pass
-    else: 
-        raise ValueError("Calibration mode {0} unknown! Check config.cfg")
+    else:
+        param = Constants.CALIB
+    #else: 
+    #    raise ValueError("Calibration mode {0} unknown! Check config.cfg")
     return param
 
 def getdata(mca):
