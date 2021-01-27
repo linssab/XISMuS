@@ -902,8 +902,8 @@ class ExportDiag():
     Target is the desired output image size. If enhance configuration is True,
     image is interpolated """
 
-    def __init__(__self__,parent):
-        __self__.master = Toplevel(parent.master)
+    def __init__(__self__, parent):
+        __self__.master = Toplevel(master = parent.master)
         __self__.master.grab_set()
         __self__.master.title("Export dialog")
         __self__.parent = parent
@@ -914,7 +914,6 @@ class ExportDiag():
         __self__.build_widgets()
 
     def build_widgets(__self__):
-        
         __self__.Frame = Frame(__self__.master, height=64, width=288)
         __self__.Frame.grid(pady=32)
         
@@ -959,7 +958,6 @@ class ExportDiag():
         icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
         __self__.master.iconbitmap(icon)
 
-
     def export(__self__,tag=0):
         enhance = __self__.parent.DATACUBE.config["enhance"]
         try:
@@ -991,6 +989,7 @@ class ExportDiag():
         except PermissionError as exception: 
             messagebox.showerror("Error!",exception.__class__.__name__)
             return
+        __self__.parent.master.focus_set()
         __self__.kill()
 
     def merge(__self__):
@@ -1579,7 +1578,6 @@ class ImageAnalyzer:
             __self__.scaleLabel.config(state=DISABLED)
 
     def build_widgets(__self__):
-        
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
         __self__.Map1Counts.set("Select an element")
@@ -2161,7 +2159,7 @@ class ImageAnalyzer:
                 f.name, 
                 enhance=Constants.MY_DATACUBE.config["enhance"],
                 merge=False)
-        #plt.imsave(f.name, img, cmap=Constants.COLORMAP) 
+        __self__.master.focus_set()
         return 0
 
     def export_maps(__self__):
@@ -2428,7 +2426,7 @@ class PlotWin:
                 handles=patches)
 
     def draw_correlation(__self__,corr,labels):
-        A, B, R = SpecRead.linregress(corr[0],corr[1]) 
+        A, B, R = linregress(corr[0],corr[1]) 
         fit = []
         labelx,macrox = labels[0].split("_")[0],labels[0].split("_")[1]
         linex = which_macro(labelx)
@@ -6340,10 +6338,8 @@ if __name__ == "__main__":
     from ImgMath import LEVELS, apply_scaling, correlate
     from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
     from Decoder import *
-    from SpecMath import getstackplot, peakstrip
-    from SpecMath import FN_reset, FN_set, FN_fit_pseudoinv, FN_fit_gaus
+    from SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
     from SpecMath import datacube as Cube
-    from SpecMath import converth5
     from AdvCalibration import AdvCalib
     from ProgressBar import Busy, BusyManager, create_tooltip
     from EnergyLib import plottables_dict, ElementColors, which_macro, ElementList

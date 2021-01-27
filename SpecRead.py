@@ -302,6 +302,7 @@ def calibrate(lead=0, tail=0, specsize=None):
     """ Returns the energy axis and gain of the calibrated axis
     The parameters are taken from config.cfg if calibration is set to manual
     or from the mca files if calibration is set to from_source """
+    from SpecMath import linregress
 
     param = getcalibration()
     x=[]
@@ -458,82 +459,6 @@ def dump_ratios(maps_list,element_list):
                     logger.debug("{}\t{}\t{}\t{}\t{}\n".format(x,y,a,b,0))
         r_file.close()
     return 0
-
-def linregress(x, y, sigmay=None, full_output=False):
-    # DISCLAIMER #
-    # function extracted from PyMca5.PyMcaMath.fitting.RateLaw script
-    """
-    Linear fit to a straight line following P.R. Bevington:
-    "Data Reduction and Error Analysis for the Physical Sciences"
-    Parameters
-    ----------
-    x, y : array_like
-        two sets of measurements.  Both arrays should have the same length.
-    sigmay : The uncertainty on the y values
-    Returns
-    -------
-    slope : float
-        slope of the regression line
-    intercept : float
-        intercept of the regression line
-    r_value : float
-        correlation coefficient
-    if full_output is true, an additional dictionary is returned with the keys
-    sigma_slope: uncertainty on the slope
-    sigma_intercept: uncertainty on the intercept
-    stderr: float
-        square root of the variance
-    """
-
-    x = np.asarray(x, dtype=np.float).flatten()
-    y = np.asarray(y, dtype=np.float).flatten()
-    N = y.size
-    if sigmay is None:
-        sigmay = np.ones((N,), dtype=y.dtype)
-    else:
-        sigmay = np.asarray(sigmay, dtype=np.float).flatten()
-    w = 1.0 / (sigmay * sigmay + (sigmay == 0))
-
-    n = S = w.sum()
-    Sx = (w * x).sum()
-    Sy = (w * y).sum()    
-    Sxx = (w * x * x).sum()
-    Sxy = ((w * x * y)).sum()
-    Syy = ((w * y * y)).sum()
-    # SSxx is identical to delta in Bevington book
-    delta = SSxx = (S * Sxx - Sx * Sx)
-
-    tmpValue = Sxx * Sy - Sx * Sxy
-    intercept = tmpValue / delta
-    SSxy = (S * Sxy - Sx * Sy)
-    slope = SSxy / delta
-    sigma_slope = np.sqrt(S /delta)
-    sigma_intercept = np.sqrt(Sxx / delta)
-
-    SSyy = (n * Syy - Sy * Sy)
-    r_value = SSxy / np.sqrt(SSxx * SSyy)
-    if r_value > 1.0:
-        r_value = 1.0
-    if r_value < -1.0:
-        r_value = -1.0
-
-    if not full_output:
-        return slope, intercept, r_value
-
-    ddict = {}
-    # calculate the variance
-    if N < 3:
-        variance = 0.0
-    else:
-        variance = ((y - intercept - slope * x) ** 2).sum() / (N - 2)
-    ddict["variance"] = variance
-    ddict["stderr"] = np.sqrt(variance)
-    ddict["slope"] = slope
-    ddict["intercept"] = intercept
-    ddict["r_value"] = r_value
-    ddict["sigma_intercept"] = np.sqrt(Sxx / SSxx)
-    ddict["sigma_slope"] = np.sqrt(S / SSxx)
-    return slope, intercept, r_value, ddict
 
 if __name__ == "__main__":
     logger.info("This is SpecRead")

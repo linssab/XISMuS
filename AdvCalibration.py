@@ -43,7 +43,7 @@ logger = logging.getLogger("logfile")
 import SpecRead
 from ProgressBar import Busy
 from Decoder import * 
-from SpecMath import findpeaks
+from SpecMath import findpeaks, linregress
 
 class AdvCalib():
 
@@ -72,7 +72,9 @@ class AdvCalib():
         __self__.spec_no = root.mcacount[Constants.CONFIG.get("directory")]
         __self__.folder = Constants.CONFIG.get("directory")
         __self__.window = DoubleVar()
+        __self__.equation = StringVar()
         __self__.window.set(Constants.PEAK_TOLERANCE)
+        __self__.equation.set("E(i) = GAIN*i + ZERO")
         __self__.loaded = []
         
         __self__.master.grid_columnconfigure(0,weight=1)
@@ -81,6 +83,31 @@ class AdvCalib():
         __self__.build_widgets()
         __self__.master.focus_force()
         __self__.master.grab_set()
+
+    def set_cursor_selection(__self__, event):
+        global CURSOR_SELECTION
+        y = event.y
+        idx = event.widget.nearest(y)
+        name = event.widget.myId
+        if name == "ch":
+            CURSOR_SELECTION = event.widget.get(idx)
+        elif name == "en":
+            CURSOR_SELECTION = event.widget.get(idx)
+        else: CURSOR_SELECTION = None
+
+    def write_equation(__self__):
+        x, y = list(__self__.channels.get(0,END)),list(__self__.energies.get(0,END))
+        op = "+"
+        if len(x) > 1:
+            gain, zero, r, = linregress(x,y) 
+        else:
+            __self__.equation.set("E(i) = GAIN*i + ZERO")
+            __self__.results.update()
+            return
+        if zero < 0: op = ""
+        text = "E(i) = {0:.3f}*i {2} {1:.3f}".format(gain, zero, op)
+        __self__.equation.set(text)
+        __self__.results.update()
 
     def random_generator(__self__):
         n = 0
@@ -281,27 +308,30 @@ class AdvCalib():
                 (not en in __self__.energies.get(0,END)):
             __self__.channels.insert(END,ch)
             __self__.energies.insert(END,en)
+            __self__.write_equation()
         __self__.kill_popup()
 
     def remove_value(__self__, e=""):
+        global CURSOR_SELECTION
         active = None
         try: 
-            active = __self__.channels.get(ACTIVE)
+            active = __self__.channels.get(__self__.channels.curselection())
             idx = __self__.channels.get(0,END).index(active)
         except:
             try:
-                active = __self__.energies.get(ACTIVE)
+                active = __self__.energies.get(__self__.energies.curselection())
                 idx = __self__.energies.get(0,END).index(active)
             except: return
         if active is None: return
         else:
+            if active == CURSOR_SELECTION: CURSOR_SELECTION = None
             __self__.channels.delete(idx)
             __self__.energies.delete(idx)
+            __self__.write_equation()
 
     def validate(__self__):
         parameters = [[i,j] for i,j in zip(__self__.channels.get(0,END),
             __self__.energies.get(0,END))]
-        print(parameters)
         __self__.parent.save_param(advparams=parameters)
         __self__.plot.clear()
 
@@ -330,21 +360,31 @@ class AdvCalib():
 
         #right panel
         __self__.listlabel = Label(__self__.frame2, text="Channel - Energy", width=25)
-        __self__.channels = Listbox(__self__.frame2, width=12, height=12)
-        __self__.energies = Listbox(__self__.frame2, width=12, height=12)
+        __self__.channels = Listbox(__self__.frame2, width=12, height=11)
+        __self__.channels.bind("<Button-1>",__self__.set_cursor_selection)
+        __self__.channels.myId = "ch"
+        __self__.channels.config(selectmode=SINGLE)
+        __self__.energies = Listbox(__self__.frame2, width=12, height=11)
+        __self__.energies.bind("<Button-1>",__self__.set_cursor_selection)
+        __self__.energies.myId = "en"
+        __self__.energies.config(selectmode=SINGLE)
         __self__.remove = Button(__self__.frame2, text="Remove", width=11,
                 command=__self__.remove_value)
+        __self__.results = Label(__self__.frame2, width=20,
+                textvariable=__self__.equation, justify=CENTER)
         __self__.save_and_exit = Button(__self__.frame2, text="Save and Compile",
                 command=__self__.validate)
         __self__.cancel = Button(__self__.frame2, text="Cancel",
                 command=__self__.kill)
+
         __self__.listlabel.grid(row=0, column=0, columnspan=2, sticky=W+E)
         __self__.channels.grid(row=1, column=0, sticky=N+S)
         __self__.energies.grid(row=1, column=1, sticky=N+S)
-        __self__.remove.grid(row=2, column=0, columnspan=2, pady=(6,6))
-        __self__.save_and_exit.grid(row=3, column=0, columnspan=2, pady=(6,6), padx=(16,16), 
+        __self__.results.grid(row=2, column=0, columnspan=2, pady=(6,0))
+        __self__.remove.grid(row=3, column=0, columnspan=2, pady=(6,3))
+        __self__.save_and_exit.grid(row=4, column=0, columnspan=2, pady=(6,3), padx=(16,16), 
                 sticky=W+E)
-        __self__.cancel.grid(row=4, column=0, columnspan=2, pady=(0,6), padx=(16,16),
+        __self__.cancel.grid(row=5, column=0, columnspan=2, pady=(0,6), padx=(16,16),
                 sticky=W+E)
 
         #bottom panel
@@ -367,17 +407,18 @@ class AdvCalib():
                 width=20,
                 height=20,
                 command=__self__.set_log)
+        
         __self__.label1.grid(row=0, column=0, padx=(2,0), sticky=W)
         __self__.entry1.grid(row=0, column=1, sticky=W)
         __self__.retry.grid(row=0, column=2, padx=(32,0), sticky=W)
         __self__.lin.grid(row=0, column=3, padx=(6,0))
         __self__.log.grid(row=0, column=4)
 
+
         # execute 
         __self__.create_reference_spectrum()
         __self__.plot.data, = __self__.plot.plot(__self__.spectrum)
         __self__.refresh()
-
         x = __self__.master.winfo_width()
         y = __self__.master.winfo_height()
         __self__.master.minsize(x,y)
