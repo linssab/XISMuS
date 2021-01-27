@@ -5122,11 +5122,16 @@ class ConfigDiag:
 
     def save_param(__self__, advparams=None):
         if __self__.CalibVar.get() == "simple":
-            EntryParam = [
+            EntryParam = []
+            entries = [
                     [__self__.ch1.get(),__self__.en1.get()],
                     [__self__.ch2.get(),__self__.en2.get()],
                     [__self__.ch3.get(),__self__.en3.get()],
                     [__self__.ch4.get(),__self__.en4.get()]]
+            for index in range(len(entries)):
+                if entries[index][0] != 0 or entries[index][1] != 0:
+                    EntryParam.append(entries[index])
+
         elif __self__.CalibVar.get() == "advanced":
             EntryParam = advparams
 
@@ -5153,9 +5158,8 @@ class ConfigDiag:
             elif EntryParam[index][0] <= 0 or EntryParam[index][1] <= 0:
                 messagebox.showerror("Calibration Error",
                         "Can't receive negative or zero values!")
-                __self__.CalibDiag.focus_set()
                 root.ManualParam = []
-                raise ValueError("Manual calibration can't receive negative values!")
+                raise ValueError("Manual calibration can't receive negative or zero values!")
         ##############################
 
         if __self__.CalibVar.get() == "simple": __self__.CalibDiag.grab_release()
