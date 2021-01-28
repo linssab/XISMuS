@@ -95,14 +95,11 @@ class Busy:
     
     def __init__(__self__,max_,min_,grab=True):
         __self__.master = Toplevel()
+        __self__.master.attributes("-alpha",0.0)
         __self__.make_abortion = False
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
-        x = __self__.master.winfo_screenwidth()
-        y = __self__.master.winfo_screenheight()
-        __self__.master.geometry("{}x{}+{}+{}".format(
-            166, 49,
-            int((x/2)-80), int((y/2)-23)))
+        
         __self__.btnz = Frame(__self__.master)
         __self__.btnz.grid(row=1,column=0)
         __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
@@ -111,11 +108,23 @@ class Busy:
         __self__.master.label.grid(row=0,column=0)       
         __self__.master.body = Frame(__self__.outerframe)        
         __self__.master.body.grid(row=1,column=0)
-        __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
+        __self__.progress = ttk.Progressbar(__self__.master.body, 
+                orient="horizontal",length=160, 
+                mode="determinate",
+                style="green.Horizontal.TProgressbar",
+                maximum=max_)
         __self__.progress.grid(row=0,column=0)
         if grab: __self__.master.grab_set()
-        __self__.win_x = __self__.master.winfo_width()
-        __self__.win_y = __self__.master.winfo_height()
+
+        __self__.master.update()
+        x = __self__.master.winfo_screenwidth()
+        y = __self__.master.winfo_screenheight()
+        win_x = __self__.master.winfo_width()
+        win_y = __self__.master.winfo_height()
+        __self__.master.geometry('{}x{}+{}+{}'.format(win_x, win_y-1,
+                round((x/2)-win_x/2), round((y/2)-win_y/2)))
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+
 
     def updatebar(__self__,value):
 
@@ -207,24 +216,34 @@ class Busy:
 class ReadProgress:
     def __init__(__self__,max_,min_):
         __self__.master = Toplevel()
+        __self__.master.attributes("-alpha",0.0)
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
-        x = __self__.master.winfo_screenwidth()
-        y = __self__.master.winfo_screenheight()
-        win_x = __self__.master.winfo_width()
-        win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(166, 71,\
-                int((x/2)-80), int((y/2)-35)))
+
         __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
         __self__.outerframe.grid(row=0, column=0)
         __self__.master.label = Label(__self__.outerframe, text="Reading spectra...").\
                 grid(row=0,column=0) 
         __self__.master.body = Frame(__self__.outerframe)        
         __self__.master.body.grid(row=1,column=0)
-        __self__.progress = ttk.Progressbar(__self__.master.body, orient="horizontal",length=160, mode="determinate",maximum=max_)
+        __self__.progress = ttk.Progressbar(__self__.master.body, 
+                orient="horizontal",
+                length=160, 
+                style="green.Horizontal.TProgressbar",
+                mode="determinate",
+                maximum=max_)
         __self__.progress.grid(row=0,column=0)
         __self__.spec = Label(__self__.master.body, text="")       
         __self__.spec.grid(row=2,column=0)
+        
+        __self__.master.update()
+        x = __self__.master.winfo_screenwidth()
+        y = __self__.master.winfo_screenheight()
+        win_x = __self__.master.winfo_width()
+        win_y = __self__.master.winfo_height()
+        __self__.master.geometry('{}x{}+{}+{}'.format(win_x, win_y,
+                int((x/2)-win_x/2), int((y/2)-win_y/2)))
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     def updatebar(__self__,value):
         if value == __self__.progress["maximum"]-1: 

@@ -64,7 +64,7 @@ class AdvCalib():
         __self__.frame1.grid(row=0, column=0, sticky=N+E+W+S, padx=(8,0))
         __self__.frame2.grid(row=0, column=1, rowspan=2, padx=(16,16), pady=(16,16), 
                 sticky=N+S)
-        __self__.frame3.grid(row=1, column=0, columnspan=2, pady=(16,16), sticky=W+E)
+        __self__.frame3.grid(row=1, column=0, columnspan=2, pady=(24,16), sticky=W+E)
         __self__.root = root
         __self__.parent = parent
         __self__.plotmode = "Linear"
@@ -217,7 +217,7 @@ class AdvCalib():
         __self__.plotmode = "Log"
         __self__.plot_peaks()
 
-    def kill(__self__):
+    def kill(__self__, e=""):
         try: __self__.kill_popup()
         except: pass
         __self__.master.grab_release()
@@ -260,30 +260,31 @@ class AdvCalib():
         __self__.win.withdraw()
         __self__.win.resizable(False,False)
         __self__.win.overrideredirect(True)
-        __self__.diag = Frame(__self__.win,relief=RIDGE,bd=3)
+        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE)
         __self__.diag.grid()
-        label1 = Label(__self__.diag,text="Channel: ")
-        label1.grid(row=1,column=0, pady=(5,0))
-        label2 = Label(__self__.diag,text="Energy (KeV): ")
-        label2.grid(row=2,column=0)
+        label1 = ttk.Label(__self__.diag,text="Channel: ")
+        label2 = ttk.Label(__self__.diag,text="Energy (KeV): ")
         __self__.en = DoubleVar()
         __self__.ch = IntVar()
         __self__.ch.set(__self__.xhover)
         __self__.win.bind("<Return>",__self__.add_values)
+        label1.grid(row=1,column=0, pady=(6,0),padx=(6,0))
+        label2.grid(row=2,column=0, padx=(6,0))
         
-        ch_ = Entry(__self__.diag, textvariable=__self__.ch,validate="focusout",
+        ch_ = ttk.Entry(__self__.diag, textvariable=__self__.ch,validate="focusout",
                 width=9)
-        ch_.grid(row=1,column=1)
-        en_ = Entry(__self__.diag, textvariable=__self__.en,validate="focusout",
+        ch_.config(state=DISABLED)
+        ch_.grid(row=1,column=1,pady=(6,0))
+        en_ = ttk.Entry(__self__.diag, textvariable=__self__.en,validate="focusout",
                 width=9)
         en_.grid(row=2,column=1)
         
-        accept = Button(__self__.diag,text="Ok", width=10, 
+        accept = ttk.Button(__self__.diag,text="Ok", width=8, 
                 command=__self__.add_values)
-        cancel = Button(__self__.diag,text="Cancel", width=10, 
+        cancel = ttk.Button(__self__.diag,text="Cancel", width=8, 
                 command=__self__.kill_popup)
-        accept.grid(row=3,column=0,pady=5,sticky=W+E,padx=3)
-        cancel.grid(row=3,column=1,pady=5,sticky=W+E,padx=3)
+        accept.grid(row=3,column=0,pady=(6,6),sticky=W+E,padx=(10,3))
+        cancel.grid(row=3,column=1,pady=(6,6),sticky=W+E,padx=(3,10))
 
         __self__.win.update()
         width = __self__.win.winfo_width()
@@ -368,13 +369,13 @@ class AdvCalib():
         __self__.energies.bind("<Button-1>",__self__.set_cursor_selection)
         __self__.energies.myId = "en"
         __self__.energies.config(selectmode=SINGLE)
-        __self__.remove = Button(__self__.frame2, text="Remove", width=11,
+        __self__.remove = ttk.Button(__self__.frame2, text="Remove", width=11,
                 command=__self__.remove_value)
         __self__.results = Label(__self__.frame2, width=20,
                 textvariable=__self__.equation, justify=CENTER)
-        __self__.save_and_exit = Button(__self__.frame2, text="Save and Compile",
+        __self__.save_and_exit = ttk.Button(__self__.frame2, text="Save and Compile",
                 command=__self__.validate)
-        __self__.cancel = Button(__self__.frame2, text="Cancel",
+        __self__.cancel = ttk.Button(__self__.frame2, text="Cancel",
                 command=__self__.kill)
 
         __self__.listlabel.grid(row=0, column=0, columnspan=2, sticky=W+E)
@@ -388,27 +389,25 @@ class AdvCalib():
                 sticky=W+E)
 
         #bottom panel
-        __self__.label1 = Label(__self__.frame3, text="Peakfind tolerance:", justify=LEFT)
+        __self__.label1 = Label(__self__.frame3, text="Peakfind tolerance:",justify=LEFT)
         __self__.entry1 = Entry(__self__.frame3, textvariable=__self__.window)
-        __self__.retry = Button(__self__.frame3, text="Refresh", command=__self__.refresh)
+        __self__.retry = ttk.Button(__self__.frame3, text="Refresh", command=__self__.refresh)
         icon = PhotoImage(data=ICO_LIN)
         __self__.ico_lin = icon.subsample(1,1)
         icon = PhotoImage(data=ICO_LOG)
         __self__.ico_log = icon.subsample(1,1)
-        __self__.lin = Button(
+        __self__.lin = ttk.Button(
                 __self__.frame3, 
                 image=__self__.ico_lin,
                 width=20,
-                height=20,
                 command=__self__.set_lin)
-        __self__.log = Button(
+        __self__.log = ttk.Button(
                 __self__.frame3, 
                 image=__self__.ico_log,
                 width=20,
-                height=20,
                 command=__self__.set_log)
         
-        __self__.label1.grid(row=0, column=0, padx=(2,0), sticky=W)
+        __self__.label1.grid(row=0, column=0, padx=(16,0), sticky=W)
         __self__.entry1.grid(row=0, column=1, sticky=W)
         __self__.retry.grid(row=0, column=2, padx=(32,0), sticky=W)
         __self__.lin.grid(row=0, column=3, padx=(6,0))

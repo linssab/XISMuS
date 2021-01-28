@@ -738,6 +738,7 @@ class Welcome:
 
         __self__.master.resizable(False,False)
         __self__.master.title("Welcome!")
+
         __self__.page = StringVar()
         __self__.tag = BooleanVar()
         __self__.infotext = StringVar()
@@ -758,11 +759,9 @@ class Welcome:
                 __self__.master, 
                 textvariable=__self__.page, 
                 relief=RIDGE)
-        __self__.page_counter.grid(row=0, column=0, sticky=W+E, columnspan=2, pady=3)
         __self__.text_frame = Frame(
                 __self__.master,
                 width=320, height=150)
-        __self__.text_frame.grid(row=1, column=0, sticky=W+E, columnspan=2)
         __self__.info = Label(__self__.text_frame,
                 textvariable=__self__.infotext,
                 anchor=CENTER,
@@ -775,37 +774,44 @@ class Welcome:
                 cursor="arrow",
                 relief=FLAT)
         __self__.info["font"] = __self__.font
+
+        __self__.page_counter.grid(row=0, column=0, sticky=W+E, columnspan=2, pady=3)
         __self__.info.grid(row=0, column=1, sticky=W+E)
+        __self__.text_frame.grid(row=1, column=0, sticky=W+E, columnspan=2)
+
         icon_fw = PhotoImage(data=ICO_NEXT)
         __self__.icon_fw = icon_fw.subsample(1,1)
         icon_bw= PhotoImage(data=ICO_PREVIOUS)
         __self__.icon_bw = icon_bw.subsample(1,1)
-        __self__.fw = Button(
+
+        __self__.fw = ttk.Button(
                 __self__.text_frame, 
                 image=__self__.icon_fw, 
-                command=__self__.next_page, 
-                width=32,height=32)
-        __self__.fw.grid(row=0, column=2,padx=6)
-        __self__.bw = Button(
+                takefocus=False,
+                command=__self__.next_page) 
+        __self__.bw = ttk.Button(
                 __self__.text_frame, 
                 image=__self__.icon_bw, 
-                command=__self__.previous_page, 
-                width=32, height=32)
+                takefocus=False,
+                command=__self__.previous_page) 
+
+        __self__.fw.grid(row=0, column=2,padx=6)
         __self__.bw.grid(row=0, column=0,padx=6)
 
         __self__.button_frame = Frame(__self__.master)
-        __self__.button_frame.grid(row=3,column=0,columnspan=2)
-        
-        __self__.tag_button = Checkbutton(__self__.master, variable=__self__.tag) 
-        __self__.tag_button.grid(row=2, column=0, padx=10)
-        
+        __self__.tag_button = ttk.Checkbutton(__self__.master, 
+                takefocus=False,
+                variable=__self__.tag) 
         __self__.tag_label = Label(__self__.master, text="Don't show me again on startup.")
-        __self__.tag_label.grid(row=2, column=1, sticky=W)
-
-        __self__.accept = Button(
+        __self__.accept = ttk.Button(
                 __self__.button_frame, 
-                text="Ok", width=13, 
+                takefocus=False,
+                text="Ok", 
                 command=__self__.checkout)
+
+        __self__.button_frame.grid(row=3,column=0,columnspan=2)
+        __self__.tag_button.grid(row=2, column=0, padx=10)
+        __self__.tag_label.grid(row=2, column=1, sticky=W)
         __self__.accept.grid(pady=10)
         
         for i in range(5):
@@ -927,24 +933,24 @@ class ExportDiag():
 
         size_x, size_y = 64,64
 
-        __self__.Button1 = Button(
+        __self__.Button1 = ttk.Button(
                 __self__.Frame, 
                 image=__self__.icon1, 
-                bd=3, 
+                style="main.TButton",
                 command=lambda:__self__.export(tag=1), 
-                width=size_x, height=size_y)
-        __self__.Button2 = Button(
+                width=size_x)#, height=size_y)
+        __self__.Button2 = ttk.Button(
                 __self__.Frame, 
                 image=__self__.icon2, 
-                bd=3, 
+                style="main.TButton",
                 command=lambda:__self__.export(tag=2), 
-                width=size_x, height=size_y)
-        __self__.Button3 = Button(
+                width=size_x)#, height=size_y)
+        __self__.Button3 = ttk.Button(
                 __self__.Frame, 
                 image=__self__.icon3, 
-                bd=3, 
+                style="main.TButton",
                 command=__self__.merge, 
-                width=size_x, height=size_y)
+                width=size_x)#, height=size_y)
 
         __self__.Button1.grid(row=0,column=0,padx=32)
         __self__.Button2.grid(row=0,column=1,padx=32)
@@ -1005,10 +1011,10 @@ class ExportDiag():
         __self__.kill()
 
     def kill(__self__,e=""):
-        __self__.master.grab_release()
-        __self__.master.destroy()
         __self__.parent.master.focus_set()
         __self__.parent.master.focus_force()
+        __self__.master.grab_release()
+        __self__.master.destroy()
 
 
 class DimensionDiag():
@@ -1555,9 +1561,13 @@ class ImageAnalyzer:
         __self__.sliders = LabelFrame(__self__.master,text="Control Panel")
         __self__.sliders.pack(side=TOP,fill=X,anchor=CENTER,padx=(5,5),pady=(0,5))
         __self__.buttons = Frame(__self__.sliders)
+        __self__.buttons.grid_propagate(1)
         __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W+E)
         __self__.buttons2 = Frame(__self__.sliders)
-        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30),sticky=E)
+        __self__.buttons2.grid_propagate(1)
+        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30),sticky=W)
+        __self__.master.grid_columnconfigure(0,weight=1)
+        __self__.master.grid_columnconfigure(9,weight=1)
         __self__.build_widgets()
 
     def get_version(__self__):
@@ -1653,21 +1663,24 @@ class ImageAnalyzer:
         # image controls Threshold, LowPass and Smooth
         __self__.T1check = BooleanVar()
         __self__.T1check.set(False)
-        __self__.T1 = Checkbutton(
+        __self__.T1 =ttk.Checkbutton(
                 __self__.sliders, 
+                takefocus=False,
                 variable=__self__.T1check,
                 command=__self__.switchLP1T1).grid(row=0,column=2)
 
         __self__.LP1check = BooleanVar()
         __self__.LP1check.set(False)
-        __self__.LP1 = Checkbutton(__self__.sliders, 
+        __self__.LP1 =ttk.Checkbutton(__self__.sliders, 
+                takefocus=False,
                 variable=__self__.LP1check,
                 command=__self__.switchT1LP1).grid(row=1,column=2)
 
         __self__.S1check = BooleanVar()
         __self__.S1check.set(False)
-        __self__.S1 = Checkbutton(
+        __self__.S1 =ttk.Checkbutton(
                 __self__.sliders, 
+                takefocus=False,
                 variable=__self__.S1check,
                 command=lambda:__self__.draw_image1(0)).grid(row=2,column=2)
        
@@ -1685,71 +1698,78 @@ class ImageAnalyzer:
         __self__.S2Label.grid(row=2,column=7)
 
         # sliders for image 1
-        __self__.T1Slider = Scale(
+        __self__.T1Slider = ttk.Scale(
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image1)
-        __self__.T1Slider.grid(row=0,column=4)
-        __self__.LP1Slider = Scale(
+        __self__.LP1Slider = ttk.Scale(
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image1)
-        __self__.LP1Slider.grid(row=1,column=4)
-        __self__.S1Slider = Scale(
+        __self__.S1Slider = ttk.Scale(
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
                 to=2,
                 command=__self__.draw_image1)
+
+        __self__.T1Slider.grid(row=0,column=4)
+        __self__.LP1Slider.grid(row=1,column=4)
         __self__.S1Slider.grid(row=2,column=4)
 
         # image controls Threshold, LowPass and Smooth
         __self__.T2check = BooleanVar()
         __self__.T2check.set(False)
-        __self__.T2 = Checkbutton(
+        __self__.T2 =ttk.Checkbutton(
                 __self__.sliders, 
+                takefocus=False,
                 variable=__self__.T2check,
-                command=__self__.switchLP2T2).grid(row=0,column=6)
-
+                command=__self__.switchLP2T2)
         __self__.LP2check = BooleanVar()
         __self__.LP2check.set(0)
-        __self__.LP2 = Checkbutton(
+        __self__.LP2 =ttk.Checkbutton(
                 __self__.sliders, 
+                takefocus=False,
                 variable=__self__.LP2check,
-                command=__self__.switchT2LP2).grid(row=1,column=6)
-
+                command=__self__.switchT2LP2)
         __self__.S2check = BooleanVar()
         __self__.S2check.set(0)
-        __self__.S2 = Checkbutton(
+        __self__.S2 =ttk.Checkbutton(
                 __self__.sliders, 
+                takefocus=False,
                 variable=__self__.S2check,
-                command=lambda:__self__.draw_image2(0)).grid(row=2,column=6)
+                command=lambda:__self__.draw_image2(0))
+
+        __self__.T2.grid(row=0,column=6,padx=(32,0))
+        __self__.LP2.grid(row=1,column=6,padx=(32,0))
+        __self__.S2.grid(row=2,column=6,padx=(32,0))
                
         # sliders for image 2
-        __self__.T2Slider = Scale(
+        __self__.T2Slider = ttk.Scale(
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image2)
-        __self__.T2Slider.grid(row=0,column=8)
-        __self__.LP2Slider = Scale(
+        __self__.LP2Slider = ttk.Scale(
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image2)
-        __self__.LP2Slider.grid(row=1,column=8)
-        __self__.S2Slider = Scale(
+        __self__.S2Slider = ttk.Scale(
                 __self__.sliders, 
                 orient='horizontal', 
                 from_=0, 
                 to=2,
                 command=__self__.draw_image2)
+
+        __self__.LP2Slider.grid(row=1,column=8)
+        __self__.T2Slider.grid(row=0,column=8)
         __self__.S2Slider.grid(row=2,column=8)
     
         # buttons
@@ -1763,37 +1783,41 @@ class ImageAnalyzer:
         __self__.annotate = Button(
                 __self__.buttons,
                 text="Set ROI",
+                cursor="hand2",
                 command=__self__.toggle_annotator,
                 relief="raised",
                 width=14)
-        __self__.annotate.grid(row=4,column=0,columnspan=2,sticky=W+E)
-        __self__.correlate = Button(
+        create_tooltip(__self__.annotate,"When toggled, use the mouse to draw a square in any of the maps above.")
+        __self__.correlate = ttk.Button(
                 __self__.buttons,
                 text="Correlate",
                 command=__self__.get_correlation,
                 width=round(__self__.annotate.winfo_width()/2))
-        __self__.correlate.grid(row=3,column=0,sticky=W+E)
-        __self__.export = Button(
+        __self__.export = ttk.Button(
                 __self__.buttons,
                 text="Export",
                 command=__self__.export_maps,
                 width=round(__self__.annotate.winfo_width()/2))
-        __self__.export.grid(row=3,column=1,sticky=W+E)
-        __self__.subtract_btn = Button(
+        __self__.subtract_btn = ttk.Button(
                 __self__.buttons2,
                 text="Add Images",
                 command=__self__.add_images,
                 width=round(__self__.annotate.winfo_width()/2))
         __self__.subtract_btn.grid(row=0,column=9,sticky=W+E)
-        __self__.add_btn = Button(
+        __self__.add_btn = ttk.Button(
                 __self__.buttons2,
                 text="Subtract Images",
                 command=__self__.subtract_images,
                 width=round(__self__.annotate.winfo_width()/2))
-        __self__.add_btn.grid(row=1,column=9,sticky=W+E)
 
-        __self__.scale = Checkbutton(
+        __self__.add_btn.grid(row=1,column=9,sticky=W+E)
+        __self__.correlate.grid(row=3,column=0,sticky=W+E)
+        __self__.export.grid(row=3,column=1,sticky=W+E)
+        __self__.annotate.grid(row=4,column=0,columnspan=2,sticky=W+E,pady=(6,16))
+
+        __self__.scale =ttk.Checkbutton(
                 __self__.buttons2, 
+                takefocus=False,
                 variable=__self__.apply_scale_mask,
                 command=__self__.refresh)
         __self__.scaleLabel = Label(__self__.buttons2, text="Apply scaling mask")
@@ -1941,7 +1965,7 @@ class ImageAnalyzer:
             __self__.annotate.config(relief="raised")
             # the easiest way to recover the default 
             #color button is pointing to an existing button that never changes its color
-            __self__.annotate.config(bg=__self__.correlate.cget("background"))
+            __self__.annotate.config(bg=__self__.master.cget("background"))
             __self__.annotator.wipe_annotator()
             __self__.plot.wipe_plot()
  
@@ -2023,7 +2047,7 @@ class ImageAnalyzer:
                 image = iteractive_median(image,__self__.S1Slider.get())
         try:
             __self__.annotate.config(relief="raised")
-            __self__.annotate.config(bg=__self__.correlate.cget("background"))
+            __self__.annotate.config(bg=__self__.master.cget("background"))
             __self__.annotator.wipe_annotator()
             del __self__.plot
         except: pass
@@ -2048,7 +2072,7 @@ class ImageAnalyzer:
                 image = iteractive_median(image,__self__.S2Slider.get())
         try:
             __self__.annotate.config(relief="raised")
-            __self__.annotate.config(bg=__self__.correlate.cget("background"))
+            __self__.annotate.config(bg=__self__.master.cget("background"))
             __self__.annotator.wipe_annotator()
             del __self__.plot
         except: pass
@@ -2966,15 +2990,12 @@ class Settings:
 
         __self__.CoreCount = Constants.CPUS
         sys_mem = dict(virtual_memory()._asdict())
-
         __self__.GeneralOptions = LabelFrame(__self__.Settings, 
                 text="General options",padx=15,pady=15)
         __self__.PeakOptions = LabelFrame(__self__.Settings, 
                 text="Peakmethod options",padx=15,pady=15)
-
         __self__.GeneralOptions.grid(row=0,column=0,padx=(15,15),sticky=N+S+W+E)
         __self__.PeakOptions.grid(row=1,column=0,padx=(15,15),sticky=N+S+W+E)
-
         __self__.RAM_tot = convert_bytes(sys_mem["total"])
         __self__.RAM_free = convert_bytes(sys_mem["available"])
         __self__.build_widgets()
@@ -3044,7 +3065,8 @@ class Settings:
                 state="readonly")
 
         CoreLabel = Label(__self__.GeneralOptions,text="Enable Multi-Core? ")
-        CoreOption = Checkbutton(__self__.GeneralOptions, variable=__self__.CoreMode,
+        CoreOption =ttk.Checkbutton(__self__.GeneralOptions, variable=__self__.CoreMode,
+                takefocus=False,
                 command=__self__.toggle_multicore)
         CoreOptionText = Label(__self__.GeneralOptions, text="Yes")
         CoreCountLabel = Label(__self__.GeneralOptions,
@@ -3053,7 +3075,8 @@ class Settings:
         
         __self__.RAMLabel = Label(__self__.GeneralOptions,text="Limit RAM in Multi-Core? ")
         __self__.RAMUnitLabel = Label(__self__.GeneralOptions, text=__self__.RAMUnit.get())
-        __self__.RAMOption = Checkbutton(__self__.GeneralOptions, variable=__self__.RAMMode,
+        __self__.RAMOption =ttk.Checkbutton(__self__.GeneralOptions, variable=__self__.RAMMode,
+                takefocus=False,
                 command=__self__.toggle_ram)
         __self__.RAMOptionText = Label(__self__.GeneralOptions, text="Yes")
         __self__.RAMEntryBox = Entry(__self__.GeneralOptions, 
@@ -3063,7 +3086,9 @@ class Settings:
                 text="Available RAM: "+str(__self__.RAM_free))
 
         WlcmLabel = Label(__self__.GeneralOptions,text="Welcome message at startup? ")
-        WlcmOption = Checkbutton(__self__.GeneralOptions, variable=__self__.WlcmMode)
+        WlcmOption =ttk.Checkbutton(__self__.GeneralOptions, 
+                takefocus=False,
+                variable=__self__.WlcmMode)
         WlcmOptionText = Label(__self__.GeneralOptions, text="Yes")
         
         PlotLabel.grid(row=0,column=0,sticky=W)
@@ -3147,15 +3172,16 @@ class Settings:
         ContSupprEntry = Entry(__self__.PeakOptions,
                 textvariable=__self__.ContSuppr,
                 width=13)
-        create_tooltip(ContSupprLabel,"Spuppress misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
-        create_tooltip(ContSupprEntry,"Spuppress misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
+        create_tooltip(ContSupprLabel,"Suppresses misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
+        create_tooltip(ContSupprEntry,"Suppresses misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
         PeakCheckEntry = Entry(__self__.PeakOptions,
                 textvariable=__self__.WizTol,
                 width=7)
         __self__.PlotSaveIntervalEntry = Entry(__self__.PeakOptions, 
                 textvariable=__self__.PlotSaveVar,
                 width=13)
-        PlotSaveBool = Checkbutton(__self__.PeakOptions, 
+        PlotSaveBool =ttk.Checkbutton(__self__.PeakOptions, 
+                takefocus=False,
                 variable=__self__.PlotSaveBoolVar,
                 command=__self__.toggle_save_plot)
 
@@ -3185,18 +3211,18 @@ class Settings:
         
         ButtonsFrame = Frame(__self__.Settings, padx=10, pady=10)
         ButtonsFrame.grid(row=4,column=0,columnspan=2)
-        OKButton = Button(
+        OKButton = ttk.Button(
                 ButtonsFrame, 
                 text="OK", 
-                justify=CENTER,
                 width=10,
+                takefocus=False,
                 command=__self__.save_settings)
         OKButton.grid(row=4,column=0)
-        CancelButton = Button(
+        CancelButton = ttk.Button(
                 ButtonsFrame, 
                 text="Cancel", 
-                justify=CENTER,
                 width=10,
+                takefocus=False,
                 command=__self__.kill_window)
         CancelButton.grid(row=4,column=1)
 
@@ -3318,6 +3344,8 @@ class MainGUI:
         f.close()
         
         __self__.master = Tk()
+        Theme.apply_theme(__self__)
+        
         __self__.master.title("XISMuS {}".format(Constants.VERSION))
         __self__.master.withdraw() 
         __self__.master.attributes("-alpha",0.0)
@@ -4479,11 +4507,12 @@ class MainGUI:
         
         re_configure_icon = PhotoImage(data=ICO_REFRESH)
         __self__.re_configure_icon = re_configure_icon.subsample(1,1)
-        __self__.re_configure = Button(
+        __self__.re_configure = ttk.Button(
                 __self__.ConfigFrame, 
+                style="main.TButton",
                 image=__self__.re_configure_icon, 
                 width=32, 
-                height=32, 
+                takefocus=False,
                 command=__self__.reconfigure)
         __self__.re_configure.grid(row=5, column=5, sticky=S,padx=6)
         
@@ -4559,64 +4588,54 @@ class MainGUI:
         __self__.SettingsButton_icon = SettingsButton_icon.subsample(subx,suby)
 
         # create buttons
-        __self__.ButtonLoad = Button(
+        __self__.ButtonLoad = ttk.Button(
                 __self__.ButtonsFrame, 
                 text="  Database", 
-                anchor=W,
                 image=__self__.ButtonLoad_icon, 
-                bd=3, 
+                style="main.TButton",
                 compound=LEFT, 
                 command=__self__.list_samples)
-        __self__.ButtonLoad.grid(row=0,column=0, sticky=W+E)
-
-        __self__.ButtonReset = Button(
+        __self__.ButtonReset =ttk.Button(
                 __self__.ButtonsFrame, 
                 text="  Reset Sample", 
-                anchor=W,
                 image=__self__.ButtonReset_icon, 
+                style="main.TButton",
                 compound=LEFT, 
-                bd=3, 
                 command=__self__.reset_sample)
-        __self__.ButtonReset.grid(row=0,column=1, sticky=W+E)
-
-        __self__.ImgAnalButton = Button(
+        __self__.ImgAnalButton =ttk.Button(
                 __self__.ButtonsFrame, 
                 text="  Image Analyzer", 
-                anchor=W,
                 image=__self__.ImgAnalButton_icon, 
+                style="main.TButton",
                 compound=LEFT, 
-                bd=3, 
                 command=__self__.open_analyzer)
-        __self__.ImgAnalButton.grid(row=1,column=0, sticky=W+E)
-
-        __self__.FindElementButton = Button(
+        __self__.FindElementButton =ttk.Button(
                 __self__.ButtonsFrame, 
                 text="  Map Elements", 
-                anchor=W,
                 image=__self__.FindElementButton_icon, 
+                style="main.TButton",
                 compound=LEFT, 
-                bd=3, 
                 command=__self__.find_elements)
-        __self__.FindElementButton.grid(row=1,column=1, sticky=W+E)
-
-        __self__.QuitButton = Button(
+        __self__.QuitButton =ttk.Button(
                 __self__.ButtonsFrame, 
                 text="  Quit", 
-                anchor=W,
                 image=__self__.QuitButton_icon, 
+                style="main.TButton",
                 compound=LEFT, 
-                bd=3, 
                 command=__self__.root_quit)
-        __self__.QuitButton.grid(row=2,column=1,sticky=W+E)
-
-        __self__.SettingsButton = Button(
+        __self__.SettingsButton =ttk.Button(
                 __self__.ButtonsFrame, 
                 text="  Settings", 
-                anchor=W,
                 image=__self__.SettingsButton_icon, 
+                style="main.TButton",
                 compound=LEFT, 
-                bd=3, 
                 command=__self__.call_settings)
+
+        __self__.ImgAnalButton.grid(row=1,column=0, sticky=W+E)
+        __self__.FindElementButton.grid(row=1,column=1, sticky=W+E)
+        __self__.QuitButton.grid(row=2,column=1,sticky=W+E)
+        __self__.ButtonLoad.grid(row=0,column=0, sticky=W+E)
+        __self__.ButtonReset.grid(row=0,column=1, sticky=W+E)
         __self__.SettingsButton.grid(row=2,column=0,sticky=W+E)
 
         __self__.master.grid_columnconfigure(0,weight=1)
@@ -4836,19 +4855,17 @@ class MainGUI:
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
             EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
                     pack(side=LEFT, pady=8, padx=16)
-            YesButton = Button(
+            YesButton = ttk.Button(
                     __self__.ResetWindow, 
                     text="Yes", 
-                    justify=CENTER,
                     command=lambda: repack(
                         __self__,Constants.MY_DATACUBE.config["directory"]),
                     width=10).pack(side=TOP,pady=5)
-            NoButton = Button(
+            NoButton = ttk.Button(
                     __self__.ResetWindow, 
                     text="No", 
-                    justify=CENTER,
                     command=__self__.ResetWindow.destroy, 
-                    width=10).pack(side=TOP, pady=5)
+                    width=10).pack(side=TOP, pady=(5,10))
             
             place_center(__self__.master,__self__.ResetWindow)
             icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
@@ -4951,9 +4968,13 @@ class ReConfigDiag:
         __self__.MethodVar.set(Constants.MY_DATACUBE.config.get('peakmethod'))
         __self__.EnhanceVar.set(Constants.MY_DATACUBE.config.get('enhance'))
         
-        __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
+        __self__.ConfigDiagRatio =ttk.Checkbutton(__self__.Frame, 
+                takefocus=False,
+                variable=__self__.RatioVar)
         
-        __self__.ConfigDiagEnhance = Checkbutton(__self__.Frame, variable=__self__.EnhanceVar)
+        __self__.ConfigDiagEnhance =ttk.Checkbutton(__self__.Frame, 
+                takefocus=False,
+                variable=__self__.EnhanceVar)
         
         __self__.ConfigDiagMethod = ttk.Combobox(
                 __self__.Frame, 
@@ -4972,25 +4993,29 @@ class ReConfigDiag:
         img_dimension_display = Label(__self__.master,text=dimension_text)
         img_dimension_display.grid(row=2,column=0,sticky=W,padx=17,pady=2)
         
-        __self__.scale = Checkbutton(__self__.MergeSettings, variable=__self__.ScaleVar)
-        __self__.cont = Checkbutton(__self__.MergeSettings, variable=__self__.ContVar)
+        __self__.scale =ttk.Checkbutton(__self__.MergeSettings, 
+                takefocus=False,
+                variable=__self__.ScaleVar)
+        __self__.cont =ttk.Checkbutton(__self__.MergeSettings, 
+                takefocus=False,
+                variable=__self__.ContVar)
         __self__.scale.grid(row=0,column=0)
         __self__.cont.grid(row=1,column=0)
 
         ButtonsFrame = Frame(__self__.master)
         ButtonsFrame.grid(row=5,columnspan=2,pady=10,padx=10)
-        SaveButton = Button(
+        SaveButton = ttk.Button(
                 ButtonsFrame, 
                 text="Save", 
-                justify=CENTER, 
                 width=10,
+                takefocus=False,
                 command=__self__.save)
         SaveButton.grid(row=5,column=0,sticky=S)
-        CancelButton = Button(
+        CancelButton = ttk.Button(
                 ButtonsFrame, 
                 text="Cancel", 
-                justify=CENTER, 
                 width=10,
+                takefocus=False,
                 command=__self__.kill)
         CancelButton.grid(row=5,column=1,sticky=S)
 
@@ -5246,11 +5271,10 @@ class ConfigDiag:
         except: pass
 
     def manual_calib(__self__):
-        
         __self__.CalibDiag = Toplevel(master = __self__.master)
         __self__.CalibDiag.title("Manual configuration")
         __self__.CalibDiag.resizable(False,False)
-        __self__.CalibDiag.protocol("WM_DELETE_WINDOW",__self__.focus_grab)
+        __self__.CalibDiag.protocol("WM_DELETE_WINDOW",__self__.kill_manual_calib)
         __self__.CalibDiag.grab_set()
         icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
         __self__.CalibDiag.iconbitmap(icon)
@@ -5297,11 +5321,11 @@ class ConfigDiag:
         EnergyBox3 = Entry(ParamFrame,textvariable=__self__.en3).grid(row=3,column=1)
         EnergyBox4 = Entry(ParamFrame,textvariable=__self__.en4).grid(row=4,column=1)
         
-        OkButton = Button(ButtonFrame,text="SAVE",command=__self__.save_param).grid(
-                row=5,columnspan=2)
-        
+        OkButton = ttk.Button(ButtonFrame,text="Save",command=__self__.save_param).grid(
+                row=5,columnspan=2,pady=(6,6))
+
+        __self__.CalibDiag.grab_set() 
         place_center(__self__.master,__self__.CalibDiag)
-    
         
     def call_PeakClipper(__self__):
         if __self__.BgstripVar.get() == "None":
@@ -5316,9 +5340,11 @@ class ConfigDiag:
             __self__.clipper = PeakClipper(__self__,mode="Polynomial")
             __self__.clipper.master.grab_set()
 
-    def focus_grab(__self__):
+    def kill_manual_calib(__self__):
+        __self__.CalibDiag.grab_release()
         __self__.master.focus_set()
-        __self__.master.grab_set()
+        __self__.CalibDiag.destroy()
+        del __self__
 
     def save_config(__self__,e=""):
 
@@ -5479,10 +5505,12 @@ class ConfigDiag:
         __self__.DirectoryVar = StringVar()
         
         __self__.RatioVar = BooleanVar()
-        __self__.ConfigDiagRatio = Checkbutton(__self__.Frame, variable=__self__.RatioVar)
+        __self__.ConfigDiagRatio = ttk.Checkbutton(__self__.Frame, variable=__self__.RatioVar,
+                takefocus=False)
         
-        __self__.ConfigDiagSetBG = Button(__self__.Frame, text="Set BG",
-               width=13+ConfigDiagRatioYes.winfo_width(),command=__self__.call_PeakClipper)
+        __self__.ConfigDiagSetBG = ttk.Button(__self__.Frame, text="Set BG",
+               width=14+ConfigDiagRatioYes.winfo_width(),
+               command=__self__.call_PeakClipper)
         
         __self__.CalibVar = StringVar()
         __self__.ConfigDiagCalib = ttk.Combobox(
@@ -5521,17 +5549,15 @@ class ConfigDiag:
 
         ButtonsFrame = Frame(__self__.master)
         ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
-        SaveButton = Button(
+        SaveButton = ttk.Button(
                 ButtonsFrame, 
                 text="Save", 
-                justify=CENTER, 
                 width=10,
                 command=__self__.check_method_and_save)
         SaveButton.grid(row=8,column=0,sticky=S)
-        CancelButton = Button(
+        CancelButton = ttk.Button(
                 ButtonsFrame, 
                 text="Cancel", 
-                justify=CENTER, 
                 width=10,
                 command=__self__.wipe)
         CancelButton.grid(row=8,column=1,sticky=S)
@@ -5666,7 +5692,7 @@ class ImageOperationWarning:
             text="Image 2 is going to be subtracted from image 1. Click OK to proceed."
             speed = 125
             __self__.gif_size = 11
-        __self__.master.geometry("380x320")
+        __self__.master.geometry("400x330")
         __self__.master.title("Operation Warning")
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.resizable(False, False)
@@ -5680,7 +5706,7 @@ class ImageOperationWarning:
         __self__.text = Label(__self__.master, 
                 text=text,
                 wraplength=300)
-        __self__.ok = Button(__self__.master,text="OK",width=13,
+        __self__.ok = ttk.Button(__self__.master,text="OK",width=13,
                 command = __self__.perform)
         __self__.animation.pack(side=TOP,fill=BOTH,anchor=CENTER,padx=15,pady=15)
         __self__.ok.pack(side=BOTTOM,anchor=CENTER,padx=15,pady=15)
@@ -6337,6 +6363,7 @@ if __name__ == "__main__":
     open_log()
     logger = logging.getLogger("logfile")
     import SpecRead
+    import Theme
     from Mosaic import Mosaic_API
     from ReadConfig import checkout_config, set_settings 
     from ImgMath import LEVELS, apply_scaling, correlate
