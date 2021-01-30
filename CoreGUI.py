@@ -4653,7 +4653,7 @@ class MainGUI:
         if 6 <= hour < 12: text=["Good morning, welcome!","Load some data to get started."]
         elif 12 <= hour < 18: text=["Good afternoon!","Load some data to get started."]
         elif 18 <= hour < 23: text=["Good evening!","Load some data to get started."]
-        elif hour >= 23: text=["Isn't it too late to be looking at data?"]
+        else: text=["Isn't it too late to be looking at data?"]
         for i in text:
             __self__.StatusBox.insert(END, f"{i}")
 

@@ -484,7 +484,7 @@ class Mosaic_API:
 
         __self__.layers_list = Listbox(__self__.RightPane, height=10)
         __self__.layers_list.myId = "layers_list"
-        __self__.layers_list.bind("<Motion>",__self__.draw_patch)
+        __self__.layers_list.bind("<Button-1>",__self__.draw_patch)
         __self__.layers_list.bind("<Leave>",__self__.remove_patch)
 
         # buttons
@@ -768,9 +768,9 @@ class Mosaic_API:
         if __self__.press:
             __self__.move = True
             try: __self__.x1 = int(event.ydata)
-            except: pass
+            except: return
             try: __self__.y1 = int(event.xdata)
-            except: pass
+            except: return
             
             # adjust drag pointer to image click position
             name = __self__.selection
@@ -786,6 +786,7 @@ class Mosaic_API:
                 pass
             else: 
                 __self__.layer[name].start[1] = new_start_y
+                __self__.layer[name].end[1] = new_start_y + __self__.layer[name].img.shape[1]
             
             # sets new x start
             new_start_x = __self__.x1 - __self__.x0  + __self__.layer[name].start[0]
@@ -795,7 +796,9 @@ class Mosaic_API:
                 pass 
             else: 
                 __self__.layer[name].start[0] = new_start_x
+                __self__.layer[name].end[0] = new_start_x + __self__.layer[name].img.shape[0]
             
+            """
             # sets new y end
             new_end_y = __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
             if new_start_y < 0: 
@@ -815,7 +818,8 @@ class Mosaic_API:
             else: 
                 __self__.layer[name].end[0] = \
                         __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
-            
+            """
+
             limits_x = [__self__.layer[name].start[0],__self__.layer[name].end[0]]
             limits_y = [__self__.layer[name].start[1],__self__.layer[name].end[1]]
             
@@ -1363,7 +1367,7 @@ class Mosaic_API:
                 conv_x, conv_y = i-x, j-y
                 if x <= i < x_ and y <= j < y_ \
                         and __self__.layer[layer].layer > front_layer:
-                    pixel = __self__.layer[layer].img[conv_x,conv_y]
+                    pixel = __self__.layer[layer].img[conv_x][conv_y]
                     top_layer = __self__.layer[layer]
                     front_layer = top_layer.layer
             except:
