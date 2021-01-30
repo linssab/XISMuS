@@ -350,6 +350,33 @@ class Mosaic_API:
         if loadfile:
             __self__.prompt_loadfile(f=loadfile)
         __self__.root.master.wait_window(__self__.master)
+
+    def draw_patch(__self__, e="", active_layer=""):
+        if active_layer == "":
+            active_layer = __self__.layers_list.curselection()
+            if active_layer == (): return
+            else:
+                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
+                active_layer = active_layer.split("_")[0]
+        __self__.area.set_visible(True)
+        layer = __self__.layer[active_layer]
+        max_ = max(layer.img.shape)
+        x0, y0 = layer.start
+        x1, y1 = x0 + max_ - 1, y0 + max_ - 1
+
+        if x1 > __self__.image.shape[0] or y1 > __self__.image.shape[1]:
+            color = "red"
+        else: color = "green"
+        
+        __self__.area.set_width(y1 - y0)
+        __self__.area.set_height(x1 - x0)
+        __self__.area.set_xy((y0,x0))
+        __self__.area.set_color(color)
+        __self__.canvas.draw() 
+
+    def remove_patch(__self__, e=""):
+        __self__.area.set_visible(False)
+        __self__.canvas.draw()
             
     def build_widgets(__self__):
         pad = 16
@@ -367,6 +394,7 @@ class Mosaic_API:
                 bottom=0.01,
                 left=0.01,
                 right=0.99)
+        
         __self__.axs = plt.gca()
         __self__.axs.axis("off")
         __self__.axs.get_yaxis().set_visible(False)
@@ -376,6 +404,11 @@ class Mosaic_API:
         __self__.axs.spines["left"].set_color("#3b3b38")
         __self__.axs.spines["right"].set_color("#3b3b38")
         __self__.axs.grid(b=None)
+
+        __self__.area = patches.Rectangle(
+                (0,0),1,1,fill=False,snap=True,color="green",linewidth=3)
+        __self__.axs.add_patch(__self__.area)
+        __self__.area.set_visible(False)
 
         __self__.canvas = FigureCanvasTkAgg(__self__.map,__self__.Canvas)
         __self__.canvas.draw()
@@ -447,6 +480,12 @@ class Mosaic_API:
                 width=32,
                 height=32,
                 command= lambda: __self__.rotate(-1))
+
+        __self__.rotate_ccw.bind("<Enter>",__self__.draw_patch)
+        __self__.rotate_cw.bind("<Enter>",__self__.draw_patch)
+        __self__.rotate_ccw.bind("<Leave>",__self__.remove_patch)
+        __self__.rotate_cw.bind("<Leave>",__self__.remove_patch)
+
         __self__.histogram= Button(
                 __self__.container,
                 text="Histogram",
@@ -454,20 +493,17 @@ class Mosaic_API:
                 height=1,
                 command=__self__.open_histogram)
 
-        __self__.save = Button(__self__.RightPane, 
+        __self__.save = ttk.Button(__self__.RightPane, 
                 text="Save mosaic",
                 width=13,
-                height=1,
                 command=__self__.prompt_savefile)
-        __self__.load = Button(__self__.RightPane, 
+        __self__.load = ttk.Button(__self__.RightPane, 
                 text="Load mosaic",
                 width=13,
-                height=1,
                 command=__self__.prompt_loadfile)
-        __self__.validate = Button(__self__.RightPane, 
+        __self__.validate = ttk.Button(__self__.RightPane, 
                 text="Merge!",
-                width=7,
-                height=1,
+                width=13,
                 command=__self__.build_cube)
         __self__.add_layer = Button(
                 __self__.RightPane, 
@@ -480,7 +516,7 @@ class Mosaic_API:
                 width=10,
                 height=1,
                 command=__self__.remove_layer)
-        __self__.cube_name = Entry(
+        __self__.cube_name = ttk.Entry(
                 __self__.RightPane,
                 textvar = __self__.NameVar,
                 width=13)
