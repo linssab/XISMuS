@@ -652,7 +652,7 @@ class Mosaic_API:
         __self__.build_image()
     """
 
-    def rotate(__self__, direction, active_layer="", e=""):
+    def rotate(__self__, direction, active_layer="", e="", loading=False):
         global LAYERS_DICT
 
         def fine_rotate(img, angle):
@@ -679,9 +679,7 @@ class Mosaic_API:
 
         layer = __self__.layer[active_layer]
 
-        #print("rotation", layer.rotation)
         fine = float(truncate(layer.rotation-(int(layer.rotation)),2))
-        #print("starting rotation", direction, layer.rotation, fine)
 
         if int(direction) == 1:
             img = layer.img[:]
@@ -690,7 +688,7 @@ class Mosaic_API:
             mask = cv2.rotate(mask, cv2.ROTATE_90_CLOCKWISE)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
-                if end[i] > __self__.image.shape[i]:
+                if end[i] > __self__.image.shape[i] and not loading:
                     return
             layer.img, layer.end, layer.mask = img, end, mask
             layer.matrix = np.rot90(layer.matrix,3)
@@ -706,7 +704,7 @@ class Mosaic_API:
             mask = cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
-                if end[i] > __self__.image.shape[i]:
+                if end[i] > __self__.image.shape[i] and not loading:
                     return
             layer.img, layer.end, layer.mask = img, end, mask
             layer.matrix = np.rot90(layer.matrix)
@@ -1286,8 +1284,8 @@ class Mosaic_API:
                 layer["rotate"]-int(layer["rotate"]),2))
         rotate_factor = layer["rotate"] 
         if int(rotate_factor) == 2 or int(rotate_factor) == -2:
-            __self__.rotate(1,active_layer=layer["name"])
-            __self__.rotate(1,active_layer=layer["name"])
+            __self__.rotate(1,active_layer=layer["name"], loading=True)
+            __self__.rotate(1,active_layer=layer["name"], loading=True)
         else: __self__.rotate(rotate_factor,active_layer=layer["name"])
 
         if mask.any():
