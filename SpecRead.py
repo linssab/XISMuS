@@ -105,6 +105,23 @@ def conditional_setup(name="None",path="auto"):
 
     return np.nan
 
+def load_cube():
+    """ Loads cube to memory (unpickle). Cube name is passed according to
+    latest SpecRead parameters. See setup conditions inside SpecRead module.
+    Returns the datacube object """
+
+    if os.path.exists(SpecRead.cube_path):
+        cube_file = open(SpecRead.cube_path,'rb')
+        del Constants.MY_DATACUBE
+        Constants.MY_DATACUBE = pickle.load(cube_file)
+        cube_file.close()
+        logger.debug("Loaded cube {} to memory.".format(cube_file))
+        Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32")
+    else:
+        pass
+    return Constants.MY_DATACUBE
+
+
 def RatioMatrixReadFile(ratiofile):
     """ Reads a ratio file created by any mapping module and transforms into
     a 2D-array.

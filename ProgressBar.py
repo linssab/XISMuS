@@ -115,16 +115,24 @@ class Busy:
                 maximum=max_)
         __self__.progress.grid(row=0,column=0)
         if grab: __self__.master.grab_set()
+        __self__.set_size()
+
+    def set_size(__self__,th=-1):
+        # NOTE: th is just a horrible workaround to rounding te size of the window
+        # when adding the 'abort' button, window is a pixel shorter, when not, it is a 
+        # pixel longer. So, without the button, a pixel is removed, when adding it, one
+        # is added. It is a horrible workaround, but it works
 
         __self__.master.update()
+        __self__.master.update_idletasks()
+
         x = __self__.master.winfo_screenwidth()
         y = __self__.master.winfo_screenheight()
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(win_x, win_y-1,
+        __self__.master.geometry('{}x{}+{}+{}'.format(win_x, win_y+th,
                 round((x/2)-win_x/2), round((y/2)-win_y/2)))
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
-
 
     def updatebar(__self__,value):
 
@@ -166,13 +174,13 @@ class Busy:
         __self__.workers = workers
         __self__.multiprocess = multiprocess
         __self__.master.geometry("{}x{}".format(166,81))
-        __self__.abort_btn = Button(__self__.outerframe,
+        __self__.abort_btn = ttk.Button(__self__.outerframe,
                 text="Abort",
                 width=7,
-                height=1,
                 command=__self__.abort)
         __self__.abort_btn.grid(row=2,column=0,pady=3)
         __self__.btnz.update()
+        __self__.set_size(th=1)
 
     def abort(__self__):
 

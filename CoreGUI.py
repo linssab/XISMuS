@@ -2120,13 +2120,6 @@ class ImageAnalyzer:
         iterations), the gain in performance is more important in filtering than correlating
         maps """
 
-        #unpacker1 = __self__.Map1Var.get()
-        #unpacker1 = unpacker1.split("_")
-        #Map1 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1]))
-        #unpacker2 = __self__.Map2Var.get()
-        #unpacker2 = unpacker2.split("_")
-        #Map2 = copy.deepcopy(__self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1]))
-
         Map1 = copy.deepcopy(__self__.newimage1)
         Map2 = copy.deepcopy(__self__.newimage2)
 
@@ -4653,6 +4646,16 @@ class MainGUI:
         __self__.StatusBar.grid(row=6, column=0, columnspan=6, sticky=W+E)
 
         __self__.master.protocol("WM_DELETE_WINDOW", __self__.root_quit)
+
+        #writes start-up message:
+        hour = int(time.strftime("%H"))
+        if 6 <= hour < 12: text=["Good morning, welcome!","Load some data to get started."]
+        elif 12 <= hour < 18: text=["Good afternoon!","Load some data to get started."]
+        elif 18 <= hour < 23: text=["Good evening!","Load some data to get started."]
+        elif hour >= 23: text=["Isn't it too late to be looking at data?"]
+        for i in text:
+            __self__.StatusBox.insert(END, f"{i}")
+
 
     def magnify(__self__):
         __self__.magnified = PlotWin(__self__.master)
