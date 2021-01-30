@@ -2980,6 +2980,7 @@ class Settings:
         __self__.Settings.title("Settings")
         __self__.Settings.resizable(False,False)
         __self__.Settings.protocol("WM_DELETE_WINDOW",__self__.kill_window)
+        __self__.Settings.bind("<Escape>",__self__.kill_window)
 
         __self__.CoreCount = Constants.CPUS
         sys_mem = dict(virtual_memory()._asdict())
@@ -3284,7 +3285,7 @@ class Settings:
             messagebox.showerror("Error","File settings.tag not found.")
             root.master.destroy()
 
-    def kill_window(__self__):
+    def kill_window(__self__, e=""):
         try: 
             del root.SettingsWin 
             __self__.Settings.grab_release()

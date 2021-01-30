@@ -352,29 +352,54 @@ class Mosaic_API:
         __self__.root.master.wait_window(__self__.master)
 
     def draw_patch(__self__, e="", active_layer=""):
-        if active_layer == "":
-            active_layer = __self__.layers_list.curselection()
-            if active_layer == (): return
-            else:
-                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
-                active_layer = active_layer.split("_")[0]
-        __self__.area.set_visible(True)
-        layer = __self__.layer[active_layer]
-        max_ = max(layer.img.shape)
-        x0, y0 = layer.start
-        x1, y1 = x0 + max_ - 1, y0 + max_ - 1
+        color = "green"
+        if hasattr(e,"widget"): #if calling object is a widget (button or list)
+            if hasattr(e.widget,"myId"): #if it is the list:
+                idx = __self__.layers_list.nearest(e.y)
+                active_layer = __self__.layers_list.get(idx).split(",")[0]
+                if active_layer != "":
+                    layer = __self__.layer[active_layer]
+                else: return
+                x0, y0 = layer.start
+                x1, y1 = layer.end
+            else: #if callback is the button
+                active_layer = __self__.layers_list.curselection()
+                if active_layer == (): return
+                else:
+                    active_layer = __self__.layers_list.get(active_layer).split(",")[0]
+                    active_layer = active_layer.split("_")[0]
+                layer = __self__.layer[active_layer]
 
-        if x1 > __self__.image.shape[0] or y1 > __self__.image.shape[1]:
-            color = "red"
-        else: color = "green"
-        
-        __self__.area.set_width(y1 - y0)
-        __self__.area.set_height(x1 - x0)
+                max_ = max(layer.img.shape)
+                x0, y0 = layer.start
+                x1, y1 = x0 + max_, y0 + max_
+                __self__.text.set_visible(True)
+                __self__.text.set_position((y0,x0-2))
+
+                if x1 > __self__.image.shape[0] or y1 > __self__.image.shape[1]:
+                    color = "red"
+        else: #last case, callback comes from canvas
+            try: active_layer = __self__.read_pixels(int(e.ydata),int(e.xdata))
+            except: return
+            if active_layer[1] != 0: 
+                layer = __self__.layer[active_layer[1].name]
+                x0, y0 = layer.start
+                x1, y1 = layer.end
+            else: 
+                __self__.remove_patch()
+                return
+
+        if active_layer == "": return
+
+        __self__.area.set_visible(True)
+        __self__.area.set_width(y1 - 1 - y0)
+        __self__.area.set_height(x1 - 1 - x0)
         __self__.area.set_xy((y0,x0))
         __self__.area.set_color(color)
         __self__.canvas.draw() 
 
     def remove_patch(__self__, e=""):
+        __self__.text.set_visible(False)
         __self__.area.set_visible(False)
         __self__.canvas.draw()
             
@@ -408,6 +433,8 @@ class Mosaic_API:
         __self__.area = patches.Rectangle(
                 (0,0),1,1,fill=False,snap=True,color="green",linewidth=3)
         __self__.axs.add_patch(__self__.area)
+        __self__.text = __self__.axs.text(0,0,"Rotation boundaries",color="white")
+        __self__.text.set_visible(False)
         __self__.area.set_visible(False)
 
         __self__.canvas = FigureCanvasTkAgg(__self__.map,__self__.Canvas)
@@ -432,6 +459,8 @@ class Mosaic_API:
 
         __self__.canvas.mpl_connect("button_press_event",__self__.on_press)
         __self__.canvas.mpl_connect("motion_notify_event",__self__.on_drag)
+        __self__.hover_highlight = __self__.canvas.mpl_connect(
+                "motion_notify_event",__self__.draw_patch)
         __self__.canvas.mpl_connect("button_release_event",__self__.on_release)
         __self__.press, __self__.move = False, False
 
@@ -454,6 +483,9 @@ class Mosaic_API:
                 height=128)
 
         __self__.layers_list = Listbox(__self__.RightPane, height=10)
+        __self__.layers_list.myId = "layers_list"
+        __self__.layers_list.bind("<Motion>",__self__.draw_patch)
+        __self__.layers_list.bind("<Leave>",__self__.remove_patch)
 
         # buttons
         __self__.layer_up = Button(
@@ -717,6 +749,8 @@ class Mosaic_API:
         __self__.build_image()
 
     def on_press(__self__, event):
+        __self__.canvas.mpl_disconnect(__self__.hover_highlight)
+        __self__.remove_patch()
         __self__.layers_list.selection_clear(0, END)
         __self__.press = True
         try: __self__.x0 = int(event.ydata)
@@ -795,6 +829,8 @@ class Mosaic_API:
             __self__.y0 = __self__.y1
 
     def on_release(__self__,event):
+        __self__.hover_highlight = __self__.canvas.mpl_connect(
+                "motion_notify_event",__self__.draw_patch)
         __self__.press = False
         if __self__.press and not __self__.move:
             __self__.press = False
