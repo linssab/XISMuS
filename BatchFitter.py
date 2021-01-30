@@ -1019,9 +1019,6 @@ class SingleFit():
         __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
         __self__.continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
 
-        del Constants.MY_DATACUBE.matrix
-        del Constants.MY_DATACUBE.background
-
         __self__.bar.update_text("Thinking...")
         __self__.fit_path = os.path.join(path,"Fit_Chunk_1.npy")
 
@@ -1035,6 +1032,8 @@ class SingleFit():
         percent = __self__.iterator/len(__self__.counts)*100
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.add_abort(multiprocess=False,mode="auto_wizard")
+        del Constants.MY_DATACUBE.matrix
+        del Constants.MY_DATACUBE.background
         fitted_spec = gausfit(
                 __self__.energies,
                 __self__.counts,
