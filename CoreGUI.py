@@ -12,9 +12,9 @@ Constants.FIND_ELEMENT_LIST: list of elements to be mapped from the datacube. It
 passed to Mapping or Mapping_parallel module. """
 
 def start_up():
-    """ Initializes SpecRead global variables and paths """
+    """ Initializes sp global variables and paths """
 
-    SpecRead.conditional_setup()
+    sp.conditional_setup()
     logger.info("Setting up...")
     try: load_cube()
     except: pass
@@ -24,7 +24,7 @@ def start_up():
 def load_user_database():
     """ Read database file and load all entries to global variable """    
 
-    path = os.path.join(SpecRead.__BIN__,"database.dat")
+    path = os.path.join(sp.__BIN__,"database.dat")
     db = open(path,"r")
     lines = db.readlines() 
     for i in range(1,len(lines),7):
@@ -47,7 +47,7 @@ def load_user_database():
     db.close()
 
 def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
-    path = os.path.join(SpecRead.__BIN__,"database.dat")
+    path = os.path.join(sp.__BIN__,"database.dat")
     db = open(path,"a+")
     db.write("\nSAMPLE\t{}\n".format(name))
     Constants.USER_DATABASE[name] = {}
@@ -64,7 +64,7 @@ def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
     db.close()
 
 def remove_entry_from_database(smpl_name):
-    path = os.path.join(SpecRead.__BIN__,"database.dat")
+    path = os.path.join(sp.__BIN__,"database.dat")
     db = open(path,"r")
     lines = db.readlines()
     new_lines = copy.deepcopy(lines)
@@ -244,12 +244,12 @@ def call_compilecube():
     of the file. """
 
     try: 
-        os.mkdir(SpecRead.output_path)
+        os.mkdir(sp.output_path)
     except IOError as exception:
         logger.warning("Error {}.".format(exception.__class__.__name__))
-        logger.warning("Can't create output folder {}".format(SpecRead.output_path))
+        logger.warning("Can't create output folder {}".format(sp.output_path))
     
-    if os.path.exists(SpecRead.cube_path): 
+    if os.path.exists(sp.cube_path): 
         pass
     else:
         root.ButtonLoad.config(state=DISABLED)
@@ -287,7 +287,7 @@ def call_compilecube():
             elif m == "no":
                 Constants.MY_DATACUBE = converth5() 
                 root.samples[Constants.CONFIG["directory"]] = "temp .h5"
-                SpecRead.cube_path = ""
+                sp.cube_path = ""
                 root.ButtonLoad.config(state=NORMAL)
                 root.MenuBar.entryconfig("Toolbox", state=NORMAL)
                 root.temporaryh5 = Constants.CONFIG["directory"]
@@ -322,14 +322,14 @@ def call_compilecube():
             if fail[0] == True:
                 messagebox.showerror("Error!",
                         "Could not read {} file! Aborting compilation".format(fail[1]))
-                shutil.rmtree(SpecRead.output_path) 
+                shutil.rmtree(sp.output_path) 
 
 def prompt_folder():
     """ Opens dialogue to change the samples folder """
 
     folder = filedialog.askdirectory(title="Select the samples folder")
     if folder != "":
-        ini_file = open(os.path.join(SpecRead.__BIN__,"folder.ini"),"w")
+        ini_file = open(os.path.join(sp.__BIN__,"folder.ini"),"w")
         ini_file.write(os.path.abspath(folder))
         ini_file.close()
         Constants.SAMPLES_FOLDER = os.path.abspath(folder)
@@ -340,24 +340,24 @@ def prompt_folder():
 
 def load_cube():
     """ Loads cube to memory (unpickle). Cube name is passed according to
-    latest SpecRead parameters. See setup conditions inside SpecRead module.
+    latest sp parameters. See setup conditions inside Engine.SpecRead module.
     Returns the datacube object """
 
-
     logger.debug("Trying to load cube file.")
-    logger.debug(SpecRead.cube_path)
-    if os.path.exists(SpecRead.cube_path):
+    logger.debug(sp.cube_path)
+    if os.path.exists(sp.cube_path):
         root_busy.busy()
-        cube_file = open(SpecRead.cube_path,'rb')
-        del Constants.MY_DATACUBE
+        cube_file = open(sp.cube_path,'rb')
+        try: del Constants.MY_DATACUBE
+        except: pass
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
         root_busy.notbusy()
-    elif os.path.exists(os.path.join(SpecRead.output_path,
+    elif os.path.exists(os.path.join(sp.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
-        lz_file = open(SpecRead.cube_path,'rb')
+        lz_file = open(sp.cube_path,'rb')
         data = lz_file.read()
         del Constants.MY_DATACUBE
         Constants.MY_DATACUBE = data
@@ -882,7 +882,7 @@ class Welcome:
         if __self__.tag.get() == True:
             Constants.WELCOME = False
             checker = False
-        inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
+        inipath = os.path.join(sp.__BIN__,"settings.tag")
         ini = open(inipath,'w+')
         ini.write("{}\n".format(Constants.SAMPLES_FOLDER))
         ini.write("<ColorMap>\t{}\n".format(Constants.COLORMAP))
@@ -1333,7 +1333,7 @@ class PeakClipper:
             not detected automatically - root.samples carries the list of all mca's path """
             if folder == "Training Data 1" or folder == "Training Data 2":
                 __self__.sample = random.randint(1,spec_no-1)
-                mca = os.path.join(SpecRead.__PERSONAL__,"Example Data",folder,
+                mca = os.path.join(sp.__PERSONAL__,"Example Data",folder,
                         root.samples[folder]+"{0}.{1}".format(__self__.sample,
                             root.mca_extension[folder]))
             elif isinstance(root.samples[folder],tuple):
@@ -1345,7 +1345,7 @@ class PeakClipper:
                         root.samples[folder]+"{0}.{1}".format(__self__.sample,
                             root.mca_extension[folder]))
                 
-            __self__.spectrum = SpecRead.getdata(mca)
+            __self__.spectrum = sp.getdata(mca)
         ####################################################################
 
         if isinstance(__self__.spectrum,np.ndarray):
@@ -2699,8 +2699,8 @@ class Samples:
             """ Verifies which samples have a compiled datacube in output folder """
             for folder in samples:
                 indexing = None
-                if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
-                    for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
+                if os.path.exists(os.path.join(sp.__PERSONAL__,"output",folder)):
+                    for name in os.listdir(os.path.join(sp.__PERSONAL__,
                         "output",folder)):
                         if name.lower().endswith(".cube"):
                             __self__.filequeue.set(
@@ -2801,8 +2801,8 @@ class Samples:
             for name in local_path:
                 new_path = new_path + name + "\\"
 
-            if os.path.exists(os.path.join(SpecRead.__PERSONAL__,"output",folder)):
-                for name in os.listdir(os.path.join(SpecRead.__PERSONAL__,
+            if os.path.exists(os.path.join(sp.__PERSONAL__,"output",folder)):
+                for name in os.listdir(os.path.join(sp.__PERSONAL__,
                     "output")):
                     if name.lower().endswith(".cube"):
                         __self__.filequeue.set(
@@ -2886,7 +2886,7 @@ class Samples:
             """ Try looking for training_data """
 
             folder = "Example Data"
-            new_path = os.path.join(SpecRead.__PERSONAL__,folder)
+            new_path = os.path.join(sp.__PERSONAL__,folder)
             
             if os.path.exists(new_path):
                 examples = [folder for folder in os.listdir(new_path) if \
@@ -2947,7 +2947,7 @@ class Samples:
                                         
             """ Verify packed cubes """
 
-            output_folder = os.path.join(SpecRead.__PERSONAL__,"output")
+            output_folder = os.path.join(sp.__PERSONAL__,"output")
             outputs = [folder for folder in os.listdir(output_folder) \
                     if os.path.isdir(os.path.join(output_folder,folder))]
             for folder in outputs:
@@ -3264,7 +3264,7 @@ class Settings:
     
     def write_to_ini(__self__):
         try: 
-            inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
+            inipath = os.path.join(sp.__BIN__,"settings.tag")
             ini = open(inipath,'w+')
             ini.write("{}\n".format(Constants.SAMPLES_FOLDER))
             ini.write("<ColorMap>\t{}\n".format(__self__.ColorMapMode.get()))
@@ -3328,7 +3328,7 @@ class MainGUI:
         "Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
             if quit == "ok": sys.exit(1)
         logger.info("Initializing program...")
-        f = open(os.path.join(SpecRead.__BIN__,"settings.tag"),"r")
+        f = open(os.path.join(sp.__BIN__,"settings.tag"),"r")
         for line in f:
             if line.startswith("<welcome>"):
                 if line.split("\t")[1] == "True": 
@@ -3358,7 +3358,7 @@ class MainGUI:
         mapfont = {'fontname':'Arial','fontsize':10}
 
         sys_mem = dict(virtual_memory()._asdict())
-        inipath = os.path.join(SpecRead.__BIN__,"settings.tag")
+        inipath = os.path.join(sp.__BIN__,"settings.tag")
         set_settings(inipath)
         __self__.RAM_limit_value = sys_mem["available"]
         if Constants.PLOTMODE == "Logarithmic": __self__.plot_display = "-semilog"
@@ -3414,11 +3414,12 @@ class MainGUI:
         r = messagebox.askquestion("Attention","Are you sure you want to exit?")
         if r == "yes":
             for widget in __self__.master.winfo_children():
-                if isinstance(widget, Toplevel):
-                    widget.destroy()
+                #if isinstance(widget, Toplevel):
+                try: widget.destroy()
+                except: pass
             checkout_config()
             __self__.master.destroy()
-            sys.exit()
+            sys.exit(0)
         else: return
     
     def toggle_(__self__,toggle='on'):
@@ -3476,7 +3477,7 @@ class MainGUI:
 
         --------------------------------------------------------- """
 
-        fit_path = SpecRead.output_path
+        fit_path = sp.output_path
         
         def call_table(elements):
             __self__.PoolTable = PeriodicTable(root)
@@ -3535,7 +3536,7 @@ class MainGUI:
                 else:
                     root.Fitter = SingleFit(fit_path)
                 
-                save_path = os.path.join(SpecRead.output_path,"peak_find.png")
+                save_path = os.path.join(sp.output_path,"peak_find.png")
                 __self__.peaks, __self__.matches = root.Fitter.locate_peaks(path=save_path)
 
                 elements = [key for key in __self__.matches.keys()]
@@ -3583,7 +3584,7 @@ class MainGUI:
                     root.bar.update_text("Building images...")
                     build_images(fit_path,bar=root.bar)
 
-                    timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+                    timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
                     timestamps.write(
                     "\n{4} - {5} WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
                         elements,
@@ -3761,7 +3762,7 @@ class MainGUI:
             except: pass
 
             remove_entry_from_database(sample)
-            SpecRead.conditional_setup()
+            sp.conditional_setup()
             load_cube()
             __self__.write_stat()
             __self__.wipe()
@@ -3796,7 +3797,7 @@ class MainGUI:
         if cubes == []: 
             messagebox.showinfo("No Sample!","No sample selected!")
             return 
-        _path = os.path.join(SpecRead.__PERSONAL__,"output")
+        _path = os.path.join(sp.__PERSONAL__,"output")
         """ list all packed cubes """
         cube_folders = [name for name in os.listdir(_path) \
                 if os.path.isdir(os.path.join(_path,name))]
@@ -3951,7 +3952,7 @@ class MainGUI:
                     __self__.SamplesWindow_TableRight.config(state=DISABLED)
                     __self__.SamplesWindow_TableRight.update_idletasks()
                     temp_path = os.path.join(
-                        SpecRead.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
+                        sp.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
                     if os.path.exists(temp_path):
                         shutil.rmtree(temp_path)
             except: pass
@@ -3965,12 +3966,12 @@ class MainGUI:
             try: in_memory = Constants.MY_DATACUBE.name
             except AttributeError: in_memory = None
             if in_memory != value:
-                local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+                local_cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
                 if os.path.exists(local_cube_path):
-                    SpecRead.cube_path = os.path.join(
-                            SpecRead.workpath,"output",value,value+".cube")
+                    sp.cube_path = os.path.join(
+                            sp.workpath,"output",value,value+".cube")
                     load_cube()
-                    SpecRead.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
+                    sp.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
                     __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
             """ ------------------------------------------------------------------------- """
             
@@ -4027,11 +4028,11 @@ class MainGUI:
         Let the user cancel the cofiguration dialog, 
         the global variable cube_path is unchanged. """
         
-        local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+        local_cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
         if os.path.exists(local_cube_path): 
-            SpecRead.cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+            sp.cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
             load_cube()
-            SpecRead.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
+            sp.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
             __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
             __self__.toggle_(toggle="on")    
             __self__.write_stat()   
@@ -4039,7 +4040,7 @@ class MainGUI:
         else: 
             if "Example Data" in value: path="auto"
             else: path=root.samples_path[value]
-            SpecRead.conditional_setup(name=value,path=path)
+            sp.conditional_setup(name=value,path=path)
             __self__.call_configure()
 
     def pop_welcome(__self__):
@@ -4092,7 +4093,7 @@ class MainGUI:
         except:
             messagebox.showerror("No datacube!","Please load a datacube first.")
             return
-        local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+        local_cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
         if os.path.exists(local_cube_path):
             path = Constants.MY_DATACUBE.path
             path = os.path.realpath(path)
@@ -4104,7 +4105,7 @@ class MainGUI:
         except:
             messagebox.showerror("No datacube!","Please load a datacube first.")
             return
-        path = os.path.join(SpecRead.__PERSONAL__,"output",value)
+        path = os.path.join(sp.__PERSONAL__,"output",value)
         if os.path.exists(path):
             path = os.path.realpath(path)
             os.startfile(path)
@@ -4115,7 +4116,7 @@ class MainGUI:
     
     def open_files_location(__self__, event=""):
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-        local_cube_path = os.path.join(SpecRead.workpath,"output",value,value+".cube")
+        local_cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
         path = root.samples_path[value]
         if Constants.MY_DATACUBE == None or Constants.MY_DATACUBE.name != value:
             if os.path.exists(local_cube_path):
@@ -4154,7 +4155,7 @@ class MainGUI:
             except: 
                 messagebox.showerror("No datacube!","Please load a datacube first.")
                 return
-        path = os.path.join(SpecRead.__PERSONAL__,"output",value)
+        path = os.path.join(sp.__PERSONAL__,"output",value)
         if os.path.exists(path):
             path = os.path.realpath(path)
             os.startfile(path)
@@ -4180,7 +4181,7 @@ class MainGUI:
                 if Constants.MY_DATACUBE == None:
                     messagebox.showerror("No datacube!","Please load a datacube first.")
                     return
-            if os.path.exists(SpecRead.cube_path) or hasattr(Constants.MY_DATACUBE,"densitymap"): 
+            if os.path.exists(sp.cube_path) or hasattr(Constants.MY_DATACUBE,"densitymap"): 
                 f = filedialog.asksaveasfile(mode='w', 
                         defaultextension=".png",
                         filetypes=[("Portable Network Graphic", "*.png")],
@@ -4258,7 +4259,7 @@ class MainGUI:
         # Verifies if h5 datacube exists #
         ##################################
         if os.path.exists(os.path.join(
-            SpecRead.__PERSONAL__,"output",sample_name,sample_name+".cube")):
+            sp.__PERSONAL__,"output",sample_name,sample_name+".cube")):
             messagebox.showinfo("Cube exists","Datacube for {} already exist!".format(
                 sample_name))
             return
@@ -4278,7 +4279,7 @@ class MainGUI:
         for i in path:
             conc_path += i+"\\"
         conc_path = os.path.abspath(conc_path)
-        SpecRead.conditional_setup(name=sample_name,path=conc_path)
+        sp.conditional_setup(name=sample_name,path=conc_path)
 
         ###############################
         # EXTRACT INFORMATION FROM h5 #
@@ -4329,14 +4330,14 @@ class MainGUI:
         try: sample_name = str(file_batch[0]).split("/")[-2]
         except IndexError: messagebox.showerror("No parent folder!","No parent folder detected. Be sure the spectra files are under a common folder (Hard drives are not parent folders!)")
 
-        #2 setup variables in SpecRead and GUI
+        #2 setup variables in sp and GUI
         path = str(file_batch[0]).split("/")
         path.pop(-1)
         conc_path = ""
         for i in path:
             conc_path += i+"\\"
         conc_path = os.path.abspath(conc_path)
-        SpecRead.conditional_setup(name=sample_name,path=conc_path)
+        sp.conditional_setup(name=sample_name,path=conc_path)
         __self__.mcacount[sample_name] = len(file_batch)
         """ samples dict attribute is always a string, except in this particular case """
         __self__.samples[sample_name] = file_batch
@@ -4347,7 +4348,7 @@ class MainGUI:
 
         #3 ask for a sample name and dimension (modified dimension diag)
         try: 
-            __self__.config_xy = SpecRead.getdimension()
+            __self__.config_xy = sp.getdimension()
             __self__.ManualParam = []
         except:
             dimension = DimensionDiag(Constants.DIRECTORY)
@@ -4654,6 +4655,9 @@ class MainGUI:
         elif 12 <= hour < 18: text=["Good afternoon!","Load some data to get started."]
         elif 18 <= hour < 23: text=["Good evening!","Load some data to get started."]
         else: text=["Isn't it too late to be looking at data?"]
+        text.append("\n")
+        text.append("ATTENTION!! Datacubes from older versions will not work on future versions!")
+        text.append("Save them with v2.0.0 in order to use them from now on.")
         for i in text:
             __self__.StatusBox.insert(END, f"{i}")
 
@@ -4726,7 +4730,7 @@ class MainGUI:
                     __self__.no_sample = False
 
                     if any("h5" in x for x in Constants.MY_DATACUBE.datatypes) and \
-                            not os.path.exists(SpecRead.cube_path):
+                            not os.path.exists(sp.cube_path):
                     
                         ########################################
                         # WRITES THE CONFIGURATION TO SUBPANEL #
@@ -4757,9 +4761,9 @@ class MainGUI:
                         "\n{} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
                 __self__.no_sample = False
 
-        if os.path.exists(SpecRead.cube_path):
+        if os.path.exists(sp.cube_path):
 
-            cube_stats = os.stat(SpecRead.cube_path)
+            cube_stats = os.stat(sp.cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
             __self__.StatusBox.insert(END,
                     "Datacube is compiled. Cube size: {0}".format(cube_size))
@@ -4812,8 +4816,8 @@ class MainGUI:
         
         def repack(__self__, sample):
             logger.warning("Cube {} and its output contents were erased!".format(sample))
-            shutil.rmtree(SpecRead.output_path)
-            try: x,y,tag_dimension_file = SpecRead.getdimension()
+            shutil.rmtree(sp.output_path)
+            try: x,y,tag_dimension_file = sp.getdimension()
             except OSError as exception:
                 tag_dimension_file = False
             if tag_dimension_file == True:
@@ -4842,7 +4846,7 @@ class MainGUI:
             __self__.ResetWindow.destroy()
             return
 
-        if os.path.exists(SpecRead.cube_path):
+        if os.path.exists(sp.cube_path):
 
             # creates dialogue to warn cube exists and promp to repack data
             __self__.ResetWindow = Toplevel(master=__self__.master)
@@ -4885,7 +4889,7 @@ class MainGUI:
         """ invokes the configuration dialog """
 
         try: 
-            __self__.config_xy = SpecRead.getdimension()
+            __self__.config_xy = sp.getdimension()
         except:
             dimension = DimensionDiag(Constants.DIRECTORY)
             __self__.master.wait_window(dimension.win) 
@@ -5241,7 +5245,7 @@ class ConfigDiag:
                     __self__.SamplesWindow_TableRight.update_idletasks()
                 except: pass
                 temp_path = os.path.join(
-                    SpecRead.__PERSONAL__,"output",Constants.CONFIG["directory"])
+                    sp.__PERSONAL__,"output",Constants.CONFIG["directory"])
                 if os.path.exists(temp_path):
                     shutil.rmtree(temp_path)
                 Constants.MY_DATACUBE = None
@@ -5302,7 +5306,7 @@ class ConfigDiag:
             # setup or conditional setup and fills entries
 
             Constants.CONFIG['calibration'] = 'simple'
-            calibparam = SpecRead.getcalibration()
+            calibparam = sp.getcalibration()
             __self__.ch1.set(calibparam[0][0])
             __self__.en1.set(calibparam[0][1])
             __self__.ch2.set(calibparam[1][0])
@@ -5360,7 +5364,7 @@ class ConfigDiag:
         samples_folder_backup = copy.deepcopy(Constants.SAMPLES_FOLDER)
         if __self__.DirectoryVar.get() == "Training Data 1" or\
                 __self__.DirectoryVar.get() == "Training Data 2":
-            Constants.SAMPLES_FOLDER = os.path.join(SpecRead.__PERSONAL__,"Example Data")
+            Constants.SAMPLES_FOLDER = os.path.join(sp.__PERSONAL__,"Example Data")
         
         ##########################################################
             
@@ -5372,23 +5376,23 @@ class ConfigDiag:
                 "peakmethod":__self__.MethodVar.get(),
                 "bg_settings":root.snip_config}
         
-        if not os.path.exists(SpecRead.output_path):
+        if not os.path.exists(sp.output_path):
             try:
-                os.mkdir(SpecRead.output_path)
+                os.mkdir(sp.output_path)
             except IOError as exception:
                 logger.warning("Error {}.".format(exception.__class__.__name__))
-                logger.warning("Can't create output folder {}".format(SpecRead.output_path))
+                logger.warning("Can't create output folder {}".format(sp.output_path))
                 if exception.__class__.__name__ == "FileExistsError": 
                     exists = "Folder already exists!"
                 else: exists = None
                 messagebox.showerror("{}".format(exception.__class__.__name__),
                         "Cannot create output folder {}\n{}".format(
-                            SpecRead.output_path, exists))
+                            sp.output_path, exists))
                 root.write_stat()
                 root.draw_map()
                 return
             if not os.path.exists(Constants.DIMENSION_FILE):
-                dm_file = open(os.path.join(SpecRead.output_path,"colonneXrighe.txt"),"w")
+                dm_file = open(os.path.join(sp.output_path,"colonneXrighe.txt"),"w")
                 dm_file.write("righe\t{}\n".format(root.config_xy[0]))
                 dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
                 dm_file.write(5*"*"+" user input data "+5*"*")
@@ -5414,12 +5418,12 @@ class ConfigDiag:
                 
             elif configdict["calibration"] == "from_source": 
                 Constants.CONFIG["calibration"] = "from_source"
-                calibparam = SpecRead.getcalibration()
+                calibparam = sp.getcalibration()
             else: 
                 raise ValueError("Didn't understand caibration method {0} input".format(configdict["calibration"]))
                 return
 
-            cfgpath = os.path.join(SpecRead.__PERSONAL__,"bin","config.cfg")
+            cfgpath = os.path.join(sp.__PERSONAL__,"bin","config.cfg")
             cfgfile = open(cfgpath,"w+")
             cfgfile.write("<<CONFIG_START>>\r")
             for key in configdict:
@@ -5430,7 +5434,7 @@ class ConfigDiag:
             cfgfile.write("<<END>>\r")
             cfgfile.close()
             
-            SpecRead.setup(root.samples[configdict["directory"]],
+            sp.setup(root.samples[configdict["directory"]],
                     root.mca_indexing[configdict["directory"]],
                     root.mca_extension[configdict["directory"]])
             __self__.master.grab_release()
@@ -5447,7 +5451,7 @@ class ConfigDiag:
             root.toggle_(toggle='on')
 
         else:
-            cfgpath = os.path.join(SpecRead.__PERSONAL__,"bin","config.cfg")
+            cfgpath = os.path.join(sp.__PERSONAL__,"bin","config.cfg")
             cfgfile = open(cfgpath,'w+')
             cfgfile.write("<<CONFIG_START>>\r")
             for key in configdict:
@@ -5466,7 +5470,7 @@ class ConfigDiag:
             messagebox.showerror("Directory not found!",
                     "Directory {} not found!\nConfig.cfg saved!".format(
                         configdict['directory']))
-            SpecRead.setup(root.samples[configdict["directory"]],
+            sp.setup(root.samples[configdict["directory"]],
                     root.mca_indexing[configdict["directory"]],
                     root.mca_extension[configdict["directory"]])
             __self__.master.grab_release()
@@ -5667,8 +5671,7 @@ class ImgageOperationOutput:
                         filetypes=[("Portable Network Graphic", "*.png")],
                         title="Save as...")
         if f is not None: 
-            from ImgMath import write_image
-            write_image(image,
+            Engine.ImgMath.write_image(image,
                 Constants.TARGET_RES,
                 f.name,
                 enhance=Constants.MY_DATACUBE.config["enhance"],
@@ -5736,8 +5739,8 @@ class ImageOperationWarning:
 
     def perform(__self__):
 
-        from ImgMath import subtract as sub_
-        from ImgMath import add as add_
+        from Engine.ImgMath import subtract as sub_
+        from Engine.ImgMath import add as add_
 
         if __self__.mode == "subtract": 
             operation = "minus"
@@ -5836,7 +5839,7 @@ class PeriodicTable:
         __self__.master.destroy()
         start_time = time.time()
 
-        save_path = os.path.join(SpecRead.output_path,"peak_find.png")
+        save_path = os.path.join(sp.output_path,"peak_find.png")
         if Constants.MULTICORE == True and \
                 Constants.CPUS>1 and \
                 Constants.MY_DATACUBE.img_size > 400:
@@ -5853,9 +5856,9 @@ class PeriodicTable:
         root.bar.update_text("Building images...")
         del root.Fitter
 
-        build_images(SpecRead.output_path,bar=root.bar)
+        build_images(sp.output_path,bar=root.bar)
 
-        timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+        timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
         timestamps.write(
                 "\n{4} - {5} WIZARD\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
             __self__.elements,
@@ -5903,7 +5906,7 @@ class PeriodicTable:
      
     def save_and_run(__self__,mode=None):
         
-        try: cube_status = os.stat(SpecRead.cube_path)
+        try: cube_status = os.stat(sp.cube_path)
         except: 
             try: cube_status = os.stat(root.h5path)
             except:
@@ -6029,7 +6032,7 @@ class PeriodicTable:
 
                 timestamp = time.time() - partialtimer
                 logger.info("Execution took %s seconds" % (timestamp))
-                timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
+                timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
                 timestamps.write("\n{5} - {7}\nbgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n".format(
                     Constants.FIND_ELEMENT_LIST,
                     Constants.MY_DATACUBE.config["bgstrip"],
@@ -6326,7 +6329,7 @@ if __name__ == "__main__":
     style.use('ggplot')
     
     def open_log():
-        from SpecRead import __PERSONAL__
+        from ReadConfig import __PERSONAL__
         # wipes logfile
         try:
             with open(os.path.join(__PERSONAL__,
@@ -6366,23 +6369,30 @@ if __name__ == "__main__":
     # internal imports
     open_log()
     logger = logging.getLogger("logfile")
-    import SpecRead
-    import Theme
-    from Mosaic import Mosaic_API
+    #from Utils import sp
     from ReadConfig import checkout_config, set_settings 
-    from ImgMath import LEVELS, apply_scaling, correlate
-    from ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
-    from Decoder import *
-    from SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
-    from SpecMath import datacube as Cube
-    from AdvCalibration import AdvCalib
-    from ProgressBar import Busy, BusyManager, create_tooltip
-    from EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
-    from Mapping import getpeakmap, grab_simple_roi_image, select_lines 
-    from Mapping_parallel import Cube_reader, sort_results, digest_results
-    from BatchFitter import MultiFit, SingleFit, build_images
 
-    logger.info("Loading GUI...")
+    import Engine
+    import Engine.SpecRead as sp
+    from Engine.ImgMath import LEVELS, apply_scaling, correlate
+    from Engine.ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
+    from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
+    from Engine.SpecMath import datacube as Cube
+
+    #from Elements.EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
+    from Elements import *
+
+    from GUI import Theme
+    from GUI.Mosaic import Mosaic_API
+    from GUI.Decoder import *
+    from GUI.AdvCalibration import AdvCalib
+    from GUI.ProgressBar import Busy, BusyManager, create_tooltip
+
+    from Engine.Mapping import getpeakmap, grab_simple_roi_image, select_lines 
+    from Engine.MappingParallel import Cube_reader, sort_results, digest_results
+    from Engine.BatchFitter import MultiFit, SingleFit, build_images
+
+    logger.info("#"*3+" Configuring environment "+"#"*3)
     start_up()
     root = MainGUI()
     GUIicon = os.path.join(os.getcwd(),"images","icons","icon.ico")

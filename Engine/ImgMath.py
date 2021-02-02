@@ -5,29 +5,35 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-""" import all modules """
-
+#############
+# Utilities #
+#############
 import logging, os, time
 import threading
-logger = logging.getLogger("logfile")
-logger.info("Importing module ImgMath.py...")
 import numpy as np
-import SpecRead
-import Constants
-import cy_funcs
+import cv2
+import math
+logger = logging.getLogger("logfile")
+#############
+
+####################
+# External modules #
+####################
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-logger.debug("Importing module matplotlib.colors...")
 from matplotlib.colors import ListedColormap
-logger.debug("Importing module mpl_toolkits.axes_grid1...")
 try: from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 except: logger.warning("Failed to load make_axes_locatable from mpl_toolkits.axes_grid1.axes_divider")
-import cv2
-import math
-logger.info("Finished ImgMath imports.")
+####################
 
-""" Set the gray levels variable """
+#################
+# Local imports #
+#################
+from . import SpecRead
+import Constants
+import cy_funcs
+#################
 
 LEVELS = 255
 

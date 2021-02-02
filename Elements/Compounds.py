@@ -5,18 +5,8 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import logging
-logger = logging.getLogger("logfile")
-logger.debug("Importing module Compounds.py...")
 import numpy as np
-logger.debug("Importing module EnergyLib.py...")
-import EnergyLib
-try: 
-    import xraylib as xlib
-    logger.info("Sucessfully imported xraylib module!")
-except: 
-    logger.warning("Failed to load xraylib module!")
-    raise ImportError("Module xraylib not fould. Cannot proceed.")
+#from . import EnergyLib
 
 CompoundList = {
         
@@ -52,7 +42,6 @@ WeightList = {
         }
 
 def ListDatabase():
-    
     """ Prints all compounds on database """
 
     ListDatabase = dict(CompoundList,**WeightList)
@@ -62,7 +51,6 @@ def ListDatabase():
 
 
 class compound:
-    
     """ Methods:
     set_compound(*args, ctype=None, mode="by_atom", name="new_compound")
     set_attenuation(energy)
@@ -78,7 +66,6 @@ class compound:
         __self__.identity = np.nan
     
     def set_compound(__self__,*args,ctype=None,mode='by_atom',name='new_compound'):
-
         """ Creates the compound according to input. The compound can be created
         manually or from the database; from a weights fraction list or atom count list.
         
@@ -108,7 +95,6 @@ class compound:
         __self__.give_name(name)
 
     def create_compound(__self__,atoms,elements):
-        
         """ Sets the compound attributes with a 2 list input, mode='by_atom'.
         
         ---------------------------------------------------------------------
@@ -125,7 +111,6 @@ class compound:
         __self__.give_density()
     
     def create_compound_by_weight(__self__,ratios,elements):
-        
         """ Sets the compound attributes with a 2 list input, mode='by_weight'.
 
         -----------------------------------------------------------------------
@@ -147,7 +132,6 @@ class compound:
         else: raise ValueError('{0} and {1} have different lenghts'.format(ratios,elements))
 
     def set_from_database(__self__,name_of_compound):
-
         """ Sets the compound attributes from database """
 
         elements = [element for element in CompoundList[name_of_compound]]
@@ -162,7 +146,6 @@ class compound:
         __self__.name = name_of_compound
     
     def set_from_w_database(__self__,name_of_compound):
-        
         """ Sets the compound attributes from database """
         
         elements = [element for element in WeightList[name_of_compound]]
@@ -177,7 +160,6 @@ class compound:
         __self__.name = name_of_compound
     
     def weightpercent(__self__):
-
         """ Sets the weight fraction attribute. This is needed in order to calculate
         the compound density. A compound will always have a weight attribute. """
 
@@ -185,7 +167,6 @@ class compound:
             __self__.weight[element] = __self__.chem[element]/__self__.mass 
          
     def total_mass(__self__):
-
         """ Calculates the compound total mass """
 
         total_mass = 0
@@ -195,7 +176,6 @@ class compound:
         return total_mass
     
     def give_density(__self__):
-
         """ Calculates the compound density according to weight fraction """
 
         try:
@@ -205,7 +185,6 @@ class compound:
             raise ValueError("{} has no property weight!".format(__self__))
 
     def mix(__self__,proportion,compounds):
-
         """ Mixes two compound class objects proportionally. This resets the attributes
         according to the mixing outcomes.
         
@@ -243,7 +222,6 @@ class compound:
         return mixture
 
     def set_attenuation(__self__,energy):
-
         """ Sets the linear and total attenuation coefficients according to input.
         Values are taken from xraylib (Brunetti et al., 2004), which is constantly
         updated.

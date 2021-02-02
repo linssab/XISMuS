@@ -8,9 +8,7 @@
 import cython
 import numpy as np
 cimport numpy as np
-from ProgressBar import Busy
-
-# utils
+from GUI import Busy
 
 cdef int cy_second_min(
         float[:,:] matrix, 

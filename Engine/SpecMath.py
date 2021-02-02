@@ -24,14 +24,14 @@ import random
 # Local imports #
 #################
 import Elements
-from Engine.SpecRead import (getdata,
+from .SpecRead import (getdata,
 getdimension,
 getcalibration,
 getfirstfile,
 calibrate,
 updatespectra)
-from Engine.ImgMath import LEVELS
-from Engine.Mapping import getdensitymap
+from .ImgMath import LEVELS
+from .Mapping import getdensitymap
 from GUI.ProgressBar import Busy
 import Constants
 import cy_funcs
@@ -176,7 +176,7 @@ class datacube:
         # import internal variables.
         # they must be imported here in order to be the most recent ones (they are constantly
         # updated by the GUI).
-        from Engine.SpecRead import output_path, cube_path
+        from .SpecRead import output_path, cube_path
         try: os.mkdir(output_path)
         except: pass
         sum_file = open(os.path.join(output_path,"stacksum.mca"),'w+')
@@ -294,7 +294,7 @@ class datacube:
         """ Writes (pickle) the datacube object to memory, if the cube already exists, it is
         replaced (updated) """ 
 
-        from Engine.SpecRead import output_path, cube_path
+        from .SpecRead import output_path, cube_path
         __self__.self_path = cube_path
         try: 
             if not os.path.exists(output_path):
@@ -537,7 +537,7 @@ class datacube:
         element; a string
         line; a string """
 
-        from Engine.SpecRead import output_path, cube_path
+        from .SpecRead import output_path, cube_path
         __self__.__dict__[element+"_"+line] = image
         logger.info("Packed {0} map to datacube {1}".format(element,cube_path))
     
@@ -545,7 +545,7 @@ class datacube:
         """ Saves the histogram of the last calculated elemental distribution map. 
         This method is called by ImgMath.py while saving the maps """
 
-        from Engine.SpecRead import output_path, cube_path
+        from .SpecRead import output_path, cube_path
         histfile = open(output_path+"\\"+element+"_hist.txt",'w')
         histfile.write("<<START>>\n")
         histfile.write("hist\n")
@@ -560,7 +560,7 @@ class datacube:
         element; a string
         line; a string """
 
-        from Engine.SpecRead import output_path, cube_path
+        from .SpecRead import output_path, cube_path
         try:
             unpacked = __self__.__dict__[element+"_"+line]
             logger.info("Unpacked {0} map from datacube {1}".format(element,cube_path))

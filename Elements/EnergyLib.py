@@ -6,11 +6,9 @@
 #################################################################
 
 import numpy as np
-import logging
 import random, os
 import Constants
-logger = logging.getLogger("logfile")
-logger.debug("Importing module EnergyLib.py...")
+
 try: 
     import xraylib as xlib
     Constants.USEXLIB = True
@@ -299,6 +297,9 @@ if Constants.USEXLIB == True:
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
 ElementColors = {}
+
+# Read the color code for the elements
+# if colours.txt does not exist, it generates random colours. 
 try: 
     f = open(os.path.join(os.getcwd(),"images","colours.txt"),"r")
     for element in ElementList:

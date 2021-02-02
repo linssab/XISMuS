@@ -1,28 +1,36 @@
 #################################################################
 #                                                               #
 #          Mapping module for multi-core processing             #
-#                        version: 1.3.1 - Oct - 2020            #
+#                        version: 1.3.2 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import numpy as np
+#############
+# Utilities #
+#############
 import os, sys, logging, multiprocessing
-import gc
 logger = logging.getLogger("logfile")
+import numpy as np
+import gc
 from multiprocessing import freeze_support
 from psutil import cpu_count
 freeze_support()
-#in python 3 Queue is lowercase:
-import queue
+import queue #in python 3 Queue is lowercase:
 import pickle
 import time
-import SpecMath
-from SpecRead import dump_ratios, setup, __BIN__, __PERSONAL__
 from matplotlib import pyplot as plt
-from EnergyLib import ElementList, Energies, kbEnergies
-from ImgMath import interpolate_zeros, split_and_save
-import Constants
+#############
 
+#################
+# Local imports #
+#################
+import Constants
+import Elements
+from .SpecRead import __PERSONAL__, __BIN__
+from . import SpecMath
+from . import SpecRead
+from . import ImgMath
+#################
 lock = multiprocessing.Lock()
 
 def convert_bytes(num):
@@ -167,7 +175,7 @@ def grab_line(cube,lines,iterator,Element):
        
     logger.info("Finished map acquisition!")
     if cube["config"]["peakmethod"] == 'auto_roi': 
-        el_dist_map = interpolate_zeros(el_dist_map)
+        el_dist_map = ImgMath.interpolate_zeros(el_dist_map)
     
     logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
             format(Element,lines[0],lines[1]))
@@ -183,8 +191,8 @@ def digest_results(datacube,results,elements):
             element_map[:,:,dist_map,element] = results[element][0][dist_map]
             datacube.max_counts[elements[element]+line[dist_map]] = results[element][0][dist_map].max()
         datacube.ROI[elements[element]] = results[element][1]
-    dump_ratios(results,elements) 
-    split_and_save(datacube,element_map,elements)
+    SpecRead.dump_ratios(results,elements) 
+    ImgMath.split_and_save(datacube,element_map,elements)
     return 0
 
 def sort_results(results,element_list):
@@ -211,9 +219,9 @@ def start_reader(cube,Element,iterator,results,F,N,TOL):
         # sets the element energies #
         #############################
 
-        element_idx = ElementList.index(Element)
-        kaenergy = Energies[element_idx]*1000
-        kbenergy = kbEnergies[element_idx]*1000
+        element_idx = Elements.ElementList.index(Element)
+        kaenergy = Elements.Energies[element_idx]*1000
+        kbenergy = Elements.kbEnergies[element_idx]*1000
         logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".format(
             Element,kaenergy,kbenergy))
 

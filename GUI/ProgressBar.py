@@ -186,7 +186,7 @@ class Busy:
 
         import pickle, os
         import Constants
-        import SpecRead
+        import Engine.SpecRead as sp
         
         def verify_existing_fit_chunks():
             frames = [npy for npy in os.listdir(
@@ -200,12 +200,12 @@ class Busy:
         __self__.abort_btn.config(state=DISABLED)
         messagebox.showinfo("ABORTED!","The process was aborted by the user.")
 
-        cube_file = open(SpecRead.cube_path,'rb')
+        cube_file = open(sp.cube_path,'rb')
         del Constants.MY_DATACUBE
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
 
-        fit_path = SpecRead.output_path
+        fit_path = sp.output_path
         if __self__.mode=="auto_wizard": 
             frames = verify_existing_fit_chunks()
             try: shutil.rmtree(os.path.join(fit_path,"Fit Plots"))

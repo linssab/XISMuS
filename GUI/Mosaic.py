@@ -11,22 +11,29 @@ OVERRIDE = False
 VMAX = 0
 LAYERS_DICT = {}
 
-# tcl/Tk imports
+##################
+# tcl/Tk imports #
+##################
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog
+##################
  
-# general utilities
+#############
+# Utilities #
+#############
 import threading
 import numpy as np
 import cv2
 import gc
 import sys, os, copy, pickle, stat, random
 import logging, time
-from Decoder import *
+#############
 
-# matplotlib imports
+######################
+# matplotlib imports #
+######################
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
@@ -36,19 +43,26 @@ from matplotlib.figure import Figure
 import matplotlib.patches as patches
 from matplotlib import style
 style.use('ggplot')
+######################
 
-# internal imports
-import SpecRead
-import Constants
-from ImgMath import LEVELS, apply_scaling, hist_match
-from ProgressBar import Busy, create_tooltip 
-from SpecMath import datacube as Cube
-from EnergyLib import plottables_dict
+#################
+# Local imports #
+#################
 import cy_funcs
+import Constants
+from Elements import plottables_dict
+import Engine
+import Engine.SpecRead as sp
+from Engine import __PERSONAL__
+from Engine.ImgMath import LEVELS, apply_scaling, hist_match
+from Engine.SpecMath import datacube as Cube
+from .ProgressBar import Busy, create_tooltip 
+from .Decoder import *
+#################
 VERSION = Constants.VERSION_MOS
 
 def load_cube(cube=""):
-    path = os.path.join(SpecRead.__PERSONAL__,
+    path = os.path.join(__PERSONAL__,
         "output",cube,"{}.cube".format(cube))
     if os.path.exists(path):
         cube_file = open(path,"rb")
@@ -852,7 +866,7 @@ class Mosaic_API:
         __self__.build_image(bound=True, limit=[limits_x,limits_y])
 
     def add_layer(__self__):
-        _path = os.path.join(SpecRead.__PERSONAL__,"output")
+        _path = os.path.join(__PERSONAL__,"output")
                
         """ list all packed cubes """
         cube_dict = {}
@@ -1435,7 +1449,7 @@ class Mosaic_API:
                 messagebox.showinfo("Attention!","Using one of the automatic scaling algorithms will OVERRIDE the manual histogram configurantion. If you want to apply the manual histogram changes, deselect the scaling method chosen.")
             
             NAME = __self__.NameVar.get()
-            forbidden_names = os.listdir(os.path.join(SpecRead.__PERSONAL__,"output"))
+            forbidden_names = os.listdir(os.path.join(__PERSONAL__,"output"))
             if NAME in forbidden_names: 
                 messagebox.showerror("Folder name error",
                     "An output folder with name \"{}\" already exists!".format(NAME))
@@ -1644,7 +1658,7 @@ class Mosaic_API:
             # Setup configuration dictionary according to the first loaded layer #
             ######################################################################
 
-            SpecRead.conditional_setup(name=NAME)
+            sp.conditional_setup(name=NAME)
             
             #########################################################################
             # Datacube object was not created with merging in mind, therefore some  #
@@ -1679,11 +1693,11 @@ class Mosaic_API:
             new_cube.densitymap = apply_scaling(new_cube, new_cube.densitymap, 1)
             new_cube.save_cube()
 
-            cv2.imwrite(os.path.join(SpecRead.__PERSONAL__,"output",NAME,
+            cv2.imwrite(os.path.join(__PERSONAL__,"output",NAME,
                 "{}_scaling_matrix.png".format(NAME)),
                 __self__.cropped/__self__.cropped.max()*LEVELS)
             cropped = total_densemap[start_x:end_x,start_y:end_y]
-            cv2.imwrite(os.path.join(SpecRead.__PERSONAL__,"output",NAME,
+            cv2.imwrite(os.path.join(__PERSONAL__,"output",NAME,
                 "{}_global_densemap.png".format(NAME)),cropped/cropped.max()*LEVELS)
 
             __self__.progress_bar.destroybar()
@@ -1698,6 +1712,9 @@ class Mosaic_API:
         __self__.master.focus_set()
 
     def kill(__self__,e=""):
+        for widget in __self__.master.winfo_children():
+            try: widget.destroy()
+            except: pass
         __self__.master.grab_release()
         __self__.master.destroy()
 
@@ -2015,6 +2032,6 @@ if __name__.endswith('__main__'):
     optimum_resolution = (1920,1080)
 
     
-    SpecRead.conditional_setup()
+    sp.conditional_setup()
     mosaic_root = Mosaic_API((500,500))
     mosaic_root.master.mainloop()

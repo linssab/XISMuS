@@ -21,13 +21,19 @@ except:
     from Tkinter import filedialog
     import tkFont
 
-# general utilities
+#############
+# utilities #
+#############
 import os, gc
 import logging
 import random
 import numpy as np
+logger = logging.getLogger("logfile")
+#############
 
-# matplotlib imports
+######################
+# matplotlib imports #
+######################
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
@@ -37,13 +43,15 @@ from matplotlib.patches import Rectangle
 import matplotlib.patches as mpatches
 from matplotlib import style
 style.use('ggplot')
+######################
 
-# internal imports
-logger = logging.getLogger("logfile")
-import SpecRead
-from ProgressBar import Busy
-from Decoder import * 
-from SpecMath import findpeaks, linregress
+####################
+# internal imports #
+from Engine import SpecRead
+from Engine import SpecMath
+from .ProgressBar import Busy
+from .Decoder import * 
+####################
 
 class AdvCalib():
 
@@ -99,7 +107,7 @@ class AdvCalib():
         x, y = list(__self__.channels.get(0,END)),list(__self__.energies.get(0,END))
         op = "+"
         if len(x) > 1:
-            gain, zero, r, = linregress(x,y) 
+            gain, zero, r, = SpecMath.linregress(x,y) 
         else:
             __self__.equation.set("E(i) = GAIN*i + ZERO")
             __self__.results.update()
@@ -177,7 +185,7 @@ class AdvCalib():
         try: w = __self__.window.get()
         except: return 1
         if 1 <= w <= 32:
-            __self__.peaks = findpeaks(__self__.spectrum, 
+            __self__.peaks = SpecMath.findpeaks(__self__.spectrum, 
                     w=w,
                     r=2)
             return

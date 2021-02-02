@@ -11,7 +11,6 @@
 import logging
 import gc
 logger = logging.getLogger("logfile")
-logger.info("Importing module BatchFitter.py...")
 import sys, os, multiprocessing, copy, pickle
 from multiprocessing import freeze_support
 lock = multiprocessing.Lock()
@@ -24,11 +23,11 @@ import time,timeit
 # Local imports #
 #################
 import Constants
-import SpecRead
-from SpecMath import savgol_filter, peakstrip, polfit_batch, refresh_position, setROI 
-from ImgMath import split_and_save
-import EnergyLib
-from ProgressBar import Busy
+import Elements
+from . import SpecRead
+from . import SpecMath 
+from . import ImgMath
+from GUI.ProgressBar import Busy
 #################
 
 ####################
@@ -54,7 +53,8 @@ def convert_bytes(num):
 def prepare_data(FitClassObject):
     for i in range(len(FitClassObject.counts)):
         FitClassObject.bar.updatebar(i)
-        FitClassObject.counts[i] = savgol_filter(FitClassObject.counts[i],5,3).clip(0)
+        FitClassObject.counts[i] = SpecMath.savgol_filter(
+                FitClassObject.counts[i],5,3).clip(0)
     FitClassObject.SUM = np.sum(FitClassObject.counts.clip(1),0)
     FitClassObject.global_continuum = batch_continuum_for_wizard(
             FitClassObject.counts,
@@ -92,9 +92,9 @@ def batch_continuum_for_wizard(
         except: cycles, window, savgol, order = 24,5,5,3
         #for i in range(spectra_batch.shape[0]):
         #    if bar!= None: bar.updatebar(i)
-        #    stripped = peakstrip(spectra_batch[i],cycles,window,savgol,order)
+        #    stripped = SpecMath.peakstrip(spectra_batch[i],cycles,window,savgol,order)
         #    continuum[i] = stripped
-        global_continuum = peakstrip(global_spectrum,cycles,window,savgol,order)
+        global_continuum = SpecMath.peakstrip(global_spectrum,cycles,window,savgol,order)
         #return continuum, global_continuum
         return global_continuum
 
@@ -103,7 +103,7 @@ def batch_continuum_for_wizard(
         attempt = 0
         while global_continuum.sum()==0:
             attempt += 1
-            global_continuum = polfit_batch(
+            global_continuum = SpecMath.polfit_batch(
                 #spectra_batch,
                 np.asarray([global_spectrum]),
                 ndegree_global=ndegree_global,
@@ -464,7 +464,7 @@ def gausfit(
                         ax[0].text(
                                 E_peak[j]+25, 
                                 y_peak[it][j]*1.35, 
-                                EnergyLib.ElementList[i], 
+                                Elements.ElementList[i], 
                                 fontsize=7)
 
                     #################################################################
@@ -477,7 +477,7 @@ def gausfit(
                         ax[0].text(
                                 E_peak[j]+25, 
                                 y_peak[it][j]*1.15, 
-                                EnergyLib.ElementList[i], 
+                                Elements.ElementList[i], 
                                 fontsize=7)
 
                     ##############################################
@@ -1077,8 +1077,8 @@ class SingleFit():
         if add_list:
             for el in add_list:
 
-                element_a = EnergyLib.Energies[el]*1000
-                element_b = EnergyLib.kbEnergies[el]*1000
+                element_a = Elements.Energies[el]*1000
+                element_b = Elements.kbEnergies[el]*1000
 
                 logger.debug("Element {}, {}".format(element_a,element_b))
                 
@@ -1255,8 +1255,8 @@ class MultiFit():
         if add_list:
             for el in add_list:
             
-                element_a = EnergyLib.Energies[el]*1000
-                element_b = EnergyLib.kbEnergies[el]*1000
+                element_a = Elements.Energies[el]*1000
+                element_b = Elements.kbEnergies[el]*1000
                 
                 #############################################
                 #NOTE: uses the theoretical energies to fit #
@@ -1273,10 +1273,10 @@ class MultiFit():
                 # peak to the theoretical value                                     #
                 #####################################################################
                 """
-                elka_peak = setROI(
+                elka_peak = SpecMath.setROI(
                         element_a,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-                elkb_peak = setROI(
+                elkb_peak = SpecMath.setROI(
                         element_b,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
 
@@ -1591,9 +1591,9 @@ def recheck_peaks(peaks,matches):
 
     for key in matches.keys():
         checked_matches[key] = []
-        element = EnergyLib.ElementList[key]
-        theoretical_energies = [EnergyLib.Energies[key]*1000,
-                EnergyLib.kbEnergies[key]*1000]
+        element = Elements.ElementList[key]
+        theoretical_energies = [Elements.Energies[key]*1000,
+                Elements.kbEnergies[key]*1000]
         for peak in range(len(matches[key])):
             lower = theoretical_energies[peak] - (W*gain)
             high = (W*gain) + theoretical_energies[peak]
@@ -1677,14 +1677,14 @@ def build_images(
     try: elements.remove("Unmatched")
     except: print("No unmatched peaks! Elements:",elements)
     for element in elements: print(element,type(element))
-    element_list = [EnergyLib.ElementList[key] for key in elements]
+    element_list = [Elements.ElementList[key] for key in elements]
 
     #################################################################
     # reload cube because data is changed somewhere down the road   #
     # making a copy can cost a lot of memory (large cubes +/- 3Gb)  #
     #################################################################
 
-    from SpecRead import cube_path
+    from .SpecRead import cube_path
     if os.path.exists(cube_path):
         cube_file = open(cube_path,'rb')
         Constants.MY_DATACUBE = pickle.load(cube_file)
@@ -1741,7 +1741,7 @@ def build_images(
                             el_maps[x][y][line][maps_count] = 0
                     else:
                         el_maps[x][y][line][maps_count] = 0
-                pos = refresh_position(x,y,Constants.MY_DATACUBE.dimension)
+                pos = SpecMath.refresh_position(x,y,Constants.MY_DATACUBE.dimension)
                 x,y = pos[0],pos[1]
             x,y = start_x, start_y
             maps_count += 1
@@ -1765,7 +1765,7 @@ def build_images(
     #            try:
     #                peak2 = Constants.MATCHES[0][Constants.MATCHES[1][key][1]]
     #            except: peak2 = 0
-    #            Constants.MY_DATACUBE.ROI[EnergyLib.ElementList[key]] = peak1, peak2
+    #            Constants.MY_DATACUBE.ROI[Elements.ElementList[key]] = peak1, peak2
     #except:
     #    print("Running module alone, MATCHES variable may have not been declared.")
     
@@ -1774,7 +1774,7 @@ def build_images(
     ###############################################################################
 
     print("Splitting and saving...")
-    split_and_save(Constants.MY_DATACUBE,el_maps,element_list,
+    ImgMath.split_and_save(Constants.MY_DATACUBE,el_maps,element_list,
             force_alfa_and_beta=True)
     bar.destroybar()
     
@@ -1816,9 +1816,9 @@ def add_roi_to_datacube():
 
                 if not np.isnan(np.sum(spectrum[idx])):
                     Constants.MY_DATACUBE.ROI[
-                EnergyLib.ElementList[int(key)]]+=(spectrum[idx]-Constants.MY_DATACUBE.sum_bg)
+                Elements.ElementList[int(key)]]+=(spectrum[idx]-Constants.MY_DATACUBE.sum_bg)
             Constants.MY_DATACUBE.ROI[
-                    EnergyLib.ElementList[int(key)]]+=Constants.MY_DATACUBE.sum_bg
+                    Elements.ElementList[int(key)]]+=Constants.MY_DATACUBE.sum_bg
 
                 #############################################################################
         del spectrum
@@ -1902,11 +1902,11 @@ if __name__.endswith('__main__'):
         print("\t",Constants.MY_DATACUBE.matrix.shape)
         #print("\t",Constants.MY_DATACUBE.background.shape,"\n")
 
-        global_cont = peakstrip(Constants.MY_DATACUBE.sum,24,5,5,3)
+        global_cont = SpecMath.peakstrip(Constants.MY_DATACUBE.sum,24,5,5,3)
         continuum = np.insert(continuum,0,global_cont, axis=0)
 
         for i in range(len(counts)):
-            counts[i] = savgol_filter(counts[i],5,3)
+            counts[i] = SpecMath.savgol_filter(counts[i],5,3)
 
         #print(intercept,slope)
         #print(len(energies))

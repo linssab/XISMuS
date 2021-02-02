@@ -1,39 +1,49 @@
 #################################################################
 #                                                               #
 #          ELEMENT MAP GENERATOR                                #
-#                        version: 1.3.1 - Oct - 2020            #
+#                        version: 1.3.2 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
+#############
+# Utilities #
+#############
 import logging
 logger = logging.getLogger("logfile")
-logger.debug("Importing module Mapping.py...")
 import sys, os
 import numpy as np
 import pickle
-import SpecMath
-import SpecRead
+#############
+
+#################
+# Local imports #
+#################
+import Elements
 import Constants
-import EnergyLib
-from ProgressBar import ReadProgress
-import ImgMath
+from . import SpecMath
+from . import SpecRead
+from . import ImgMath
+from GUI.ProgressBar import ReadProgress
+#################
+
+####################
+# External modules #
+####################
 import matplotlib.pyplot as plt
 import time
 import cv2
-logger.debug("Finished Mapping imports.")
-
-
 from tkinter import *
 from tkinter import ttk
+####################
 
 
 def select_lines(element,ratio):
     """ Returns the theoretical peak position (in eV)
     for the alpha and beta energy macros """
 
-    element_idx = EnergyLib.ElementList.index(element)
-    kaenergy = EnergyLib.Energies[element_idx]*1000
-    kbenergy = EnergyLib.kbEnergies[element_idx]*1000
+    element_idx = Elements.ElementList.index(element)
+    kaenergy = Elements.Energies[element_idx]*1000
+    kbenergy = Elements.kbEnergies[element_idx]*1000
     
     if  ratio == True:
         max_counts = [0,0]
@@ -156,8 +166,8 @@ def getpeakmap(element_list,datacube):
     #   KA AND KB LINES OF INPUT ELEMENT(S).        #
     #################################################
     
-    KaElementsEnergy = EnergyLib.Energies
-    KbElementsEnergy = EnergyLib.kbEnergies
+    KaElementsEnergy = Elements.Energies
+    KbElementsEnergy = Elements.kbEnergies
     
     logger.info("Started energy axis calibration")
     energyaxis = datacube.energyaxis
@@ -169,7 +179,7 @@ def getpeakmap(element_list,datacube):
     ratiofiles = ['' for x in range(len(element_list))]
 
 
-    if element_list[0] in EnergyLib.ElementList:
+    if element_list[0] in Elements.ElementList:
         logger.info("Started acquisition of {0} map(s)".format(element_list))
         
         currentspectra = Constants.FIRSTFILE_ABSPATH
@@ -201,7 +211,7 @@ def getpeakmap(element_list,datacube):
         for Element in range(len(element_list)):
 
             # sets ka energy
-            kaindex[Element] = EnergyLib.ElementList.index(element_list[Element])
+            kaindex[Element] = Elements.ElementList.index(element_list[Element])
             kaenergy[Element] = KaElementsEnergy[kaindex[Element]]*1000
         
             logger.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
@@ -218,8 +228,8 @@ def getpeakmap(element_list,datacube):
                 r_file.write("row\tcolumn\tline1\tline2\tratio\n")
 
                 # sets kb energy
-                kbindex[Element] = EnergyLib.ElementList.index(element_list[Element])
-                kbenergy[Element] = EnergyLib.kbEnergies[kbindex[Element]]*1000
+                kbindex[Element] = Elements.ElementList.index(element_list[Element])
+                kbenergy[Element] = Elements.kbEnergies[kbindex[Element]]*1000
                 r_file.close() 
                 logger.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                         .format(kbenergy[Element],element_list[Element]))
