@@ -355,6 +355,35 @@ def load_cube():
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
         root_busy.notbusy()
+
+        """
+        a = Constants.MY_DATACUBE.densitymap.flatten()
+        b = Constants.MY_DATACUBE.scale_matrix.flatten()
+        print(a.shape)
+        print(b.shape)
+
+        
+
+        import cy_funcs 
+
+        timer=time.time()
+        print("Start! - straight from cy_funcs")
+        cy_funcs.cy_fast_scaling(Constants.MY_DATACUBE.scale_matrix,
+                Constants.MY_DATACUBE.densitymap,1,
+                np.asarray(Constants.MY_DATACUBE.densitymap.shape,dtype="int32"))
+        print("End!",time.time()-timer)
+
+        timer=time.time()
+        print("Start! - straight from booster module")
+        boost_fast_scaling(b,a,1,int(b.shape[0]))
+        print("End!",time.time()-timer)
+
+        timer=time.time()
+        print("Start! - rerouting to ImgMath + booster")
+        fast_scaling(Constants.MY_DATACUBE,Constants.MY_DATACUBE.densitymap,1)
+        print("End!",time.time()-timer)
+        """
+
     elif os.path.exists(os.path.join(sp.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
         lz_file = open(sp.cube_path,'rb')
@@ -2032,16 +2061,16 @@ class ImageAnalyzer:
     def transform1(__self__,image):
         if __self__.T1check.get() == True:
             if __self__.S1check.get() == True: 
-                image = threshold(image,__self__.T1Slider.get())
+                image = fast_threshold(image,0,__self__.T1Slider.get())
                 image = iteractive_median(image,__self__.S1Slider.get())
             else:
-                image = threshold(image,__self__.T1Slider.get())
+                image = fast_threshold(image,0,__self__.T1Slider.get())
         elif __self__.LP1check.get() == True:
             if __self__.S1check.get() == True: 
-                image = low_pass(image,__self__.LP1Slider.get())
+                image = fast_threshold(image,1,__self__.LP1Slider.get())
                 image = iteractive_median(image,__self__.S1Slider.get())
             else:
-                image = low_pass(image,__self__.LP1Slider.get())
+                image = fast_threshold(image,1,__self__.LP1Slider.get())
         else:
             if __self__.S1check.get() == True:
                 image = iteractive_median(image,__self__.S1Slider.get())
@@ -2057,16 +2086,16 @@ class ImageAnalyzer:
     def transform2(__self__,image):
         if __self__.T2check.get() == True:
             if __self__.S2check.get() == True: 
-                image = threshold(image,__self__.T2Slider.get())
+                image = fast_threshold(image,0,__self__.T2Slider.get())
                 image = iteractive_median(image,__self__.S2Slider.get())
             else:
-                image = threshold(image,__self__.T2Slider.get())
+                image = fast_threshold(image,0,__self__.T2Slider.get())
         elif __self__.LP2check.get() == True:
             if __self__.S2check.get() == True: 
-                image = low_pass(image,__self__.LP2Slider.get())
+                image = fast_threshold(image,1,__self__.LP2Slider.get())
                 image = iteractive_median(image,__self__.S2Slider.get())
             else:
-                image = low_pass(image,__self__.LP2Slider.get())
+                image = fast_threshold(image,1,__self__.LP2Slider.get())
         else:
             if __self__.S2check.get() == True:
                 image = iteractive_median(image,__self__.S2Slider.get())
@@ -2089,12 +2118,12 @@ class ImageAnalyzer:
         else: scalemode = 0
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
         __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
-        del __self__.CACHEMAP1
         __self__.plot1.clear()
-        apply_scaling(__self__.DATACUBE,__self__.newimage1, scalemode) 
+        __self__.newimage1 = fast_scaling(__self__.DATACUBE, __self__.newimage1, scalemode) 
         __self__.plot1.imshow(__self__.newimage1, cmap=Constants.COLORMAP)
         __self__.plot1.grid(b=None)
         __self__.canvas1.draw()
+        del __self__.CACHEMAP1
     
     def draw_image2(__self__,i):
         scalemode = __self__.apply_scale_mask.get()
@@ -2102,12 +2131,12 @@ class ImageAnalyzer:
         else: scalemode = 0
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
         __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
-        del __self__.CACHEMAP2
         __self__.plot2.clear()
-        apply_scaling(__self__.DATACUBE,__self__.newimage2, scalemode) 
+        __self__.newimage2 = fast_scaling(__self__.DATACUBE,__self__.newimage2, scalemode) 
         __self__.plot2.imshow(__self__.newimage2, cmap=Constants.COLORMAP)
         __self__.plot2.grid(b=None)
         __self__.canvas2.draw()
+        del __self__.CACHEMAP2
 
     def get_correlation(__self__):
         labels = __self__.Map1Var.get(),__self__.Map2Var.get()
@@ -5081,7 +5110,7 @@ class ReConfigDiag:
                 if Constants.MY_DATACUBE.scalable and __self__.ScaleVar.get():
                     Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype(
                             "float32")
-                    Constants.MY_DATACUBE.densitymap = apply_scaling(
+                    Constants.MY_DATACUBE.densitymap = fast_scaling(
                             Constants.MY_DATACUBE, Constants.MY_DATACUBE.densitymap, 1)
                     Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
                 elif Constants.MY_DATACUBE.scalable and not __self__.ScaleVar.get():
@@ -5093,7 +5122,7 @@ class ReConfigDiag:
                     Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
                     Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype(
                             "float32")
-                    Constants.MY_DATACUBE.densitymap = apply_scaling(
+                    Constants.MY_DATACUBE.densitymap = fast_scaling(
                             Constants.MY_DATACUBE,
                             Constants.MY_DATACUBE.densitymap, 1)
                     Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
@@ -5101,7 +5130,7 @@ class ReConfigDiag:
                     Constants.MY_DATACUBE.scalable = __self__.ScaleVar.get()
                     Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype(
                             "float32")
-                    Constants.MY_DATACUBE.densitymap = apply_scaling(
+                    Constants.MY_DATACUBE.densitymap = fast_scaling(
                             Constants.MY_DATACUBE, Constants.MY_DATACUBE.densitymap, -1)
                     Constants.MY_DATACUBE.matrix = Constants.MY_DATACUBE.matrix.astype("int32")
 
@@ -5752,7 +5781,7 @@ class ImageOperationWarning:
                     __self__.parent.newimage2,norm=True)
         else: pass
         if __self__.scaled:
-            apply_scaling(__self__.parent.DATACUBE, output, -1)
+            output = fast_scaling(__self__.parent.DATACUBE, output, -1)
         ImgageOperationOutput(output,__self__.parent.Map1Var.get(),
                 __self__.parent.Map2Var.get(),operation, __self__.parent.DATACUBE.datatypes)
         __self__.master.grab_release()
@@ -6374,10 +6403,11 @@ if __name__ == "__main__":
 
     import Engine
     import Engine.SpecRead as sp
-    from Engine.ImgMath import LEVELS, apply_scaling, correlate
-    from Engine.ImgMath import threshold, low_pass, iteractive_median, write_image, stackimages
+    from Engine.ImgMath import LEVELS, correlate
+    from Engine.ImgMath import iteractive_median, write_image, stackimages
     from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
     from Engine.SpecMath import datacube as Cube
+    from Engine.CBooster import *
 
     #from Elements.EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
     from Elements import *
