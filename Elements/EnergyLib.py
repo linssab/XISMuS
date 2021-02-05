@@ -1,13 +1,22 @@
 #################################################################
 #                                                               #
 #          DATABASE FOR ELEMENTS                                #
-#                        version: 1.3.1 - Oct - 2020            #
+#                        version: 1.3.2 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import numpy as np
 import random, os
-import Constants
+try:
+    import Constants
+except: 
+    """ workaround to work as an independent module 
+    without having to remove XLIB checks. 
+    XISMuS can run with or without xlib, hence the checks. """
+    class constant:
+        def __init__(__self__):
+            __self__.USEXLIB = False
+    Constants = constant()
 
 try: 
     import xraylib as xlib
@@ -15,7 +24,8 @@ try:
     xlib.SetErrorMessages(0)
 except: 
     logger.warning("xraylib module not found!")
-    print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.")
+    print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.\
+            check https://github.com/tschoonj/xraylib/wiki for further information.")
     Constants.USEXLIB = False
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"

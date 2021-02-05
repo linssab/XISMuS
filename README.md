@@ -27,6 +27,18 @@ You will have to compile the Cython code, by typing in the following command on 
 You must have a GNU compiler to do so, as `stupy_cy.py` will compile the python code in `cy_funcs.pyx` into native C code.<br>
 Finally, add `My Documents` content inside your user documents folder.<br>
 
+## As a package
+XISMuS Elements module is available as a package<br>
+To install it, simply type:
+<br>
+`pip install compound-wizard`<br>
+<br>
+The module can be imported with:<br>
+<br>
+`import Elements`<br>
+<br>
+For further usage information, check the [COMPOUNDS.md][compounds] file.<br>
+
 #### Dependencies
 
 To run it within a Python interpreter, we recommend you have Python 3.7 installed and the following packages:<br>
@@ -52,6 +64,7 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 [x64]: https://sourceforge.net/projects/xismus/files/XISMuSx64_1.3.2.1_Setup.exe/download
 [x86]: https://sourceforge.net/projects/xismus/files/XISMuSx86_1.3.2.1_Setup.exe/download
 [UserGuide]: https://sourceforge.net/projects/xismus/files/XISMuS_User_Manual_1.3.0.pdf/download
+[compounds]: https://github.com/linssab/XISMuS/blob/master/COMPOUNDS.md
 
 ## Funding
 This project has received funding from the European Union’s Horizon 2020 research and innovation programme under the Marie-Skłodowska Curie Innovative Training Networks (MSCA-ITN) grant agreement No 766311.<img align="right" src="https://github.com/linssab/XISMuS/blob/master/images/msca_itn.png?raw=true" width="70px"></img>

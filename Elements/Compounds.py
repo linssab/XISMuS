@@ -6,10 +6,10 @@
 #################################################################
 
 import numpy as np
-#from . import EnergyLib
+import xraylib as xlib
+from . import EnergyLib
 
 CompoundList = {
-        
         'Air'           :{'O':2,'N':2,},
         'Azurite'       :{'Cu':3,'C':2,'O':8,'H':2},
         'AuSheet'       :{'Au':9,'Ag':1},
@@ -28,7 +28,6 @@ CompoundList = {
         }
 
 WeightList = {
-
         'Au24'          :{'Au':0.999,'Ag':0.001},
         'AuAg23.5'      :{'Au':0.985,'Ag':0.015},
         'AuCu23.5'      :{'Au':0.985,'Cu':0.015},
@@ -44,10 +43,10 @@ WeightList = {
 def ListDatabase():
     """ Prints all compounds on database """
 
-    ListDatabase = dict(CompoundList,**WeightList)
-    for key in ListDatabase:
-        print(key,ListDatabase[key])
-    return 0
+    Database = dict(CompoundList,**WeightList)
+    for key in Database:
+        print(key,Database[key])
+    return Database
 
 
 class compound:
@@ -235,7 +234,7 @@ class compound:
         if type(energy) == int:
             for element in __self__.weight:
                 ele_no = EnergyLib.Element_No[element]
-                print(ele_no, element)
+                #print(ele_no, element)
                 mu1 = xlib.CS_Total(ele_no,energy)
                 mu2 = 0
                 mu1_w += mu1*__self__.weight[element]
