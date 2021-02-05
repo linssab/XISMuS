@@ -1,3 +1,10 @@
+#################################################################
+#                                                               #
+#          DLL FUNCTIONS                                        #
+#                        version: 1.3.2 - Feb - 2021            #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
 import numpy as np
 import time
 import ctypes
@@ -73,7 +80,6 @@ def fast_threshold(image, mode, t):
 
     dll.threshold(newimg,mode,t,size)
     newimg.shape = (newimg.size//shape[1], shape[1])
-    newimg = newimg.astype("float32")
     return newimg
 
 def fast_smooth(image, iterations):

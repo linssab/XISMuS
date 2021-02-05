@@ -1,3 +1,9 @@
+// booster.c
+// C functions to build the dynamic libraries for python
+// @author: Sergio Lins
+// @email: sergio.lins@roma3.infn.it
+// Version: 1.3.1 Feb - 2021
+
 #include <stdio.h>
 #include <stdlib.h>
 

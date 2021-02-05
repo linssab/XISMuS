@@ -1,3 +1,8 @@
+// booster.h
+// DLL linkage and header
+// @author: Sergio Lins
+// @email: sergio.lins@roma3.infn.it
+// Version: 1.3.1 Feb - 2021
 
 __declspec(dllexport) float average(int arr[], int dim);
 __declspec(dllexport) void apply_scaling(float arr1[], float arr2[], int mode, int shape);
