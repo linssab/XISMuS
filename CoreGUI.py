@@ -1866,9 +1866,6 @@ class ImageAnalyzer:
         __self__.LP1Slider.config(state=DISABLED)
         __self__.LP2Slider.config(state=DISABLED)
         
-        __self__.draw_image1(0)
-        __self__.draw_image2(0)
-        
         icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
         __self__.master.iconbitmap(icon)  
         
@@ -1885,10 +1882,16 @@ class ImageAnalyzer:
                 except: pass
             if __self__.ElementalMap1.max() == 0:
                 __self__.ElementalMap1 = Constants.MY_DATACUBE.densitymap
+                __self__.left_image = __self__.plot1.imshow(__self__.ElementalMap1)
                 __self__.draw_image1(0)
+            else: __self__.left_image = __self__.plot1.imshow(np.zeros([20,20]))
             if __self__.ElementalMap2.max() == 0:
                 __self__.ElementalMap2 =  Constants.MY_DATACUBE.densitymap
+                __self__.right_image = __self__.plot2.imshow(__self__.ElementalMap2)
                 __self__.draw_image2(0)
+            else: __self__.right_image = __self__.plot2.imshow(np.zeros([20,20]))
+            __self__.plot1.grid(False)
+            __self__.plot2.grid(False)
             __self__.update_sample1(None)
             __self__.update_sample2(None)
         except: 
@@ -2061,19 +2064,17 @@ class ImageAnalyzer:
     def transform1(__self__,image):
         if __self__.T1check.get() == True:
             if __self__.S1check.get() == True: 
-                image = fast_threshold(image,0,__self__.T1Slider.get())
-                image = iteractive_median(image,__self__.S1Slider.get())
+                image = fast_combo(image,0,__self__.T1Slider.get(),__self__.S1Slider.get())
             else:
                 image = fast_threshold(image,0,__self__.T1Slider.get())
         elif __self__.LP1check.get() == True:
             if __self__.S1check.get() == True: 
-                image = fast_threshold(image,1,__self__.LP1Slider.get())
-                image = iteractive_median(image,__self__.S1Slider.get())
+                image = fast_combo(image,1,__self__.LP1Slider.get(),__self__.S1Slider.get())
             else:
                 image = fast_threshold(image,1,__self__.LP1Slider.get())
         else:
             if __self__.S1check.get() == True:
-                image = iteractive_median(image,__self__.S1Slider.get())
+                image = fast_smooth(image,__self__.S1Slider.get())
         try:
             __self__.annotate.config(relief="raised")
             __self__.annotate.config(bg=__self__.master.cget("background"))
@@ -2086,19 +2087,17 @@ class ImageAnalyzer:
     def transform2(__self__,image):
         if __self__.T2check.get() == True:
             if __self__.S2check.get() == True: 
-                image = fast_threshold(image,0,__self__.T2Slider.get())
-                image = iteractive_median(image,__self__.S2Slider.get())
+                image = fast_combo(image,0,__self__.T2Slider.get(),__self__.S2Slider.get())
             else:
                 image = fast_threshold(image,0,__self__.T2Slider.get())
         elif __self__.LP2check.get() == True:
             if __self__.S2check.get() == True: 
-                image = fast_threshold(image,1,__self__.LP2Slider.get())
-                image = iteractive_median(image,__self__.S2Slider.get())
+                image = fast_combo(image,1,__self__.LP2Slider.get(),__self__.S2Slider.get())
             else:
                 image = fast_threshold(image,1,__self__.LP2Slider.get())
         else:
             if __self__.S2check.get() == True:
-                image = iteractive_median(image,__self__.S2Slider.get())
+                image = fast_smooth(image,__self__.S2Slider.get())
         try:
             __self__.annotate.config(relief="raised")
             __self__.annotate.config(bg=__self__.master.cget("background"))
@@ -2118,10 +2117,12 @@ class ImageAnalyzer:
         else: scalemode = 0
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
         __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
-        __self__.plot1.clear()
+        #__self__.plot1.clear()
         __self__.newimage1 = fast_scaling(__self__.DATACUBE, __self__.newimage1, scalemode) 
-        __self__.plot1.imshow(__self__.newimage1, cmap=Constants.COLORMAP)
-        __self__.plot1.grid(b=None)
+        #__self__.plot1.imshow(__self__.newimage1, cmap=Constants.COLORMAP)
+        __self__.left_image.set_data(__self__.newimage1)
+        __self__.left_image.set_clim(vmin=0, vmax=__self__.newimage1.max())
+        __self__.left_image.set_cmap(Constants.COLORMAP)
         __self__.canvas1.draw()
         del __self__.CACHEMAP1
     
@@ -2131,10 +2132,12 @@ class ImageAnalyzer:
         else: scalemode = 0
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
         __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
-        __self__.plot2.clear()
+        #__self__.plot2.clear()
         __self__.newimage2 = fast_scaling(__self__.DATACUBE,__self__.newimage2, scalemode) 
-        __self__.plot2.imshow(__self__.newimage2, cmap=Constants.COLORMAP)
-        __self__.plot2.grid(b=None)
+        #__self__.plot2.imshow(__self__.newimage2, cmap=Constants.COLORMAP)
+        __self__.right_image.set_data(__self__.newimage2)
+        __self__.right_image.set_clim(vmin=0, vmax=__self__.newimage2.max())
+        __self__.right_image.set_cmap(Constants.COLORMAP)
         __self__.canvas2.draw()
         del __self__.CACHEMAP2
 
@@ -2179,7 +2182,7 @@ class ImageAnalyzer:
 
         corr = correlate(Map1,Map2,bar=bar)
         if not corr: 
-            messagebox.showerror("Error","Cannot correlate an empty image!")
+            messagebox.showerror("Error","Cannot correlate an empty image or region!")
             bar.destroybar()
             return
         bar.update_text("Loading plot...")
@@ -6404,7 +6407,7 @@ if __name__ == "__main__":
     import Engine
     import Engine.SpecRead as sp
     from Engine.ImgMath import LEVELS, correlate
-    from Engine.ImgMath import iteractive_median, write_image, stackimages
+    from Engine.ImgMath import write_image, stackimages
     from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
     from Engine.SpecMath import datacube as Cube
     from Engine.CBooster import *

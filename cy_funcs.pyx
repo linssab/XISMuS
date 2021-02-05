@@ -111,10 +111,10 @@ def cy_threshold_low(float[:,:] a_2D_array, int[:] shape, int t):
     cdef float[:,:] new_array = a_2D_array[:,:]
     for x in range(shape[0]):
         for y in range(shape[1]):
-            if a_2D_array[x][y] > t: 
-                new_array[x][y] = 0
+            if a_2D_array[x,y] > t: 
+                new_array[x,y] = 0
             else:
-                new_array[x][y] = a_2D_array[x][y]
+                new_array[x,y] = a_2D_array[x,y]
     return new_array
 
 cdef float cy_simple_median(float[:,:] m, int x, int y, list shape):
@@ -124,40 +124,40 @@ cdef float cy_simple_median(float[:,:] m, int x, int y, list shape):
     cdef float average = 0.0
     if x == 0:
         if y == 0: 
-            return (2*m[x][y] + m[x+1][y] + m[x][y+1] + m[x+1][y+1])/5 #upper-left corner
+            return (2*m[x,y] + m[x+1,y] + m[x,y+1] + m[x+1,y+1])/5 #upper-left corner
         elif y == shape[1]-1:
-            return (2*m[x][y] + m[x+1][y] + m[x][y-1] + m[x+1][y-1])/5 #upper-right corner
+            return (2*m[x,y] + m[x+1,y] + m[x,y-1] + m[x+1,y-1])/5 #upper-right corner
         else:
-            return (2*m[x][y] + m[x+1][y] +\
-            m[x][y-1] + m[x+1][y-1] +\
-            m[x][y+1] + m[x+1][y+1])/7
+            return (2*m[x,y] + m[x+1,y] +\
+            m[x,y-1] + m[x+1,y-1] +\
+            m[x,y+1] + m[x+1,y+1])/7
     elif x == shape[0]-1:
         if y == 0: 
-            return (2*m[x][y] + m[x-1][y] + m[x][y+1] + m[x-1][y+1])/5 #bottom-left corner
+            return (2*m[x,y] + m[x-1,y] + m[x,y+1] + m[x-1,y+1])/5 #bottom-left corner
         elif y == shape[1]-1: 
-            return (2*m[x][y] + m[x-1][y] + m[x][y-1] + m[x-1][y-1])/5 #bottom-right corner
+            return (2*m[x,y] + m[x-1,y] + m[x,y-1] + m[x-1,y-1])/5 #bottom-right corner
         else: 
-            return (2*m[x][y]  + m[x-1][y] +\
-            m[x][y-1] + m[x-1][y-1] +\
-            m[x][y+1] + m[x-1][y+1])/7
+            return (2*m[x,y]  + m[x-1,y] +\
+            m[x,y-1] + m[x-1,y-1] +\
+            m[x,y+1] + m[x-1,y+1])/7
     elif y == 0:
-        return (2*m[x][y] + m[x-1][y] + m[x+1][y] +\
-            m[x][y+1] + m[x-1][y+1] + m[x+1][y+1])/7
+        return (2*m[x,y] + m[x-1,y] + m[x+1,y] +\
+            m[x,y+1] + m[x-1,y+1] + m[x+1,y+1])/7
     elif y == shape[1]-1:
-        return (2*m[x][y] + m[x-1][y] + m[x+1][y] +\
-            m[x][y-1] + m[x-1][y-1] + m[x+1][y-1])/7
+        return (2*m[x,y] + m[x-1,y] + m[x+1,y] +\
+            m[x,y-1] + m[x-1,y-1] + m[x+1,y-1])/7
     else:
-        return (2*m[x][y] + m[x-1][y] + m[x+1][y] +\
-            m[x][y-1] + m[x-1][y-1] + m[x+1][y-1] +\
-            m[x][y+1] + m[x-1][y+1] + m[x+1][y+1])/10
+        return (2*m[x,y] + m[x-1][y] + m[x+1,y] +\
+            m[x,y-1] + m[x-1,y-1] + m[x+1,y-1] +\
+            m[x,y+1] + m[x-1,y+1] + m[x+1,y+1])/10
 
 def cy_average(float[:,:] a_2D_array, int x, int y):
     """ Returns the average value of pixel x,y. Ignores edges """
     """ This function can be called by pure python modules """ 
     cdef float average = 0.0
-    return (2*a_2D_array[x][y] + a_2D_array[x-1][y] + a_2D_array[x+1][y] +\
-            a_2D_array[x][y-1] + a_2D_array[x-1][y-1] + a_2D_array[x+1][y-1] +\
-            a_2D_array[x][y+1] + a_2D_array[x-1][y+1] + a_2D_array[x+1][y+1])/10
+    return (2*a_2D_array[x,y] + a_2D_array[x-1,y] + a_2D_array[x+1,y] +\
+            a_2D_array[x,y-1] + a_2D_array[x-1,y-1] + a_2D_array[x+1,y-1] +\
+            a_2D_array[x,y+1] + a_2D_array[x-1,y+1] + a_2D_array[x+1,y+1])/10
 
 def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
     """ Applies the median_filter funtion to all pixels within a 2D-array.
@@ -174,7 +174,7 @@ def cy_iteractive_median(float[:,:] img, int[:] shape, int iterations):
     for i in range(iterations):
         for x in range(shape[0]):
             for y in range(shape[1]):
-                new_image[x][y] = cy_simple_median(current_image,x,y,[shape[0],shape[1]])
+                new_image[x,y] = cy_simple_median(current_image,x,y,[shape[0],shape[1]])
         current_img = new_image
     return new_image 
 
@@ -188,8 +188,8 @@ def cy_subtract(float[:,:] map1,
 
     for i in range(shape[0]):
         for j in range(shape[1]):
-            output[i][j] = map1[i][j] - map2[i][j]
-            if output[i][j] < 0: output[i][j] = 0
+            output[i,j] = map1[i,j] - map2[i,j]
+            if output[i,j] < 0: output[i,j] = 0
     return output
 
 def cy_add(float[:,:] map1, 
@@ -202,7 +202,7 @@ def cy_add(float[:,:] map1,
 
     for i in range(shape[0]):
         for j in range(shape[1]):
-            output[i][j] = map1[i][j] + map2[i][j]
+            output[i,j] = map1[i,j] + map2[i,j]
     return output
 
 def cy_read_densemap_pixels(dict layers, int i, int j, int mode):
@@ -253,19 +253,19 @@ def cy_iterate_img_and_mask(
 
     cdef int i = 0
     cdef int j = 0
-    cdef float x1 = xy[0][0]
-    cdef float y1 = xy[1][0]
-    cdef float x2 = xy[0][1]
-    cdef float y2 = xy[1][1]
+    cdef float x1 = xy[0,0]
+    cdef float y1 = xy[1,0]
+    cdef float x2 = xy[0,1]
+    cdef float y2 = xy[1,1]
 
     for i in range(shape[0]):
         for j in range(shape[1]):
-            if img[i][j] <= x1:
-                mask[i][j] = y1/img[i][j]
-            elif img[i][j] >= x2:
-                mask[i][j] = y2/img[i][j]
+            if img[i,j] <= x1:
+                mask[i,j] = y1/img[i,j]
+            elif img[i,j] >= x2:
+                mask[i,j] = y2/img[i,j]
             else:
-                mask[i][j] = (img[i][j]*a + b)/img[i][j]
+                mask[i,j] = (img[i,j]*a + b)/img[i,j]
     return
 
 def cy_build_densemap(float[:,:] image, 
@@ -280,10 +280,10 @@ def cy_build_densemap(float[:,:] image,
     cdef int j = 0
     for i in range(size[0]):
         for j in range(size[1]):
-            image[i][j] = cy_read_densemap_pixels(all_layers,i,j,mode)
-            if image[i][j] > TARGET[1]:
-                TARGET[0] = image[i][j]
-                TARGET[1] = image[i][j]
+            image[i,j] = cy_read_densemap_pixels(all_layers,i,j,mode)
+            if image[i,j] > TARGET[1]:
+                TARGET[0] = image[i,j]
+                TARGET[1] = image[i,j]
     cy_second_min(image, size, TARGET)
     return image
 
@@ -311,7 +311,7 @@ def cy_read_pixels(dict layers, int i, int j):
             conv_x, conv_y = i-x, j-y
             if x <= i < x_ and y <= j < y_ \
                     and layers[layer]["layer"] > front_layer:
-                v = layers[layer]["img"][conv_x][conv_y]
+                v = layers[layer]["img"][conv_x,conv_y]
                 if v > 0:
                     pixel = v
                     front_layer = layers[layer]["layer"]
@@ -328,9 +328,9 @@ def cy_build_image(float[:,:] image, int[:,:] boundaries, dict all_layers):
     cdef int j = 0
     cdef float[:,:] new_image = image
 
-    for i in range(boundaries[0][0],boundaries[0][1]):
-        for j in range(boundaries[1][0],boundaries[1][1]):
-            new_image[i][j] = cy_read_pixels(all_layers,i,j)
+    for i in range(boundaries[0,0],boundaries[0,1]):
+        for j in range(boundaries[1,0],boundaries[1,1]):
+            new_image[i,j] = cy_read_pixels(all_layers,i,j)
     return new_image
 
 def cy_build_merge_cube(dict layers, 
@@ -365,7 +365,7 @@ def cy_build_merge_cube(dict layers,
                     spectrum,
                     size)
             for c in range(size):
-                cube_matrix[x][y][c] = spectrum[c]
+                cube_matrix[x,y,c] = spectrum[c]
             c = 0
             y+=1
         i = 0
@@ -407,10 +407,10 @@ def cy_pack_spectra(dict layers,
         conv_x, conv_y = i-x, j-y
         if x <= i < x_ and y <= j < y_ \
             and layers[layer]["layer"] > front_layer:
-                v = layers[layer]["img"][conv_x][conv_y]
+                v = layers[layer]["img"][conv_x,conv_y]
                 if v != 0:
                     for c in range(shape):
-                        specout[c] = layers[layer]["matrix"][conv_x][conv_y][c]
+                        specout[c] = layers[layer]["matrix"][conv_x,conv_y,c]
                         front_layer = layers[layer]["layer"]
     if front_layer >= 0: 
         return specout
@@ -466,7 +466,7 @@ def cy_build_intense_scaling_matrix(
     cdef int j = 0
     for i in range(shape[0]):
         for j in range(shape[1]):
-            m[i][j] = read_value(all_layers,i,j)
+            m[i,j] = read_value(all_layers,i,j)
 
 def cy_build_scaling_matrix(float[:,:] scale_matrix, 
         int[:] size, 
@@ -484,9 +484,9 @@ def cy_build_scaling_matrix(float[:,:] scale_matrix,
         for j in range(size[1]):
             iterator += 1
             if mode == 1:
-                scale_matrix[i][j] = cy_get_linstr_scaling(all_layers,i,j,target)
+                scale_matrix[i,j] = cy_get_linstr_scaling(all_layers,i,j,target)
             elif mode == 2:
-                scale_matrix[i][j] = cy_get_sum_scaling(all_layers,i,j,gross)
+                scale_matrix[i,j] = cy_get_sum_scaling(all_layers,i,j,gross)
             else:
                 return scale_matrix
         mec.updatebar(i)
@@ -518,7 +518,7 @@ def cy_get_linstr_scaling(dict layers, int i, int j, float[:] target):
                     and layers[layer]["layer"] > front_layer:
                 loc_max = layers[layer]["max"]
                 loc_min = layers[layer]["min"]
-                r = layers[layer]["dense"][conv_x][conv_y]
+                r = layers[layer]["dense"][conv_x,conv_y]
                 if r == 0: return 1.0
                 else: pass 
                 s = cy_stretch(r,target[0],target[1],loc_min,loc_max)
@@ -562,6 +562,6 @@ def cy_MPS(int[:,:,:] matrix, int[:] m_size, int[:] mps_spec, int spec_size):
     for c in range(spec_size):
         for x in range(m_size[0]):
             for y in range(m_size[1]):
-                if mps_spec[c] < matrix[x][y][c]: mps_spec[c] = matrix[x][y][c]
+                if mps_spec[c] < matrix[x,y,c]: mps_spec[c] = matrix[x,y,c]
     return mps_spec
 

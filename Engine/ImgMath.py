@@ -72,15 +72,7 @@ def iteractive_median(img,iterations=1):
     cy_funcs.cy_iteractive_median(img, shape, iterations)
     return img
 
-def threshold(image, mode, t):
-    """ Applies a threshold filter cutting the values BELOW threshold.
-    Returns a 2D-array """
-
-    if len(image.shape) != 2:
-        raise ValueError("Input shape {} is not bi-dimensional")
-    image = fast_threshold(image, mode, t)
-    return image
-
+# Deprecated with the introduction of CBooster module
 def apply_scaling(datacube, image, scalemode=0, mask=np.zeros(0)):
     """ scalemode:
     0 = Returns
