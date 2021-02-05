@@ -15,5 +15,10 @@ logger.info("Importing MappingParallel...")
 from .MappingParallel import *
 logger.info("Importing BatchFitter...")
 from .BatchFitter import *
+logger.info("Importing CBooster...")
+try: from .CBooster import *
+except OSError as e: 
+    print(e)
+    sys.exit(1)
 logger.info("Engine modules ready!")
 

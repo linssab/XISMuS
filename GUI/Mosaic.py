@@ -54,8 +54,9 @@ from Elements import plottables_dict
 import Engine
 import Engine.SpecRead as sp
 from Engine import __PERSONAL__
-from Engine.ImgMath import LEVELS, apply_scaling, hist_match
+from Engine.ImgMath import LEVELS, hist_match
 from Engine.SpecMath import datacube as Cube
+from Engine.CBooster import *
 from .ProgressBar import Busy, create_tooltip 
 from .Decoder import *
 #################
@@ -116,7 +117,7 @@ def convert_layers_to_dict(MosaicAPI_class):
                 "dense":MosaicAPI_class.layer[layer].dense,
                 "max":MosaicAPI_class.layer[layer].dense.max(),
                 "min":MosaicAPI_class.layer[layer].dense.min(),
-                "layer":MosaicAPI_class.layer[layer].layer,
+                "layer":int(MosaicAPI_class.layer[layer].layer),
                 "matrix":MosaicAPI_class.layer[layer].matrix,
                 "mask":MosaicAPI_class.layer[layer].mask
                 }
@@ -811,28 +812,6 @@ class Mosaic_API:
             else: 
                 __self__.layer[name].start[0] = new_start_x
                 __self__.layer[name].end[0] = new_start_x + __self__.layer[name].img.shape[0]
-            
-            """
-            # sets new y end
-            new_end_y = __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
-            if new_start_y < 0: 
-                __self__.layer[name].end[1] = __self__.layer[name].img.shape[1]
-            elif new_end_y  >= __self__.image.shape[1]:
-                __self__.layer[name].end[1] = __self__.image.shape[1]-1
-            else: 
-                __self__.layer[name].end[1] = \
-                        __self__.y1 - __self__.y0  + __self__.layer[name].end[1]
-
-            # sets new x end
-            new_end_x = __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
-            if new_start_x < 0: 
-                __self__.layer[name].end[0] = __self__.layer[name].img.shape[0]
-            elif new_end_x >= __self__.image.shape[0]: 
-                __self__.layer[name].end[0] = __self__.image.shape[0]-1
-            else: 
-                __self__.layer[name].end[0] = \
-                        __self__.x1 - __self__.x0  + __self__.layer[name].end[0]
-            """
 
             limits_x = [__self__.layer[name].start[0],__self__.layer[name].end[0]]
             limits_y = [__self__.layer[name].start[1],__self__.layer[name].end[1]]
@@ -1343,7 +1322,7 @@ class Mosaic_API:
         else: __self__.rotate(rotate_factor,active_layer=layer["name"])
 
         if mask.any():
-            apply_scaling(
+            __self__.layer[layer["name"]].img = fast_scaling(
                     cube,
                     __self__.layer[layer["name"]].img,
                     scalemode=1,
@@ -1690,7 +1669,7 @@ class Mosaic_API:
             new_cube.calibration = __self__.layer[layers[0]].calibration
             new_cube.config["gain"] = new_cube.gain
             new_cube.digest_merge(bar=__self__.progress_bar)
-            new_cube.densitymap = apply_scaling(new_cube, new_cube.densitymap, 1)
+            new_cube.densitymap = fast_scaling(new_cube, new_cube.densitymap, 1)
             new_cube.save_cube()
 
             cv2.imwrite(os.path.join(__PERSONAL__,"output",NAME,

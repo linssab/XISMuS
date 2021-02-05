@@ -31,6 +31,7 @@ except: logger.warning("Failed to load make_axes_locatable from mpl_toolkits.axe
 # Local imports #
 #################
 from . import SpecRead
+from . CBooster import *
 import Constants
 import cy_funcs
 #################
@@ -71,25 +72,14 @@ def iteractive_median(img,iterations=1):
     cy_funcs.cy_iteractive_median(img, shape, iterations)
     return img
 
-def threshold(a_2D_array,t):
+def threshold(image, mode, t):
     """ Applies a threshold filter cutting the values BELOW threshold.
     Returns a 2D-array """
 
-    if len(a_2D_array.shape) != 2:
+    if len(image.shape) != 2:
         raise ValueError("Input shape {} is not bi-dimensional")
-    shape = np.asarray(a_2D_array.shape)
-    cy_funcs.cy_threshold(a_2D_array, shape, t)
-    return a_2D_array
-
-def low_pass(a_2D_array,t):
-    """ Applies a threshold filter cutting the values ABOVE threshold.
-    Returns a 2D-array """
-
-    if len(a_2D_array.shape) != 2:
-        raise ValueError("Input shape {} is not bi-dimensional")
-    shape = np.asarray(a_2D_array.shape)
-    cy_funcs.cy_threshold_low(a_2D_array, shape, t)
-    return a_2D_array
+    image = fast_threshold(image, mode, t)
+    return image
 
 def apply_scaling(datacube, image, scalemode=0, mask=np.zeros(0)):
     """ scalemode:
