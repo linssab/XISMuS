@@ -2,7 +2,7 @@
 // C functions to build the dynamic libraries for python
 // @author: Sergio Lins
 // @email: sergio.lins@roma3.infn.it
-// Version: 1.3.1 Feb - 2021
+// Version: 2.0.0 Feb - 2021
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -144,7 +144,7 @@ float get_pixel(float* arr,
 				arr[pos(x,y+1,cols)] +
 				arr[pos(x-1,y-1,cols)] +
 				arr[pos(x-1,y+1,cols)] +
-				arr[pos(x-1,y-1,cols)] +
+				arr[pos(x+1,y-1,cols)] +
 				arr[pos(x+1,y+1,cols)])/10;
 	}
 }
