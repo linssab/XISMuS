@@ -252,7 +252,6 @@ class compound:
         __self__.lin_att = (__self__.density * mu1_w , __self__.density * mu2_w)
     
     def give_name(__self__,a_string):
-
         """ Attributes a string to compound class object name attribute """
 
         __self__.name = a_string

@@ -5,11 +5,12 @@
 *.ipynb
 *.svg
 *.ico
-.ipynb_checkpoints\
-\.ipynb_checkpoints
-build\
-\build
-add-ons\
-\add-ons
-__pycache__\
-\__pycache\
+
+.\__pycache\
+.\ipynb_checkpoints
+.\build
+.\Build Essentials
+.\CustomScripts
+.\dist
+.\xismus.egg-info
+setup.py

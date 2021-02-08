@@ -31,7 +31,7 @@ Finally, add `My Documents` content inside your user documents folder.<br>
 XISMuS Elements module is available as a package<br>
 To install it, simply type:
 <br>
-`pip install compound-wizard`<br>
+`pip install compwizard`<br>
 <br>
 The module can be imported with:<br>
 <br>
