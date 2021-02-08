@@ -4,8 +4,6 @@ logger.info("Booting GUI...")
 
 logger.info("Importing AdvCalibration...")
 from .AdvCalibration import *
-logger.info("Importing Decoder...")
-from .Decoder import *
 #logger.info("Importing Mosaic...")
 #from .Mosaic import *
 logger.info("Importing ProgressBar...")

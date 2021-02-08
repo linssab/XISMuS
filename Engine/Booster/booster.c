@@ -169,11 +169,12 @@ void apply_smooth(float *arr,
 	}
 }
 
-void print_arr(float* arr, int dim){
+void print_arr(float *arr, int dim){
 	for (int i=0;i<dim;i++){
 		printf("\n%f",arr[i]);
 	}
 }
+
 
 int main(){
 	float arr[20] = {1,1,1,1,1,

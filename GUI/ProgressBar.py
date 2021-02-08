@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          PROGRESS BARS AND LOADING MODULE                     #
-#                        version: 1.3.2 - Jan - 2021            #
+#                        version: 2.0.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -10,7 +10,6 @@ from tkinter import ttk
 import logging
 import Constants
 logger = logging.getLogger("logfile")
-logger.info("Importing module BatchFitter.py...")
 
 def create_tooltip(widget, text):
     toolTip = ToolTip(widget)

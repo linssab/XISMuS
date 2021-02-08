@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 1.3.2 - Jan - 2021            #
+#                        version: 2.0.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -427,20 +427,24 @@ class datacube:
                     thread.join()
 
             else:
-                for spec in Constants.FILE_POOL:
-                    try: specdata = getdata(spec)
-                    except: 
-                        __self__.progressbar.destroybar()
-                        return 1, spec
-                    if isinstance(specdata,np.ndarray) == False: 
-                        __self__.progressbar.interrupt(specdata,5)
-                        __self__.progressbar.destroybar()
-                        return 1,specdata
-                    __self__.matrix[x][y] = specdata
-                    scan = refresh_position(scan[0],scan[1],__self__.dimension)
-                    x,y = scan[0],scan[1]
-                    __self__.progressbar.updatebar(iterator)
-                    iterator += 1
+                try:
+                    for spec in Constants.FILE_POOL:
+                        try: specdata = getdata(spec)
+                        except: 
+                            __self__.progressbar.destroybar()
+                            return 1, spec
+                        if isinstance(specdata,np.ndarray) == False: 
+                            __self__.progressbar.interrupt(specdata,5)
+                            __self__.progressbar.destroybar()
+                            return 1,specdata
+                        __self__.matrix[x][y] = specdata
+                        scan = refresh_position(scan[0],scan[1],__self__.dimension)
+                        x,y = scan[0],scan[1]
+                        __self__.progressbar.updatebar(iterator)
+                        iterator += 1
+                except IndexError as e:
+                    __self__.progressbar.destroybar()
+                    return 1, spec
             logger.info("Packed spectra in {} seconds".format(time.time()-timer))
             ######################
 

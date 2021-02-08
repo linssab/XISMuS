@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 1.3.2 - Jan - 2021            #
+#                        version: 2.0.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -57,8 +57,8 @@ from Engine import __PERSONAL__
 from Engine.ImgMath import LEVELS, hist_match
 from Engine.SpecMath import datacube as Cube
 from Engine.CBooster import *
+from Graphics import *
 from .ProgressBar import Busy, create_tooltip 
-from .Decoder import *
 #################
 VERSION = Constants.VERSION_MOS
 

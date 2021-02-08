@@ -1,15 +1,9 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 1.3.2 - Jan - 2021            #
+#                        version: 2.0.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
-
-""" Global variables: 
-Constants.MY_DATACUBE is the last loaded cube into memory. It is used for almost
-every operation, since configuration parameters and data are extracted from it.
-Constants.FIND_ELEMENT_LIST: list of elements to be mapped from the datacube. It is
-passed to Mapping or Mapping_parallel module. """
 
 def start_up():
     """ Initializes sp global variables and paths """
@@ -20,6 +14,35 @@ def start_up():
     except: pass
     logger.info("Done.")
     Constants.FIND_ELEMENT_LIST = []
+
+def open_log():
+    from ReadConfig import __PERSONAL__
+    # wipes logfile
+    try:
+        with open(os.path.join(__PERSONAL__,
+            "logfile.log"),'w+') as mylog: mylog.truncate(0)
+    except: pass
+
+    # tries to create logfile on user folder
+    try:
+        logger = logging.getLogger("logfile")
+        logger.setLevel(Constants.LOGLEVEL)
+        lHandler = logging.FileHandler(os.path.join(__PERSONAL__,
+            "logfile.log"))
+        formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
+        lHandler.setFormatter(formatter)
+        logger.addHandler(lHandler)
+        logger.info('*'* 10 + ' LOG START! ' + '*'* 10)
+        log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        logger.info(log_start)
+    except IOError as exception:
+        p = Tk()
+        p.iconify()
+        messagebox.showerror(
+                exception.__class__.__name__,
+                "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.path.join(__PERSONAL__,"logfile.log")))
+        sys.exit(1)
+    return 0
 
 def load_user_database():
     """ Read database file and load all entries to global variable """    
@@ -89,10 +112,12 @@ def refresh_all_plots():
         root.draw_map()
     except: pass
     try:
-        for API in root.ImageAnalyzers: 
+        for ImgAnal in root.ImageAnalyzers: 
             try:
-                API.draw_image1(0)
-                API.draw_image2(0)
+                ImgAnal.left_image.set_cmap(Constants.COLORMAP)
+                ImgAnal.right_image.set_cmap(Constants.COLORMAP)
+                ImgAnal.canvas1.draw()
+                ImgAnal.canvas2.draw()
             except: pass
     except:
         pass
@@ -101,8 +126,8 @@ def refresh_all_plots():
 def wipe_list():
     """ Self-explanatory. Clears the global variable and
     destroys the Periodic Table Tk.Toplevel window """
-
     Constants.FIND_ELEMENT_LIST = []
+    refresh_plots() 
     try: root.find_elements_diag.master.destroy()
     except AttributeError: pass #for auto_wizard method
 
@@ -355,35 +380,6 @@ def load_cube():
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
         root_busy.notbusy()
-
-        """
-        a = Constants.MY_DATACUBE.densitymap.flatten()
-        b = Constants.MY_DATACUBE.scale_matrix.flatten()
-        print(a.shape)
-        print(b.shape)
-
-        
-
-        import cy_funcs 
-
-        timer=time.time()
-        print("Start! - straight from cy_funcs")
-        cy_funcs.cy_fast_scaling(Constants.MY_DATACUBE.scale_matrix,
-                Constants.MY_DATACUBE.densitymap,1,
-                np.asarray(Constants.MY_DATACUBE.densitymap.shape,dtype="int32"))
-        print("End!",time.time()-timer)
-
-        timer=time.time()
-        print("Start! - straight from booster module")
-        boost_fast_scaling(b,a,1,int(b.shape[0]))
-        print("End!",time.time()-timer)
-
-        timer=time.time()
-        print("Start! - rerouting to ImgMath + booster")
-        fast_scaling(Constants.MY_DATACUBE,Constants.MY_DATACUBE.densitymap,1)
-        print("End!",time.time()-timer)
-        """
-
     elif os.path.exists(os.path.join(sp.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
         lz_file = open(sp.cube_path,'rb')
@@ -393,7 +389,7 @@ def load_cube():
         lz_file.close()
     else:
         logger.debug("No cube found.")
-        MainGUI.toggle_(root,toggle='Off') 
+        root.toggle_(toggle='Off') 
         pass
     return Constants.MY_DATACUBE
 
@@ -405,6 +401,7 @@ def refresh_plots(exclusive=""):
     else: 
         lines = False
     
+    ##############################################################
     if exclusive == "mps":
         try:
             root.MPS.draw_spec(
@@ -433,6 +430,8 @@ def refresh_plots(exclusive=""):
                         refresh=True)
                 API.plot.master.update_idletasks()
             except: pass
+    ##############################################################
+
     else:
         try:
             root.MPS.draw_spec(
@@ -458,9 +457,6 @@ def refresh_plots(exclusive=""):
                         refresh=True)
                 API.plot.master.update_idletasks()
             except: pass
-
-    try: root.find_elements_diag.master.focus_force()
-    except: pass
 
 def check_screen_resolution(resolution_tuple):
     Constants.LOW_RES = None
@@ -1469,7 +1465,6 @@ class Annotator:
         return
 
     def refresh_roi_plot(__self__):
-        Constants.FIND_ELEMENT_LIST
         if len(Constants.FIND_ELEMENT_LIST) > 0: 
             lines = True
         else: 
@@ -1527,8 +1522,8 @@ class Annotator:
         unpacker1 = __self__.element1.split("_")
         unpacker2 = __self__.element2.split("_")
         
-        x_ = [__self__.x0,__self__.x1]
-        y_ = [__self__.y0,__self__.y1]
+        y_ = [__self__.x0,__self__.x1] #indexes from matplotlib canvas and image index are inverted.
+        x_ = [__self__.y0,__self__.y1]
         x_.sort()
         y_.sort()
         
@@ -1545,19 +1540,29 @@ class Annotator:
         # IF NO MAPS ARE AVAILABLE, ONLY ITERATES TO SHOW THE ROI PLOT #
         ################################################################
         else:
+            __self__.parent.sum_spectrum = __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
+            __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
+            """
             for x in range(y_[0],y_[1]):
                 for y in range(x_[0],x_[1]):
                     __self__.parent.sum_spectrum += __self__.parent.DATACUBE.matrix[x][y]
                     __self__.spec_no += 1
+            """
             return
         ################################################################
         
+        __self__.area1_sum = image1[x_[0]:x_[1],y_[0]:y_[1]].sum()
+        __self__.area2_sum = image2[x_[0]:x_[1],y_[0]:y_[1]].sum()
+        __self__.parent.sum_spectrum = __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
+        __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
+        """
         for x in range(y_[0],y_[1]):
            for y in range(x_[0],x_[1]):
                __self__.area1_sum += image1[x][y]
                __self__.area2_sum += image2[x][y]
                __self__.parent.sum_spectrum += __self__.parent.DATACUBE.matrix[x][y]
                __self__.spec_no += 1
+        """
         __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
         __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
         if __self__.area2_sum > 0:
@@ -1995,8 +2000,6 @@ class ImageAnalyzer:
                     root.plot_display,lines=True)
         else:
             __self__.annotate.config(relief="raised")
-            # the easiest way to recover the default 
-            #color button is pointing to an existing button that never changes its color
             __self__.annotate.config(bg=__self__.master.cget("background"))
             __self__.annotator.wipe_annotator()
             __self__.plot.wipe_plot()
@@ -2117,9 +2120,7 @@ class ImageAnalyzer:
         else: scalemode = 0
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
         __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
-        #__self__.plot1.clear()
         __self__.newimage1 = fast_scaling(__self__.DATACUBE, __self__.newimage1, scalemode) 
-        #__self__.plot1.imshow(__self__.newimage1, cmap=Constants.COLORMAP)
         __self__.left_image.set_data(__self__.newimage1)
         __self__.left_image.set_clim(vmin=0, vmax=__self__.newimage1.max())
         __self__.left_image.set_cmap(Constants.COLORMAP)
@@ -2132,9 +2133,7 @@ class ImageAnalyzer:
         else: scalemode = 0
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
         __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
-        #__self__.plot2.clear()
         __self__.newimage2 = fast_scaling(__self__.DATACUBE,__self__.newimage2, scalemode) 
-        #__self__.plot2.imshow(__self__.newimage2, cmap=Constants.COLORMAP)
         __self__.right_image.set_data(__self__.newimage2)
         __self__.right_image.set_clim(vmin=0, vmax=__self__.newimage2.max())
         __self__.right_image.set_cmap(Constants.COLORMAP)
@@ -2406,12 +2405,6 @@ class PlotWin:
 
                 ###########################################################################
 
-                #elif element=="Au" or element=="Hg":
-                #__self__.plot.semilogy(
-                #    Constants.MY_DATACUBE.energyaxis,
-                #    __self__.plotdata,
-                #    label=roi_label,
-                #    color=ElementColors[element])
                 __self__.plot.fill_between(
                         Constants.MY_DATACUBE.energyaxis,
                         Constants.MY_DATACUBE.sum_bg,
@@ -2464,7 +2457,6 @@ class PlotWin:
         __self__.plot.set_ylabel("Counts")
         __self__.plot.set_xlabel("Energy (KeV)")
         __self__.plot.set_ylim([1,Constants.MY_DATACUBE.sum.max()*1.20])
-        #__self__.plot.set_xlim([9.20,10.90])
         __self__.plot.legend(
                 fancybox=True,
                 shadow=True,
@@ -2618,75 +2610,90 @@ class PlotWin:
         __self__.canvas.draw()
 
 
-class Samples:
+class Splash:
     def __init__(__self__):
+        __self__.master = Toplevel()
+        __self__.master.resizable(False,False)
+        __self__.master.configure(bg="#DCDCDC")
+        __self__.master.geometry("640x400")
+        __self__.master.overrideredirect(True)
+        __self__.master.withdraw()
+
+        __self__.text = StringVar()
+        __self__.text.set(" ")
+        __self__.master.grid_rowconfigure(0,weight=10)
+        __self__.master.grid_rowconfigure(1,weight=1)
+        __self__.master.grid_columnconfigure(0,weight=1)
+        __self__.master.grid_columnconfigure(1,weight=1)
+        __self__.master_image = PhotoImage(data=IMG_SPLASH)
+
+        __self__.canvas = Label(__self__.master, 
+                image = __self__.master_image,
+                height=374)
+        __self__.canvas.grid(row=0,column=0,columnspan=2)
+        __self__.footer = Frame(__self__.master, bg="#DCDCDC")
+        __self__.label1 = Label(__self__.footer, text="Adding to database...\t",bg="#DCDCDC")
+        __self__.label2 = Label(__self__.footer, textvariable = __self__.text,bg="#DCDCDC")
+
+        __self__.footer.grid(row=1,column=0,columnspan=2,sticky=W+E)
+        __self__.label1.grid(row=0,column=0,sticky=W)
+        __self__.label2.grid(row=0,column=1)
+
+        __self__.master.update()
+        __self__.master.update_idletasks()
+        __self__.master.wm_attributes("-topmost",True)
+        __self__.master.wm_attributes("-disabled",True)
+        spawn_center(__self__.master)
+        __self__.master.deiconify()
+
+    def kill(__self__):
+        __self__.master.destroy()
+
+
+class Samples:
+    def __init__(__self__, splash=None):
         __self__.samples_database = {}
         __self__.samples_path = {}
         __self__.mcacount = {}
         __self__.mca_indexing = {}
         __self__.mca_extension = {}
+        __self__.splash = splash
+        __self__.filequeue = splash.text
 
-    def splash_screen(__self__,parent):
-        __self__.splash = Toplevel(parent.master)
-        __self__.splash.resizable(False,False)
-        __self__.splash.configure(bg="#DCDCDC")
-        __self__.splash.geometry("640x400")
-        __self__.splash.overrideredirect(True)
-        __self__.splash.withdraw()
-        __self__.splash.grid_rowconfigure(0,weight=10)
-        __self__.splash.grid_rowconfigure(1,weight=1)
-        __self__.splash.grid_columnconfigure(0,weight=1)
-        __self__.splash.grid_columnconfigure(1,weight=1)
-        __self__.splash_image = PhotoImage(data=IMG_SPLASH)
-        __self__.canvas = Label(__self__.splash, 
-                image = __self__.splash_image,
-                height=374)
-        __self__.canvas.grid(row=0,column=0,columnspan=2)
-        __self__.filequeue = StringVar()
-        __self__.filequeue.set(" ")
-        __self__.bar = Frame(__self__.splash,bg="#DCDCDC")
-        __self__.bar.grid(row=1,column=0,columnspan=2,sticky=W+E)
-        __self__.label1 = Label(__self__.bar, text="Adding to database...\t",bg="#DCDCDC")
-        __self__.label1.grid(row=0,column=0,sticky=W)
-        __self__.label2 = Label(__self__.bar, textvariable = __self__.filequeue,bg="#DCDCDC")
-        __self__.label2.grid(row=0,column=1)
-        __self__.splash.update()
-        __self__.splash.update_idletasks()
-        __self__.splash.wm_attributes("-topmost",True)
-        __self__.splash.wm_attributes("-disabled",True)
-        #__self__.splash.wm_attributes("-transparentcolor","white")
-        spawn_center(__self__.splash)
-        __self__.splash.deiconify()
-
-    def splash_kill(__self__):
-        try: 
-            __self__.splash.destroy()
-            __self__.popup.grab_set()
-            __self__.popup.destroy()
-        except:
-            pass
+    def kill(__self__):
+        __self__.popup.grab_set()
+        __self__.popup.destroy()
 
     def pop_loader(__self__):
+        __self__.filequeue = StringVar()
+        __self__.filequeue.set(" ")
         __self__.popup = Toplevel(master=root.master)
-        __self__.popup.grab_set()
         __self__.popup.resizable(False,False)
         __self__.popup.overrideredirect(True)
+
         x = __self__.popup.winfo_screenwidth()
         y = __self__.popup.winfo_screenheight()
+
         __self__.popup.geometry(
-                "{}x{}+{}+{}".format(166, 51,
+                "{}x{}+{}+{}".format(260, 51,
                 int((x/2)-80), int((y/2)-23)))
+
         __self__.outerframe = Frame(
                 __self__.popup, 
-                bd=3, 
                 relief=RIDGE,
-                width=166, height=52)
-        __self__.outerframe.grid(row=0,column=0,sticky=E+W)
-        __self__.outerframe.grid_propagate(0)
+                bd = 3,
+                width=260, height=52)
         __self__.popup.label1 = Label(__self__.outerframe, text="Adding to database...")
-        __self__.popup.label1.grid(row=0,column=0,sticky=W)       
         __self__.label2 = Label(__self__.outerframe, textvariable = __self__.filequeue)
+
+        __self__.outerframe.grid_propagate(0)
+        __self__.outerframe.grid(row=0,column=0,sticky=E+W)
         __self__.label2.grid(row=1,column=0,sticky=W)
+        __self__.popup.label1.grid(row=0,column=0,sticky=W)       
+
+        __self__.popup.update_idletasks()
+        __self__.popup.grab_set()
+
 
     def load_folder_from_database(__self__,folder):
         __self__.samples_database[folder] = Constants.USER_DATABASE[folder]["prefix"]
@@ -2711,6 +2718,17 @@ class Samples:
                 remove_entry_from_database(folder)
         for folder in not_found_samples:
             Constants.USER_DATABASE.pop(folder)
+
+    def update_label(__self__):
+        try: 
+            splash.master.update_idletasks()
+        except: 
+            pass
+        try: 
+            __self__.popup.update_idletasks()
+            __self__.label2.update()
+        except: 
+            pass
 
     def list_all(__self__):
         __self__.skip_list = []
@@ -2738,11 +2756,7 @@ class Samples:
                             __self__.filequeue.set(
                                     "Cube for {} already compiled, skipping mca\'s".format(
                                         folder))
-                            logger.info("Cube {} already compiled".format(folder))
-                            __self__.label2.update()
-                            try: __self__.splash.update_idletasks()
-                            except: __self__.popup.update_idletasks()
-                            finally: pass
+                            __self__.update_label()
                             __self__.skip_list.append(name.split(".cube")[0])
                 
                 """ Lists the spectra files """            
@@ -2758,25 +2772,22 @@ class Samples:
                         for item in range(len(files)): 
                             # displays file being read on splash screen
                             __self__.filequeue.set("{}".format(files[item]))
-                            __self__.label2.update()
-                            try: __self__.splash.update_idletasks()
-                            except: __self__.popup.update_idletasks()
-                            finally:
-                                try:
-                                    files[item], extension[item] = \
-                                            files[item].split(".",1)[0],\
-                                            files[item].split(".",1)[1]
+                            __self__.update_label()
+                            try:
+                                files[item], extension[item] = \
+                                        files[item].split(".",1)[0],\
+                                        files[item].split(".",1)[1]
 
-                                    """ Gets rid of file numbering """
-                                    for i in range(len(files[item])):
-                                        if not files[item][-1].isdigit(): break
-                                        if files[item][-i].isdigit() and \
-                                                not files[item][-i-1].isdigit(): 
-                                            if indexing == None:
-                                                indexing = files[item][-i:]
-                                            files[item] = files[item][:-i]
-                                            break
-                                except: pass
+                                """ Gets rid of file numbering """
+                                for i in range(len(files[item])):
+                                    if not files[item][-1].isdigit(): break
+                                    if files[item][-i].isdigit() and \
+                                            not files[item][-i-1].isdigit(): 
+                                        if indexing == None:
+                                            indexing = files[item][-i:]
+                                        files[item] = files[item][:-i]
+                                        break
+                            except: pass
 
                         files_set = set(files)
                         extension_set = set(extension)
@@ -2840,10 +2851,7 @@ class Samples:
                         __self__.filequeue.set(
                                 "Cube for {} already compiled, skipping mca\'s".format(
                                     folder))
-                        __self__.label2.update()
-                        try: __self__.splash.update_idletasks()
-                        except: __self__.popup.update_idletasks()
-                        finally: pass
+                        __self__.update_label()
                         __self__.skip_list.append(name.split(".cube")[0])
             files = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
                     if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
@@ -2854,25 +2862,22 @@ class Samples:
                     for item in range(len(files)): 
                         # displays file being read on splash screen
                         __self__.filequeue.set("{}".format(files[item]))
-                        __self__.label2.update()
-                        try: __self__.splash.update_idletasks()
-                        except: __self__.popup.update_idletasks()
-                        finally: 
-                            try:
-                                files[item], extension[item] = \
-                                        files[item].split(".",1)[0],\
-                                        files[item].split(".",1)[1]
+                        __self__.update_label()
+                        try:
+                            files[item], extension[item] = \
+                                    files[item].split(".",1)[0],\
+                                    files[item].split(".",1)[1]
 
-                                """ Gets rid of file numbering """
-                                for i in range(len(files[item])):
-                                    if not files[item][-1].isdigit(): break
-                                    if files[item][-i].isdigit() and \
-                                            not files[item][-i-1].isdigit(): 
-                                        if indexing == None:
-                                            indexing = files[item][-i:]
-                                        files[item] = files[item][:-i]
-                                        break
-                            except: pass
+                            """ Gets rid of file numbering """
+                            for i in range(len(files[item])):
+                                if not files[item][-1].isdigit(): break
+                                if files[item][-i].isdigit() and \
+                                        not files[item][-i-1].isdigit(): 
+                                    if indexing == None:
+                                        indexing = files[item][-i:]
+                                    files[item] = files[item][:-i]
+                                    break
+                        except: pass
 
                     files_set = set(files)
                     extension_set = set(extension)
@@ -2930,25 +2935,22 @@ class Samples:
                     for item in range(len(files)): 
                         # displays file being read on splash screen
                         __self__.filequeue.set("{}".format(files[item]))
-                        __self__.label2.update()
-                        try: __self__.splash.update_idletasks()
-                        except: __self__.popup.update_idletasks()
-                        finally: 
-                            try:
-                                files[item], extension[item] = \
-                                        files[item].split(".",1)[0],\
-                                        files[item].split(".",1)[1]
+                        __self__.update_label()
+                        try:
+                            files[item], extension[item] = \
+                                    files[item].split(".",1)[0],\
+                                    files[item].split(".",1)[1]
 
-                                """ Gets rid of file numbering """
-                                for i in range(len(files[item])):
-                                    if not files[item][-1].isdigit(): break
-                                    if files[item][-i].isdigit() and \
-                                            not files[item][-i-1].isdigit(): 
-                                        if indexing == None:
-                                            indexing = files[item][-i:]
-                                        files[item] = files[item][:-i]
-                                        break
-                            except: pass
+                            """ Gets rid of file numbering """
+                            for i in range(len(files[item])):
+                                if not files[item][-1].isdigit(): break
+                                if files[item][-i].isdigit() and \
+                                        not files[item][-i-1].isdigit(): 
+                                    if indexing == None:
+                                        indexing = files[item][-i:]
+                                    files[item] = files[item][:-i]
+                                    break
+                        except: pass
                     files_set = set(files)
                     extension_set = set(extension)
                     counter = dict((x,files.count(x)) for x in files_set)
@@ -3002,7 +3004,8 @@ class Samples:
                     exception.__class__.__name__))
             else: pass
 
-        __self__.splash_kill()
+        try: __self__.kill()
+        except: pass
        
 
 class Settings:        
@@ -3354,7 +3357,15 @@ class Settings:
 
 class MainGUI:
     def __init__(__self__):
+        __self__.master = Tk()
+        __self__.master.withdraw()
+        icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
+        __self__.master.iconbitmap(icon)
+        __self__.master.title("XISMuS {}".format(Constants.VERSION))
+        __self__.master.resizable(False,False)
+        __self__.master.attributes("-alpha",0.0)
 
+    def boot(__self__):
         if Constants.LOW_RES == "extreme": 
             quit = messagebox.showinfo("WARNING",
         "Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
@@ -3369,20 +3380,13 @@ class MainGUI:
                     Constants.WELCOME = False
         f.close()
         
-        __self__.master = Tk()
         Theme.apply_theme(__self__)
-        
-        __self__.master.title("XISMuS {}".format(Constants.VERSION))
-        __self__.master.withdraw() 
-        __self__.master.attributes("-alpha",0.0)
-                
         __self__.snip_config = []
         __self__.find_elements_diag = None
         __self__.ImageAnalyzers = [] 
         #everytime ImgAnalyzer API is opened, instance is appended
         
         __self__.ConfigDiag = None
-        __self__.master.resizable(False,False)
         __self__.sample_figure = Figure(figsize=(3,2), dpi=100)
         __self__.sample_plot =__self__.sample_figure.add_subplot(111)
         __self__.sample_plot.grid(b=None)
@@ -3405,8 +3409,7 @@ class MainGUI:
         # reading thousands of files that were read before at some time     #
         #####################################################################
 
-        __self__.SampleLoader = Samples()
-        __self__.SampleLoader.splash_screen(__self__)
+        __self__.SampleLoader = Samples(splash=splash)
         __self__.master.after(100,__self__.SampleLoader.list_all())
 
         #####################################################################
@@ -3440,6 +3443,7 @@ class MainGUI:
         __self__.master.deiconify()
 
         __self__.toggle_(toggle='off')
+        splash.kill()
         __self__.pop_welcome()
                
     def root_quit(__self__):
@@ -3498,10 +3502,7 @@ class MainGUI:
         __self__.SampleLoader.list_all()
         __self__.samples = __self__.SampleLoader.samples_database
         __self__.samples_path = __self__.SampleLoader.samples_path
-        try: 
-            __self__.SamplesWindow.destroy()
-            __self__.list_samples()
-        except: __self__.list_samples()
+        __self__.list_samples()
 
     def invoke_wizard(__self__):
 
@@ -3650,7 +3651,6 @@ class MainGUI:
                 return
             else: return
             return
-        #root.master.mainloop()
 
     def find_elements(__self__):
 
@@ -3669,11 +3669,8 @@ class MainGUI:
             try:
                 if __self__.find_elements_diag.master.winfo_exists() == False:
                     __self__.find_elements_diag = PeriodicTable(__self__)
-                    __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
-                            lambda: wipe_list())
                 else:
                     __self__.find_elements_diag.master.focus_force()
-                    place_center(__self__.master,__self__.find_elements_diag.master)
                     pass
             except:
                 __self__.find_elements_diag = PeriodicTable(__self__)
@@ -4833,7 +4830,6 @@ class MainGUI:
                 __self__.TableLeft.insert(END,key)
 
         elif __self__.no_sample == False and root.temporaryh5 == "None": 
-            print("Inserting keys")
             __self__.StatusBox.insert(END, "Datacube not compiled.") 
             __self__.StatusBox.insert(END, "Please compile the cube first.")
             for key in Constants.CONFIG:
@@ -5259,7 +5255,6 @@ class ConfigDiag:
                 root.TableMiddle.config(state=DISABLED)
                 root.TableMiddle.update_idletasks()
                 root.StatusBox.update_idletasks()
-                print("Wiped configuration subpanels")
                 ##################################################
 
                 del root.samples[Constants.CONFIG["directory"]]
@@ -5794,8 +5789,9 @@ class ImageOperationWarning:
 class PeriodicTable:
     # Creates the periodic table and starts find_elements module from Mapping.py
     def __init__(__self__,parent):
-        __self__.master = Toplevel(parent.master)
+        __self__.master = Toplevel(master = parent.master)
         __self__.master.tagged = True
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.title("Periodic Table of Elements")
         __self__.master.resizable(False,False)
         __self__.master.header = Label(__self__.master, text="Periodic Table of Elements.")
@@ -5815,6 +5811,10 @@ class PeriodicTable:
         icon = os.path.join(os.getcwd(),"images","icons","rubik.ico")
         place_center(parent.master,__self__.master)
         __self__.master.iconbitmap(icon)
+
+    def kill(__self__,e=""):
+        wipe_list()
+        __self__.master.destroy()
     
     def auto(__self__,elements):
 
@@ -5907,7 +5907,6 @@ class PeriodicTable:
         root.ButtonLoad.config(state=NORMAL)
         root.write_stat()
         refresh_plots()
-
     
     def add_element(__self__,toggle_btn):
         if toggle_btn.config('relief')[-1] == 'sunken':
@@ -6318,6 +6317,8 @@ class PeriodicTable:
 #if __name__.endswith('__main__'):         
 if __name__ == "__main__":
     import Constants
+    from Graphics import *
+
     optimum_resolution = (1920,1080)
     _init_numpy_mkl()
     del _init_numpy_mkl
@@ -6335,6 +6336,9 @@ if __name__ == "__main__":
         from Tkinter import messagebox
         from Tkinter import filedialog
         import tkFont
+
+    root = MainGUI()
+    splash = Splash()
 
     # general utilities
     import numpy as np
@@ -6360,36 +6364,8 @@ if __name__ == "__main__":
     from matplotlib import style
     style.use('ggplot')
     
-    def open_log():
-        from ReadConfig import __PERSONAL__
-        # wipes logfile
-        try:
-            with open(os.path.join(__PERSONAL__,
-                "logfile.log"),'w+') as mylog: mylog.truncate(0)
-        except: pass
-
-        # tries to create logfile on user folder
-        try: 
-            logger = logging.getLogger("logfile")
-            logger.setLevel(Constants.LOGLEVEL)
-            lHandler = logging.FileHandler(os.path.join(__PERSONAL__,
-                "logfile.log"))
-            formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
-            lHandler.setFormatter(formatter)
-            logger.addHandler(lHandler)
-            logger.info('*'* 10 + ' LOG START! ' + '*'* 10)
-            log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-            logger.info(log_start)   
-        except IOError as exception:
-            p = Tk()
-            p.iconify()
-            messagebox.showerror(
-                    exception.__class__.__name__,
-                    "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.path.join(__PERSONAL__,"logfile.log")))
-            sys.exit(1)
-        return 0
-    class NavigationToolbar(NavigationToolbar2Tk):
     # only display the buttons we need
+    class NavigationToolbar(NavigationToolbar2Tk):
         toolitems = (
         ('Home', 'Reset original view', 'home', 'home'),
         ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
@@ -6398,10 +6374,9 @@ if __name__ == "__main__":
       )
    
     check_screen_resolution(optimum_resolution)
-    # internal imports
     open_log()
     logger = logging.getLogger("logfile")
-    #from Utils import sp
+
     from ReadConfig import checkout_config, set_settings 
 
     import Engine
@@ -6412,12 +6387,10 @@ if __name__ == "__main__":
     from Engine.SpecMath import datacube as Cube
     from Engine.CBooster import *
 
-    #from Elements.EnergyLib import plottables_dict, ElementColors, which_macro, ElementList
     from Elements import *
 
     from GUI import Theme
     from GUI.Mosaic import Mosaic_API
-    from GUI.Decoder import *
     from GUI.AdvCalibration import AdvCalib
     from GUI.ProgressBar import Busy, BusyManager, create_tooltip
 
@@ -6427,9 +6400,7 @@ if __name__ == "__main__":
 
     logger.info("#"*3+" Configuring environment "+"#"*3)
     start_up()
-    root = MainGUI()
-    GUIicon = os.path.join(os.getcwd(),"images","icons","icon.ico")
-    root.master.iconbitmap(GUIicon)  
+    root.boot()
     root_busy = BusyManager(root.master)
     root.master.mainloop()
 

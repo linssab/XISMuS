@@ -7,10 +7,10 @@
 *.ico
 
 .\__pycache\
-.\ipynb_checkpoints
-.\build
-.\Build Essentials
-.\CustomScripts
-.\dist
-.\xismus.egg-info
+.\ipynb_checkpoints\
+.\build\
+.\Build Essentials\
+.\CustomScripts\
+.\dist\
+.\xismus.egg-info\
 .\setup.py

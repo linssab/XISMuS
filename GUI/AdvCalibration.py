@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Advanced Calibration Window                          #
-#                        version: 1.3.2 - Jan - 2021            #
+#                        version: 2.0.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -50,7 +50,7 @@ style.use('ggplot')
 from Engine import SpecRead
 from Engine import SpecMath
 from .ProgressBar import Busy
-from .Decoder import * 
+from Graphics import *
 ####################
 
 class AdvCalib():
