@@ -2500,7 +2500,7 @@ class PlotWin:
                 path=None,
                 enhance=Constants.MY_DATACUBE.config["enhance"],
                 save=False)
-        __self__.plot.imshow(fixed_image, cmap=Constants.COLORMAP)
+        __self__.plot.imshow(fixed_image, cmap=Constants.COLORMAP, vmin=0)
         place_topright(__self__.master.master,__self__.master)
 
     def draw_selective_sum(__self__,
@@ -4697,7 +4697,6 @@ class MainGUI:
         spawn_center(__self__.magnified.master)
             
     def write_stat(__self__):
-
         __self__.no_sample = True
         
         __self__.TableMiddle.config(state=NORMAL)
@@ -4841,7 +4840,6 @@ class MainGUI:
         
        
     def reset_sample(__self__):
-        
         def repack(__self__, sample):
             logger.warning("Cube {} and its output contents were erased!".format(sample))
             shutil.rmtree(sp.output_path)
@@ -4913,7 +4911,6 @@ class MainGUI:
                     "Sample {} could not be located!".format(Constants.DIRECTORY))
 
     def call_configure(__self__):
-        
         """ invokes the configuration dialog """
 
         try: 
@@ -5603,7 +5600,7 @@ class ConfigDiag:
         root.master.wait_window(__self__.master)
 
 
-class ImgageOperationOutput:
+class ImageOperationOutput:
     def __init__(__self__,image,el1,el2,operation,cube_datatypes):
         __self__.image = image
         __self__.master = Toplevel(master=root.master)
@@ -5680,7 +5677,7 @@ class ImgageOperationOutput:
         maximize_window(__self__)
 
     def draw(__self__,image=None):
-        __self__.plot.imshow(image, vmin=0, vmax=LEVELS, cmap=Constants.COLORMAP)
+        __self__.plot.imshow(image, vmin=0, cmap=Constants.COLORMAP)
         spawn_center(__self__.master)
 
     def replace_on_cube(__self__,image,element):
@@ -5780,7 +5777,7 @@ class ImageOperationWarning:
         else: pass
         if __self__.scaled:
             output = fast_scaling(__self__.parent.DATACUBE, output, -1)
-        ImgageOperationOutput(output,__self__.parent.Map1Var.get(),
+        ImageOperationOutput(output,__self__.parent.Map1Var.get(),
                 __self__.parent.Map2Var.get(),operation, __self__.parent.DATACUBE.datatypes)
         __self__.master.grab_release()
         __self__.master.destroy()
