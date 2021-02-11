@@ -268,10 +268,10 @@ class AdvCalib():
         __self__.win.withdraw()
         __self__.win.resizable(False,False)
         __self__.win.overrideredirect(True)
-        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE)
+        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE, style="dark.TFrame")
 
-        label1 = ttk.Label(__self__.diag,text="Channel: ")
-        label2 = ttk.Label(__self__.diag,text="Energy (KeV): ")
+        label1 = ttk.Label(__self__.diag,text="Channel: ", style="dark.TLabel")
+        label2 = ttk.Label(__self__.diag,text="Energy (KeV): ", style="dark.TLabel")
 
         __self__.en = DoubleVar()
         __self__.ch = IntVar()

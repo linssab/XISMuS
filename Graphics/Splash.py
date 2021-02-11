@@ -25,7 +25,7 @@ class SplashScreen:
         __self__.master.withdraw()
 
         __self__.text = StringVar()
-        __self__.text.set("auehueahueaueaueuea ")
+        __self__.text.set("Start")
         __self__.master.grid_rowconfigure(0,weight=10)
         __self__.master.grid_rowconfigure(1,weight=1)
         __self__.master.grid_columnconfigure(0,weight=1)

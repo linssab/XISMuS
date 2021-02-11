@@ -264,14 +264,15 @@ def call_compilecube():
         root.ButtonLoad.config(state=DISABLED)
         root.MenuBar.entryconfig("Toolbox", state=DISABLED)
 
-        #######################################
-        # Tries to destroy the samples window #
-        #######################################
+        ###############################
+        # disables the samples window #
+        ###############################
 
-        try: root.SamplesWindow.destroy()
-        except: pass
+        root.SamplesWindow_TableLeft.config(state=DISABLED)
+        root.SamplesWindow_multi.config(state=DISABLED)
+        root.SamplesWindow_ok.config(state=DISABLED)
 
-        #######################################
+        ###############################
 
         root.StatusBox.delete(0,END)
         root.StatusBox.insert(END, "\nStarting cube compilation.\n")
@@ -332,6 +333,10 @@ def call_compilecube():
                 messagebox.showerror("Error!",
                         "Could not read {} file! Aborting compilation".format(fail[1]))
                 shutil.rmtree(sp.output_path) 
+
+        root.SamplesWindow_TableLeft.config(state=NORMAL)
+        root.SamplesWindow_multi.config(state=NORMAL)
+        root.SamplesWindow_ok.config(state=NORMAL)
 
 def load_cube():
     global root
@@ -498,10 +503,10 @@ class CanvasSizeDialog:
         __self__.win.grab_set()
 
 
-        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE)
-        label0 = ttk.Label(__self__.diag,text="Canvas Size")
-        label1 = ttk.Label(__self__.diag,text="Height (px): ")
-        label2 = ttk.Label(__self__.diag,text="Width (px): ")
+        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE, style="dark.TFrame")
+        label0 = ttk.Label(__self__.diag,text="Canvas Size", style="dark.TLabel")
+        label1 = ttk.Label(__self__.diag,text="Height (px): ", style="dark.TLabel")
+        label2 = ttk.Label(__self__.diag,text="Width (px): ", style="dark.TLabel")
 
         __self__.x = IntVar()
         __self__.y = IntVar()
@@ -3302,11 +3307,11 @@ class Settings:
 class MainGUI:
     def __init__(__self__):
         __self__.master = Tk()
+        __self__.master.configure(bg=Constants.DEFAULTBTN_COLOR)
         __self__.master.withdraw()
         icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
         __self__.master.iconbitmap(icon)
         __self__.master.title("XISMuS {}".format(Constants.VERSION))
-        __self__.master.resizable(False,False)
         __self__.master.attributes("-alpha",0.0)
 
     def boot(__self__, database):
@@ -3331,7 +3336,7 @@ class MainGUI:
         #everytime ImgAnalyzer API is opened, instance is appended
         
         __self__.ConfigDiag = None
-        __self__.sample_figure = Figure(figsize=(3,2), dpi=100)
+        __self__.sample_figure = Figure(figsize=(4,3), dpi=75)
         __self__.sample_plot =__self__.sample_figure.add_subplot(111)
         __self__.sample_plot.grid(b=None)
         __self__.sample_plot.axis('off')
@@ -3341,9 +3346,6 @@ class MainGUI:
         inipath = os.path.join(sp.__BIN__,"settings.tag")
         set_settings(inipath)
         __self__.RAM_limit_value = sys_mem["available"]
-        
-        __self__.build_widgets()
-        __self__.plot_canvas.mpl_connect("button_press_event",__self__.pop)
         
         #####################################################################
         # Spawn splash screen and look for samples under the search folder  #
@@ -3368,6 +3370,9 @@ class MainGUI:
 
         #############################################
 
+        __self__.build_widgets()
+        __self__.plot_canvas.mpl_connect("button_press_event",__self__.pop)
+
         __self__.plot_canvas_popup = Menu(__self__.master, tearoff=0)
         __self__.plot_canvas_popup.add_command(
                 label="Save density map as . . .",
@@ -3381,6 +3386,333 @@ class MainGUI:
 
         __self__.master.after(400,__self__.pop_welcome)
         __self__.toggle_(toggle='off')
+
+    def build_widgets(__self__):
+        magnifier_icon = PhotoImage(data=ICO_MAGNIFIER)
+        __self__.MAG_ICON = magnifier_icon.subsample(1,1)
+
+        # define the frame and layout
+        __self__.ButtonsFrame = Frame(__self__.master)
+        __self__.ImageCanvas = Canvas(__self__.master,
+                width=205, height=205,
+                bg='black', relief=SUNKEN, bd=5)
+        __self__.ImageCanvas.config(state=DISABLED)
+
+        __self__.magnifier = Button(__self__.master,
+                image=__self__.MAG_ICON,
+                bg="white", bd=1,
+                command=__self__.magnify)
+
+        __self__.DataFrame = ttk.Frame(__self__.master)
+        __self__.DataBox = ttk.LabelFrame(__self__.DataFrame, text="Info", width=320)
+
+        __self__.StatusScroller = ttk.Scrollbar(__self__.DataBox)
+        __self__.StatusBox = Listbox(__self__.DataBox, 
+                yscrollcommand=__self__.StatusScroller.set,
+                bd=0,
+                highlightthickness=0)
+
+        __self__.ConfigFrame = ttk.LabelFrame(
+                __self__.DataFrame,
+                text="Configuration: ")
+         
+        # start matplotlib call inside __self__.ImageCanvas
+        blank_image = np.zeros([1,1])
+        __self__.plot_canvas = FigureCanvasTkAgg(__self__.sample_figure,__self__.ImageCanvas)
+        __self__.plot_canvas.draw()
+        __self__.draw_map()
+
+        # define the tables which go inside the DataFrame (bottom left corner)
+        __self__.TableLabel2 = ttk.Label(__self__.ConfigFrame,text="Value")
+        __self__.TableLabel3 = ttk.Label(__self__.ConfigFrame,text="Configuration")
+        __self__.TableLeft = Listbox(__self__.ConfigFrame, bd=0,
+                highlightthickness=0,
+                bg=Constants.DEFAULTBTN_COLOR)
+        __self__.TableMiddle = Listbox(__self__.ConfigFrame, 
+                width=int(__self__.TableLeft.winfo_reqwidth()/3), bd=0, 
+                highlightthickness=0,
+                bg=Constants.DEFAULTBTN_COLOR)
+        re_configure_icon = PhotoImage(data=ICO_REFRESH)
+        __self__.re_configure_icon = re_configure_icon.subsample(1,1)
+        __self__.re_configure = ttk.Button(
+                __self__.ConfigFrame, 
+                style="main.TButton",
+                image=__self__.re_configure_icon, 
+                width=32, 
+                takefocus=False,
+                command=__self__.reconfigure)
+
+        #####
+        # define the menu bar
+
+        __self__.MenuBar = Menu(__self__.master,tearoff=0)
+        __self__.Toolbox = Menu(__self__.MenuBar,tearoff=0)
+        __self__.derived_spectra = Menu(__self__.Toolbox,tearoff=0)
+
+        __self__.MenuBar.add_cascade(label="Toolbox", menu=__self__.Toolbox)
+        __self__.MenuBar.add_command(label="Help", 
+                command=call_help)
+        __self__.MenuBar.add_command(label="About", 
+                command=__self__.call_author)
+        __self__.derived_spectra.add_command(label="Summation", 
+                command=__self__.call_summation)
+        __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)",
+                command=__self__.call_mps)
+        __self__.derived_spectra.add_command(label="Combined", 
+                command=__self__.call_combined)
+        __self__.Toolbox.add_command(label="Open samples database . . .", 
+                command=__self__.list_samples)
+        __self__.Toolbox.add_command(label="Reset sample", 
+                command=__self__.reset_sample)
+        __self__.Toolbox.add_separator()
+        __self__.Toolbox.add_command(label="Change samples folder . . .", 
+                command=__self__.prompt_folder)
+        __self__.Toolbox.add_command(label="Load file selection . . .",
+                command=__self__.batch)
+        __self__.Toolbox.add_command(label="Load h5 file . . .",
+                command=__self__.h5loader)
+        __self__.Toolbox.add_command(label="Convert spectra name . . .",
+                command=__self__.converter)
+        __self__.Toolbox.add_separator()
+        __self__.Toolbox.add_cascade(label="Derived spectra", menu=__self__.derived_spectra)
+        __self__.Toolbox.add_command(label="Check calibration", 
+                command=__self__.plot_calibration_curve)
+        __self__.Toolbox.add_command(label="Verify calculated ROI", 
+                command=__self__.plot_ROI)
+        __self__.Toolbox.add_separator()
+        __self__.Toolbox.add_command(label="Map elements", 
+                command=__self__.find_elements)
+        __self__.Toolbox.add_command(label="Create Mosaic...", 
+                command=__self__.open_mosaic)
+        __self__.Toolbox.add_command(label="Load Mosaic...", 
+                command=__self__.prompt_mosaic_load_file)
+        __self__.Toolbox.add_command(label="Image Analyzer . . .", 
+                command=__self__.open_analyzer)
+        __self__.Toolbox.add_separator()
+        __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
+        __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
+        __self__.master.config(menu=__self__.MenuBar)
+        
+        #####
+        # define the buttons which go inside the ButtonsFrame (top left corner)
+        
+        subx,suby = 1,1 #icon resize factor
+        
+        # load icons
+        ButtonLoad_icon = PhotoImage(data=ICO_LOAD)
+        __self__.ButtonLoad_icon = ButtonLoad_icon.subsample(subx,suby)
+        ButtonReset_icon = PhotoImage(data=ICO_RESET)
+        __self__.ButtonReset_icon = ButtonReset_icon.subsample(subx,suby)
+        ImgAnalButton_icon = PhotoImage(data=ICO_IMGANAL)
+        __self__.ImgAnalButton_icon = ImgAnalButton_icon.subsample(subx,suby)
+        FindElementButton_icon = PhotoImage(data=ICO_RUBIK)
+        __self__.FindElementButton_icon = FindElementButton_icon.subsample(subx,suby)
+        QuitButton_icon = PhotoImage(data=ICO_QUIT)
+        __self__.QuitButton_icon = QuitButton_icon.subsample(subx,suby)
+        SettingsButton_icon = PhotoImage(data=ICO_SETTINGS)
+        __self__.SettingsButton_icon = SettingsButton_icon.subsample(subx,suby)
+
+        # create buttons
+        __self__.ButtonLoad = ttk.Button(
+                __self__.ButtonsFrame, 
+                text="  Mosaic", 
+                image=__self__.ButtonLoad_icon, 
+                style="main.TButton",
+                compound=LEFT, 
+                width=15,
+                command=__self__.open_mosaic)
+        __self__.ButtonReset =ttk.Button(
+                __self__.ButtonsFrame, 
+                text="  Reset Sample", 
+                image=__self__.ButtonReset_icon, 
+                style="main.TButton",
+                compound=LEFT, 
+                width=15,
+                command=__self__.reset_sample)
+        __self__.ImgAnalButton =ttk.Button(
+                __self__.ButtonsFrame, 
+                text="  Image Analyzer", 
+                image=__self__.ImgAnalButton_icon, 
+                style="main.TButton",
+                compound=LEFT, 
+                width=15,
+                command=__self__.open_analyzer)
+        __self__.FindElementButton =ttk.Button(
+                __self__.ButtonsFrame, 
+                text="  Map Elements", 
+                image=__self__.FindElementButton_icon, 
+                style="main.TButton",
+                compound=LEFT, 
+                width=15,
+                command=__self__.find_elements)
+        __self__.QuitButton =ttk.Button(
+                __self__.ButtonsFrame, 
+                text="  Quit", 
+                image=__self__.QuitButton_icon, 
+                style="main.TButton",
+                compound=LEFT, 
+                width=15,
+                command=__self__.root_quit)
+        __self__.SettingsButton =ttk.Button(
+                __self__.ButtonsFrame, 
+                text="  Settings", 
+                image=__self__.SettingsButton_icon, 
+                style="main.TButton",
+                compound=LEFT, 
+                width=15,
+                command=__self__.call_settings)
+        
+        #####
+
+        __self__.SampleVar = StringVar()
+        __self__.SampleVar.set("Sample on memory: "+Constants.DIRECTORY)
+        __self__.StatusBar = Label(
+                __self__.master, 
+                textvariable=__self__.SampleVar,
+                bd=1, 
+                relief=SUNKEN, 
+                anchor=W)
+        __self__.master.protocol("WM_DELETE_WINDOW", __self__.root_quit)
+
+        __self__.SamplesWindow = ttk.LabelFrame(__self__.DataFrame, text="Samples")
+
+        #__self__.SamplesWindow.tagged = False
+        #__self__.SamplesWindow.title("Sample List")
+        #icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
+        #__self__.SamplesWindow.resizable(False,True)
+        #__self__.SamplesWindow.minsize(0,340)
+
+        #__self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="Sample")
+        #__self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="Mca Prefix")
+        __self__.SamplesWindow_TableLeft = Listbox(
+                __self__.SamplesWindow,
+                height=__self__.SamplesWindow.winfo_height(),
+                bd=1)
+        __self__.SamplesWindow_TableRight = Listbox(
+                __self__.SamplesWindow,
+                height=__self__.SamplesWindow.winfo_height(),
+                bd=0)
+        __self__.SamplesWindow_multi = Button(
+                __self__.SamplesWindow,
+                text = "Export multiple maps",
+                bd=2,
+                width=13,
+                command=__self__.select_multiple)
+        __self__.SamplesWindow_ok = Button(
+                __self__.SamplesWindow,
+                text = "Validate",
+                bd=2,
+                width=13,
+                command=__self__.digestmaps)
+
+        __self__.SamplesWindow_TableLeft.bind("<MouseWheel>", __self__.scroll_y_L)
+        __self__.SamplesWindow_TableRight.bind("<MouseWheel>", __self__.scroll_y_R)
+        __self__.SamplesWindow_TableLeft.bind("<Up>", __self__.scroll_up)
+        __self__.SamplesWindow_TableLeft.bind("<Down>", __self__.scroll_down)
+        __self__.SamplesWindow_TableLeft.bind("<Double-Button-1>", __self__.sample_select)
+        __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
+        __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
+
+        #pop-up commands (rigth-click)
+        __self__.SamplesWindow.popup = Menu(__self__.SamplesWindow, tearoff=0)
+        __self__.SamplesWindow.popup.add_command(
+                label="Load",
+                command=__self__.sample_select)
+        __self__.SamplesWindow.popup.add_command(
+                label="Save density map",
+                command=__self__.export_density_map)
+        __self__.SamplesWindow.popup.add_command(
+                label="Open files location",
+                command=__self__.open_files_location)
+        __self__.SamplesWindow.popup.add_command(
+                label="Open output folder",
+                command=__self__.open_output_folder)
+        __self__.SamplesWindow.popup.add_command(
+                label="Remove from database",
+                command=__self__.remove_sample)
+        __self__.SamplesWindow.popup.add_command(
+                label="Clear all maps",
+                command=lambda: __self__.sample_select(override=True))
+
+        __self__.ButtonsFrame.grid(row=0, column=0, padx=(32,8+8), pady=(32,16), sticky="")
+        __self__.ButtonLoad.grid(row=0,column=0, sticky=W+E)
+        __self__.ButtonReset.grid(row=0,column=1, sticky=W+E)
+        __self__.ImgAnalButton.grid(row=1,column=0, sticky=W+E)
+        __self__.FindElementButton.grid(row=1,column=1, sticky=W+E)
+        __self__.SettingsButton.grid(row=2,column=0, sticky=W+E)
+        __self__.QuitButton.grid(row=2,column=1, sticky=W+E)
+
+        __self__.ImageCanvas.grid(row=1, column=0, padx=(16+8,8), pady=16, sticky=N+W+S+E)
+        __self__.magnifier.grid(row=1, column=0, sticky=S+W, padx=(16+8+3,0), pady=(0,18+1))
+
+        __self__.DataFrame.grid(row=0, column=1, rowspan=2, 
+                padx=(16,8), pady=16, sticky=N+W+E+S)
+        __self__.DataBox.grid(row=0, column=0, columnspan=2, sticky=N+W+E+S, 
+                padx=16, pady=16)
+        __self__.StatusBox.grid(row=0, column=0, sticky=W+E+N+S)
+        __self__.StatusScroller.grid(row=0, column=1, sticky=N+S)
+
+        __self__.DataFrame.grid_columnconfigure(0, weight=1, minsize=1)
+        __self__.DataBox.grid_columnconfigure(0, weight=1, minsize=1)
+
+        __self__.ConfigFrame.grid(row=1, column=0, columnspan=2, 
+                sticky=N+W+E+S, padx=16, pady=(10,0))
+        __self__.TableLabel2.grid(row=0, column=0, pady=(3,6))
+        __self__.TableLabel3.grid(row=0, column=1, pady=(3,6))
+        __self__.TableLeft.grid(row=1, column=0, sticky=N+S, padx=(3,0), pady=(0,3))
+        __self__.TableMiddle.grid(row=1, column=1, sticky=N+S, padx=(0,3), pady=(0,3))
+        __self__.re_configure.grid(row=1, column=2, sticky=S+W, columnspan=2)
+        
+        __self__.plot_canvas.get_tk_widget().pack(fill=BOTH, expand=1, padx=3, pady=3)
+
+        __self__.StatusBar.grid(row=3, column=0, columnspan=3, sticky=W+E)
+
+        __self__.SamplesWindow.grid(row=0, column=2, rowspan=2, 
+                sticky=N+W+S+E, padx=(8,16+8), pady=(16,0))
+        __self__.SamplesWindow_TableLeft.grid(row=1, column=0, sticky=N+S, pady=(12,16), 
+                padx=12)
+        __self__.SamplesWindow_multi.grid(row=2, column=0, sticky=W+E, pady=2)
+        __self__.SamplesWindow_ok.grid(row=3, column=0, sticky=W+E, pady=2)
+        __self__.SamplesWindow_ok.config(state=DISABLED)
+
+        __self__.ImageCanvas.propagate(1)
+        __self__.ButtonsFrame.grid_propagate(1)
+        __self__.DataFrame.grid_propagate(1)
+        __self__.DataBox.grid_propagate(1)
+        __self__.StatusBox.grid_propagate(1)
+        __self__.ConfigFrame.grid_propagate(1)
+        Grid.rowconfigure(__self__.SamplesWindow, 1, weight=1)
+        Grid.rowconfigure(__self__.DataFrame, 0, weight=1)
+        Grid.rowconfigure(__self__.DataFrame, 1, weight=1)
+        Grid.columnconfigure(__self__.DataFrame, 0, weight=1)
+        Grid.columnconfigure(__self__.DataFrame, 1, weight=1)
+        Grid.rowconfigure(__self__.DataBox, 0, weight=1)
+        Grid.rowconfigure(__self__.ConfigFrame, 1, weight=1)
+        Grid.columnconfigure(__self__.ConfigFrame, 0, weight=1)
+        Grid.rowconfigure(__self__.TableLeft, 0, weight=1)
+        Grid.rowconfigure(__self__.TableMiddle, 0, weight=1)
+        __self__.master.grid_columnconfigure(0,weight=2)
+        __self__.master.grid_columnconfigure(1,weight=1)
+        __self__.master.grid_rowconfigure(1,weight=1)
+        __self__.StatusScroller.config(command=__self__.StatusBox.yview)
+
+        __self__.SamplesWindow_TableRight.config(state=DISABLED)
+        __self__.SamplesWindow_TableLeft.focus_set()
+
+        #writes start-up message:
+        hour = int(time.strftime("%H"))
+        if 6 <= hour < 12: text=["Good morning, welcome!","Load some data to get started."]
+        elif 12 <= hour < 18: text=["Good afternoon!","Load some data to get started."]
+        elif 18 <= hour < 23: text=["Good evening!","Load some data to get started."]
+        else: text=["Isn't it too late to be looking at data?"]
+        text.append("\n")
+        text.append("ATTENTION!! Datacubes from older versions will not work on future versions!")
+        text.append("Save them with v2.0.0 in order to use them from now on.")
+        for i in text:
+            __self__.StatusBox.insert(END, f"{i}")
+
+        __self__.list_samples()
+        __self__.StatusBox.focus_set()
 
     def prompt_folder(__self__):
         """ Opens dialogue to change the samples folder """
@@ -3471,7 +3803,6 @@ class MainGUI:
         __self__.list_samples()
 
     def invoke_wizard(__self__):
-
         """ This function invokes the auto wizard (BatchFitting)
 
         --------------------------------------------------------- """
@@ -3619,7 +3950,6 @@ class MainGUI:
             return
 
     def find_elements(__self__):
-
         mode = Constants.MY_DATACUBE.config["peakmethod"]
         if Constants.MY_DATACUBE.config["peakmethod"] == "auto_wizard" and\
                 any("temp" in x for x in Constants.MY_DATACUBE.datatypes):
@@ -3644,17 +3974,17 @@ class MainGUI:
                         lambda: wipe_list())
         
     def call_listsamples(__self__):
-
         """ Draws the sample list window.
         This is not a window class, but still a child of root """
+        return
 
+        __self__.SamplesWindow = Frame(__self__.master)
 
-        __self__.SamplesWindow = Toplevel(master=__self__.master, name="samples list")
-        __self__.SamplesWindow.tagged = False
-        __self__.SamplesWindow.title("Sample List")
-        icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
-        __self__.SamplesWindow.resizable(False,True) 
-        __self__.SamplesWindow.minsize(0,340)
+        #__self__.SamplesWindow.tagged = False
+        #__self__.SamplesWindow.title("Sample List")
+        #icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
+        #__self__.SamplesWindow.resizable(False,True) 
+        #__self__.SamplesWindow.minsize(0,340)
 
         __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="Sample")
         __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="Mca Prefix")
@@ -3685,6 +4015,7 @@ class MainGUI:
         __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
 
+        __self__.SamplesWindow.grid()
         __self__.SamplesWindow_LabelLeft.grid(row=0,column=0)
         __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
         __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0,sticky=N+S)
@@ -3720,10 +4051,10 @@ class MainGUI:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(__self__.samples[key]))
 
-        place_topright(__self__.master,__self__.SamplesWindow)
-        __self__.SamplesWindow.iconbitmap(icon)
+        #place_topright(__self__.master,__self__.SamplesWindow)
+        #__self__.SamplesWindow.iconbitmap(icon)
         __self__.SamplesWindow_TableRight.config(state=DISABLED)
-        __self__.SamplesWindow_TableLeft.focus_set()
+       # __self__.SamplesWindow_TableLeft.focus_set()
 
     def remove_sample(__self__,e=""):
         try:
@@ -3880,19 +4211,12 @@ class MainGUI:
         of any running instance of samples window and call the function which
         draws it accordingly """
 
-        try:
-            if __self__.SamplesWindow.state() == 'normal': 
-                __self__.SamplesWindow.focus_force()
-                __self__.SamplesWindow.delete(0,END)
-                for key in __self__.samples:
-                    __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
-                    __self__.SamplesWindow_TableRight.insert(END,"{}".format(\
-                            __self__.samples[key]))
-                __self__.SamplesWindow_TableLeft.set_focus()
-                place_topright(__self__.master,__self__.SamplesWindow)
-                pass
-            else: __self__.call_listsamples()
-        except: __self__.call_listsamples()
+        __self__.SamplesWindow.focus_force()
+        for key in __self__.samples:
+            __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
+            __self__.SamplesWindow_TableRight.insert(END,"{}".format(\
+                    __self__.samples[key]))
+        __self__.SamplesWindow_TableLeft.focus_set()
 
     def scroll_y_R(__self__,event):
         """ Right table triggers. Scrolls Left """
@@ -3919,7 +4243,6 @@ class MainGUI:
     def sample_select(__self__,event="",override=False):
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
-        
                 
         if override  == False:
             # name of selected sample
@@ -4046,6 +4369,10 @@ class MainGUI:
         __self__.master.attributes("-alpha",1.0)
         __self__.master.deiconify()
         """Displays a pop-up window with information on the software"""
+        __self__.master.geometry()
+        __self__.master.update_idletasks()
+        w, h = __self__.master.winfo_width(), __self__.master.winfo_height()
+        __self__.master.minsize(w,h)
         if Constants.WELCOME == True:
             __self__.welcome_window = Welcome(__self__)
             __self__.welcome_window.master.grab_set()
@@ -4113,7 +4440,6 @@ class MainGUI:
         else:
             messagebox.showinfo("Directory not found.",
                     "Sample may be uncompiled. Output directory for sample {} not found.".format(value))
-
     
     def open_files_location(__self__, event=""):
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
@@ -4432,233 +4758,7 @@ class MainGUI:
 
     def reconfigure(__self__):
         ReConfigDiag(__self__.master)
-        
-    def build_widgets(__self__):
-        magnifier_icon = PhotoImage(data=ICO_MAGNIFIER)
-        __self__.MAG_ICON = magnifier_icon.subsample(1,1)
-
-        # define the frame and layout
-        __self__.ButtonsFrame = Frame(__self__.master)
-        __self__.ButtonsFrame.grid_propagate(1)
-        __self__.ButtonsFrame.grid(row=0, column=0, rowspan=3, columnspan=2,padx=16,sticky="")
-        __self__.ImageCanvas = Canvas(__self__.master,
-                width=200, height=200,
-                bg='black', relief=SUNKEN, bd=5)
-        __self__.ImageCanvas.grid(row=3, column=0, rowspan=3, columnspan=2, padx=(8,8),sticky="")
-        __self__.ImageCanvas.propagate(1)
-        __self__.magnifier = Button(__self__.master,
-                image=__self__.MAG_ICON,
-                bg="white", bd=1,
-                command=__self__.magnify)
-        __self__.magnifier.grid(row=5, column=0, sticky=S+W, padx=(11,0), pady=(0,20))
-        __self__.DataFrame = Frame(__self__.master).grid(
-                padx=16, pady=16, row=0, column=2, rowspan=3, columnspan=3)
-        __self__.StatusScroller = Scrollbar(__self__.DataFrame, relief=SUNKEN)
-        __self__.StatusBox = Listbox(__self__.DataFrame, 
-                yscrollcommand=__self__.StatusScroller.set)
-        __self__.StatusBox.grid(
-                row=0, 
-                column=2, 
-                rowspan=3, 
-                columnspan=3, 
-                sticky=W+E, 
-                padx=(16,0))
-        __self__.StatusScroller.grid(row=0, column=5, rowspan=3, sticky=N+W+E+S, padx=(0,16))
-        __self__.StatusScroller.config(command=__self__.StatusBox.yview) 
-        __self__.ConfigFrame = LabelFrame(
-                __self__.DataFrame,
-                padx=8, pady=8,
-                text="Configuration: ")
-        __self__.master.columnconfigure(3,weight=1,minsize=4)
-        __self__.ConfigFrame.grid(row=3, column=2, rowspan=3, columnspan=4, padx=16,pady=10)
-         
-        # start matplotlib call inside __self__.ImageCanvas
-        blank_image = np.zeros([1,1])
-        __self__.plot_canvas = FigureCanvasTkAgg(__self__.sample_figure,__self__.ImageCanvas)
-        __self__.plot_canvas.draw()
-        __self__.plot_canvas.get_tk_widget().grid(\
-                row=3, column=0, rowspan=3, columnspan=2, sticky=E, padx=(3,3), pady=(3,3))
-        
-        __self__.draw_map()
-
-        #####
-        # define the tables which go inside the DataFrame (bottom left corner)
-        
-        __self__.TableLabel2 = Label(__self__.ConfigFrame,text="KEY")
-        __self__.TableLabel3 = Label(__self__.ConfigFrame,text="PACKED")
-        __self__.TableLabel2.grid(row=4, column=2)
-        __self__.TableLabel3.grid(row=4, column=3, columnspan=2)
-
-        __self__.TableLeft = Listbox(__self__.ConfigFrame)
-        __self__.TableLeft.update()
-        __self__.TableMiddle = Listbox(
-                __self__.ConfigFrame, 
-                width=int(__self__.TableLeft.winfo_reqwidth()/3))
-        __self__.TableLeft.grid(row=5, column=2, sticky=N+S)
-        __self__.TableMiddle.grid(row=5, column=3, columnspan=2, sticky=N+S)
-        
-        re_configure_icon = PhotoImage(data=ICO_REFRESH)
-        __self__.re_configure_icon = re_configure_icon.subsample(1,1)
-        __self__.re_configure = ttk.Button(
-                __self__.ConfigFrame, 
-                style="main.TButton",
-                image=__self__.re_configure_icon, 
-                width=32, 
-                takefocus=False,
-                command=__self__.reconfigure)
-        __self__.re_configure.grid(row=5, column=5, sticky=S,padx=6)
-        
-        #####
-        # define the menu bar
-
-        __self__.MenuBar = Menu(__self__.master,tearoff=0)
-        __self__.Toolbox = Menu(__self__.MenuBar,tearoff=0)
-        __self__.derived_spectra = Menu(__self__.Toolbox,tearoff=0)
-
-        __self__.MenuBar.add_cascade(label="Toolbox", menu=__self__.Toolbox)
-        __self__.MenuBar.add_command(label="Help", 
-                command=call_help)
-        __self__.MenuBar.add_command(label="About", 
-                command=__self__.call_author)
-        __self__.derived_spectra.add_command(label="Summation", 
-                command=__self__.call_summation)
-        __self__.derived_spectra.add_command(label="Maximum Pixel Spectra (MPS)",
-                command=__self__.call_mps)
-        __self__.derived_spectra.add_command(label="Combined", 
-                command=__self__.call_combined)
-        __self__.Toolbox.add_command(label="Open samples database . . .", 
-                command=__self__.list_samples)
-        __self__.Toolbox.add_command(label="Reset sample", 
-                command=__self__.reset_sample)
-        __self__.Toolbox.add_separator()
-        __self__.Toolbox.add_command(label="Change samples folder . . .", 
-                command=__self__.prompt_folder)
-        __self__.Toolbox.add_command(label="Load file selection . . .",
-                command=__self__.batch)
-        __self__.Toolbox.add_command(label="Load h5 file . . .",
-                command=__self__.h5loader)
-        __self__.Toolbox.add_command(label="Convert spectra name . . .",
-                command=__self__.converter)
-        __self__.Toolbox.add_separator()
-        __self__.Toolbox.add_cascade(label="Derived spectra", menu=__self__.derived_spectra)
-        __self__.Toolbox.add_command(label="Check calibration", 
-                command=__self__.plot_calibration_curve)
-        __self__.Toolbox.add_command(label="Verify calculated ROI", 
-                command=__self__.plot_ROI)
-        __self__.Toolbox.add_separator()
-        __self__.Toolbox.add_command(label="Map elements", 
-                command=__self__.find_elements)
-        __self__.Toolbox.add_command(label="Create Mosaic...", 
-                command=__self__.open_mosaic)
-        __self__.Toolbox.add_command(label="Load Mosaic...", 
-                command=__self__.prompt_mosaic_load_file)
-        __self__.Toolbox.add_command(label="Image Analyzer . . .", 
-                command=__self__.open_analyzer)
-        __self__.Toolbox.add_separator()
-        __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
-        __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
-
-        __self__.master.config(menu=__self__.MenuBar)
-        
-        #####
-        # define the buttons which go inside the ButtonsFrame (top left corner)
-        
-        subx,suby = 1,1 #icon resize factor
-        
-        # load icons
-        ButtonLoad_icon = PhotoImage(data=ICO_LOAD)
-        __self__.ButtonLoad_icon = ButtonLoad_icon.subsample(subx,suby)
-        ButtonReset_icon = PhotoImage(data=ICO_RESET)
-        __self__.ButtonReset_icon = ButtonReset_icon.subsample(subx,suby)
-        ImgAnalButton_icon = PhotoImage(data=ICO_IMGANAL)
-        __self__.ImgAnalButton_icon = ImgAnalButton_icon.subsample(subx,suby)
-        FindElementButton_icon = PhotoImage(data=ICO_RUBIK)
-        __self__.FindElementButton_icon = FindElementButton_icon.subsample(subx,suby)
-        QuitButton_icon = PhotoImage(data=ICO_QUIT)
-        __self__.QuitButton_icon = QuitButton_icon.subsample(subx,suby)
-        SettingsButton_icon = PhotoImage(data=ICO_SETTINGS)
-        __self__.SettingsButton_icon = SettingsButton_icon.subsample(subx,suby)
-
-        # create buttons
-        __self__.ButtonLoad = ttk.Button(
-                __self__.ButtonsFrame, 
-                text="  Database", 
-                image=__self__.ButtonLoad_icon, 
-                style="main.TButton",
-                compound=LEFT, 
-                command=__self__.list_samples)
-        __self__.ButtonReset =ttk.Button(
-                __self__.ButtonsFrame, 
-                text="  Reset Sample", 
-                image=__self__.ButtonReset_icon, 
-                style="main.TButton",
-                compound=LEFT, 
-                command=__self__.reset_sample)
-        __self__.ImgAnalButton =ttk.Button(
-                __self__.ButtonsFrame, 
-                text="  Image Analyzer", 
-                image=__self__.ImgAnalButton_icon, 
-                style="main.TButton",
-                compound=LEFT, 
-                command=__self__.open_analyzer)
-        __self__.FindElementButton =ttk.Button(
-                __self__.ButtonsFrame, 
-                text="  Map Elements", 
-                image=__self__.FindElementButton_icon, 
-                style="main.TButton",
-                compound=LEFT, 
-                command=__self__.find_elements)
-        __self__.QuitButton =ttk.Button(
-                __self__.ButtonsFrame, 
-                text="  Quit", 
-                image=__self__.QuitButton_icon, 
-                style="main.TButton",
-                compound=LEFT, 
-                command=__self__.root_quit)
-        __self__.SettingsButton =ttk.Button(
-                __self__.ButtonsFrame, 
-                text="  Settings", 
-                image=__self__.SettingsButton_icon, 
-                style="main.TButton",
-                compound=LEFT, 
-                command=__self__.call_settings)
-
-        __self__.ImgAnalButton.grid(row=1,column=0, sticky=W+E)
-        __self__.FindElementButton.grid(row=1,column=1, sticky=W+E)
-        __self__.QuitButton.grid(row=2,column=1,sticky=W+E)
-        __self__.ButtonLoad.grid(row=0,column=0, sticky=W+E)
-        __self__.ButtonReset.grid(row=0,column=1, sticky=W+E)
-        __self__.SettingsButton.grid(row=2,column=0,sticky=W+E)
-
-        __self__.master.grid_columnconfigure(0,weight=1)
-        
-        #####
-
-        __self__.SampleVar = StringVar()
-        __self__.SampleVar.set("Sample on memory: "+Constants.DIRECTORY)
-        __self__.StatusBar = Label(
-                __self__.master, 
-                textvariable=__self__.SampleVar,
-                bd=1, 
-                relief=SUNKEN, 
-                anchor=W)
-        __self__.StatusBar.grid(row=6, column=0, columnspan=6, sticky=W+E)
-
-        __self__.master.protocol("WM_DELETE_WINDOW", __self__.root_quit)
-
-        #writes start-up message:
-        hour = int(time.strftime("%H"))
-        if 6 <= hour < 12: text=["Good morning, welcome!","Load some data to get started."]
-        elif 12 <= hour < 18: text=["Good afternoon!","Load some data to get started."]
-        elif 18 <= hour < 23: text=["Good evening!","Load some data to get started."]
-        else: text=["Isn't it too late to be looking at data?"]
-        text.append("\n")
-        text.append("ATTENTION!! Datacubes from older versions will not work on future versions!")
-        text.append("Save them with v2.0.0 in order to use them from now on.")
-        for i in text:
-            __self__.StatusBox.insert(END, f"{i}")
-
-
+ 
     def magnify(__self__):
         __self__.magnified = PlotWin(__self__)
         __self__.magnified.draw_map()
@@ -4805,7 +4905,6 @@ class MainGUI:
 
         __self__.TableLeft.config(state=DISABLED)
         __self__.TableMiddle.config(state=DISABLED)
-        
        
     def reset_sample(__self__):
         def repack(__self__, sample):

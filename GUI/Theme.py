@@ -18,6 +18,7 @@ except:
 
 def apply_theme(TkWin):
     default = Constants.DEFAULTBTN_COLOR
+    dark = "#A0A1A1"
     style = ttk.Style()
     style.theme_use("clam")
     style.configure("TCheckbutton", focuscolor=TkWin.master.cget("background"))
@@ -28,3 +29,9 @@ def apply_theme(TkWin):
     style.configure('main.TButton', background=TkWin.master.cget("background"), 
             anchor=W, relief=RAISED, bd=3)
     style.configure("green.Horizontal.TProgressbar", foreground="red", background="red")
+    style.configure("TFrame", background=TkWin.master.cget("background"))
+    style.configure("TLabelframe", background=TkWin.master.cget("background"))
+    style.configure("TLabel", background=TkWin.master.cget("background"))
+    style.configure("dark.TFrame", background=dark)
+    style.configure("dark.TLabel", background=dark)
+    style.configure("dark.TLabelframe", background=dark)
