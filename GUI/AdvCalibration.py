@@ -269,28 +269,31 @@ class AdvCalib():
         __self__.win.resizable(False,False)
         __self__.win.overrideredirect(True)
         __self__.diag = ttk.Frame(__self__.win, relief=RIDGE)
-        __self__.diag.grid()
+
         label1 = ttk.Label(__self__.diag,text="Channel: ")
         label2 = ttk.Label(__self__.diag,text="Energy (KeV): ")
+
         __self__.en = DoubleVar()
         __self__.ch = IntVar()
         __self__.ch.set(__self__.xhover)
         __self__.win.bind("<Return>",__self__.add_values)
-        label1.grid(row=1,column=0, pady=(6,0),padx=(6,0))
-        label2.grid(row=2,column=0, padx=(6,0))
-        
+
         ch_ = ttk.Entry(__self__.diag, textvariable=__self__.ch,validate="focusout",
                 width=9)
         ch_.config(state=DISABLED)
-        ch_.grid(row=1,column=1,pady=(6,0))
         en_ = ttk.Entry(__self__.diag, textvariable=__self__.en,validate="focusout",
                 width=9)
-        en_.grid(row=2,column=1)
         
         accept = ttk.Button(__self__.diag,text="Ok", width=8, 
                 command=__self__.add_values)
         cancel = ttk.Button(__self__.diag,text="Cancel", width=8, 
                 command=__self__.kill_popup)
+
+        __self__.diag.grid()
+        label1.grid(row=1,column=0, pady=(6,0),padx=(6,0))
+        label2.grid(row=2,column=0, padx=(6,0))
+        ch_.grid(row=1,column=1,pady=(6,0))
+        en_.grid(row=2,column=1)
         accept.grid(row=3,column=0,pady=(6,6),sticky=W+E,padx=(10,3))
         cancel.grid(row=3,column=1,pady=(6,6),sticky=W+E,padx=(3,10))
 

@@ -490,42 +490,47 @@ class About:
 
 class CanvasSizeDialog:
     def __init__(__self__, parent):
-        __self__.win = Toplevel(parent.master)
+        __self__.win = Toplevel(master=parent.master)
         __self__.win.bind("<Escape>",__self__.kill)
         __self__.win.withdraw()
         __self__.win.resizable(False,False)
         __self__.win.overrideredirect(True)
         __self__.win.grab_set()
-        __self__.diag = Frame(__self__.win,relief=RIDGE,bd=3)
-        __self__.diag.grid()
-        label0 = Label(__self__.diag,text="Canvas Size")
-        label0.grid(row=0,column=0,columnspan=2)
-        label1 = Label(__self__.diag,text="Height (px): ")
-        label1.grid(row=1,column=0)
-        label2 = Label(__self__.diag,text="Width (px): ")
-        label2.grid(row=2,column=0)
+
+
+        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE)
+        label0 = ttk.Label(__self__.diag,text="Canvas Size")
+        label1 = ttk.Label(__self__.diag,text="Height (px): ")
+        label2 = ttk.Label(__self__.diag,text="Width (px): ")
+
         __self__.x = IntVar()
         __self__.y = IntVar()
         __self__.x.set(100)
         __self__.y.set(100)
         __self__.win.bind("<Return>",__self__.spawn_mosaic)
         
-        x_ = Entry(__self__.diag,textvariable=__self__.x,validate="focusout",
+        x_ = ttk.Entry(__self__.diag,textvariable=__self__.x,validate="focusout",
                 width=9)
-        x_.grid(row=1,column=1)
-        y_ = Entry(__self__.diag,textvariable=__self__.y,validate="focusout",
+        y_ = ttk.Entry(__self__.diag,textvariable=__self__.y,validate="focusout",
                 width=9)
-        y_.grid(row=2,column=1)
-        
-        accept = Button(__self__.diag,text="Ok", width=10, 
+
+        accept = ttk.Button(__self__.diag,text="Ok", width=10, 
                 command=__self__.spawn_mosaic)
-        cancel = Button(__self__.diag,text="Cancel", width=10, 
+        cancel = ttk.Button(__self__.diag,text="Cancel", width=10, 
                 command=__self__.kill)
-        accept.grid(row=3,column=0,pady=5,sticky=W+E,padx=3)
-        cancel.grid(row=3,column=1,pady=5,sticky=W+E,padx=3)
+        
+        
+        label0.grid(row=0,column=0,columnspan=2,pady=(3,0))
+        label1.grid(row=1,column=0)
+        label2.grid(row=2,column=0)
+        __self__.diag.grid()
+        x_.grid(row=1,column=1)
+        y_.grid(row=2,column=1)
+        accept.grid(row=3,column=0,pady=5,sticky=W+E,padx=(10,6))
+        cancel.grid(row=3,column=1,pady=5,sticky=W+E,padx=(6,10))
         
         __self__.win.update()
-        place_center(root.master,__self__.win)
+        place_center(parent.master,__self__.win)
         __self__.win.deiconify()
         x_.focus_set()
 
@@ -3650,14 +3655,28 @@ class MainGUI:
         icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
         __self__.SamplesWindow.resizable(False,True) 
         __self__.SamplesWindow.minsize(0,340)
-        __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="FOLDER")
-        __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="MCA PREFIX")
+
+        __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="Sample")
+        __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="Mca Prefix")
         __self__.SamplesWindow_TableLeft = Listbox(
                 __self__.SamplesWindow, 
-                height=__self__.SamplesWindow.winfo_height())
+                height=__self__.SamplesWindow.winfo_height(),
+                bd=0)
         __self__.SamplesWindow_TableRight = Listbox(
                 __self__.SamplesWindow, 
-                height=__self__.SamplesWindow.winfo_height())
+                height=__self__.SamplesWindow.winfo_height(),
+                bd=0)
+        __self__.SamplesWindow_multi = Button(
+                __self__.SamplesWindow, 
+                text = "Export multiple maps", 
+                bd=0, 
+                command=__self__.select_multiple)
+        __self__.SamplesWindow_ok = Button(
+                __self__.SamplesWindow, 
+                text = "Validate", 
+                bd=0, 
+                command=__self__.digestmaps)
+
         __self__.SamplesWindow_TableLeft.bind("<MouseWheel>", __self__.scroll_y_L)
         __self__.SamplesWindow_TableRight.bind("<MouseWheel>", __self__.scroll_y_R)
         __self__.SamplesWindow_TableLeft.bind("<Up>", __self__.scroll_up)
@@ -3665,23 +3684,13 @@ class MainGUI:
         __self__.SamplesWindow_TableLeft.bind("<Double-Button-1>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
-        
+
         __self__.SamplesWindow_LabelLeft.grid(row=0,column=0)
         __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
         __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0,sticky=N+S)
         __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1,sticky=N+S)
-        __self__.SamplesWindow_multi = Button(
-                __self__.SamplesWindow, 
-                text = "Export multiple maps", 
-                bd=3, 
-                command=__self__.select_multiple)
-        __self__.SamplesWindow_ok = Button(
-                __self__.SamplesWindow, 
-                text = "Validate", 
-                bd=3, 
-                command=__self__.digestmaps)
-        __self__.SamplesWindow_multi.grid(row=2,column=0,sticky=W+E)
-        __self__.SamplesWindow_ok.grid(row=2,column=1,sticky=W+E)
+        __self__.SamplesWindow_multi.grid(row=2,column=0,sticky=W+E,padx=2,pady=2)
+        __self__.SamplesWindow_ok.grid(row=2,column=1,sticky=W+E,padx=2,pady=2)
         __self__.SamplesWindow_ok.config(state=DISABLED)
 
         Grid.rowconfigure(__self__.SamplesWindow, 1, weight=1)
