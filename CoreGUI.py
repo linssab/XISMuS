@@ -79,6 +79,7 @@ def load_user_database():
     db.close()
 
 def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
+    logger.info(f"Adding {name} to database.")
     path = os.path.join(sp.__BIN__,"database.dat")
     db = open(path,"a+")
     db.write("\nSAMPLE\t{}\n".format(name))
@@ -332,7 +333,6 @@ def call_compilecube():
                         "Could not read {} file! Aborting compilation".format(fail[1]))
                 shutil.rmtree(sp.output_path) 
 
-
 def load_cube():
     global root
     """ Loads cube to memory (unpickle). Cube name is passed according to
@@ -458,6 +458,8 @@ def _init_numpy_mkl():
                      'libmmd', 'libifcoremd', 'libimalloc'):
             ctypes.cdll.LoadLibrary(os.path.join(_core,_dll))
             print("Loaded {}".format(_dll))
+            splash.update(f"Loaded {_dll}")
+            time.sleep(0.100)
     except Exception:
         pass
 
@@ -2592,8 +2594,7 @@ class Samples:
         __self__.mcacount = {}
         __self__.mca_indexing = {}
         __self__.mca_extension = {}
-        __self__.text = StringVar()
-        __self__.text.set(" ")
+        
 
     def kill(__self__):
         __self__.popup.grab_set()
@@ -2601,6 +2602,8 @@ class Samples:
 
     def pop_loader(__self__):
         __self__.popup = Toplevel()
+        __self__.text = StringVar()
+        __self__.text.set("None")
         __self__.popup.resizable(False,False)
         __self__.popup.overrideredirect(True)
 
@@ -2653,8 +2656,8 @@ class Samples:
 
     def update_label(__self__, splash=None, text=None):
         if splash:
-            splash.text.set(text)
-            splash.label2.update()
+            text = "Reading\t"+text
+            splash.update(text)
         else:
             __self__.text.set(text)
             __self__.label2.update()
@@ -2671,6 +2674,7 @@ class Samples:
         mca_prefix = None
         
         try:
+            logger.info(f"Checking tree {Constants.SAMPLES_FOLDER}")
                         
             """ Lists all possible samples """
             samples = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
@@ -2750,6 +2754,7 @@ class Samples:
                                     len(files),
                                     mca_extension,
                                     indexing)
+            logger.info("Done.")
 
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
@@ -2760,12 +2765,11 @@ class Samples:
                 messagebox.showerror(exception.__class__.__name__,
                         "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(Constants.SAMPLES_FOLDER))
             else: pass
-        try:
 
+        try:
             """ After trying to look at every folder under the folder selected, 
             priority is given to the actual selected folder """
 
-            #if __self__.samples_database == {}:
             local_path = Constants.SAMPLES_FOLDER.split("\\")
             folder = local_path.pop(-1)
             
@@ -2773,6 +2777,8 @@ class Samples:
             new_path = ""
             for name in local_path:
                 new_path = new_path + name + "\\"
+
+            logger.info(f"Checking {new_path}")
 
             if os.path.exists(os.path.join(sp.__PERSONAL__,"output",folder)):
                 for name in os.listdir(os.path.join(sp.__PERSONAL__,
@@ -2839,6 +2845,7 @@ class Samples:
                                 len(files),
                                 mca_extension,
                                 indexing)
+            logger.info("Done.")
         
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
@@ -2849,11 +2856,12 @@ class Samples:
             else: pass
         
         try:
-        
+
             """ Try looking for training_data """
 
             folder = "Example Data"
             new_path = os.path.join(sp.__PERSONAL__,folder)
+            logger.info(f"Checking for TRAINING DATA {new_path}")
             
             if os.path.exists(new_path):
                 examples = [folder for folder in os.listdir(new_path) if \
@@ -2904,6 +2912,7 @@ class Samples:
                         __self__.mcacount[folder] = len(files)
                         __self__.mca_extension[folder] = mca_extension
                         __self__.mca_indexing[folder] = "1"
+            logger.info("Done.")
 
         except: logger.info("Could not locate Training Data.")
 
@@ -2939,7 +2948,6 @@ class Samples:
        
 
 class Settings:        
-
     def __init__(__self__,parent):
         __self__.master = Toplevel(master=parent.master)
         __self__.parent = parent
@@ -3366,10 +3374,8 @@ class MainGUI:
                 label="Open output folder",
                 command=__self__.open_output_folder_from_cube)
 
-        __self__.master.after(400,__self__.master.attributes,"-alpha",1.0)
-        __self__.master.deiconify()
+        __self__.master.after(400,__self__.pop_welcome)
         __self__.toggle_(toggle='off')
-        __self__.pop_welcome()
 
     def prompt_folder(__self__):
         """ Opens dialogue to change the samples folder """
@@ -4028,6 +4034,8 @@ class MainGUI:
             __self__.call_configure()
 
     def pop_welcome(__self__):
+        __self__.master.attributes("-alpha",1.0)
+        __self__.master.deiconify()
         """Displays a pop-up window with information on the software"""
         if Constants.WELCOME == True:
             __self__.welcome_window = Welcome(__self__)
@@ -6264,12 +6272,15 @@ class PeriodicTable:
 
 #if __name__.endswith('__main__'):         
 if __name__ == "__main__":
+    import time
     import Constants
     from Graphics import *
+    splash = SplashScreen()
 
     optimum_resolution = (1920,1080)
+
+    splash.update("Loading MKL libraries...")
     _init_numpy_mkl()
-    del _init_numpy_mkl
 
     # tcl/Tk imports
     try:
@@ -6285,24 +6296,45 @@ if __name__ == "__main__":
         from Tkinter import filedialog
         import tkFont
 
-    splash = SplashScreen()
-
     # general utilities
+    t = 0.050 #50 ms
     splash.update("Importing utilities...")
+    time.sleep(t)
+    splash.update("Importing utilities... numpy")
+    time.sleep(t)
     import numpy as np
+    splash.update("Importing utilities... h5py")
+    time.sleep(t)
     import h5py
+    splash.update("Importing utilities... cv2")
+    time.sleep(t)
     import cv2
+    splash.update("Importing utilities... system")
+    time.sleep(t)
     import sys, os, copy, pickle, stat, random, base64
+    splash.update("Importing utilities... shutil")
+    time.sleep(t)
     import shutil
+    splash.update("Importing utilities... webbrowser")
+    time.sleep(t)
     import webbrowser
+    splash.update("Importing utilities... virtual memory")
+    time.sleep(t)
     from psutil import virtual_memory
-    import logging, time
+    splash.update("Importing utilities... logging")
+    time.sleep(t)
+    import logging
+    splash.update("Importing utilities... garbage collector")
+    time.sleep(t)
     import gc
+    splash.update("Importing utilities... freeze support")
+    time.sleep(t)
     from multiprocessing import freeze_support
     freeze_support()
     
     # matplotlib imports
     splash.update("Importing plot tools...")
+    time.sleep(t)
     import matplotlib
     import matplotlib.pyplot as plt
     matplotlib.use("TkAgg")
@@ -6323,7 +6355,9 @@ if __name__ == "__main__":
       )
    
     splash.update("Verifying screen resolution...")
+    time.sleep(t)
     check_screen_resolution(optimum_resolution)
+
     open_log()
     logger = logging.getLogger("logfile")
 
@@ -6331,6 +6365,7 @@ if __name__ == "__main__":
     from ReadConfig import checkout_config, set_settings 
 
     splash.update("Booting Engine...")
+    time.sleep(t)
     import Engine
     import Engine.SpecRead as sp
     from Engine.ImgMath import LEVELS, correlate
@@ -6340,15 +6375,18 @@ if __name__ == "__main__":
     from Engine.CBooster import *
 
     splash.update("Creating elements...")
+    time.sleep(t)
     from Elements import *
 
     splash.update("Preparing GUI...")
+    time.sleep(t)
     from GUI import Theme
     from GUI.Mosaic import Mosaic_API
     from GUI.AdvCalibration import AdvCalib
     from GUI.ProgressBar import Busy, BusyManager, create_tooltip
 
     splash.update("Revving Engine...")
+    time.sleep(t)
     from Engine.Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Engine.MappingParallel import Cube_reader, sort_results, digest_results
     from Engine.BatchFitter import MultiFit, SingleFit, build_images

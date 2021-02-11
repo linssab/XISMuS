@@ -13,33 +13,38 @@ def screen_size():
 class SplashScreen:
     def __init__(__self__):
         from .Decoder import IMG_SPLASH
+        BG = "red"
         __self__.master = Tk()
         __self__.master.resizable(False,False)
-        __self__.master.configure(bg="#DCDCDC")
-        w, h = screen_size()
-        __self__.master.geometry(f"640x400+{int(w/2)-320}+{int(h/2)-200}")
+        __self__.master.configure(bg=BG)
+        __self__.master.wm_attributes("-transparent", BG)
+        scr_w, scr_h = screen_size()
+        w, h = 740, 470
+        __self__.master.geometry(f"{w}x{h}+{int((scr_w/2)-w/2)}+{int((scr_h/2)-h/2)}")
         __self__.master.overrideredirect(True)
         __self__.master.withdraw()
 
         __self__.text = StringVar()
-        __self__.text.set(" ")
+        __self__.text.set("auehueahueaueaueuea ")
         __self__.master.grid_rowconfigure(0,weight=10)
         __self__.master.grid_rowconfigure(1,weight=1)
         __self__.master.grid_columnconfigure(0,weight=1)
         __self__.master.grid_columnconfigure(1,weight=1)
         __self__.master_image = PhotoImage(data=IMG_SPLASH)
 
-        __self__.canvas = Label(__self__.master, 
-                image = __self__.master_image,
-                height=374)
-        __self__.canvas.grid(row=0,column=0,columnspan=2)
-        __self__.footer = Frame(__self__.master, bg="#DCDCDC")
-        __self__.label1 = Label(__self__.footer, text="Loading...\t",bg="#DCDCDC")
-        __self__.label2 = Label(__self__.footer, textvariable = __self__.text,bg="#DCDCDC")
-
-        __self__.footer.grid(row=1,column=0,columnspan=2,sticky=W+E)
-        __self__.label1.grid(row=0,column=0,sticky=W)
-        __self__.label2.grid(row=0,column=1)
+        __self__.canvas = Canvas(__self__.master, 
+                height=h,
+                width=w,
+                highlightthickness=0,
+                bd=0,
+                bg=BG)
+        __self__.canvas.create_image(int(w/2),int(h/2),image=__self__.master_image)
+        __self__.label2 = __self__.canvas.create_text(
+                60,h-45,text=__self__.text,
+                font=("Tahoma",12),
+                fill="white",
+                anchor=W)
+        __self__.canvas.grid(row=0,column=0,columnspan=3)
 
         __self__.master.update()
         __self__.master.update_idletasks()
@@ -49,7 +54,8 @@ class SplashScreen:
 
     def update(__self__,text):
         __self__.text.set(text)
-        __self__.label2.update()
+        __self__.canvas.itemconfigure(__self__.label2, text=text)
+        __self__.master.update()
 
     def kill(__self__):
         __self__.master.destroy()

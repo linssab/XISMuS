@@ -24,7 +24,7 @@ def b64_to_array(uri):
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
     image_file = open(os.path.join(os.path.dirname(__file__),"graphics.tz"),"rb")
-    IMG_SPLASH = image_file.read(502440)
+    IMG_SPLASH = image_file.read(517704)
     no_data = image_file.read(38872) 
     IMG_NODATA = b64_to_array(no_data)
 
