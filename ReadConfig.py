@@ -28,7 +28,6 @@ logger = logging.getLogger("logfile")
 logger.debug("Importing module ReadConfig.py...")
 
 def check_config():
-    
     """ Tries to read Config.cfg and verifies it contain all needed entries.
     Returns tags found in file. """
 
@@ -50,7 +49,6 @@ def check_config():
     return tags
 
 def getconfig():
-    
     """ Extracts all configuration information in Config.cfg
 
     --------------------------------------------------------
@@ -151,7 +149,6 @@ def getconfig():
     return modesdict,CalParam
 
 def checkout_config():
-    
     """ Re-sets Config.cfg file with default values if any tag is missing. """
     
     cfgfile = os.path.join(__BIN__,"config.cfg")
@@ -194,7 +191,6 @@ def checkout_config():
     return 0
 
 def unpack_cfg():
-
     """ Calls getconfig to get configuration parameters """
 
     all_parameters = getconfig()
@@ -257,6 +253,9 @@ def set_settings(inifile):
     Constants.CHECK_TOLERANCE = WizTol
     Constants.SAVE_INTERVAL = SaveInterval
     Constants.SAVE_FIT_FIGURES = SavePlot
+
+    if PlotMode == "Logarithmic": Constants.PLOTSCALE = "-semilogy"
+    else: Constants.PLOTSCALE = None
 
     output = Constants.list_all()
 

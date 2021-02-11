@@ -39,6 +39,7 @@ USER_DATABASE = {}
 COLORMAP = "hot"
 MULTICORE = True
 PLOTMODE = "Logarithmic"
+PLOTSCALE = "-semilogy"
 RAM_LIMIT = None
 WELCOME = False
 CPUS = cpu_count(logical=False)

@@ -4,8 +4,10 @@
 #                        version: 2.0.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
+global root
 
 def start_up():
+    global root
     """ Initializes sp global variables and paths """
 
     sp.conditional_setup()
@@ -14,6 +16,13 @@ def start_up():
     except: pass
     logger.info("Done.")
     Constants.FIND_ELEMENT_LIST = []
+
+    database = Samples()
+    database.list_all(splash)
+    splash.kill()
+    root = MainGUI()
+    root.boot(database)
+    root.busy = BusyManager(root.master)
 
 def open_log():
     from ReadConfig import __PERSONAL__
@@ -107,23 +116,8 @@ def remove_entry_from_database(smpl_name):
         db.close()
     return
 
-def refresh_all_plots():
-    try:
-        root.draw_map()
-    except: pass
-    try:
-        for ImgAnal in root.ImageAnalyzers: 
-            try:
-                ImgAnal.left_image.set_cmap(Constants.COLORMAP)
-                ImgAnal.right_image.set_cmap(Constants.COLORMAP)
-                ImgAnal.canvas1.draw()
-                ImgAnal.canvas2.draw()
-            except: pass
-    except:
-        pass
-    return
-
 def wipe_list():
+    global root
     """ Self-explanatory. Clears the global variable and
     destroys the Periodic Table Tk.Toplevel window """
     Constants.FIND_ELEMENT_LIST = []
@@ -143,10 +137,7 @@ def maximize_window(window,e=""):
             window.master.state("zoomed")
 
 def place_topright(window1,window2):
-    import ctypes
-    user32 = ctypes.windll.user32
-    user32.SetProcessDPIAware()
-    w_user, h_user = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+    w_user, h_user = screen_size()
     
     # adapted from: https://stackoverflow.com/questions/3352918/
     """ Places window2 next to window1 top-right end """ 
@@ -198,16 +189,7 @@ def place_center(window1,window2):
     win_height = height + titlebar_height + frm_width
     height2 = window2.winfo_height()
 
-    ##############################
-    # GETS USER SCREEN DIMENSION #
-    ##############################
-
-    import ctypes
-    user32 = ctypes.windll.user32
-    user32.SetProcessDPIAware()
-    w_user, h_user = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)   
-
-    ##############################
+    w_user, h_user = screen_size()   
 
     x = window1.winfo_rootx() + (int(win_width/2)) - (int(width2/2))
     y = window1.winfo_rooty() - titlebar_height + (int(height/2)) - (int(height2/2))
@@ -260,6 +242,7 @@ def call_help():
         return 0
 
 def call_compilecube():
+    global root
     """ Tries to create output folder (name is Constants.CONFIG['directory']) 
     and calls SpecMath to compile the data. Spectra to compile are looked under the directory
     set by the user (default is C:/samples/) and inside a directory named 
@@ -349,21 +332,9 @@ def call_compilecube():
                         "Could not read {} file! Aborting compilation".format(fail[1]))
                 shutil.rmtree(sp.output_path) 
 
-def prompt_folder():
-    """ Opens dialogue to change the samples folder """
-
-    folder = filedialog.askdirectory(title="Select the samples folder")
-    if folder != "":
-        ini_file = open(os.path.join(sp.__BIN__,"folder.ini"),"w")
-        ini_file.write(os.path.abspath(folder))
-        ini_file.close()
-        Constants.SAMPLES_FOLDER = os.path.abspath(folder)
-        root.refresh_samples()
-    else:
-        pass
-    return 0
 
 def load_cube():
+    global root
     """ Loads cube to memory (unpickle). Cube name is passed according to
     latest sp parameters. See setup conditions inside Engine.SpecRead module.
     Returns the datacube object """
@@ -371,7 +342,7 @@ def load_cube():
     logger.debug("Trying to load cube file.")
     logger.debug(sp.cube_path)
     if os.path.exists(sp.cube_path):
-        root_busy.busy()
+        root.busy.busy()
         cube_file = open(sp.cube_path,'rb')
         try: del Constants.MY_DATACUBE
         except: pass
@@ -379,7 +350,7 @@ def load_cube():
         cube_file.close()
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
-        root_busy.notbusy()
+        root.busy.notbusy()
     elif os.path.exists(os.path.join(sp.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
         lz_file = open(sp.cube_path,'rb')
@@ -394,6 +365,7 @@ def load_cube():
     return Constants.MY_DATACUBE
 
 def refresh_plots(exclusive=""):
+    global root
     """refresh one plot window exclusively or all open windows"""
 
     if len(Constants.FIND_ELEMENT_LIST) > 0: 
@@ -405,19 +377,19 @@ def refresh_plots(exclusive=""):
     if exclusive == "mps":
         try:
             root.MPS.draw_spec(
-                mode=['mps'],display_mode=root.plot_display,lines=lines)
+                mode=['mps'],display_mode=Constants.PLOTSCALE,lines=lines)
             root.MPS.update_idletasks()
         except: pass
     elif exclusive == "summation":
         try: 
             root.summation.draw_spec(
-                mode=['summation'],display_mode=root.plot_display,lines=lines)
+                mode=['summation'],display_mode=Constants.PLOTSCALE,lines=lines)
             root.summation.update_idletasks()
         except: pass
     elif exclusive == "combined":
         try: 
             root.combined.draw_spec(
-                mode=['summation','mps'],display_mode=root.plot_display,lines=lines)
+                mode=['summation','mps'],display_mode=Constants.PLOTSCALE,lines=lines)
             root.combined.update_idletasks()
         except: pass
     elif exclusive == "roi_sum":
@@ -425,7 +397,7 @@ def refresh_plots(exclusive=""):
             try:
                 API.plot.draw_selective_sum(API.DATACUBE,
                         API.sum_spectrum,
-                        display_mode = root.plot_display,
+                        display_mode = Constants.PLOTSCALE,
                         lines = lines,
                         refresh=True)
                 API.plot.master.update_idletasks()
@@ -435,24 +407,24 @@ def refresh_plots(exclusive=""):
     else:
         try:
             root.MPS.draw_spec(
-                mode=['mps'],display_mode=root.plot_display,lines=lines)
+                mode=['mps'],display_mode=Constants.PLOTSCALE,lines=lines)
             root.MPS.update_idletasks()
         except: pass
         try: 
             root.summation.draw_spec(
-                mode=['summation'],display_mode=root.plot_display,lines=lines)
+                mode=['summation'],display_mode=Constants.PLOTSCALE,lines=lines)
             root.summation.update_idletasks()
         except: pass
         try: 
             root.combined.draw_spec(
-                mode=['summation','mps'],display_mode=root.plot_display,lines=lines)
+                mode=['summation','mps'],display_mode=Constants.PLOTSCALE,lines=lines)
             root.combined.update_idletasks()
         except: pass
         for API in root.ImageAnalyzers:
             try :
                 API.plot.draw_selective_sum(API.DATACUBE,
                         API.sum_spectrum,
-                        display_mode = root.plot_display,
+                        display_mode = Constants.PLOTSCALE,
                         lines = lines,
                         refresh=True)
                 API.plot.master.update_idletasks()
@@ -460,13 +432,9 @@ def refresh_plots(exclusive=""):
 
 def check_screen_resolution(resolution_tuple):
     Constants.LOW_RES = None
-    pop = Tk()
-    pop.withdraw()
     limit_w, limit_h = resolution_tuple[0], resolution_tuple[1]
-    import ctypes
-    user32 = ctypes.windll.user32
-    user32.SetProcessDPIAware()
-    w, h = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+    w, h = screen_size()
+
     if w > limit_w or h > limit_h:
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too small or if any problems are experienced with buttons and icons, please try lowering your screen resolution and setting the Windows scaling option to 100%.".format(w,h))
     elif w < limit_w and h < limit_h:
@@ -474,7 +442,6 @@ def check_screen_resolution(resolution_tuple):
         if 800 < w <= 1024 or 600 < h <= 768: Constants.LOW_RES = "high"
         elif w <= 640 or h <= 480: Constants.LOW_RES = "extreme"
         messagebox.showinfo("Info","Your current screen resolution is {}x{}. This program was optmized to work in 1080p resolution. If the windows are too large, off-scale or if any problems are experienced with buttons and icons, please try increasing your screen resolution. Shall problems persist, verify your Windows scaling option.".format(w,h))
-    pop.destroy()
 
 def _init_numpy_mkl():
     import os
@@ -520,8 +487,8 @@ class About:
 
 
 class CanvasSizeDialog:
-    def __init__(__self__):
-        __self__.win = Toplevel(root.master)
+    def __init__(__self__, parent):
+        __self__.win = Toplevel(parent.master)
         __self__.win.bind("<Escape>",__self__.kill)
         __self__.win.withdraw()
         __self__.win.resizable(False,False)
@@ -583,7 +550,7 @@ class CanvasSizeDialog:
 
 class Convert_File_Name:
     def __init__(__self__,parent):
-        __self__.master = Toplevel(master=parent)
+        __self__.master = Toplevel(master=parent.master)
         __self__.master.withdraw()
         __self__.master.title("Spectrum name converter")
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
@@ -608,7 +575,7 @@ class Convert_File_Name:
         __self__.RightPane.grid(row=0, column=1,sticky=N+S,padx=(2,3),pady=2)
 
         __self__.build_widgets()
-        place_center(root.master,__self__.master)
+        place_center(parent.master,__self__.master)
         __self__.master.grab_set()
 
     def build_widgets(__self__):
@@ -750,11 +717,11 @@ class Welcome:
     of MainGUI window """
 
     def __init__(__self__,parent):
-
         """parent is a Tk window"""
 
         __self__.h, __self__.w = 400, 240
-        __self__.master = Toplevel(master=parent)
+        __self__.master = Toplevel(master=parent.master)
+        __self__.parent = parent
         icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
         __self__.master.iconbitmap(icon)  
         __self__.master.bind("<Return>",__self__.checkout)
@@ -923,8 +890,8 @@ class Welcome:
         ini.write("<SaveInterval>\t{}\n".format(Constants.SAVE_INTERVAL))
         ini.write("<SavePlot>\t{}".format(Constants.SAVE_FIT_FIGURES))
         ini.close()
-        root.master.focus_set()
-        root.master.focus_force()
+        __self__.parent.master.focus_set()
+        __self__.parent.master.focus_force()
         __self__.master.destroy()
 
 
@@ -963,19 +930,19 @@ class ExportDiag():
                 image=__self__.icon1, 
                 style="main.TButton",
                 command=lambda:__self__.export(tag=1), 
-                width=size_x)#, height=size_y)
+                width=size_x)
         __self__.Button2 = ttk.Button(
                 __self__.Frame, 
                 image=__self__.icon2, 
                 style="main.TButton",
                 command=lambda:__self__.export(tag=2), 
-                width=size_x)#, height=size_y)
+                width=size_x)
         __self__.Button3 = ttk.Button(
                 __self__.Frame, 
                 image=__self__.icon3, 
                 style="main.TButton",
                 command=__self__.merge, 
-                width=size_x)#, height=size_y)
+                width=size_x)
 
         __self__.Button1.grid(row=0,column=0,padx=32)
         __self__.Button2.grid(row=0,column=1,padx=32)
@@ -1048,41 +1015,47 @@ class DimensionDiag():
     It writes a custom colonneXrighe.txt file to the sample output
     folder, which is deleted if the sample is RESET """
 
-    def __init__(__self__,folder):
-        __self__.win = Toplevel(root.master)
-        __self__.win.withdraw()
-        __self__.win.resizable(False,False)
-        __self__.win.overrideredirect(True)
-        __self__.win.bind("<Escape>",__self__.kill)
+    def __init__(__self__, parent):
+        __self__.master = Toplevel(master = parent.master)
+        __self__.parent = parent
+        __self__.master.withdraw()
+        __self__.master.resizable(False,False)
+        __self__.master.overrideredirect(True)
+        __self__.master.bind("<Escape>",__self__.kill)
+        __self__.master.bind("<Return>",__self__.send)
+
         __self__.exit_code = None
-        __self__.win.grab_set()
-        __self__.folder = folder
-        diag = Frame(__self__.win,relief=RIDGE,bd=3)
-        diag.grid()
+        __self__.master.grab_set()
+        __self__.folder = Constants.DIRECTORY
+
+        diag = Frame(__self__.master,relief=RIDGE,bd=3)
         label0 = Label(diag,text="Image size")
-        label0.grid(row=0,column=0,columnspan=2)
         label1 = Label(diag,text="Height: ")
-        label1.grid(row=1,column=0)
         label2 = Label(diag,text="Width: ")
-        label2.grid(row=2,column=0)
+
         __self__.x = StringVar()
         __self__.x.trace("w",__self__.callback_x)
         __self__.y = StringVar()
         __self__.y.trace("w",__self__.callback_y)
         
         __self__.x_ = Entry(diag,textvariable=__self__.x,validate="focusout")
-        __self__.x_.grid(row=1,column=1)
         __self__.y_ = Entry(diag,textvariable=__self__.y,validate="focusout")
-        __self__.y_.grid(row=2,column=1)
-        
-        __self__.win.bind("<Return>",__self__.send)
         
         accept = Button(diag,text="Ok", width=13, command=__self__.send)
+
+        diag.grid()
+        label0.grid(row=0,column=0,columnspan=2)
+        label1.grid(row=1,column=0)
+        label2.grid(row=2,column=0)
         accept.grid(row=3,column=0,columnspan=2,pady=5)
+        __self__.x_.grid(row=1,column=1)
+        __self__.y_.grid(row=2,column=1)
         
-        __self__.win.update()
-        place_center(root.master,__self__.win)
-        __self__.win.deiconify()
+        __self__.master.update()
+
+        place_center(parent.master,__self__.master)
+
+        __self__.master.deiconify()
         __self__.x_.focus_set()
 
     def check_values(__self__,x,y):
@@ -1092,60 +1065,60 @@ class DimensionDiag():
             return
         if x.isdigit(): 
             x=int(x)
-            if x > root.mcacount[__self__.folder]: x = root.mcacount[__self__.folder]
+            if x > __self__.parent.mcacount[__self__.folder]: x = root.mcacount[__self__.folder]
             elif x == 0: x = 1
         else: 
             messagebox.showerror("Error!","{} not a number!".format(x))
             return
         if y.isdigit(): 
             y=int(y)
-            if y > root.mcacount[__self__.folder]: y = root.mcacount[__self__.folder]
+            if y > __self__.parent.mcacount[__self__.folder]: y = root.mcacount[__self__.folder]
             elif y == 0: y = 1
         else:
             messagebox.showerror("Error!","{} not a number!".format(y))
             return
-        while x*y > root.mcacount[__self__.folder]:
+        while x*y > __self__.parent.mcacount[__self__.folder]:
             if x > y: x-=1
             elif y > x: y-=1
         return x,y
     
     def send(__self__,event=""):
-        root.config_xy = __self__.check_values(__self__.x,__self__.y)
-        if root.config_xy == None: return
-        __self__.win.grab_release()
-        __self__.win.destroy()
+        __self__.parent.config_xy = __self__.check_values(__self__.x,__self__.y)
+        if __self__.parent.config_xy == None: return
+        __self__.master.grab_release()
+        __self__.master.destroy()
         __self__.exit_code = "save"
         return __self__.x.get(),__self__.y.get()
 
     def callback_x(__self__,name="",index="",mode=""):
         try: 
-            value = int(root.mcacount[__self__.folder]/int(__self__.x.get()))
+            value = int(__self__.parent.mcacount[__self__.folder]/int(__self__.x.get()))
             __self__.y.set(value)
         except: 
             pass
     
     def callback_y(__self__,name="",index="",mode=""):
         try: 
-            value = int(root.mcacount[__self__.folder]/int(__self__.y.get()))
+            value = int(__self__.parent.mcacount[__self__.folder]/int(__self__.y.get()))
             __self__.x.set(value)
         except:
             pass
     
     def kill(__self__,e):
         __self__.exit_code = "cancel"
-        #root.samples.pop(Constants.CONFIG["directory"])
-        __self__.win.destroy()
+        __self__.master.destroy()
 
 
 class PeakClipper:
     """Creates a dialog to set-up SNIPBG parameters"""
+    global root
     
     def __init__(__self__,parent,mode=None):
         """ Parent is ConfigDiag class """
-        __self__.master = Toplevel(parent.master)
+        __self__.master = Toplevel(master = parent.master)
+        __self__.parent = parent
         __self__.mode = mode
         __self__.master.tagged = True
-        __self__.parent = parent
         __self__.master.attributes("-alpha",0.0)
         __self__.master.resizable(True,True)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
@@ -1311,7 +1284,7 @@ class PeakClipper:
             label = root.samples[folder]+"{0}.{1}".format(
                         __self__.sample,root.mca_extension[folder])
 
-        if Constants.PLOTMODE == "Linear":
+        if Constants.PLOTSCALE == None:
             __self__.plot.set_ylabel("Counts")
             __self__.plot.set_xlabel("Channels")
             __self__.plot.plot(__self__.spectrum,
@@ -1380,8 +1353,8 @@ class PeakClipper:
                     format(__self__.spectrum))
 
     def save(__self__):
-        root.snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
-        proceed = __self__.verify_values(root.snip_config)
+        __self__.parent.snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
+        proceed = __self__.verify_values(__self__.parent.snip_config)
         if proceed == True: __self__.kill()
         else: messagebox.showerror("Value Error", "Parameters not valid. No negative or zero values are valid. Sav-gol window must be odd and greater than Sav-gol order.")
 
@@ -1571,11 +1544,12 @@ class Annotator:
 
 
 class ImageAnalyzer:
+    global root
     def __init__(__self__,parent,datacube):
         __self__.DATACUBE = datacube
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
         __self__.sum_spectrum = __self__.DATACUBE.sum
-        __self__.master = Toplevel(parent)
+        __self__.master = Toplevel(master=parent.master)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
@@ -1988,7 +1962,7 @@ class ImageAnalyzer:
             __self__.annotate.config(relief="sunken")
             __self__.annotate.config(bg="yellow")
             __self__.annotator = Annotator(__self__) 
-            __self__.plot = PlotWin(__self__.master)
+            __self__.plot = PlotWin(__self__)
             if Constants.LOW_RES == None:
                 place_topright(__self__.master, __self__.plot.master)
             elif Constants.LOW_RES == "moderate":
@@ -1997,7 +1971,7 @@ class ImageAnalyzer:
                 place_center(__self__.master, __self__.plot.master)
             __self__.plot.draw_selective_sum(__self__.DATACUBE,
                     __self__.DATACUBE.sum,
-                    root.plot_display,lines=True)
+                    Constants.PLOTSCALE,lines=True)
         else:
             __self__.annotate.config(relief="raised")
             __self__.annotate.config(bg=__self__.master.cget("background"))
@@ -2185,7 +2159,7 @@ class ImageAnalyzer:
             bar.destroybar()
             return
         bar.update_text("Loading plot...")
-        corr_plot = PlotWin(__self__.master)
+        corr_plot = PlotWin(__self__)
         corr_plot.draw_correlation(corr,labels)
         bar.destroybar()
 
@@ -2216,10 +2190,10 @@ class ImageAnalyzer:
 
 
 class PlotWin:
-    def __init__(__self__,master):
+    def __init__(__self__,parent):
         __self__.plot_font = {'fontname':'Arial','fontsize':14}
         __self__.lw = 3
-        __self__.master = Toplevel(master=master)
+        __self__.master = Toplevel(master=parent.master)
         __self__.master.attributes("-alpha",0.0)
         __self__.alt = False
         __self__.master.bind("<Alt_L>",__self__.AltOn)
@@ -2301,7 +2275,7 @@ class PlotWin:
         if __self__.master.winfo_exists() == True:
             __self__.plot.clear()
             colors = ["blue","red","green"]
-            if display_mode == '-semilog':
+            if display_mode == '-semilogy':
                 __self__.plot.set_ylabel("Counts")
                 i = 0
                 for option in mode:
@@ -2464,7 +2438,8 @@ class PlotWin:
                 framealpha=1,
                 borderpad=1,
                 facecolor="white",
-                handles=patches)
+                handles=patches,
+		loc="upper right")
 
     def draw_correlation(__self__,corr,labels):
         A, B, R = linregress(corr[0],corr[1]) 
@@ -2564,7 +2539,7 @@ class PlotWin:
         __self__.plot.set_ylabel("Counts")
         __self__.plot.set_xlabel("Energy (KeV)")
 
-        if display_mode == '-semilog':
+        if display_mode == '-semilogy':
             __self__.plotdata = y_data
             __self__.DATA, = __self__.plot.semilogy(
                     DATACUBE.energyaxis,
@@ -2610,64 +2585,22 @@ class PlotWin:
         __self__.canvas.draw()
 
 
-class Splash:
-    def __init__(__self__):
-        __self__.master = Toplevel()
-        __self__.master.resizable(False,False)
-        __self__.master.configure(bg="#DCDCDC")
-        __self__.master.geometry("640x400")
-        __self__.master.overrideredirect(True)
-        __self__.master.withdraw()
-
-        __self__.text = StringVar()
-        __self__.text.set(" ")
-        __self__.master.grid_rowconfigure(0,weight=10)
-        __self__.master.grid_rowconfigure(1,weight=1)
-        __self__.master.grid_columnconfigure(0,weight=1)
-        __self__.master.grid_columnconfigure(1,weight=1)
-        __self__.master_image = PhotoImage(data=IMG_SPLASH)
-
-        __self__.canvas = Label(__self__.master, 
-                image = __self__.master_image,
-                height=374)
-        __self__.canvas.grid(row=0,column=0,columnspan=2)
-        __self__.footer = Frame(__self__.master, bg="#DCDCDC")
-        __self__.label1 = Label(__self__.footer, text="Adding to database...\t",bg="#DCDCDC")
-        __self__.label2 = Label(__self__.footer, textvariable = __self__.text,bg="#DCDCDC")
-
-        __self__.footer.grid(row=1,column=0,columnspan=2,sticky=W+E)
-        __self__.label1.grid(row=0,column=0,sticky=W)
-        __self__.label2.grid(row=0,column=1)
-
-        __self__.master.update()
-        __self__.master.update_idletasks()
-        __self__.master.wm_attributes("-topmost",True)
-        __self__.master.wm_attributes("-disabled",True)
-        spawn_center(__self__.master)
-        __self__.master.deiconify()
-
-    def kill(__self__):
-        __self__.master.destroy()
-
-
 class Samples:
-    def __init__(__self__, splash=None):
+    def __init__(__self__):
         __self__.samples_database = {}
         __self__.samples_path = {}
         __self__.mcacount = {}
         __self__.mca_indexing = {}
         __self__.mca_extension = {}
-        __self__.splash = splash
-        __self__.filequeue = splash.text
+        __self__.text = StringVar()
+        __self__.text.set(" ")
 
     def kill(__self__):
         __self__.popup.grab_set()
         __self__.popup.destroy()
 
     def pop_loader(__self__):
-        __self__.filequeue = StringVar()
-        __self__.filequeue.set(" ")
-        __self__.popup = Toplevel(master=root.master)
+        __self__.popup = Toplevel()
         __self__.popup.resizable(False,False)
         __self__.popup.overrideredirect(True)
 
@@ -2684,7 +2617,7 @@ class Samples:
                 bd = 3,
                 width=260, height=52)
         __self__.popup.label1 = Label(__self__.outerframe, text="Adding to database...")
-        __self__.label2 = Label(__self__.outerframe, textvariable = __self__.filequeue)
+        __self__.label2 = Label(__self__.outerframe, textvariable = __self__.text)
 
         __self__.outerframe.grid_propagate(0)
         __self__.outerframe.grid(row=0,column=0,sticky=E+W)
@@ -2693,7 +2626,6 @@ class Samples:
 
         __self__.popup.update_idletasks()
         __self__.popup.grab_set()
-
 
     def load_folder_from_database(__self__,folder):
         __self__.samples_database[folder] = Constants.USER_DATABASE[folder]["prefix"]
@@ -2719,18 +2651,16 @@ class Samples:
         for folder in not_found_samples:
             Constants.USER_DATABASE.pop(folder)
 
-    def update_label(__self__):
-        try: 
-            splash.master.update_idletasks()
-        except: 
-            pass
-        try: 
-            __self__.popup.update_idletasks()
+    def update_label(__self__, splash=None, text=None):
+        if splash:
+            splash.text.set(text)
+            splash.label2.update()
+        else:
+            __self__.text.set(text)
             __self__.label2.update()
-        except: 
-            pass
+            __self__.popup.update_idletasks()
 
-    def list_all(__self__):
+    def list_all(__self__, splash=None):
         __self__.skip_list = []
         logger.info("Loading sample list...")
         logger.info("Reading database...")
@@ -2753,10 +2683,9 @@ class Samples:
                     for name in os.listdir(os.path.join(sp.__PERSONAL__,
                         "output",folder)):
                         if name.lower().endswith(".cube"):
-                            __self__.filequeue.set(
-                                    "Cube for {} already compiled, skipping mca\'s".format(
-                                        folder))
-                            __self__.update_label()
+                            __self__.update_label(
+                                splash=splash,
+                                text=f"Cube for {folder} already compiled, skipping mca\'s")
                             __self__.skip_list.append(name.split(".cube")[0])
                 
                 """ Lists the spectra files """            
@@ -2771,8 +2700,9 @@ class Samples:
                     if folder not in __self__.skip_list:
                         for item in range(len(files)): 
                             # displays file being read on splash screen
-                            __self__.filequeue.set("{}".format(files[item]))
-                            __self__.update_label()
+                            __self__.update_label(
+                            splash=splash,
+                            text=f"{files[item]}")
                             try:
                                 files[item], extension[item] = \
                                         files[item].split(".",1)[0],\
@@ -2848,10 +2778,9 @@ class Samples:
                 for name in os.listdir(os.path.join(sp.__PERSONAL__,
                     "output")):
                     if name.lower().endswith(".cube"):
-                        __self__.filequeue.set(
-                                "Cube for {} already compiled, skipping mca\'s".format(
-                                    folder))
-                        __self__.update_label()
+                        __self__.update_label(
+                        splash=splash,
+                        text= f"Cube for {folder} already compiled, skipping mca\'s")
                         __self__.skip_list.append(name.split(".cube")[0])
             files = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
                     if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
@@ -2861,8 +2790,9 @@ class Samples:
                 if folder not in __self__.skip_list:
                     for item in range(len(files)): 
                         # displays file being read on splash screen
-                        __self__.filequeue.set("{}".format(files[item]))
-                        __self__.update_label()
+                        __self__.update_label(
+                        splash=splash,
+                        text= f"{files[item]}")
                         try:
                             files[item], extension[item] = \
                                     files[item].split(".",1)[0],\
@@ -2934,8 +2864,8 @@ class Samples:
                     extension = files[:]
                     for item in range(len(files)): 
                         # displays file being read on splash screen
-                        __self__.filequeue.set("{}".format(files[item]))
-                        __self__.update_label()
+                        __self__.update_label(splash=splash,
+                                text=f"{files[item]}")
                         try:
                             files[item], extension[item] = \
                                     files[item].split(".",1)[0],\
@@ -3009,19 +2939,20 @@ class Samples:
        
 
 class Settings:        
-    def __init__(__self__,parent):
 
-        __self__.Settings = Toplevel(master=parent.master)
-        __self__.Settings.title("Settings")
-        __self__.Settings.resizable(False,False)
-        __self__.Settings.protocol("WM_DELETE_WINDOW",__self__.kill_window)
-        __self__.Settings.bind("<Escape>",__self__.kill_window)
+    def __init__(__self__,parent):
+        __self__.master = Toplevel(master=parent.master)
+        __self__.parent = parent
+        __self__.master.title("Settings")
+        __self__.master.resizable(False,False)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill_window)
+        __self__.master.bind("<Escape>",__self__.kill_window)
 
         __self__.CoreCount = Constants.CPUS
         sys_mem = dict(virtual_memory()._asdict())
-        __self__.GeneralOptions = LabelFrame(__self__.Settings, 
+        __self__.GeneralOptions = LabelFrame(__self__.master, 
                 text="General options",padx=15,pady=15)
-        __self__.PeakOptions = LabelFrame(__self__.Settings, 
+        __self__.PeakOptions = LabelFrame(__self__.master, 
                 text="Peakmethod options",padx=15,pady=15)
         __self__.GeneralOptions.grid(row=0,column=0,padx=(15,15),sticky=N+S+W+E)
         __self__.PeakOptions.grid(row=1,column=0,padx=(15,15),sticky=N+S+W+E)
@@ -3030,11 +2961,11 @@ class Settings:
         __self__.build_widgets()
 
         icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
-        __self__.Settings.iconbitmap(icon)  
+        __self__.master.iconbitmap(icon)  
 
-        place_center(root.master,__self__.Settings)
+        place_center(parent.master,__self__.master)
 
-        __self__.Settings.grab_set()
+        __self__.master.grab_set()
 
     def build_widgets(__self__):
 
@@ -3238,7 +3169,7 @@ class Settings:
         __self__.toggle_multicore()
         __self__.toggle_save_plot()
         
-        ButtonsFrame = Frame(__self__.Settings, padx=10, pady=10)
+        ButtonsFrame = Frame(__self__.master, padx=10, pady=10)
         ButtonsFrame.grid(row=4,column=0,columnspan=2)
         OKButton = ttk.Button(
                 ButtonsFrame, 
@@ -3322,9 +3253,8 @@ class Settings:
 
     def kill_window(__self__, e=""):
         try: 
-            del root.SettingsWin 
-            __self__.Settings.grab_release()
-            __self__.Settings.destroy()
+            __self__.master.grab_release()
+            __self__.master.destroy()
         except: pass
 
     def save_settings(__self__):
@@ -3335,9 +3265,10 @@ class Settings:
         Constants.COLORMAP = __self__.ColorMapMode.get()
         Constants.MULTICORE = __self__.CoreMode.get()
         Constants.PLOTMODE = __self__.PlotMode.get()
+        if Constants.PLOTMODE == "Logarithmic": Constants.PLOTSCALE = "-semilogy"
+        else: Constants.PLOTSCALE = None
+
         Constants.WELCOME = __self__.WlcmMode.get()
-        if Constants.PLOTMODE == "Logarithmic": root.plot_display = "-semilog"
-        if Constants.PLOTMODE == "Linear": root.plot_display = None
 
         Constants.SETROI_TOLERANCE = [__self__.TolVar1.get(),
                 __self__.TolVar2.get(),__self__.TolVar3.get()]
@@ -3349,10 +3280,10 @@ class Settings:
         Constants.SAVE_FIT_FIGURES = __self__.PlotSaveBoolVar.get()
 
         refresh_plots()
-        try: root.clipper.refresh_plot() 
+        try: __self__.parent.clipper.refresh_plot() 
         except: pass
         __self__.write_to_ini()
-        refresh_all_plots()
+        __self__.parent.refresh_all_plots()
 
 
 class MainGUI:
@@ -3365,7 +3296,7 @@ class MainGUI:
         __self__.master.resizable(False,False)
         __self__.master.attributes("-alpha",0.0)
 
-    def boot(__self__):
+    def boot(__self__, database):
         if Constants.LOW_RES == "extreme": 
             quit = messagebox.showinfo("WARNING",
         "Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
@@ -3397,8 +3328,6 @@ class MainGUI:
         inipath = os.path.join(sp.__BIN__,"settings.tag")
         set_settings(inipath)
         __self__.RAM_limit_value = sys_mem["available"]
-        if Constants.PLOTMODE == "Logarithmic": __self__.plot_display = "-semilog"
-        if Constants.PLOTMODE == "Linear": __self__.plot_display = None
         
         __self__.build_widgets()
         __self__.plot_canvas.mpl_connect("button_press_event",__self__.pop)
@@ -3409,8 +3338,7 @@ class MainGUI:
         # reading thousands of files that were read before at some time     #
         #####################################################################
 
-        __self__.SampleLoader = Samples(splash=splash)
-        __self__.master.after(100,__self__.SampleLoader.list_all())
+        __self__.SampleLoader = database
 
         #####################################################################
 
@@ -3438,13 +3366,24 @@ class MainGUI:
                 label="Open output folder",
                 command=__self__.open_output_folder_from_cube)
 
-        time.sleep(0.1)
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+        __self__.master.after(400,__self__.master.attributes,"-alpha",1.0)
         __self__.master.deiconify()
-
         __self__.toggle_(toggle='off')
-        splash.kill()
         __self__.pop_welcome()
+
+    def prompt_folder(__self__):
+        """ Opens dialogue to change the samples folder """
+
+        folder = filedialog.askdirectory(title="Select the samples folder")
+        if folder != "":
+            ini_file = open(os.path.join(sp.__BIN__,"folder.ini"),"w")
+            ini_file.write(os.path.abspath(folder))
+            ini_file.close()
+            Constants.SAMPLES_FOLDER = os.path.abspath(folder)
+            __self__.refresh_samples()
+        else:
+            pass
+        return 0
                
     def root_quit(__self__):
         r = messagebox.askquestion("Attention","Are you sure you want to exit?")
@@ -3457,6 +3396,22 @@ class MainGUI:
             __self__.master.destroy()
             sys.exit(0)
         else: return
+
+    def refresh_all_plots(__self__):
+        try:
+            __self__.draw_map()
+        except: pass
+        try:
+            for ImgAnal in __self__.ImageAnalyzers:
+                try:
+                    ImgAnal.left_image.set_cmap(Constants.COLORMAP)
+                    ImgAnal.right_image.set_cmap(Constants.COLORMAP)
+                    ImgAnal.canvas1.draw()
+                    ImgAnal.canvas2.draw()
+                except: pass
+        except:
+            pass
+        return
     
     def toggle_(__self__,toggle='on'):
         if toggle == 'on':
@@ -4075,7 +4030,7 @@ class MainGUI:
     def pop_welcome(__self__):
         """Displays a pop-up window with information on the software"""
         if Constants.WELCOME == True:
-            __self__.welcome_window = Welcome(__self__.master)
+            __self__.welcome_window = Welcome(__self__)
             __self__.welcome_window.master.grab_set()
             place_center(__self__.master, __self__.welcome_window.master)
         else: pass
@@ -4262,7 +4217,7 @@ class MainGUI:
                     vmax=1)
     
     def converter(__self__):
-        __self__.converterGUI = Convert_File_Name(__self__.master) 
+        __self__.converterGUI = Convert_File_Name(__self__) 
 
     def h5loader(__self__):
         def readh5(name):
@@ -4380,7 +4335,7 @@ class MainGUI:
             __self__.config_xy = sp.getdimension()
             __self__.ManualParam = []
         except:
-            dimension = DimensionDiag(Constants.DIRECTORY)
+            dimension = DimensionDiag(__self__)
             __self__.master.wait_window(dimension.win) 
             if dimension.exit_code == "cancel":
                 __self__.wipe()
@@ -4393,38 +4348,34 @@ class MainGUI:
         __self__.ConfigDiag.build_widgets()
         
     def plot_ROI(__self__):
-        master = __self__.master
-        ROI_plot = PlotWin(master)
+        ROI_plot = PlotWin(__self__)
         ROI_plot.draw_ROI()
 
     def plot_calibration_curve(__self__):
-        master = __self__.master
-        calibration_plot = PlotWin(master)
+        calibration_plot = PlotWin(__self__)
         calibration_plot.draw_calibration()
     
     def call_summation(__self__):
-        master = __self__.master
-        __self__.summation = PlotWin(master)
+        __self__.summation = PlotWin(__self__)
         __self__.summation.draw_spec(
                 mode=['summation'],
-                display_mode=root.plot_display,
+                display_mode=Constants.PLOTSCALE,
                 lines=False)
         spawn_center(__self__.summation.master)
     
     def call_mps(__self__):
-        master = __self__.master
-        __self__.MPS = PlotWin(master)
+        __self__.MPS = PlotWin(__self__)
         __self__.MPS.draw_spec(
                 mode=['mps'],
-                display_mode=root.plot_display,
+                display_mode=Constants.PLOTSCALE,
                 lines=False)
         spawn_center(__self__.MPS.master)
     
     def call_combined(__self__):
-        __self__.combined = PlotWin(__self__.master)
+        __self__.combined = PlotWin(__self__)
         __self__.combined.draw_spec(
                 mode=['summation','mps'],
-                display_mode=root.plot_display,
+                display_mode=Constants.PLOTSCALE,
                 lines=False)
         spawn_center(__self__.combined.master)
     
@@ -4447,7 +4398,7 @@ class MainGUI:
             __self__.SettingsWin = Settings(__self__)
 
     def open_mosaic(__self__):
-        CanvasSizeDialog()
+        CanvasSizeDialog(__self__)
     
     def prompt_mosaic_load_file(__self__):
         f = filedialog.askopenfilename(title="Open mosaic",
@@ -4459,7 +4410,7 @@ class MainGUI:
             Mosaic_API(size, root, loadfile=f)
 
     def open_analyzer(__self__):
-        API = ImageAnalyzer(__self__.master,Constants.MY_DATACUBE)
+        API = ImageAnalyzer(__self__,Constants.MY_DATACUBE)
         __self__.ImageAnalyzers.append(API) 
 
     def reconfigure(__self__):
@@ -4564,7 +4515,7 @@ class MainGUI:
                 command=__self__.reset_sample)
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Change samples folder . . .", 
-                command=prompt_folder)
+                command=__self__.prompt_folder)
         __self__.Toolbox.add_command(label="Load file selection . . .",
                 command=__self__.batch)
         __self__.Toolbox.add_command(label="Load h5 file . . .",
@@ -4692,7 +4643,7 @@ class MainGUI:
 
 
     def magnify(__self__):
-        __self__.magnified = PlotWin(__self__.master)
+        __self__.magnified = PlotWin(__self__)
         __self__.magnified.draw_map()
         spawn_center(__self__.magnified.master)
             
@@ -4916,7 +4867,7 @@ class MainGUI:
         try: 
             __self__.config_xy = sp.getdimension()
         except:
-            dimension = DimensionDiag(Constants.DIRECTORY)
+            dimension = DimensionDiag(__self__)
             __self__.master.wait_window(dimension.win) 
             if dimension.exit_code == "cancel":
                 __self__.wipe()
@@ -6334,10 +6285,10 @@ if __name__ == "__main__":
         from Tkinter import filedialog
         import tkFont
 
-    root = MainGUI()
-    splash = Splash()
+    splash = SplashScreen()
 
     # general utilities
+    splash.update("Importing utilities...")
     import numpy as np
     import h5py
     import cv2
@@ -6351,6 +6302,7 @@ if __name__ == "__main__":
     freeze_support()
     
     # matplotlib imports
+    splash.update("Importing plot tools...")
     import matplotlib
     import matplotlib.pyplot as plt
     matplotlib.use("TkAgg")
@@ -6370,12 +6322,15 @@ if __name__ == "__main__":
         ('Save', 'Save the figure', 'filesave', 'save_figure')
       )
    
+    splash.update("Verifying screen resolution...")
     check_screen_resolution(optimum_resolution)
     open_log()
     logger = logging.getLogger("logfile")
 
+    splash.update("Reading configuration...")
     from ReadConfig import checkout_config, set_settings 
 
+    splash.update("Booting Engine...")
     import Engine
     import Engine.SpecRead as sp
     from Engine.ImgMath import LEVELS, correlate
@@ -6384,20 +6339,21 @@ if __name__ == "__main__":
     from Engine.SpecMath import datacube as Cube
     from Engine.CBooster import *
 
+    splash.update("Creating elements...")
     from Elements import *
 
+    splash.update("Preparing GUI...")
     from GUI import Theme
     from GUI.Mosaic import Mosaic_API
     from GUI.AdvCalibration import AdvCalib
     from GUI.ProgressBar import Busy, BusyManager, create_tooltip
 
+    splash.update("Revving Engine...")
     from Engine.Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Engine.MappingParallel import Cube_reader, sort_results, digest_results
     from Engine.BatchFitter import MultiFit, SingleFit, build_images
 
     logger.info("#"*3+" Configuring environment "+"#"*3)
     start_up()
-    root.boot()
-    root_busy = BusyManager(root.master)
-    root.master.mainloop()
+    mainloop()
 
