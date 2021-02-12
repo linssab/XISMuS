@@ -19,19 +19,23 @@ except:
 def apply_theme(TkWin):
     default = Constants.DEFAULTBTN_COLOR
     dark = "#A0A1A1"
+    system = TkWin.master.cget("background")
+
     style = ttk.Style()
     style.theme_use("clam")
-    style.configure("TCheckbutton", focuscolor=TkWin.master.cget("background"))
+    style.configure("TCheckbutton", focuscolor=system)
     style.configure("TCheckbutton", background=default)
     style.map("TCheckbutton", background=[("disabled",default),("active",default)])
     style.configure('TButton', focuscolor="#D3D3D3")
-    style.configure('TButton', background=TkWin.master.cget("background"))
-    style.configure('main.TButton', background=TkWin.master.cget("background"), 
+    style.configure('TButton', background=system)
+    style.configure('main.TButton', background=system, 
             anchor=W, relief=RAISED, bd=3)
     style.configure("green.Horizontal.TProgressbar", foreground="red", background="red")
-    style.configure("TFrame", background=TkWin.master.cget("background"))
-    style.configure("TLabelframe", background=TkWin.master.cget("background"))
-    style.configure("TLabel", background=TkWin.master.cget("background"))
+    style.configure("TFrame", background=system)
+    style.configure("TLabelframe", background=system, foreground="black")
+    style.configure("TLabelframe.Label", background=system, foreground="black", 
+            font=("Tahoma",10,"bold"))
+    style.configure("TLabel", background=system)
     style.configure("dark.TFrame", background=dark)
     style.configure("dark.TLabel", background=dark)
     style.configure("dark.TLabelframe", background=dark)

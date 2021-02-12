@@ -1562,32 +1562,37 @@ class ImageAnalyzer:
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
         __self__.sum_spectrum = __self__.DATACUBE.sum
         __self__.master = Toplevel(master=parent.master)
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
         __self__.master.title("Image Analyzer")
         __self__.alt = False
+
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Alt_L>",__self__.AltOn)
         __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
         __self__.master.bind("<Return>",__self__.maximize)
+
         __self__.sampler = Frame(__self__.master)
-        __self__.sampler.pack(side=TOP,anchor=CENTER)
         __self__.SampleFrame = Frame(__self__.master)
-        __self__.SampleFrame.pack(side=TOP,expand=True,fill=BOTH)
+        
         __self__.LeftCanvas = Canvas(__self__.SampleFrame)
-        __self__.LeftCanvas.pack(side=LEFT,expand=True,fill=BOTH)
         __self__.RightCanvas = Canvas(__self__.SampleFrame)
+        __self__.sliders = ttk.LabelFrame(__self__.master,text="Control Panel")
+        __self__.buttons = ttk.Frame(__self__.sliders)
+        __self__.buttons2 = ttk.Frame(__self__.sliders)
+
+        __self__.sampler.pack(side=TOP,anchor=CENTER)
+        __self__.SampleFrame.pack(side=TOP,expand=True,fill=BOTH)
+        __self__.LeftCanvas.pack(side=LEFT,expand=True,fill=BOTH)
         __self__.RightCanvas.pack(side=RIGHT,expand=True,fill=BOTH)
-        __self__.sliders = LabelFrame(__self__.master,text="Control Panel")
-        __self__.sliders.pack(side=TOP,fill=X,anchor=CENTER,padx=(5,5),pady=(0,5))
-        __self__.buttons = Frame(__self__.sliders)
+        __self__.sliders.pack(side=TOP,fill=X,anchor=CENTER,padx=(5,5),pady=(8,5))
+        __self__.buttons.grid(row=0,column=0,rowspan=4,padx=(60,30))
+        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30))
         __self__.buttons.grid_propagate(1)
-        __self__.buttons.grid(row=0,column=0,rowspan=4,columnspan=2,padx=(60,30),sticky=W+E)
-        __self__.buttons2 = Frame(__self__.sliders)
         __self__.buttons2.grid_propagate(1)
-        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30),sticky=W)
-        __self__.master.grid_columnconfigure(0,weight=1)
-        __self__.master.grid_columnconfigure(9,weight=1)
+        for i in range(10):
+            __self__.master.grid_columnconfigure(i,weight=1)
+
         __self__.build_widgets()
 
     def get_version(__self__):
@@ -1636,36 +1641,29 @@ class ImageAnalyzer:
                 __self__.sampler, 
                 textvariable=__self__.Map1Counts,
                 width=30)
-        __self__.Map1Label.grid(row=0, column=0, columnspan=3, sticky=W)
         __self__.Map1Combo = ttk.Combobox(
                 __self__.sampler, 
                 textvariable=__self__.Map1Var,
                 values=__self__.packed_elements,
                 width=5,
                 state="readonly")
-        __self__.Map1Combo.grid(row=0,column=3, sticky=W,padx=(16,16),pady=(8,4))
-        __self__.Map1Combo.bind("<<ComboboxSelected>>", __self__.update_sample1)
         
         # map 2
         __self__.Map2Label = Label(
                 __self__.sampler, 
                 textvariable=__self__.Map2Counts,
                 width=30)
-        __self__.Map2Label.grid(row=0, column=5, columnspan=3, sticky=E)
         __self__.Map2Combo = ttk.Combobox(
                 __self__.sampler, 
                 textvariable=__self__.Map2Var,
                 values=__self__.packed_elements,
                 width=5,
                 state="readonly")
-        __self__.Map2Combo.grid(row=0,column=4, sticky=E,padx=(16,16),pady=(8,4))
-        __self__.Map2Combo.bind("<<ComboboxSelected>>", __self__.update_sample2)
 
         # matplotlib canvases
         __self__.figure1 = Figure(figsize=(5,4), dpi=75)
         __self__.plot1 = __self__.figure1.add_subplot(111)
         __self__.plot1.axis('On')
-        __self__.plot1.grid(b=None)
         __self__.canvas1 = FigureCanvasTkAgg(__self__.figure1,__self__.LeftCanvas)
         __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
         __self__.canvas1.mpl_connect("button_press_event",
@@ -1674,7 +1672,7 @@ class ImageAnalyzer:
         __self__.figure2 = Figure(figsize=(5,4), dpi=75)
         __self__.plot2 = __self__.figure2.add_subplot(111)
         __self__.plot2.axis('On')
-        __self__.plot2.grid(b=None)
+        
         __self__.canvas2 = FigureCanvasTkAgg(__self__.figure2,__self__.RightCanvas)
         __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
         __self__.canvas2.mpl_connect("button_press_event",
@@ -1683,19 +1681,18 @@ class ImageAnalyzer:
         # image controls Threshold, LowPass and Smooth
         __self__.T1check = BooleanVar()
         __self__.T1check.set(False)
+
         __self__.T1 =ttk.Checkbutton(
                 __self__.sliders, 
                 takefocus=False,
                 variable=__self__.T1check,
                 command=__self__.switchLP1T1).grid(row=0,column=2)
-
         __self__.LP1check = BooleanVar()
         __self__.LP1check.set(False)
         __self__.LP1 =ttk.Checkbutton(__self__.sliders, 
                 takefocus=False,
                 variable=__self__.LP1check,
                 command=__self__.switchT1LP1).grid(row=1,column=2)
-
         __self__.S1check = BooleanVar()
         __self__.S1check.set(False)
         __self__.S1 =ttk.Checkbutton(
@@ -1703,20 +1700,14 @@ class ImageAnalyzer:
                 takefocus=False,
                 variable=__self__.S1check,
                 command=lambda:__self__.draw_image1(0)).grid(row=2,column=2)
-       
-        __self__.T1Label = Label(__self__.sliders, text="Threshold ")
-        __self__.T1Label.grid(row=0,column=3)
-        __self__.T2Label = Label(__self__.sliders, text="Threshold ")
-        __self__.T2Label.grid(row=0,column=7)
-        __self__.LP1Label = Label(__self__.sliders, text="Low Pass ")
-        __self__.LP1Label.grid(row=1,column=3)
-        __self__.LP2Label = Label(__self__.sliders, text="Low Pass ")
-        __self__.LP2Label.grid(row=1,column=7)
-        __self__.S1Label = Label(__self__.sliders, text="Smooth ")
-        __self__.S1Label.grid(row=2,column=3)
-        __self__.S2Label = Label(__self__.sliders, text="Smooth ")
-        __self__.S2Label.grid(row=2,column=7)
 
+        __self__.T1Label = Label(__self__.sliders, text="Threshold ")
+        __self__.T2Label = Label(__self__.sliders, text="Threshold ")
+        __self__.LP1Label = Label(__self__.sliders, text="Low Pass ")
+        __self__.LP2Label = Label(__self__.sliders, text="Low Pass ")
+        __self__.S1Label = Label(__self__.sliders, text="Smooth ")
+        __self__.S2Label = Label(__self__.sliders, text="Smooth ")
+        
         # sliders for image 1
         __self__.T1Slider = ttk.Scale(
                 __self__.sliders, 
@@ -1737,36 +1728,33 @@ class ImageAnalyzer:
                 to=2,
                 command=__self__.draw_image1)
 
-        __self__.T1Slider.grid(row=0,column=4)
-        __self__.LP1Slider.grid(row=1,column=4)
-        __self__.S1Slider.grid(row=2,column=4)
-
         # image controls Threshold, LowPass and Smooth
         __self__.T2check = BooleanVar()
         __self__.T2check.set(False)
+
         __self__.T2 =ttk.Checkbutton(
                 __self__.sliders, 
                 takefocus=False,
                 variable=__self__.T2check,
                 command=__self__.switchLP2T2)
+
         __self__.LP2check = BooleanVar()
         __self__.LP2check.set(0)
+
         __self__.LP2 =ttk.Checkbutton(
                 __self__.sliders, 
                 takefocus=False,
                 variable=__self__.LP2check,
                 command=__self__.switchT2LP2)
+
         __self__.S2check = BooleanVar()
         __self__.S2check.set(0)
+
         __self__.S2 =ttk.Checkbutton(
                 __self__.sliders, 
                 takefocus=False,
                 variable=__self__.S2check,
                 command=lambda:__self__.draw_image2(0))
-
-        __self__.T2.grid(row=0,column=6,padx=(32,0))
-        __self__.LP2.grid(row=1,column=6,padx=(32,0))
-        __self__.S2.grid(row=2,column=6,padx=(32,0))
                
         # sliders for image 2
         __self__.T2Slider = ttk.Scale(
@@ -1787,18 +1775,11 @@ class ImageAnalyzer:
                 from_=0, 
                 to=2,
                 command=__self__.draw_image2)
-
-        __self__.LP2Slider.grid(row=1,column=8)
-        __self__.T2Slider.grid(row=0,column=8)
-        __self__.S2Slider.grid(row=2,column=8)
     
         # buttons
         __self__.roibox1 = Label(__self__.buttons,text="Roi 1: None") 
-        __self__.roibox1.grid(row=0,column=0,columnspan=2)
         __self__.roibox2 = Label(__self__.buttons,text="Roi 2: None") 
-        __self__.roibox2.grid(row=1,column=0,columnspan=2)
         __self__.ratebox = Label(__self__.buttons,text="Ratio: None") 
-        __self__.ratebox.grid(row=2,column=0,columnspan=2)
         
         __self__.annotate = Button(
                 __self__.buttons,
@@ -1823,39 +1804,65 @@ class ImageAnalyzer:
                 text="Add Images",
                 command=__self__.add_images,
                 width=round(__self__.annotate.winfo_width()/2))
-        __self__.subtract_btn.grid(row=0,column=9,sticky=W+E)
         __self__.add_btn = ttk.Button(
                 __self__.buttons2,
                 text="Subtract Images",
                 command=__self__.subtract_images,
                 width=round(__self__.annotate.winfo_width()/2))
-
-        __self__.add_btn.grid(row=1,column=9,sticky=W+E)
-        __self__.correlate.grid(row=3,column=0,sticky=W+E)
-        __self__.export.grid(row=3,column=1,sticky=W+E)
-        __self__.annotate.grid(row=4,column=0,columnspan=2,sticky=W+E,pady=(6,16))
-
         __self__.scale =ttk.Checkbutton(
                 __self__.buttons2, 
                 takefocus=False,
                 variable=__self__.apply_scale_mask,
                 command=__self__.refresh)
         __self__.scaleLabel = Label(__self__.buttons2, text="Apply scaling mask")
-        __self__.scale.grid(row=3,column=9, sticky=W)
-        __self__.scaleLabel.grid(row=3,column=9, sticky=E, padx=(25,0))
         __self__.get_version()
         __self__.CubeVersionLabel = Label(__self__.master,
                 text=__self__.cube_version,
                 bd=1,
                 relief=SUNKEN,
                 anchor=W)
-        __self__.CubeVersionLabel.pack(side=BOTTOM, expand=False, fill=X, anchor=W)
         
         # Disable sliders
         __self__.T1Slider.config(state=DISABLED)
         __self__.T2Slider.config(state=DISABLED)
         __self__.LP1Slider.config(state=DISABLED)
         __self__.LP2Slider.config(state=DISABLED)
+
+        __self__.Map1Label.grid(row=0, column=0, columnspan=3, sticky=W)
+        __self__.Map1Combo.grid(row=0,column=3, sticky=W,padx=(16,16),pady=(8,4))
+        __self__.Map2Label.grid(row=0, column=5, columnspan=3, sticky=E)
+        __self__.Map2Combo.grid(row=0,column=4, sticky=E,padx=(16,16),pady=(8,4))
+        __self__.plot1.grid(b=None)
+        __self__.plot2.grid(b=None)
+        __self__.T1Label.grid(row=0,column=3)
+        __self__.T2Label.grid(row=0,column=7)
+        __self__.LP1Label.grid(row=1,column=3)
+        __self__.LP2Label.grid(row=1,column=7)
+        __self__.S1Label.grid(row=2,column=3)
+        __self__.S2Label.grid(row=2,column=7)
+        __self__.T1Slider.grid(row=0,column=4)
+        __self__.LP1Slider.grid(row=1,column=4)
+        __self__.S1Slider.grid(row=2,column=4)
+        __self__.T2.grid(row=0,column=6,padx=(32,0))
+        __self__.LP2.grid(row=1,column=6,padx=(32,0))
+        __self__.S2.grid(row=2,column=6,padx=(32,0))
+        __self__.LP2Slider.grid(row=1,column=8)
+        __self__.T2Slider.grid(row=0,column=8)
+        __self__.S2Slider.grid(row=2,column=8)
+        __self__.roibox1.grid(row=0,column=0,columnspan=2)
+        __self__.roibox2.grid(row=1,column=0,columnspan=2)
+        __self__.ratebox.grid(row=2,column=0,columnspan=2)
+        __self__.add_btn.grid(row=1,column=9,sticky=W+E)
+        __self__.correlate.grid(row=3,column=0,sticky=W+E)
+        __self__.export.grid(row=3,column=1,sticky=W+E)
+        __self__.annotate.grid(row=4,column=0,columnspan=2,sticky=W+E,pady=(6,16))
+        __self__.subtract_btn.grid(row=0,column=9,sticky=W+E)
+        __self__.scale.grid(row=3,column=9, sticky=W)
+        __self__.scaleLabel.grid(row=3,column=9, sticky=E, padx=(25,0))
+        __self__.CubeVersionLabel.pack(side=BOTTOM, expand=False, fill=X, anchor=W)
+
+        __self__.Map1Combo.bind("<<ComboboxSelected>>", __self__.update_sample1)
+        __self__.Map2Combo.bind("<<ComboboxSelected>>", __self__.update_sample2)
         
         icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
         __self__.master.iconbitmap(icon)  
@@ -3375,6 +3382,9 @@ class MainGUI:
 
         __self__.plot_canvas_popup = Menu(__self__.master, tearoff=0)
         __self__.plot_canvas_popup.add_command(
+                label="Export as *.h5 . . .",
+                command=__self__.h5writer)
+        __self__.plot_canvas_popup.add_command(
                 label="Save density map as . . .",
                 command=__self__.export_density_map)
         __self__.plot_canvas_popup.add_command(
@@ -3383,6 +3393,9 @@ class MainGUI:
         __self__.plot_canvas_popup.add_command(
                 label="Open output folder",
                 command=__self__.open_output_folder_from_cube)
+        __self__.plot_canvas_popup.add_command(
+                label="Clear all maps",
+                command=__self__.wipe_maps)
 
         __self__.master.after(400,__self__.pop_welcome)
         __self__.toggle_(toggle='off')
@@ -3404,7 +3417,7 @@ class MainGUI:
                 command=__self__.magnify)
 
         __self__.DataFrame = ttk.Frame(__self__.master)
-        __self__.DataBox = ttk.LabelFrame(__self__.DataFrame, text="Info", width=320)
+        __self__.DataBox = ttk.LabelFrame(__self__.DataFrame, text="Information:", width=320)
 
         __self__.StatusScroller = ttk.Scrollbar(__self__.DataBox)
         __self__.StatusBox = Listbox(__self__.DataBox, 
@@ -3460,8 +3473,8 @@ class MainGUI:
                 command=__self__.call_mps)
         __self__.derived_spectra.add_command(label="Combined", 
                 command=__self__.call_combined)
-        __self__.Toolbox.add_command(label="Open samples database . . .", 
-                command=__self__.list_samples)
+        __self__.Toolbox.add_command(label="Export datacube as h5 . . .", 
+                command=__self__.h5writer)
         __self__.Toolbox.add_command(label="Reset sample", 
                 command=__self__.reset_sample)
         __self__.Toolbox.add_separator()
@@ -3576,14 +3589,6 @@ class MainGUI:
 
         __self__.SamplesWindow = ttk.LabelFrame(__self__.DataFrame, text="Samples")
 
-        #__self__.SamplesWindow.tagged = False
-        #__self__.SamplesWindow.title("Sample List")
-        #icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
-        #__self__.SamplesWindow.resizable(False,True)
-        #__self__.SamplesWindow.minsize(0,340)
-
-        #__self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="Sample")
-        #__self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="Mca Prefix")
         __self__.SamplesWindow_TableLeft = Listbox(
                 __self__.SamplesWindow,
                 height=__self__.SamplesWindow.winfo_height(),
@@ -3613,14 +3618,16 @@ class MainGUI:
         __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
         __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
 
+        __self__.SamplesWindow_ok.config(state=DISABLED)
+
         #pop-up commands (rigth-click)
         __self__.SamplesWindow.popup = Menu(__self__.SamplesWindow, tearoff=0)
         __self__.SamplesWindow.popup.add_command(
                 label="Load",
                 command=__self__.sample_select)
-        __self__.SamplesWindow.popup.add_command(
-                label="Save density map",
-                command=__self__.export_density_map)
+        #__self__.SamplesWindow.popup.add_command(
+        #        label="Save density map as . . .",
+        #        command=__self__.export_density_map)
         __self__.SamplesWindow.popup.add_command(
                 label="Open files location",
                 command=__self__.open_files_location)
@@ -3630,11 +3637,9 @@ class MainGUI:
         __self__.SamplesWindow.popup.add_command(
                 label="Remove from database",
                 command=__self__.remove_sample)
-        __self__.SamplesWindow.popup.add_command(
-                label="Clear all maps",
-                command=lambda: __self__.sample_select(override=True))
+        
 
-        __self__.ButtonsFrame.grid(row=0, column=0, padx=(32,8+8), pady=(32,16), sticky="")
+        __self__.ButtonsFrame.grid(row=0, column=0, padx=(32,8+8), pady=(32+8,0), sticky="")
         __self__.ButtonLoad.grid(row=0,column=0, sticky=W+E)
         __self__.ButtonReset.grid(row=0,column=1, sticky=W+E)
         __self__.ImgAnalButton.grid(row=1,column=0, sticky=W+E)
@@ -3642,7 +3647,7 @@ class MainGUI:
         __self__.SettingsButton.grid(row=2,column=0, sticky=W+E)
         __self__.QuitButton.grid(row=2,column=1, sticky=W+E)
 
-        __self__.ImageCanvas.grid(row=1, column=0, padx=(16+8,8), pady=16, sticky=N+W+S+E)
+        __self__.ImageCanvas.grid(row=1, column=0, padx=(16+8,8), pady=(32,16), sticky=N+W+S+E)
         __self__.magnifier.grid(row=1, column=0, sticky=S+W, padx=(16+8+3,0), pady=(0,18+1))
 
         __self__.DataFrame.grid(row=0, column=1, rowspan=2, 
@@ -3669,10 +3674,10 @@ class MainGUI:
 
         __self__.SamplesWindow.grid(row=0, column=2, rowspan=2, 
                 sticky=N+W+S+E, padx=(8,16+8), pady=(16,0))
-        __self__.SamplesWindow_TableLeft.grid(row=1, column=0, sticky=N+S, pady=(12,16), 
+        __self__.SamplesWindow_TableLeft.grid(row=1, column=0, sticky=N+S, pady=(12,12), 
                 padx=12)
-        __self__.SamplesWindow_multi.grid(row=2, column=0, sticky=W+E, pady=2)
-        __self__.SamplesWindow_ok.grid(row=3, column=0, sticky=W+E, pady=2)
+        __self__.SamplesWindow_multi.grid(row=2, column=0, sticky=W+E, pady=2,padx=6)
+        __self__.SamplesWindow_ok.grid(row=3, column=0, sticky=W+E, pady=(2,6),padx=6)
         __self__.SamplesWindow_ok.config(state=DISABLED)
 
         __self__.ImageCanvas.propagate(1)
@@ -3972,89 +3977,6 @@ class MainGUI:
                 __self__.find_elements_diag = PeriodicTable(__self__)
                 __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
                         lambda: wipe_list())
-        
-    def call_listsamples(__self__):
-        """ Draws the sample list window.
-        This is not a window class, but still a child of root """
-        return
-
-        __self__.SamplesWindow = Frame(__self__.master)
-
-        #__self__.SamplesWindow.tagged = False
-        #__self__.SamplesWindow.title("Sample List")
-        #icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
-        #__self__.SamplesWindow.resizable(False,True) 
-        #__self__.SamplesWindow.minsize(0,340)
-
-        __self__.SamplesWindow_LabelLeft = Label(__self__.SamplesWindow, text="Sample")
-        __self__.SamplesWindow_LabelRight = Label(__self__.SamplesWindow, text="Mca Prefix")
-        __self__.SamplesWindow_TableLeft = Listbox(
-                __self__.SamplesWindow, 
-                height=__self__.SamplesWindow.winfo_height(),
-                bd=0)
-        __self__.SamplesWindow_TableRight = Listbox(
-                __self__.SamplesWindow, 
-                height=__self__.SamplesWindow.winfo_height(),
-                bd=0)
-        __self__.SamplesWindow_multi = Button(
-                __self__.SamplesWindow, 
-                text = "Export multiple maps", 
-                bd=0, 
-                command=__self__.select_multiple)
-        __self__.SamplesWindow_ok = Button(
-                __self__.SamplesWindow, 
-                text = "Validate", 
-                bd=0, 
-                command=__self__.digestmaps)
-
-        __self__.SamplesWindow_TableLeft.bind("<MouseWheel>", __self__.scroll_y_L)
-        __self__.SamplesWindow_TableRight.bind("<MouseWheel>", __self__.scroll_y_R)
-        __self__.SamplesWindow_TableLeft.bind("<Up>", __self__.scroll_up)
-        __self__.SamplesWindow_TableLeft.bind("<Down>", __self__.scroll_down)
-        __self__.SamplesWindow_TableLeft.bind("<Double-Button-1>", __self__.sample_select)
-        __self__.SamplesWindow_TableLeft.bind("<Return>", __self__.sample_select)
-        __self__.SamplesWindow_TableLeft.bind("<Button-3>", __self__.sample_popup)
-
-        __self__.SamplesWindow.grid()
-        __self__.SamplesWindow_LabelLeft.grid(row=0,column=0)
-        __self__.SamplesWindow_LabelRight.grid(row=0,column=1)
-        __self__.SamplesWindow_TableLeft.grid(pady=5, row=1,column=0,sticky=N+S)
-        __self__.SamplesWindow_TableRight.grid(pady=5, row=1,column=1,sticky=N+S)
-        __self__.SamplesWindow_multi.grid(row=2,column=0,sticky=W+E,padx=2,pady=2)
-        __self__.SamplesWindow_ok.grid(row=2,column=1,sticky=W+E,padx=2,pady=2)
-        __self__.SamplesWindow_ok.config(state=DISABLED)
-
-        Grid.rowconfigure(__self__.SamplesWindow, 1, weight=1)
-        
-        #pop-up commands (rigth-click)
-        __self__.SamplesWindow.popup = Menu(__self__.SamplesWindow, tearoff=0)
-        __self__.SamplesWindow.popup.add_command(
-                label="Load",
-                command=__self__.sample_select)
-        __self__.SamplesWindow.popup.add_command(
-                label="Save density map",
-                command=__self__.export_density_map)
-        __self__.SamplesWindow.popup.add_command(
-                label="Open files location",
-                command=__self__.open_files_location)
-        __self__.SamplesWindow.popup.add_command(
-                label="Open output folder",
-                command=__self__.open_output_folder)
-        __self__.SamplesWindow.popup.add_command(
-                label="Remove from database",
-                command=__self__.remove_sample)
-        __self__.SamplesWindow.popup.add_command(
-                label="Clear all maps",
-                command=lambda: __self__.sample_select(override=True))
-
-        for key in __self__.samples:
-            __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
-            __self__.SamplesWindow_TableRight.insert(END,"{}".format(__self__.samples[key]))
-
-        #place_topright(__self__.master,__self__.SamplesWindow)
-        #__self__.SamplesWindow.iconbitmap(icon)
-        __self__.SamplesWindow_TableRight.config(state=DISABLED)
-       # __self__.SamplesWindow_TableLeft.focus_set()
 
     def remove_sample(__self__,e=""):
         try:
@@ -4240,68 +4162,44 @@ class MainGUI:
         if __self__.SamplesWindow_TableRight.yview() != __self__.SamplesWindow_TableLeft.yview():
             __self__.SamplesWindow_TableRight.yview_scroll(1,"units") 
 
-    def sample_select(__self__,event="",override=False):
+    def sample_select(__self__,event=""):
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
                 
-        if override  == False:
-            # name of selected sample
-            try: 
-                value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-            except:
-                value = event
-            if value == "": return
-            
-            #############################################################
-            # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
-            # GET RID OF IT                                             #
-            #############################################################
-            try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
-                if any("temp" in x for x in Constants.MY_DATACUBE.datatypes) and \
-                        value != Constants.MY_DATACUBE.name:
-                    idx = __self__.SamplesWindow_TableLeft.get(0, END).index(
-                            Constants.MY_DATACUBE.name)
-                    del root.samples[Constants.MY_DATACUBE.name]
-                    del root.samples_path[Constants.MY_DATACUBE.name]
-                    del root.mcacount[Constants.MY_DATACUBE.name]
-                    del root.mca_indexing[Constants.MY_DATACUBE.name]
-                    del root.mca_extension[Constants.MY_DATACUBE.name]
-                    root.temporaryh5 = "None"
-                    gc.collect()
-                    __self__.SamplesWindow_TableLeft.delete(idx)
-                    __self__.SamplesWindow_TableRight.config(state=NORMAL)
-                    __self__.SamplesWindow_TableRight.delete(idx)
-                    __self__.SamplesWindow_TableRight.config(state=DISABLED)
-                    __self__.SamplesWindow_TableRight.update_idletasks()
-                    temp_path = os.path.join(
-                        sp.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
-                    if os.path.exists(temp_path):
-                        shutil.rmtree(temp_path)
-            except: pass
-            #############################################################
-
-        else: 
+        # name of selected sample
+        try: 
             value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-            
-
-            """ If cube clicked is not the one in memory, load it and configure variables """
-            try: in_memory = Constants.MY_DATACUBE.name
-            except AttributeError: in_memory = None
-            if in_memory != value:
-                local_cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
-                if os.path.exists(local_cube_path):
-                    sp.cube_path = os.path.join(
-                            sp.workpath,"output",value,value+".cube")
-                    load_cube()
-                    sp.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
-                    __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
-            """ ------------------------------------------------------------------------- """
-            
-            p = messagebox.askquestion("Attention!",
-                    "This will remove all elemental maps packed in datacube {}. Are you sure you want to proceed?".format(Constants.MY_DATACUBE.name))
-            if p == "yes":
-                Constants.MY_DATACUBE.wipe_maps()
-            else: return 0
+        except:
+            value = event
+        if value == "": return
+        
+        #############################################################
+        # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
+        # GET RID OF IT                                             #
+        #############################################################
+        try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
+            if any("temp" in x for x in Constants.MY_DATACUBE.datatypes) and \
+                    value != Constants.MY_DATACUBE.name:
+                idx = __self__.SamplesWindow_TableLeft.get(0, END).index(
+                        Constants.MY_DATACUBE.name)
+                del root.samples[Constants.MY_DATACUBE.name]
+                del root.samples_path[Constants.MY_DATACUBE.name]
+                del root.mcacount[Constants.MY_DATACUBE.name]
+                del root.mca_indexing[Constants.MY_DATACUBE.name]
+                del root.mca_extension[Constants.MY_DATACUBE.name]
+                root.temporaryh5 = "None"
+                gc.collect()
+                __self__.SamplesWindow_TableLeft.delete(idx)
+                __self__.SamplesWindow_TableRight.config(state=NORMAL)
+                __self__.SamplesWindow_TableRight.delete(idx)
+                __self__.SamplesWindow_TableRight.config(state=DISABLED)
+                __self__.SamplesWindow_TableRight.update_idletasks()
+                temp_path = os.path.join(
+                    sp.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
+                if os.path.exists(temp_path):
+                    shutil.rmtree(temp_path)
+        except: pass
+        #############################################################
 
         __self__.master.deiconify()
         __self__.master.focus_set()
@@ -4365,6 +4263,19 @@ class MainGUI:
             sp.conditional_setup(name=value,path=path)
             __self__.call_configure()
 
+    def wipe_maps(__self__,e=""):
+        if hasattr(Constants.MY_DATACUBE,"name"):
+            pass
+        else: 
+            messagebox.showerror("No datacube!","Please load a datacube first.")
+            return
+
+        p = messagebox.askquestion("Attention!",
+                "This will remove all elemental maps packed in datacube {}. Are you sure you want to proceed?".format(Constants.MY_DATACUBE.name))
+        if p == "yes":
+            Constants.MY_DATACUBE.wipe_maps()
+        else: return 0
+
     def pop_welcome(__self__):
         __self__.master.attributes("-alpha",1.0)
         __self__.master.deiconify()
@@ -4390,14 +4301,16 @@ class MainGUI:
         name = __self__.SamplesWindow_TableRight.get(idx)
         if "temp" in name:
             __self__.SamplesWindow.popup.entryconfig("Load", state=DISABLED)
-            __self__.SamplesWindow.popup.entryconfig("Clear all maps", state=DISABLED)
+            __self__.plot_canvas_popup.entryconfig("Clear all maps", state=DISABLED)
+            __self__.plot_canvas_popup.entryconfig("Export as *.h5 . . .", state=DISABLED)
             __self__.SamplesWindow.popup.entryconfig("Remove from database", state=DISABLED)
-            __self__.SamplesWindow.popup.entryconfig("Save density map", state=DISABLED)
+            #__self__.SamplesWindow.popup.entryconfig("Save density map as . . .", state=DISABLED)
         else:
             __self__.SamplesWindow.popup.entryconfig("Load", state=NORMAL)
-            __self__.SamplesWindow.popup.entryconfig("Clear all maps", state=NORMAL)
+            __self__.plot_canvas_popup.entryconfig("Clear all maps", state=NORMAL)
+            __self__.plot_canvas_popup.entryconfig("Export as *.h5 . . .", state=NORMAL)
             __self__.SamplesWindow.popup.entryconfig("Remove from database", state=NORMAL)
-            __self__.SamplesWindow.popup.entryconfig("Save density map", state=NORMAL)
+            #__self__.SamplesWindow.popup.entryconfig("Save density map as . . .", state=NORMAL)
 
         try: __self__.SamplesWindow.popup.tk_popup(event.x_root, event.y_root, entry="")
         finally: __self__.SamplesWindow.popup.grab_release()
@@ -4425,7 +4338,11 @@ class MainGUI:
         if os.path.exists(local_cube_path):
             path = Constants.MY_DATACUBE.path
             path = os.path.realpath(path)
-            os.startfile(path)
+            try: os.startfile(path)
+            except: 
+                messagebox.showinfo("Directory not found.",
+                        "Sample files not found! Path {} couldn't be located.\nRemember that merged Datacubes have no files path. Check the output folder instead.".format(path))
+                return
     
     def open_output_folder_from_cube(__self__, event=""):
         try:
@@ -4561,6 +4478,25 @@ class MainGUI:
     
     def converter(__self__):
         __self__.converterGUI = Convert_File_Name(__self__) 
+
+    def h5writer(__self__):
+        try:
+            value = Constants.MY_DATACUBE.name
+        except:
+            messagebox.showerror("No datacube!","Please load a datacube first.")
+            return
+
+        h5f = filedialog.asksaveasfile(mode='w',
+                        defaultextension=".h5",
+                        filetypes=[("Hierarchical Data Format", "*.h5")],
+                        title="Save as...")
+        if h5f is None: 
+            return
+        else:
+            h5 = h5py.File(h5f.name, "w")
+            data = Constants.MY_DATACUBE.matrix
+            h5.create_dataset("dataset_1", data=data)
+            h5.close()
 
     def h5loader(__self__):
         def readh5(name):
