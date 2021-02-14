@@ -738,7 +738,7 @@ class Welcome:
         __self__.master.iconbitmap(icon)  
         __self__.master.bind("<Return>",__self__.checkout)
         __self__.master.bind("<Escape>",__self__.checkout)
-        __self__.font = tkFont.Font(family="Arial", size=8)
+        __self__.font = tkFont.Font(family="Tahoma", size=8)
 
         __self__.master.resizable(False,False)
         __self__.master.title("Welcome!")
@@ -746,8 +746,14 @@ class Welcome:
         __self__.page = StringVar()
         __self__.tag = BooleanVar()
         __self__.infotext = StringVar()
-        __self__.messages = ["Welcome to XISMuS {}\n\nClick the left or right arrows to navigate through this menu.".format(Constants.VERSION),\
-                "Getting started:\nClick \"Load Sample\" to open the \"Sample List\" window.\nBy default, XISMuS looks for mca files under C:\\Users\\user\\Documents\\XISMuS\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"\nSelect the folder that contains the folder with your data.\nXISMuS also manages your samples, so if any sample is already compiled, it will appear in the list.","Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples List\" window in the right corner. You will be prompted to configure your sample parameters.\nTo save the \"sample counts map\", right-click the sample name in the \"Samples List\" window and select \"Save density map\"."]
+        __self__.messages = [
+                "Welcome to XISMuS {}\n\
+                \nClick the left or right arrows to navigate through this menu.".format(Constants.VERSION),\
+
+                "Getting started: \nSamples automatically located can be found in the righti-most panel. Double-click the name to load it.\nBy default, XISMuS looks for mca files under C:\\Users\\user\\Documents\\XISMuS\\ folder. To change it, click on \"Toolbox\" and select \"Change samples folder\"",
+
+                "Compiling a sample:\nTo compile your data, double click on the sample name inside the \"Samples\" window in the right corner. You will be prompted to configure your sample parameters.\nRight-click the sample or the white canvas in the left for further options."
+                ]
         change = __self__.read_log() 
         if change:
             for i in range(len(change)):
@@ -775,7 +781,6 @@ class Welcome:
                 height=7,
                 padx=5,
                 bg=Constants.DEFAULTBTN_COLOR, 
-                cursor="arrow",
                 relief=FLAT)
         __self__.info["font"] = __self__.font
 
@@ -792,11 +797,13 @@ class Welcome:
                 __self__.text_frame, 
                 image=__self__.icon_fw, 
                 takefocus=False,
+                cursor="hand2",
                 command=__self__.next_page) 
         __self__.bw = ttk.Button(
                 __self__.text_frame, 
                 image=__self__.icon_bw, 
                 takefocus=False,
+                cursor="hand2",
                 command=__self__.previous_page) 
 
         __self__.fw.grid(row=0, column=2,padx=6)
@@ -829,14 +836,14 @@ class Welcome:
         except:
             return 
         lines = f.readlines()
-        tot = int(len(lines)/6)
+        tot = int(len(lines)/5)
         message,counter,page = [""],0,1
         for i in range(len(lines)):
             line = lines[i]
             counter += 1
-            if counter >= 6:
+            if counter >= 5:
                 counter = 0
-                message[page-1] += "Log {} of {}".format(page,tot+1)
+                message[page-1] += "\nLog {} of {}".format(page,tot+1)
                 message.append("")
                 page += 1
             message[page-1] += line
@@ -1574,24 +1581,49 @@ class ImageAnalyzer:
 
         __self__.sampler = Frame(__self__.master)
         __self__.SampleFrame = Frame(__self__.master)
-        
         __self__.LeftCanvas = Canvas(__self__.SampleFrame)
         __self__.RightCanvas = Canvas(__self__.SampleFrame)
         __self__.sliders = ttk.LabelFrame(__self__.master,text="Control Panel")
         __self__.buttons = ttk.Frame(__self__.sliders)
+        __self__.buttons1 = ttk.Frame(__self__.sliders)
         __self__.buttons2 = ttk.Frame(__self__.sliders)
+        __self__.roibox = ttk.Frame(__self__.buttons, width=80)
+        __self__.ColoursPanel = Frame(__self__.master, relief=SUNKEN, height=36)
 
-        __self__.sampler.pack(side=TOP,anchor=CENTER)
-        __self__.SampleFrame.pack(side=TOP,expand=True,fill=BOTH)
-        __self__.LeftCanvas.pack(side=LEFT,expand=True,fill=BOTH)
-        __self__.RightCanvas.pack(side=RIGHT,expand=True,fill=BOTH)
-        __self__.sliders.pack(side=TOP,fill=X,anchor=CENTER,padx=(5,5),pady=(8,5))
-        __self__.buttons.grid(row=0,column=0,rowspan=4,padx=(60,30))
-        __self__.buttons2.grid(row=0,column=9,rowspan=4,padx=(60,30))
-        __self__.buttons.grid_propagate(1)
-        __self__.buttons2.grid_propagate(1)
-        for i in range(10):
-            __self__.master.grid_columnconfigure(i,weight=1)
+        __self__.sampler.grid(row=0,column=0,columnspan=2,sticky=W+E)
+        __self__.SampleFrame.grid(row=1,column=0,columnspan=2,sticky=W+E+N+S)
+        __self__.LeftCanvas.grid(row=0,column=0,sticky=N+S+E+W)
+        __self__.RightCanvas.grid(row=0,column=1,sticky=N+S+E+W)
+        __self__.ColoursPanel.grid(row=2,column=0,sticky=N+E,pady=(16,3), padx=(3,3))
+        __self__.sliders.grid(row=2,column=0,columnspan=2,sticky=N+W+S+E,padx=(16,16),pady=(6,6))
+        __self__.buttons.grid(row=0,column=0,padx=(15,30),pady=(6,3),sticky=E)
+        __self__.buttons1.grid(row=0,column=1,padx=(5,5),pady=(6,3),sticky=E+W)
+        __self__.buttons2.grid(row=0,column=2,padx=(30,15),pady=(6,3),sticky=W)
+
+        __self__.RightCanvas.grid_propagate(1)
+        __self__.LeftCanvas.grid_propagate(1)
+        __self__.SampleFrame.grid_propagate(1)
+        __self__.master.grid_propagate(1)
+        __self__.sliders.grid_propagate(1)
+        
+        __self__.SampleFrame.grid_columnconfigure(0,weight=1)
+        __self__.SampleFrame.grid_columnconfigure(1,weight=1)
+        __self__.SampleFrame.grid_rowconfigure(0,weight=1)
+
+        Grid.rowconfigure(__self__.SampleFrame, 0, weight=1)
+        Grid.columnconfigure(__self__.SampleFrame, 0, weight=1)
+        Grid.columnconfigure(__self__.SampleFrame, 1, weight=1)
+        Grid.columnconfigure(__self__.sliders, 0, weight=1)
+        #Grid.columnconfigure(__self__.sliders, 1, weight=1)
+        Grid.columnconfigure(__self__.sliders, 2, weight=1)
+        Grid.columnconfigure(__self__.sampler, 0, weight=1)
+        Grid.columnconfigure(__self__.sampler, 1, weight=1)
+        Grid.columnconfigure(__self__.sampler, 2, weight=1)
+        Grid.columnconfigure(__self__.sampler, 3, weight=1)
+
+        __self__.master.grid_columnconfigure(0,weight=1)
+        __self__.master.grid_columnconfigure(1,weight=1)
+        __self__.master.grid_rowconfigure(1,weight=1)
 
         __self__.build_widgets()
 
@@ -1603,16 +1635,14 @@ class ImageAnalyzer:
             __self__.cube_version = "Cube version: "+__self__.DATACUBE.version
             if hasattr(__self__.DATACUBE,"scalable"):
                 __self__.scale.config(state=NORMAL)
-                __self__.scaleLabel.config(state=NORMAL)
             else:
                 __self__.scale.config(state=DISABLED)
-                __self__.scaleLabel.config(state=DISABLED)
         else:
             __self__.cube_version = "Cube version: pre-1.3"
             __self__.scale.config(state=DISABLED)
-            __self__.scaleLabel.config(state=DISABLED)
 
     def build_widgets(__self__):
+
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
         __self__.Map1Counts.set("Select an element")
@@ -1645,7 +1675,7 @@ class ImageAnalyzer:
                 __self__.sampler, 
                 textvariable=__self__.Map1Var,
                 values=__self__.packed_elements,
-                width=5,
+                width=7,
                 state="readonly")
         
         # map 2
@@ -1657,128 +1687,144 @@ class ImageAnalyzer:
                 __self__.sampler, 
                 textvariable=__self__.Map2Var,
                 values=__self__.packed_elements,
-                width=5,
+                width=7,
                 state="readonly")
 
         # matplotlib canvases
         __self__.figure1 = Figure(figsize=(5,4), dpi=75)
         __self__.plot1 = __self__.figure1.add_subplot(111)
-        __self__.plot1.axis('On')
+        __self__.plot1.axis('Off')
         __self__.canvas1 = FigureCanvasTkAgg(__self__.figure1,__self__.LeftCanvas)
-        __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
+        canvas1 = __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
         __self__.canvas1.mpl_connect("button_press_event",
                 lambda event: __self__.pop(event,1))
         
         __self__.figure2 = Figure(figsize=(5,4), dpi=75)
         __self__.plot2 = __self__.figure2.add_subplot(111)
-        __self__.plot2.axis('On')
-        
+        __self__.plot2.axis('Off')
         __self__.canvas2 = FigureCanvasTkAgg(__self__.figure2,__self__.RightCanvas)
-        __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
+        canvas2 = __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
         __self__.canvas2.mpl_connect("button_press_event",
                 lambda event: __self__.pop(event,2))
 
+        #Grid.rowconfigure(canvas1,0,weight=1)
+        #Grid.columnconfigure(canvas1,0,weight=1)
+        #Grid.rowconfigure(canvas2,0,weight=1)
+        #Grid.columnconfigure(canvas2,0,weight=1)
+
         # image controls Threshold, LowPass and Smooth
         __self__.T1check = BooleanVar()
+        __self__.LP1check = BooleanVar()
+        __self__.S1check = BooleanVar()
+        __self__.BVar = BooleanVar()
+        __self__.GVar = BooleanVar()
+        __self__.WVar = BooleanVar()
+        __self__.WVar.set(True)
+        __self__.T2check = BooleanVar()
+        __self__.LP2check = BooleanVar()
+        __self__.S2check = BooleanVar()
+        __self__.T2check.set(False)
+        __self__.LP2check.set(False)
+        __self__.S2check.set(False)
         __self__.T1check.set(False)
+        __self__.LP1check.set(False)
+        __self__.S1check.set(False)
+
+        Label(__self__.ColoursPanel,text="Background colour: ").grid(row=0,column=0)
+        __self__.Black = ttk.Checkbutton(__self__.ColoursPanel, 
+                text="Black",
+                takefocus=False, variable=__self__.BVar,
+                command=lambda: __self__.set_bg("black"))
+        __self__.Grey = ttk.Checkbutton(__self__.ColoursPanel, 
+                text="Grey",
+                takefocus=False, variable=__self__.GVar,
+                command=lambda: __self__.set_bg("#3b3b38"))
+        __self__.White = ttk.Checkbutton(__self__.ColoursPanel, 
+                text="White",
+                takefocus=False, variable=__self__.WVar,
+                command=lambda: __self__.set_bg())
 
         __self__.T1 =ttk.Checkbutton(
-                __self__.sliders, 
+                __self__.buttons1,
                 takefocus=False,
+                text="Threshold (high)",
                 variable=__self__.T1check,
-                command=__self__.switchLP1T1).grid(row=0,column=2)
-        __self__.LP1check = BooleanVar()
-        __self__.LP1check.set(False)
-        __self__.LP1 =ttk.Checkbutton(__self__.sliders, 
+                command=__self__.switchLP1T1)
+        __self__.LP1 =ttk.Checkbutton(__self__.buttons1,
                 takefocus=False,
+                text="Threshold (low)",
                 variable=__self__.LP1check,
-                command=__self__.switchT1LP1).grid(row=1,column=2)
-        __self__.S1check = BooleanVar()
-        __self__.S1check.set(False)
+                command=__self__.switchT1LP1)
         __self__.S1 =ttk.Checkbutton(
-                __self__.sliders, 
+                __self__.buttons1,
                 takefocus=False,
+                text="Smooth",
                 variable=__self__.S1check,
-                command=lambda:__self__.draw_image1(0)).grid(row=2,column=2)
-
-        __self__.T1Label = Label(__self__.sliders, text="Threshold ")
-        __self__.T2Label = Label(__self__.sliders, text="Threshold ")
-        __self__.LP1Label = Label(__self__.sliders, text="Low Pass ")
-        __self__.LP2Label = Label(__self__.sliders, text="Low Pass ")
-        __self__.S1Label = Label(__self__.sliders, text="Smooth ")
-        __self__.S2Label = Label(__self__.sliders, text="Smooth ")
+                command=lambda:__self__.draw_image1(0))
         
         # sliders for image 1
         __self__.T1Slider = ttk.Scale(
-                __self__.sliders, 
+                __self__.buttons1, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image1)
         __self__.LP1Slider = ttk.Scale(
-                __self__.sliders, 
+                __self__.buttons1, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image1)
         __self__.S1Slider = ttk.Scale(
-                __self__.sliders, 
+                __self__.buttons1, 
                 orient='horizontal', 
                 from_=0, 
                 to=2,
                 command=__self__.draw_image1)
 
         # image controls Threshold, LowPass and Smooth
-        __self__.T2check = BooleanVar()
-        __self__.T2check.set(False)
-
         __self__.T2 =ttk.Checkbutton(
-                __self__.sliders, 
+                __self__.buttons1, 
                 takefocus=False,
+                text="Threshold (high)",
                 variable=__self__.T2check,
                 command=__self__.switchLP2T2)
-
-        __self__.LP2check = BooleanVar()
-        __self__.LP2check.set(0)
-
         __self__.LP2 =ttk.Checkbutton(
-                __self__.sliders, 
+                __self__.buttons1, 
                 takefocus=False,
+                text="Threshold (low)",
                 variable=__self__.LP2check,
                 command=__self__.switchT2LP2)
-
-        __self__.S2check = BooleanVar()
-        __self__.S2check.set(0)
-
         __self__.S2 =ttk.Checkbutton(
-                __self__.sliders, 
+                __self__.buttons1, 
                 takefocus=False,
+                text="Smooth",
                 variable=__self__.S2check,
                 command=lambda:__self__.draw_image2(0))
                
         # sliders for image 2
         __self__.T2Slider = ttk.Scale(
-                __self__.sliders, 
+                __self__.buttons1, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image2)
         __self__.LP2Slider = ttk.Scale(
-                __self__.sliders, 
+                __self__.buttons1, 
                 orient='horizontal', 
                 from_=0, 
                 to=LEVELS,
                 command=__self__.draw_image2)
         __self__.S2Slider = ttk.Scale(
-                __self__.sliders, 
+                __self__.buttons1, 
                 orient='horizontal', 
                 from_=0, 
                 to=2,
                 command=__self__.draw_image2)
     
         # buttons
-        __self__.roibox1 = Label(__self__.buttons,text="Roi 1: None") 
-        __self__.roibox2 = Label(__self__.buttons,text="Roi 2: None") 
+        __self__.roibox1 = Label(__self__.buttons1,text="Roi 1: None",relief=GROOVE) 
+        __self__.roibox2 = Label(__self__.buttons1,text="Roi 2: None",relief=GROOVE)
         __self__.ratebox = Label(__self__.buttons,text="Ratio: None") 
         
         __self__.annotate = Button(
@@ -1812,9 +1858,9 @@ class ImageAnalyzer:
         __self__.scale =ttk.Checkbutton(
                 __self__.buttons2, 
                 takefocus=False,
+                text="Apply scaling mask",
                 variable=__self__.apply_scale_mask,
                 command=__self__.refresh)
-        __self__.scaleLabel = Label(__self__.buttons2, text="Apply scaling mask")
         __self__.get_version()
         __self__.CubeVersionLabel = Label(__self__.master,
                 text=__self__.cube_version,
@@ -1828,38 +1874,43 @@ class ImageAnalyzer:
         __self__.LP1Slider.config(state=DISABLED)
         __self__.LP2Slider.config(state=DISABLED)
 
-        __self__.Map1Label.grid(row=0, column=0, columnspan=3, sticky=W)
-        __self__.Map1Combo.grid(row=0,column=3, sticky=W,padx=(16,16),pady=(8,4))
-        __self__.Map2Label.grid(row=0, column=5, columnspan=3, sticky=E)
-        __self__.Map2Combo.grid(row=0,column=4, sticky=E,padx=(16,16),pady=(8,4))
+        __self__.Map1Label.grid(row=0, column=0, sticky=E)
+        __self__.Map1Combo.grid(row=0,column=1, sticky=W,padx=(16,16),pady=(8,4))
+        __self__.Map2Label.grid(row=0, column=2, sticky=E)
+        __self__.Map2Combo.grid(row=0,column=3, sticky=W,padx=(16,16),pady=(8,4))
         __self__.plot1.grid(b=None)
         __self__.plot2.grid(b=None)
-        __self__.T1Label.grid(row=0,column=3)
-        __self__.T2Label.grid(row=0,column=7)
-        __self__.LP1Label.grid(row=1,column=3)
-        __self__.LP2Label.grid(row=1,column=7)
-        __self__.S1Label.grid(row=2,column=3)
-        __self__.S2Label.grid(row=2,column=7)
-        __self__.T1Slider.grid(row=0,column=4)
-        __self__.LP1Slider.grid(row=1,column=4)
-        __self__.S1Slider.grid(row=2,column=4)
-        __self__.T2.grid(row=0,column=6,padx=(32,0))
-        __self__.LP2.grid(row=1,column=6,padx=(32,0))
-        __self__.S2.grid(row=2,column=6,padx=(32,0))
-        __self__.LP2Slider.grid(row=1,column=8)
-        __self__.T2Slider.grid(row=0,column=8)
-        __self__.S2Slider.grid(row=2,column=8)
-        __self__.roibox1.grid(row=0,column=0,columnspan=2)
-        __self__.roibox2.grid(row=1,column=0,columnspan=2)
-        __self__.ratebox.grid(row=2,column=0,columnspan=2)
-        __self__.add_btn.grid(row=1,column=9,sticky=W+E)
-        __self__.correlate.grid(row=3,column=0,sticky=W+E)
-        __self__.export.grid(row=3,column=1,sticky=W+E)
-        __self__.annotate.grid(row=4,column=0,columnspan=2,sticky=W+E,pady=(6,16))
-        __self__.subtract_btn.grid(row=0,column=9,sticky=W+E)
-        __self__.scale.grid(row=3,column=9, sticky=W)
-        __self__.scaleLabel.grid(row=3,column=9, sticky=E, padx=(25,0))
-        __self__.CubeVersionLabel.pack(side=BOTTOM, expand=False, fill=X, anchor=W)
+
+        pady = 6
+        __self__.T1Slider.grid(row=1,column=1,pady=pady)
+        __self__.LP1Slider.grid(row=2,column=1,pady=pady)
+        __self__.S1Slider.grid(row=3,column=1,pady=pady)
+        __self__.T2Slider.grid(row=1,column=3,pady=pady)
+        __self__.LP2Slider.grid(row=2,column=3,pady=pady)
+        __self__.S2Slider.grid(row=3,column=3,pady=pady)
+        __self__.T1.grid(row=1,column=0,padx=(0,6),sticky=W,pady=pady)
+        __self__.LP1.grid(row=2,column=0,padx=(0,6),sticky=W,pady=pady)
+        __self__.S1.grid(row=3,column=0,padx=(0,6),sticky=W,pady=pady)
+        __self__.T2.grid(row=1,column=2,padx=(24,6),sticky=W,pady=pady)
+        __self__.LP2.grid(row=2,column=2,padx=(24,6),sticky=W,pady=pady)
+        __self__.S2.grid(row=3,column=2,padx=(24,6),sticky=W,pady=pady)
+
+        __self__.White.grid(row=0, column=1, padx=6)
+        __self__.Grey.grid(row=0, column=2, padx=6)
+        __self__.Black.grid(row=0, column=3, padx=6)
+
+        __self__.roibox1.grid(row=0,column=0,columnspan=2,sticky=W+E,pady=(12,6))
+        __self__.roibox2.grid(row=0,column=2,columnspan=2,sticky=W+E,pady=(12,6))
+        __self__.ratebox.grid(row=2,column=0,columnspan=2,sticky=W+E)
+        __self__.export.grid(row=0,column=1,sticky=W+E)
+        __self__.correlate.grid(row=0,column=0,sticky=W+E)
+        __self__.annotate.grid(row=1,column=0,columnspan=2,sticky=W+E,pady=(3,3))
+
+        __self__.subtract_btn.grid(row=0,column=0,sticky=W+E)
+        __self__.add_btn.grid(row=1,column=0,sticky=W+E)
+        __self__.scale.grid(row=2,column=0, sticky=W)
+
+        __self__.CubeVersionLabel.grid(row=3,columnspan=2,sticky=W+E)#pack(side=BOTTOM, expand=False, fill=X, anchor=W)
 
         __self__.Map1Combo.bind("<<ComboboxSelected>>", __self__.update_sample1)
         __self__.Map2Combo.bind("<<ComboboxSelected>>", __self__.update_sample2)
@@ -1879,12 +1930,12 @@ class ImageAnalyzer:
                 try: __self__.Map2Combo.current(0)
                 except: pass
             if __self__.ElementalMap1.max() == 0:
-                __self__.ElementalMap1 = Constants.MY_DATACUBE.densitymap
+                __self__.ElementalMap1 = Constants.MY_DATACUBE.densitymap.astype("float32")*LEVELS/Constants.MY_DATACUBE.densitymap.max()
                 __self__.left_image = __self__.plot1.imshow(__self__.ElementalMap1)
                 __self__.draw_image1(0)
             else: __self__.left_image = __self__.plot1.imshow(np.zeros([20,20]))
             if __self__.ElementalMap2.max() == 0:
-                __self__.ElementalMap2 =  Constants.MY_DATACUBE.densitymap
+                __self__.ElementalMap2 = Constants.MY_DATACUBE.densitymap.astype("float32")*LEVELS/Constants.MY_DATACUBE.densitymap.max()
                 __self__.right_image = __self__.plot2.imshow(__self__.ElementalMap2)
                 __self__.draw_image2(0)
             else: __self__.right_image = __self__.plot2.imshow(np.zeros([20,20]))
@@ -1903,7 +1954,6 @@ class ImageAnalyzer:
             __self__.correlate.config(state=DISABLED)
             __self__.export.config(state=DISABLED)
             __self__.scale.config(state=DISABLED)
-            __self__.scaleLabel.config(state=DISABLED)
         else:
             __self__.add_btn.config(state=NORMAL)
             __self__.subtract_btn.config(state=NORMAL)
@@ -1913,6 +1963,24 @@ class ImageAnalyzer:
 
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+
+    def set_bg(__self__,colour="white"):
+        if colour == "white":
+            __self__.GVar.set(False)
+            __self__.BVar.set(False)
+        elif colour == "#3b3b38":
+            __self__.WVar.set(False)
+            __self__.BVar.set(False)
+        elif colour == "black":
+            __self__.WVar.set(False)
+            __self__.GVar.set(False)
+
+        __self__.LeftCanvas.config(bg=colour)
+        __self__.RightCanvas.config(bg=colour)
+        __self__.figure1.set_facecolor(colour)
+        __self__.figure2.set_facecolor(colour)
+        __self__.canvas1.draw()
+        __self__.canvas2.draw()
 
     def kill(__self__):
         for widget in __self__.master.winfo_children():
@@ -3589,9 +3657,13 @@ class MainGUI:
 
         __self__.SamplesWindow = ttk.LabelFrame(__self__.DataFrame, text="Samples")
 
+        __self__.SampleScroller = ttk.Scrollbar(__self__.SamplesWindow)
         __self__.SamplesWindow_TableLeft = Listbox(
                 __self__.SamplesWindow,
+                yscrollcommand=__self__.SampleScroller.set,
                 height=__self__.SamplesWindow.winfo_height(),
+                width=22,
+                cursor="hand2",
                 bd=1)
         __self__.SamplesWindow_TableRight = Listbox(
                 __self__.SamplesWindow,
@@ -3625,9 +3697,6 @@ class MainGUI:
         __self__.SamplesWindow.popup.add_command(
                 label="Load",
                 command=__self__.sample_select)
-        #__self__.SamplesWindow.popup.add_command(
-        #        label="Save density map as . . .",
-        #        command=__self__.export_density_map)
         __self__.SamplesWindow.popup.add_command(
                 label="Open files location",
                 command=__self__.open_files_location)
@@ -3674,10 +3743,11 @@ class MainGUI:
 
         __self__.SamplesWindow.grid(row=0, column=2, rowspan=2, 
                 sticky=N+W+S+E, padx=(8,16+8), pady=(16,0))
-        __self__.SamplesWindow_TableLeft.grid(row=1, column=0, sticky=N+S, pady=(12,12), 
-                padx=12)
-        __self__.SamplesWindow_multi.grid(row=2, column=0, sticky=W+E, pady=2,padx=6)
-        __self__.SamplesWindow_ok.grid(row=3, column=0, sticky=W+E, pady=(2,6),padx=6)
+        __self__.SamplesWindow_TableLeft.grid(row=1, column=0, sticky=N+S, pady=(12,10), 
+                padx=(12,0))
+        __self__.SampleScroller.grid(row=1, column=1, sticky=N+S, pady=(12,12), padx=(2,12))
+        __self__.SamplesWindow_multi.grid(row=2, column=0, columnspan=2, sticky=W+E, pady=(0,2),padx=(12,12))
+        __self__.SamplesWindow_ok.grid(row=3, column=0, columnspan=2, sticky=W+E, pady=(2,12),padx=(12,12))
         __self__.SamplesWindow_ok.config(state=DISABLED)
 
         __self__.ImageCanvas.propagate(1)
@@ -3700,6 +3770,7 @@ class MainGUI:
         __self__.master.grid_columnconfigure(1,weight=1)
         __self__.master.grid_rowconfigure(1,weight=1)
         __self__.StatusScroller.config(command=__self__.StatusBox.yview)
+        __self__.SampleScroller.config(command=__self__.SamplesWindow_TableLeft.yview)
 
         __self__.SamplesWindow_TableRight.config(state=DISABLED)
         __self__.SamplesWindow_TableLeft.focus_set()
@@ -4304,13 +4375,11 @@ class MainGUI:
             __self__.plot_canvas_popup.entryconfig("Clear all maps", state=DISABLED)
             __self__.plot_canvas_popup.entryconfig("Export as *.h5 . . .", state=DISABLED)
             __self__.SamplesWindow.popup.entryconfig("Remove from database", state=DISABLED)
-            #__self__.SamplesWindow.popup.entryconfig("Save density map as . . .", state=DISABLED)
         else:
             __self__.SamplesWindow.popup.entryconfig("Load", state=NORMAL)
             __self__.plot_canvas_popup.entryconfig("Clear all maps", state=NORMAL)
             __self__.plot_canvas_popup.entryconfig("Export as *.h5 . . .", state=NORMAL)
             __self__.SamplesWindow.popup.entryconfig("Remove from database", state=NORMAL)
-            #__self__.SamplesWindow.popup.entryconfig("Save density map as . . .", state=NORMAL)
 
         try: __self__.SamplesWindow.popup.tk_popup(event.x_root, event.y_root, entry="")
         finally: __self__.SamplesWindow.popup.grab_release()

@@ -1,6 +1,11 @@
 New in Version v2.0.0
 
-- Datacubes from older version will be deprectaed in the next version!!
+- Datacubes from older versions will be deprectaed in the next version!!
 - GUI overhaul
 - Mosaic canvas improvement and bug fixes
 - Advanced calibration option now available when packing new data
+- Fixed the display of all images, now with the corrected contrast
+- Significant performance improvements to image filtering
+- Datacubes can now be exported as H5 files
+- Samples database is incorporated in the main panel
+- Main panel now supports resizing and fullscreen mode
