@@ -1614,7 +1614,6 @@ class ImageAnalyzer:
         Grid.columnconfigure(__self__.SampleFrame, 0, weight=1)
         Grid.columnconfigure(__self__.SampleFrame, 1, weight=1)
         Grid.columnconfigure(__self__.sliders, 0, weight=1)
-        #Grid.columnconfigure(__self__.sliders, 1, weight=1)
         Grid.columnconfigure(__self__.sliders, 2, weight=1)
         Grid.columnconfigure(__self__.sampler, 0, weight=1)
         Grid.columnconfigure(__self__.sampler, 1, weight=1)
@@ -1876,8 +1875,8 @@ class ImageAnalyzer:
 
         __self__.Map1Label.grid(row=0, column=0, sticky=E)
         __self__.Map1Combo.grid(row=0,column=1, sticky=W,padx=(16,16),pady=(8,4))
-        __self__.Map2Label.grid(row=0, column=2, sticky=E)
-        __self__.Map2Combo.grid(row=0,column=3, sticky=W,padx=(16,16),pady=(8,4))
+        __self__.Map2Label.grid(row=0, column=3, sticky=W)
+        __self__.Map2Combo.grid(row=0,column=2, sticky=E,padx=(16,16),pady=(8,4))
         __self__.plot1.grid(b=None)
         __self__.plot2.grid(b=None)
 
@@ -4204,7 +4203,8 @@ class MainGUI:
         of any running instance of samples window and call the function which
         draws it accordingly """
 
-        __self__.SamplesWindow.focus_force()
+        __self__.SamplesWindow_TableLeft.focus_force()
+        __self__.SamplesWindow_TableLeft.delete(0,END)
         for key in __self__.samples:
             __self__.SamplesWindow_TableLeft.insert(END,"{}".format(key))
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(\
@@ -4345,6 +4345,7 @@ class MainGUI:
                 "This will remove all elemental maps packed in datacube {}. Are you sure you want to proceed?".format(Constants.MY_DATACUBE.name))
         if p == "yes":
             Constants.MY_DATACUBE.wipe_maps()
+            __self__.write_stat()
         else: return 0
 
     def pop_welcome(__self__):
@@ -6022,8 +6023,6 @@ class PeriodicTable:
         else:
             # disabled widgets to avoid user changes sample
             root.toggle_(toggle="off")
-            try: root.SamplesWindow.destroy()
-            except: pass
 
             # Sets fano and noise factor 
             if not hasattr(Constants.MY_DATACUBE,"FN"):
