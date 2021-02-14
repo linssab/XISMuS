@@ -99,37 +99,37 @@ class Busy:
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
         
-        __self__.btnz = Frame(__self__.master)
-        __self__.btnz.grid(row=1,column=0)
-        __self__.outerframe = Frame(__self__.master, bd=3, relief=RIDGE)
-        __self__.outerframe.grid(row=0,column=0)
-        __self__.master.label = Label(__self__.outerframe, text="Packing spectra...")
-        __self__.master.label.grid(row=0,column=0)       
-        __self__.master.body = Frame(__self__.outerframe)        
-        __self__.master.body.grid(row=1,column=0)
+        __self__.outerframe = ttk.Frame(__self__.master, relief=RIDGE, style="dark.TFrame")
+        __self__.master.body = ttk.Frame(__self__.outerframe, style="dark.TFrame")
+        __self__.master.label = ttk.Label(__self__.outerframe, 
+                text="Packing spectra...",
+                style="dark.TLabel")
         __self__.progress = ttk.Progressbar(__self__.master.body, 
                 orient="horizontal",length=160, 
                 mode="determinate",
                 style="green.Horizontal.TProgressbar",
                 maximum=max_)
+
+        __self__.master.label.grid(row=0,column=0, pady=(3,0))       
         __self__.progress.grid(row=0,column=0)
+        __self__.outerframe.grid(row=0,column=0)
+        __self__.master.body.grid(row=1,column=0,padx=(6,6),pady=(6,6))
+
         if grab: __self__.master.grab_set()
         __self__.set_size()
 
-    def set_size(__self__,th=-1):
-        # NOTE: th is just a horrible workaround to rounding te size of the window
-        # when adding the 'abort' button, window is a pixel shorter, when not, it is a 
-        # pixel longer. So, without the button, a pixel is removed, when adding it, one
-        # is added. It is a horrible workaround, but it works
-
+    def set_size(__self__):
         __self__.master.update()
-        __self__.master.update_idletasks()
+        __self__.master.body.update_idletasks()
+        __self__.outerframe.update_idletasks()
 
         x = __self__.master.winfo_screenwidth()
         y = __self__.master.winfo_screenheight()
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
-        __self__.master.geometry('{}x{}+{}+{}'.format(win_x, win_y+th,
+        try: btn_y = __self__.abort_btn.winfo_height() + 6 #pady = 3
+        except: btn_y = 0
+        __self__.master.geometry('{}x{}+{}+{}'.format(win_x, win_y + btn_y,
                 round((x/2)-win_x/2), round((y/2)-win_y/2)))
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
@@ -172,14 +172,12 @@ class Busy:
         __self__.mode=mode
         __self__.workers = workers
         __self__.multiprocess = multiprocess
-        __self__.master.geometry("{}x{}".format(166,81))
         __self__.abort_btn = ttk.Button(__self__.outerframe,
                 text="Abort",
                 width=7,
                 command=__self__.abort)
         __self__.abort_btn.grid(row=2,column=0,pady=3)
-        __self__.btnz.update()
-        __self__.set_size(th=1)
+        __self__.set_size()
 
     def abort(__self__):
 
