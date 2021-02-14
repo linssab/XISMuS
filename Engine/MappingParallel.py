@@ -100,7 +100,8 @@ def grab_line(cube,lines,iterator,Element):
         # AND SECOND DIFFERENTIAL #
         ###########################
         
-        background = cube["background"][currentx][currenty]
+        if cube["config"]["bgstrip"] != "None": background = cube["background"][currentx][currenty]
+        else: background = np.zeros(specdata.shape)
        
         # low-passes second differential
         if usedif2 == True: 

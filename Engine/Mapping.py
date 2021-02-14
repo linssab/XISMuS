@@ -257,7 +257,8 @@ def getpeakmap(element_list,datacube):
             # AND SECOND DIFFERENTIAL #
             ###########################
             
-            background = datacube.background[currentx][currenty]
+            if bgstrip != "None": background = datacube.background[currentx][currenty]
+            else: background = np.zeros(specdata.shape)
             
             if usedif2 == True: 
                 dif2 = SpecMath.getdif2(specdata,1)
@@ -417,7 +418,8 @@ def getdensitymap(datacube):
     for x in range(datacube.dimension[0]):
         for y in range(datacube.dimension[1]):
             spec = datacube.matrix[x][y]
-            background = datacube.background[x][y]    
+            if datacube.config["bgstrip"] != "None": background = datacube.background[x][y] 
+            else: background = np.zeros(spec.shape)
             density_map[x][y] = abs(spec.sum()-background.sum())
     logger.info("Finished fetching density map!")
     logger.info("Execution took %s seconds" % (time.time() - timer))

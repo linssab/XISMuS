@@ -283,6 +283,9 @@ class datacube:
                     progressbar.updatebar(counter)
             del y_cont
 
+        #elif bgstrip == "None":
+        #    del __self__.background
+        #    __self__.background = np.zeros(__self__.matrix.shape[2])
         return
 
     def create_densemap(__self__):
