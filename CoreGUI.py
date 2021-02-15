@@ -295,12 +295,14 @@ def call_compilecube():
                 root.MenuBar.entryconfig("Toolbox", state=NORMAL)
                 root.temporaryh5 = "None"
             elif m == "no":
+                root.busy.busy()
                 Constants.MY_DATACUBE = converth5() 
                 root.samples[Constants.CONFIG["directory"]] = "temp .h5"
                 sp.cube_path = ""
                 root.ButtonLoad.config(state=NORMAL)
                 root.MenuBar.entryconfig("Toolbox", state=NORMAL)
                 root.temporaryh5 = Constants.CONFIG["directory"]
+                root.busy.notbusy()
 
         ##########################################################################
         
@@ -337,6 +339,8 @@ def call_compilecube():
         root.SamplesWindow_TableLeft.config(state=NORMAL)
         root.SamplesWindow_multi.config(state=NORMAL)
         root.SamplesWindow_ok.config(state=NORMAL)
+        root.toggle_(toggle="on")
+        root.list_samples()
 
 def load_cube():
     global root
@@ -475,7 +479,8 @@ class About:
         __self__.master = Toplevel(master=root.master)
         __self__.master.title("About")
         __self__.master.resizable(False,False)
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.master.destroy)
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+        __self__.master.bind("<Escape>",__self__.kill)
         icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
         __self__.master.iconbitmap(icon)  
         infotext="Software version: {0}\nContact: sergio.lins@roma3.infn.it".format(Constants.VERSION)
@@ -487,6 +492,9 @@ class About:
         __self__.Link.bind("<Button-1>", __self__.go_to_RS)
         __self__.Link.pack(side=LEFT)
         place_center(root.master,__self__.master)
+
+    def kill(__self__,e=""):
+        __self__.master.destroy()
 
     def go_to_RS(__self__,e=""):
         openURL("https://www.researchgate.net/profile/Sergio_Augusto_Lins")
@@ -3856,6 +3864,7 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.re_configure.config(state=DISABLED)
             __self__.magnifier.config(state=DISABLED)
+        __self__.master.update_idletasks()
     
     def pop(__self__,event):
         if event.button == 3:
@@ -4282,7 +4291,7 @@ class MainGUI:
                     if widget.tagged == True: widget.destroy()
                 except:
                     pass
-        __self__.toggle_("off")
+        __self__.toggle_(toggle="off")
          
         if __self__.SampleVar.get().split(":")[1].replace(" ","") != value:
             # destroy any open configuration window
@@ -4356,6 +4365,7 @@ class MainGUI:
         __self__.master.update_idletasks()
         w, h = __self__.master.winfo_width(), __self__.master.winfo_height()
         __self__.master.minsize(w,h)
+        __self__.master.state("zoomed")
         if Constants.WELCOME == True:
             __self__.welcome_window = Welcome(__self__)
             __self__.welcome_window.master.grab_set()
@@ -4639,13 +4649,14 @@ class MainGUI:
             __self__.ManualParam = []
         except:
             dimension = (Constants.MY_DATACUBE.shape[0],Constants.MY_DATACUBE.shape[1])
-            __self__.master.wait_window(dimension.win)
+            __self__.master.wait_window(dimension.master)
             if dimension.exit_code == "cancel":
                 __self__.wipe()
                 return 0
             __self__.ManualParam = []
 
         # calls the configuration window
+        root.toggle_(toggle="off")
         __self__.ConfigDiag = ConfigDiag(__self__.master,matrix=Constants.MY_DATACUBE)
         __self__.ConfigDiag.build_widgets()
 
@@ -4990,7 +5001,7 @@ class MainGUI:
             __self__.config_xy = sp.getdimension()
         except:
             dimension = DimensionDiag(__self__)
-            __self__.master.wait_window(dimension.win) 
+            __self__.master.wait_window(dimension.master) 
             if dimension.exit_code == "cancel":
                 __self__.wipe()
                 return 0
@@ -5297,7 +5308,6 @@ class ConfigDiag:
         __self__.save_config()
     
     def wipe(__self__,e=""):
-
         try: 
             __self__.master.grab_release()
             __self__.master.destroy()
@@ -5335,11 +5345,11 @@ class ConfigDiag:
                 root.temporaryh5 = "None"
                 gc.collect()
                 try:
-                    __self__.SamplesWindow_TableRight.config(state=NORMAL)
-                    __self__.SamplesWindow_TableRight.delete(temph5_idx)
+                    #__self__.SamplesWindow_TableRight.config(state=NORMAL)
+                    #__self__.SamplesWindow_TableRight.delete(temph5_idx)
                     __self__.SamplesWindow_TableLeft.delete(temph5_idx)
-                    __self__.SamplesWindow_TableRight.config(state=DISABLED)
-                    __self__.SamplesWindow_TableRight.update_idletasks()
+                    #__self__.SamplesWindow_TableRight.config(state=DISABLED)
+                    #__self__.SamplesWindow_TableRight.update_idletasks()
                 except: pass
                 temp_path = os.path.join(
                     sp.__PERSONAL__,"output",Constants.CONFIG["directory"])
@@ -5371,7 +5381,6 @@ class ConfigDiag:
         root.SampleVar.set("Sample on memory: None")
         try: 
             if root.SamplesWindow.state() == "normal": 
-                root.SamplesWindow.deiconify()
                 root.SamplesWindow_TableLeft.focus_set()
         except: pass
 
@@ -5546,6 +5555,7 @@ class ConfigDiag:
             root.write_stat()
             root.draw_map()
             root.toggle_(toggle='on')
+            if root.temporaryh5 != "None": root.ButtonReset.config(state=DISABLED)
 
         else:
             cfgpath = os.path.join(sp.__PERSONAL__,"bin","config.cfg")
