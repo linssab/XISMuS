@@ -3587,7 +3587,7 @@ class MainGUI:
         subx,suby = 1,1 #icon resize factor
         
         # load icons
-        ButtonLoad_icon = PhotoImage(data=ICO_LOAD)
+        ButtonLoad_icon = PhotoImage(data=ICO_MOSAIC)
         __self__.ButtonLoad_icon = ButtonLoad_icon.subsample(subx,suby)
         ButtonReset_icon = PhotoImage(data=ICO_RESET)
         __self__.ButtonReset_icon = ButtonReset_icon.subsample(subx,suby)
@@ -3603,7 +3603,7 @@ class MainGUI:
         # create buttons
         __self__.ButtonLoad = ttk.Button(
                 __self__.ButtonsFrame, 
-                text="  Mosaic", 
+                text="  Create Mosaic", 
                 image=__self__.ButtonLoad_icon, 
                 style="main.TButton",
                 compound=LEFT, 

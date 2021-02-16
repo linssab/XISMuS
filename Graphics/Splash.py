@@ -19,7 +19,7 @@ class SplashScreen:
         __self__.master.configure(bg=BG)
         __self__.master.wm_attributes("-transparent", BG)
         scr_w, scr_h = screen_size()
-        w, h = 740, 470
+        w, h = 787, 526
         __self__.master.geometry(f"{w}x{h}+{int((scr_w/2)-w/2)}+{int((scr_h/2)-h/2)}")
         __self__.master.overrideredirect(True)
         __self__.master.withdraw()
@@ -38,9 +38,10 @@ class SplashScreen:
                 highlightthickness=0,
                 bd=0,
                 bg=BG)
+        pad = 10
         __self__.canvas.create_image(int(w/2),int(h/2),image=__self__.master_image)
         __self__.label2 = __self__.canvas.create_text(
-                60,h-45,text=__self__.text,
+                119+pad,382+pad,text=__self__.text,
                 font=("Tahoma",12),
                 fill="white",
                 anchor=W)

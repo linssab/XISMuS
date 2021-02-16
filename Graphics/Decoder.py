@@ -24,7 +24,7 @@ def b64_to_array(uri):
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
     image_file = open(os.path.join(os.path.dirname(__file__),"graphics.tz"),"rb")
-    IMG_SPLASH = image_file.read(517704)
+    IMG_SPLASH = image_file.read(751440)
     no_data = image_file.read(38872) 
     IMG_NODATA = b64_to_array(no_data)
 
@@ -34,6 +34,7 @@ def unpack_icons():
     global ICO_LOAD, ICO_NEXT, ICO_PREVIOUS, ICO_QUIT, ICO_REFRESH, ICO_RESET
     global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP, ICO_MAGNIFIER
     global ICO_SAVE, ICO_LOG, ICO_LIN, ICO_ADVCALIB
+    global ICO_MOSAIC
 
     icons_file = open(os.path.join(os.getcwd(),"images","icons","icons.tz"),"rb")
     ICO_ACCEPT = icons_file.read(1548)
@@ -50,13 +51,14 @@ def unpack_icons():
     ICO_LOAD = icons_file.read(2184)
     ICO_LOG = icons_file.read(4004)
     ICO_MAGNIFIER = icons_file.read(3876)
+    ICO_MOSAIC = icons_file.read(5968)
     ICO_NEXT = icons_file.read(4020)
     ICO_PREVIOUS = icons_file.read(4064)
     ICO_QUIT = icons_file.read(2476)
-    ICO_REFRESH = icons_file.read(5848)
+    ICO_REFRESH = icons_file.read(6596)
     ICO_REJECT = icons_file.read(1832)
     ICO_RESET = icons_file.read(2184)
-    ICO_RUBIK = icons_file.read(4348)
+    ICO_RUBIK = icons_file.read(8120)
     ICO_SAVE = icons_file.read(928)
     ICO_SETTINGS = icons_file.read(3624)
     ICO_UP = icons_file.read(4064)
