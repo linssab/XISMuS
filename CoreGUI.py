@@ -1335,7 +1335,7 @@ class PeakClipper:
             __self__.plot.set_ylim(bottom=10e-2)
             __self__.plot.set_ylim(top=1.10*__self__.spectrum.max())
 
-        __self__.plot.legend()
+        __self__.plot.legend(loc="upper right")
         __self__.canvas.draw()
 
     def random_sample(__self__):
