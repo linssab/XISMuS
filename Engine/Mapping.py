@@ -135,7 +135,9 @@ def slice_matrix(matrix,bg_matrix,new_image,indexes,ROI):
     for x in range(matrix.shape[0]):
         for y in range(matrix.shape[1]):
             a = float(matrix[x][y][indexes[0]:indexes[1]].sum())
-            b = float(bg_matrix[x][y][indexes[0]:indexes[1]].sum())
+            if Constants.MY_DATACUBE.config["bgstrip"] != "None":
+                b = float(bg_matrix[x][y][indexes[0]:indexes[1]].sum())
+            else: b=0
             if b > a: c == 0
             else: c = a-b
             new_image[x][y] = c
@@ -418,7 +420,8 @@ def getdensitymap(datacube):
     for x in range(datacube.dimension[0]):
         for y in range(datacube.dimension[1]):
             spec = datacube.matrix[x][y]
-            if datacube.config["bgstrip"] != "None": background = datacube.background[x][y] 
+            if datacube.config["bgstrip"] != "None": 
+                background = datacube.background[x][y] 
             else: background = np.zeros(spec.shape)
             density_map[x][y] = abs(spec.sum()-background.sum())
     logger.info("Finished fetching density map!")

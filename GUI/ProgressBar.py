@@ -107,7 +107,7 @@ class Busy:
         __self__.progress = ttk.Progressbar(__self__.master.body, 
                 orient="horizontal",length=160, 
                 mode="determinate",
-                style="green.Horizontal.TProgressbar",
+                style="red.Horizontal.TProgressbar",
                 maximum=max_)
 
         __self__.master.label.grid(row=0,column=0, pady=(3,0))       
@@ -234,7 +234,7 @@ class ReadProgress:
         __self__.progress = ttk.Progressbar(__self__.master.body, 
                 orient="horizontal",
                 length=160, 
-                style="green.Horizontal.TProgressbar",
+                style="red.Horizontal.TProgressbar",
                 mode="determinate",
                 maximum=max_)
         __self__.progress.grid(row=0,column=0)

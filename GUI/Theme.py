@@ -30,7 +30,7 @@ def apply_theme(TkWin):
     style.configure('TButton', background=system)
     style.configure('main.TButton', background=system, 
             anchor=W, relief=RAISED, bd=3)
-    style.configure("green.Horizontal.TProgressbar", foreground="red", background="red")
+    style.configure("red.Horizontal.TProgressbar", foreground="red", background="red")
     style.configure("TFrame", background=system)
     style.configure("TLabelframe", background=system, foreground="black")
     style.configure("TLabelframe.Label", background=system, foreground="black", 
@@ -39,3 +39,6 @@ def apply_theme(TkWin):
     style.configure("dark.TFrame", background=dark)
     style.configure("dark.TLabel", background=dark)
     style.configure("dark.TLabelframe", background=dark)
+
+    return style
+    

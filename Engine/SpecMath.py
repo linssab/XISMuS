@@ -233,14 +233,19 @@ class datacube:
         # initialize empty array #
         ##########################
 
-        __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],
-                __self__.matrix.shape[2]],dtype="float32",order='C')
         __self__.sum_bg = np.zeros([__self__.matrix.shape[2]])
+        if bgstrip != "None":
+            __self__.background = np.zeros([__self__.dimension[0],__self__.dimension[1],
+                    __self__.matrix.shape[2]],dtype="float32",order='C')
+        else:
+            __self__.background = np.zeros([1,__self__.matrix.shape[2]],dtype="float32")
+            return
 
         ##########################
        
         if bgstrip == "SNIPBG":
             progressbar.update_text("Calculating SNIPBG")
+            tot = progressbar.progress["maximum"]
             try: cycles, window,savgol,order= __self__.config["bg_settings"] 
             except: cycles, window, savgol, order = 24,5,5,3
             for x in range(__self__.matrix.shape[0]):
@@ -249,7 +254,9 @@ class datacube:
                     stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
                     __self__.background[x,y] = stripped
                     counter = counter + 1
+                    percent = counter/tot*100
                     progressbar.updatebar(counter)
+                    progressbar.update_text("Calculating SNIPBG... {0:0.2f}%".format(percent))
             __self__.sum_bg = peakstrip(__self__.sum,cycles,window,savgol,order)
 
         elif bgstrip == "Polynomial":
@@ -259,33 +266,48 @@ class datacube:
             
             y_cont, attempt = np.zeros([__self__.matrix.shape[2]]), 0
             progressbar.update_text(
-                    "Preparing to fit continuum.".format(attempt))
+                    "Calculating Polynomial cont.".format(attempt))
+            progressbar.progress["maximum"] = matrix_flatten.shape[0]
+            progressbar.updatebar(0)
             while y_cont.sum()==0:
                 attempt += 1
                 y_cont = polfit_batch(
                     matrix_flatten,
                     ndegree_global=ndegree_global,
                     ndegree_single=ndegree_single,
-                    r=r_fact)
-                progressbar.update_text(
-                        "Fitting continuum. Trial: {}".format(attempt))
+                    r=r_fact,
+                    bar=progressbar)
                 logger.warning(
                 "Attempt {} to fit continuum. Too slow, increasing R factor".format(
                             attempt))
                 r_fact+=1
+                progressbar.updatebar(0)
+                print("r_fact",r_fact)
 
             __self__.sum_bg = y_cont[0]
-            progressbar.updatebar(0)
-            for x in range(__self__.matrix.shape[0]):
-                for y in range(__self__.matrix.shape[1]):
-                    counter += 1 #ignores first continuum which is the global one
-                    __self__.background[x][y] = y_cont[counter]
-                    progressbar.updatebar(counter)
+            __self__.background = y_cont[1:]
+            __self__.background.shape = (__self__.matrix.shape[0], 
+                    __self__.matrix.shape[1], __self__.matrix.shape[2])
+            
+            # NOTE:
+            # looping to fill in __self__.background is too slow. Better user numpy reshape
+
+            #for x in range(__self__.matrix.shape[0]):
+            #    for y in range(__self__.matrix.shape[1]):
+            #        counter += 1 #ignores first continuum which is the global one
+            #        __self__.background[x][y] = y_cont[counter]
+            #        progressbar.updatebar(counter)
+
             del y_cont
 
-        #elif bgstrip == "None":
-        #    del __self__.background
-        #    __self__.background = np.zeros(__self__.matrix.shape[2])
+        #plt.semilogy(__self__.background.sum(0).sum(0),label="bg")
+        #plt.semilogy(__self__.matrix.sum(0).sum(0))
+        #plt.semilogy(__self__.sum_bg, label="sum bg")
+        #plt.semilogy(__self__.matrix[15][22])
+        #plt.semilogy(__self__.background[15][22])
+        #plt.legend()
+        #plt.show()
+
         return
 
     def create_densemap(__self__):
@@ -1518,7 +1540,7 @@ def peakstrip(an_array,cycles,width,*args):
     return snip_bg
 
 def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
-        custom_global_spec=None):
+        custom_global_spec=None, bar=None):
 
     """ Calculates the continuum following a polynomial fitting function for the entire
     dataset and the summation derived spectrum. A custom summation spectrum can be passed
@@ -1667,6 +1689,7 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
                 #################################################################
 
                 iteration += 1
+                if bar is not None: bar.updatebar(iteration)
                 if time.time()-start > timeout: return np.zeros([spectra_batch.shape[1]])
                 
             logger.info("Iterations polynomial to overall converge: {}".format(iteration))

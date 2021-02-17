@@ -81,6 +81,7 @@ def batch_continuum_for_wizard(
     # the spectra, recalculating tenths of thousands of continuums is a waste of time.
 
     #continuum = np.zeros([spectra_batch.shape[0],spectra_batch.shape[1]],dtype="float32")
+
     global_continuum = np.zeros([spectra_batch.shape[1]],dtype="float32")
 
     if bgstrip == "None":
@@ -118,57 +119,166 @@ def batch_continuum_for_wizard(
         #return continuum, global_continuum
         return global_continuum
 
+def save_plot(
+        x,                  #Energy axis
+        Y_DATA,             #Smoothed spectrum
+        Y_CONT,             #Continuum
+        y_gaus_single,      #Array with single fitted peaks
+        y_gaus,             #Fitted spectrum
+        rchisq_gaus,        #Chi-squared error
+        residuals_gaus,     #Fit residuals
+        Z_dict,             #Dictionary with elements
+        E_peak,             #Peaks energies
+        y_peak,             #Peaks positions
+        figures_path, it    #Save path and iterator number
+        ):
+
+    ############################
+    element = [*Z_dict][:-1] #To be plotted elements
+    color=plt.cm.jet(np.linspace(0,1,len(element))) #Create fixed color for specific element
+    ########################################
+    # Get duplicate values from dictionary #
+    ########################################
+    seen=set() #Define set of all values seen so far in set comprehension
+    dupl_value=set(int(x) for x in [value for sublist in Z_dict.values() \
+            for value in sublist] if x in seen or seen.add(x))
+    ########################################
+
+    #######################################################
+    # Get corresponding duplicate keys and reversely sort #
+    #######################################################
+    un_ = Z_dict["Unmatched"]
+    Z_dict.pop("Unmatched")
+    dupl_key=sorted([key for key,sublist in Z_dict.items() \
+            for value in sublist if value in dupl_value],reverse=True)
+    Z_dict["Unmatched"] = un_
+    #######################################################
+
+    fig,ax=plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
+    ax[0].set_title('Element deconvolution',fontsize=16)
+    plt.setp(ax, xlim=(x.min(),x.max())) #Set xlim on both axes
+
+    ax[0].text(
+            0,
+            np.max(Y_DATA),
+            "$\chi^2$: %.3f"%rchisq_gaus,
+            fontsize=10,
+            bbox={'facecolor':'None', 'edgecolor':'None', 'pad':10})
+
+    ax[0].semilogy(x,Y_CONT,linewidth=1,zorder=1,label='Continuum',color="green")
+    ax[0].plot(x,Y_DATA,linewidth=1,zorder=1, label='Counts',color="blue")
+    ax[0].plot(x,y_gaus,label='Fit')
+    ax[0].set_ylim([1,Y_DATA.max()])
+    element = [*Z_dict][:-1] #To be plotted elements
+
+    #######################################################################
+    # Loop over list of keys with elements, disregarding last 'unmatched' #
+    # key (For iteration list needed, with list(Z_dict.keys()) being same #
+    # as [*Z_dict])                                                       #
+    #######################################################################
+
+    for i in element:
+
+        ###############################################################
+        # Loop over list of specific values with corresponding peak   #
+        # index (Values are already of type(list) and since .values() #
+        # not used no need to convert to list like needed with keys)  #
+        ###############################################################
+
+        for j in Z_dict[i]:
+            ax[0].axvline(
+                    x=E_peak[j],
+                    color='m',
+                    linewidth=1,
+                    zorder=2,
+                    label='Found peaks')
+            ax[0].plot(x, y_gaus_single[j], color='k', linewidth=1, zorder=3)
+            ax[0].fill_between(
+                    x,
+                    Y_CONT,
+                    y_gaus_single[j],
+                    facecolor=color[element.index(i)],
+                    alpha=0.5,
+                    zorder=3)
+
+            #################################################################
+            # Make sure if double assigned peak latter is plotted slightly  #
+            # higher so no overlap occurs in plotting element indication    #
+            #################################################################
+
+            if i in dupl_key[:int(len(dupl_key)/2)] and j in dupl_value:
+                ax[0].text(
+                        E_peak[j]+25,
+                        y_peak[j]*1.35,
+                        Elements.ElementList[i],
+                        fontsize=7)
+
+            #################################################################
+
+            ##############################################
+            # Plot element indication at standard height #
+            ##############################################
+
+            else:
+                ax[0].text(
+                        E_peak[j]+25,
+                        y_peak[j]*1.15,
+                        Elements.ElementList[i],
+                        fontsize=7)
+
+            ##############################################
+
+        ###############################################################
+
+    #######################################################################
+
+    for i in [*Z_dict['Unmatched']]:
+        ax[0].axvline(
+                x=E_peak[i],
+                color='m',
+                linestyle='dashed',
+                linewidth=1,
+                zorder=2,
+                label='Unmatched peaks')
+
+    ax[1].set_ylim([-2,2])
+    ax[1].set_yticks([-2,-1,0,1,2])
+    ax[1].plot(x, residuals_gaus, linewidth=1)
+    ax[1].axhline(y=0, color='k')
+    ax[1].set_xlabel('Energy (eV)')
+    ax[0].set_ylabel('Counts')
+    ax[1].set_ylabel('Residuals / $\sigma$')
+    handles,labels = ax[0].get_legend_handles_labels()
+    by_label = dict(zip(labels,handles))
+    ax[0].legend(by_label.values(), by_label.keys(),prop={'size': 7})
+
+    plt.savefig(
+            os.path.join(figures_path,"Fit_{}.png".format(it+1)),
+            dpi=600,
+            format="png")
+    plt.close()
+
 def gausfit(
-        x,
-        y_savgol,
-        y_cont,
-        x_peak,
-        Z_dict,
-        zero,
-        gain,
-        fit_path,
-        figures_path,
-        SUM,
-        FN,
-        iterator,
+        x,                  #Energy axis
+        y_savgol,           #Array with spectra
+        y_cont,             #Array with corresponding continuum
+        x_peak,             #Peaks indexes
+        Z_dict,             #Matched elements
+        zero,               #Calibration zero
+        gain,               #Calibration gain
+        fit_path,           #Path to save FRAMEs
+        figures_path,       #Path to save plots
+        SUM,                #Gloabl sum spectrum and cprresponding continuum (tuple)
+        FN,                 #Fano and Noise tuple
+        iterator,           #Progressbar iterator (uses lock)
+        configurations,     #Datacube configuration
         bar=None,
         work_done=None,
         results=None):
 
-    """
-    Input:
-        x:              (channels,)            <class 'numpy.ndarray'>     
-        Calibrated energy-axis applicable for all spectra
-        y_savgol:       (files,channels)       <class 'numpy.ndarray'>     
-        Counts spectra with Savitzky-Golay filter
-        x_peak:         (peaks,)               <class 'numpy.ndarray'>     
-        Peak indices 
-        Z_dict:         {}                     <class 'dict'>              
-        Z-number to matched peak indices 
-        zero:           ()                     <class 'numpy.float64'>     
-        Slope from linear regression calibration data
-        gain:           ()                     <class 'numpy.float64'>     
-        Intercept from linear regression calibration data
-        Fit path
-
-    Output:
-        frame:          (files+1,channels)     <class 'list'>              
-        Saved 2D array with areas peaks (dictionaries)
-        (fig):          (files+1,)             <class 'matplotlib'>        
-        Figures of fitted spectra                                              
-    """
-
     from scipy.optimize import curve_fit
     import gc
     cycles = Constants.FIT_CYCLES
-
-    #############################################################################
-    # Fit using linregression calibration with x_peaks deduced from this and    #
-    # hence automatically located perfectly at peaks and after element          #
-    # recognition via xraylib. Like this stay in spectrum raum as well as no    #
-    # need to refit Zero & Gain x/energy-axis parameters. Besides small shifts  #
-    # in true spectrum values on x/energy-axis dont matter for peak area!       #
-    #############################################################################
 
     ######################################################################################
     # Prepend global spectrum to spectra. Each gausfit instance receives the RAW         #
@@ -225,41 +335,6 @@ def gausfit(
     A0 = y_peak*np.sqrt(((Noise0/2.3548)**2)+(3.85*Fano0*E_peak))*2.5066282746310002/gain
     params_gaus = A0
 
-    ############################################################
-    # These lines are used when fitting fano and noise locally #
-    ############################################################
-    #params_gaus = np.insert(A0,[0],[Noise0,Fano0],axis=1)
-    #params_voigt = np.insert(A0,[0],[Noise0,Fano0,gamma0],axis=1)
-    ############################################################
-
-    ############################
-
-    ''' Plotting params '''
-    element = [*Z_dict][:-1] #To be plotted elements
-    color=plt.cm.jet(np.linspace(0,1,len(element))) #Create fixed color for specific element
-    
-    ########################################
-    # Get duplicate values from dictionary #
-    ########################################
-
-    seen=set() #Define set of all values seen so far in set comprehension
-    dupl_value=set(int(x) for x in [value for sublist in Z_dict.values() \
-            for value in sublist] if x in seen or seen.add(x)) 
-
-    ########################################
-
-    #######################################################
-    # Get corresponding duplicate keys and reversely sort #
-    #######################################################
-        
-    un_ = Z_dict["Unmatched"]
-    Z_dict.pop("Unmatched")
-    dupl_key=sorted([key for key,sublist in Z_dict.items() \
-            for value in sublist if value in dupl_value],reverse=True) 
-    Z_dict["Unmatched"] = un_
-
-    #######################################################
-
     tot = len(y_savgol)
     for it in range(tot):
         time0 = timeit.default_timer()
@@ -273,26 +348,25 @@ def gausfit(
         else:
             with lock: iterator.value = iterator.value + 1
 
-        #print("Shapes")
-        #print("x",x.shape)
-        #print("E_peak",E_peak.shape)
-        #print("y_savgol",y_savgol.shape)
-        #print("y_savgol[0]",y_savgol[0].shape)
-        #print("y_cont",y_cont.shape)
-        #print("y_cont[0]",y_cont[0].shape)
-        #print("uncertainty",uncertainty.shape)
-        #print("params gaus",params_gaus.shape)
-        
         time_fit = timeit.default_timer()
         ''' Gaussian Fit '''
         try: 
-            popt_gaus, pcov_gaus = curve_fit(lambda x,*A: gaus(
-                x,E_peak,gain,Noise0,Fano0,*A) + y_cont[it],
-                x,
-                y_savgol[it],
-                p0=params_gaus[it],
-                sigma=uncertainty[it],
-                maxfev=cycles) #Clean Gaus
+            if configurations["bgstrip"] == "None":
+                popt_gaus, pcov_gaus = curve_fit(lambda x,*A: gaus(
+                    x,E_peak,gain,Noise0,Fano0,*A),
+                    x,
+                    y_savgol[it],
+                    p0=params_gaus[it],
+                    sigma=uncertainty[it],
+                    maxfev=cycles) #Clean Gaus
+            else:
+                 popt_gaus, pcov_gaus = curve_fit(lambda x,*A: gaus(
+                    x,E_peak,gain,Noise0,Fano0,*A) + y_cont[it],
+                    x,
+                    y_savgol[it],
+                    p0=params_gaus[it],
+                    sigma=uncertainty[it],
+                    maxfev=cycles) #Clean Gaus
         except:
             print("WARNING:\nFit failed for spec {}".format(it))
             popt_gaus = np.zeros(E_peak.shape[0],dtype="int32")
@@ -301,21 +375,14 @@ def gausfit(
         ######################################
         # Exclude global spectrum from frame #
         ######################################
-        
         if it:
-
             ########################################################
             # Put combined area's peaks belonging to corresponding #
             # elements into dictionary only taking positive area's #
             ########################################################
-            
-            #Area_dict_gaus={i: [p for p in popt_gaus[2:][Z_dict[i]] if p>0]\ 
-            #Area_dict_gaus={i: popt_gaus[2:][Z_dict[i]]\
             Area_dict_gaus={i: popt_gaus[:][Z_dict[i]]\
                     for i in [*Z_dict][:-1]} #-1 excludes last key "Unmatched"
-
             ########################################################
-
             frame.append(Area_dict_gaus) #Append dictionaries in frame list chronologically
 
         ######################################
@@ -331,6 +398,7 @@ def gausfit(
 
                     [gaus(x,E_peak[i],gain,Noise0,Fano0,popt_gaus[i]) for i in range(
                         E_peak.size)]) + y_cont[it]
+
             g_fit_path = fit_path.split(".")[0]
             g_fit_path, chunk = g_fit_path.split("Fit_Chunk_",1)
             g_peak_order_path = g_fit_path + "Global_Peak_Order.npy"
@@ -339,181 +407,58 @@ def gausfit(
             ordered_peaks = E_peak,Z_dict
             np.save(g_peak_order_path,ordered_peaks)
        
-        #y_gaus = gaus(x,E_peak,gain,*popt_gaus)+y_cont[it]
-        y_gaus = gaus(x,E_peak,gain,Noise0,Fano0,popt_gaus)+y_cont[it]
+        if configurations["bgstrip"] == "None":
+            y_gaus = gaus(x,E_peak,gain,Noise0,Fano0,popt_gaus)
+        else:
+            y_gaus = gaus(x,E_peak,gain,Noise0,Fano0,popt_gaus)+y_cont[it]
 
         #############################################################################
         #Residuals devided by sigma y_i/y_savgol or eventual 1 in case of sigma = 0 #
         #############################################################################
-
         residuals_gaus = (y_savgol[it]-y_gaus)/np.maximum(uncertainty[it],1) 
-
         #############################################################################
 
         ############################################
         #Residual sum squares, in this case chi-sq #
         ############################################
-
         ss_res_gaus= np.sum(np.square(residuals_gaus)) 
-
-        ############################################
-
         rchisq_gaus=ss_res_gaus/(len(y_savgol[it])-len(popt_gaus)) #Reduced chi-sq
-
-        # print("\rReduced chi-sq Gaus_%s: %.2f"%(it+1,rchisq_gaus))
-
-        # s_params = np.sqrt(np.diag(pcov_gaus)) #Standard error params
-        # print("\rStandard error params:",s_params)
-        # FWHM_gaus=2.355*np.sqrt((np.square(popt_gaus[0]/2.3548))+(3.85*popt_gaus[1]*E_peak)) #(Divide /gain to get FWHM expressed in channels)
-        # print("\rFWHM_gaus (eV):",FWHM)
-        
-
         ################### END OF GAUSS FIT ####################
-
-        ''' Voigt Fit '''
-        # popt_voigt, pcov_voigt = curve_fit(lambda x,Noise,Fano,gamma,*A: voigt(x,E_peak,Noise,Fano,gamma,*A) + y_cont[it], x, y_savgol[it], p0=params_voigt[it], sigma=uncertainty[it], maxfev=1000) #Clean Voigt + clip sigma to 1 for 0 values
-        #
-        # if not (0<popt_voigt[0]<200)|(0<popt_voigt[1]<0.2): #Determine boundaries of fitted Noise and Fano for which to print warning
-        #     print("  -  Non-physical value of fitted parameter")
-        # if it: #Exclude global spectrum from frame
-        #     Area_dict_voigt={i: sum(popt_voigt[3:][Z_dict[i]][popt_voigt[3:][Z_dict[i]]>0]) for i in [*Z_dict][:-1]} #Put combined area's peaks belonging to corresponding elements into dictionary
-        #     frame.append(Area_dict_voigt) #Append dictionaries in frame list chronologically
-        #
-        # print("\rParams Voigt (Noise Fano gamma):",*popt_voigt[:3])
-        # print("\rVoigt peak area's:",popt_voigt[3:])
-        #
-        # y_voigt = voigt(x,E_peak,*popt_voigt)+y_cont[it]
-        # y_voigt_single = np.asarray([voigt(x,E_peak[i],*popt_voigt[[0,1,2,3+i]]) for i in range(E_peak.size)]) + y_cont[it]
-        #
-        # residuals_voigt = (y_savgol[it]-y_voigt)/np.maximum(uncertainty[it],1) #Residuals devided by sigma y_i/y_savgol or eventual 1 in case of sigma = 0
-        # ss_res_voigt= np.sum(np.square(residuals_voigt)) #Residual sum squares, in this case chi-sq
-        # rchisq_voigt=ss_res_voigt/(len(y_savgol[it])-len(popt_voigt)) #Reduced chi-sq
-        # print("\rReduced chi-sq Voigt_%s: %.2f"%(it+1,rchisq_voigt))
-        #
-        # s_params_voigt = np.sqrt(np.diag(pcov_voigt)) #Standard error params
-        # print("\rStandard error params Voigt:",s_params_voigt)
-        # FWHM_voigt=2.355*np.sqrt((np.square(popt_voigt[0]/2.3548))+(3.85*popt_voigt[1]*E_peak)) #(Divide /gain to get FWHM expressed in channels)
-        # print("\rFWHM_voigt (eV):",FWHM)
         
-        #time_avg = (timeit.default_timer()-time0) 
-        #print("Avg time: {0:0.2f}".format(time_avg),end="\r")
-        
-        #############################
-        # FROM HERE TO PLOT SPECTRA #
-        #############################
+        ##########################
+        # SAVE PLOT IS REQUESTED #
+        ##########################
         
         if Constants.SAVE_FIT_FIGURES and (it+1)%Constants.SAVE_INTERVAL==0:
             
-            y_gaus_single = np.asarray(
-                #[gaus(x,E_peak[i],gain,*popt_gaus[[0,1,2+i]]) for i in range(
-                [gaus(x,E_peak[i],gain,Noise0,Fano0,popt_gaus[i]) for i in range(
-                        E_peak.size)]) + y_cont[it]
+            if configurations["bgstrip"] == "None":
+                y_gaus_single = np.asarray(
+                    [gaus(x,E_peak[i],gain,Noise0,Fano0,popt_gaus[i]) for i in range(
+                            E_peak.size)])
+                y_continuum = np.zeros(y_savgol[it].shape)
+            else:
+                y_gaus_single = np.asarray(
+                    [gaus(x,E_peak[i],gain,Noise0,Fano0,popt_gaus[i]) for i in range(
+                            E_peak.size)]) + y_cont[it]
+                y_continuum = y_cont[it]
 
-            fig,ax=plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
-            ax[0].set_title('Element deconvolution',fontsize=16)
-            plt.setp(ax, xlim=(x.min(),x.max())) #Set xlim on both axes
+            save_plot(
+                    x,
+                    y_savgol[it],
+                    y_continuum,
+                    y_gaus_single,
+                    y_gaus,
+                    rchisq_gaus,
+                    residuals_gaus,
+                    Z_dict,
+                    E_peak,
+                    y_peak[it],
+                    figures_path, it
+                    )
             
-            ax[0].text(
-                    0,
-                    np.max(y_savgol[it]),
-                    "$\chi^2$: %.3f"%rchisq_gaus,
-                    fontsize=10,
-                    bbox={'facecolor':'None', 'edgecolor':'None', 'pad':10})
-            ax[0].semilogy(x,y_cont[it],linewidth=1,zorder=1,label='Continuum',color="green")
-            ax[0].plot(x,y_savgol[it],linewidth=1,zorder=1, label='Counts',color="blue")
-            ax[0].plot(x,y_gaus,label='Fit')
-            ax[0].set_ylim([1,y_savgol[it].max()])
-            element = [*Z_dict][:-1] #To be plotted elements
-            
-            #######################################################################
-            # Loop over list of keys with elements, disregarding last 'unmatched' #
-            # key (For iteration list needed, with list(Z_dict.keys()) being same #
-            # as [*Z_dict])                                                       #
-            #######################################################################
-
-            for i in element:
-
-                ###############################################################
-                # Loop over list of specific values with corresponding peak   #
-                # index (Values are already of type(list) and since .values() #
-                # not used no need to convert to list like needed with keys)  #
-                ###############################################################
-
-                for j in Z_dict[i]: 
-                    ax[0].axvline(
-                            x=E_peak[j], 
-                            color='m', 
-                            linewidth=1, 
-                            zorder=2, 
-                            label='Found peaks')
-                    ax[0].plot(x, y_gaus_single[j], color='k', linewidth=1, zorder=3)
-                    ax[0].fill_between(
-                            x, 
-                            y_cont[it], 
-                            y_gaus_single[j], 
-                            facecolor=color[element.index(i)], 
-                            alpha=0.5,
-                            zorder=3)
-
-                    #################################################################
-                    # Make sure if double assigned peak latter is plotted slightly  #
-                    # higher so no overlap occurs in plotting element indication    #
-                    #################################################################
-
-                    if i in dupl_key[:int(len(dupl_key)/2)] and j in dupl_value: 
-                        ax[0].text(
-                                E_peak[j]+25, 
-                                y_peak[it][j]*1.35, 
-                                Elements.ElementList[i], 
-                                fontsize=7)
-
-                    #################################################################
-
-                    ##############################################
-                    # Plot element indication at standard height #
-                    ##############################################
-
-                    else: 
-                        ax[0].text(
-                                E_peak[j]+25, 
-                                y_peak[it][j]*1.15, 
-                                Elements.ElementList[i], 
-                                fontsize=7)
-
-                    ##############################################
-
-                ###############################################################
-
-            #######################################################################
-
-            for i in [*Z_dict['Unmatched']]:
-                ax[0].axvline(
-                        x=E_peak[i], 
-                        color='m', 
-                        linestyle='dashed',
-                        linewidth=1,
-                        zorder=2,
-                        label='Unmatched peaks')
-
-            ax[1].set_ylim([-2,2])
-            ax[1].set_yticks([-2,-1,0,1,2])
-            ax[1].plot(x, residuals_gaus, linewidth=1)
-            ax[1].axhline(y=0, color='k')
-            ax[1].set_xlabel('Energy (eV)')
-            ax[0].set_ylabel('Counts')
-            ax[1].set_ylabel('Residuals / $\sigma$')
-            handles,labels = ax[0].get_legend_handles_labels()
-            by_label = dict(zip(labels,handles))
-            ax[0].legend(by_label.values(), by_label.keys(),prop={'size': 7})
-
-            plt.savefig(
-                    os.path.join(figures_path,"Fit_{}.png".format(it+1)),
-                    dpi=600,
-                    format="png")
-            plt.close()
             del y_gaus_single
 
-        ############# END OF SAVE BLOCK #############
+        ########### END OF SAVE BLOCK ###########
 
         del popt_gaus
         del y_gaus
@@ -713,11 +658,8 @@ def findpeak(
     # Insert Element to disregard, keeping in mind Z_true is index+5 #
     ##################################################################
     E_lib[50:,:2]=False #Set elements K-alpha & K-beta lines to zero after Xenon (Z=54)
-    #E_lib[45:,:2]=False #Set elements K-alpha & K-beta lines to zero after Xenon (Z=54)
     E_lib[:51,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
-    #E_lib[:46,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
     E_lib[52:74,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
-    #E_lib[46:74,2:]=False #Set elements L-alpha & L-beta lines to zero prior to Hg (Z=80)
     ##################################################################
 
     #####################################################################
@@ -989,484 +931,10 @@ def findpeak(
 
     return x_peak, Z_dict
 
-
-class Interrupt(Exception):
-    pass
-
-
-class SingleFit():
-    def __init__(__self__,path):
-        __self__.iterator = 0
-        __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
-        __self__.intercept = __self__.energies[0]
-        __self__.slope = Constants.MY_DATACUBE.gain*1000
-        __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
-                -1,Constants.MY_DATACUBE.matrix.shape[-1])
-        __self__.FN = Constants.MY_DATACUBE.FN
-        
-        ###################################################################################
-        # Prepare the data. Spectra are filtered with a savgol filter and the global      #
-        # spectrum must be recalculated for the filtered data. The same for the continuum #
-        ###################################################################################
-
-        __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.update_text("Filtering data...")
-
-        prepare_data(__self__)
-        
-        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
-                -1,Constants.MY_DATACUBE.background.shape[-1])
-        __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
-        __self__.continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
-
-        __self__.bar.update_text("Thinking...")
-        __self__.fit_path = os.path.join(path,"Fit_Chunk_1.npy")
-
-
-    def run_fit(__self__):
-        import gc
-        figures_path = os.path.join(SpecRead.output_path,"Fit plots","Single")
-        try: os.makedirs(figures_path)
-        except: pass
-        peaks, matches = Constants.MATCHES
-        percent = __self__.iterator/len(__self__.counts)*100
-        __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.add_abort(multiprocess=False,mode="auto_wizard")
-        del Constants.MY_DATACUBE.matrix
-        del Constants.MY_DATACUBE.background
-        fitted_spec = gausfit(
-                __self__.energies,
-                __self__.counts,
-                __self__.continuum,
-                peaks,
-                matches,
-                __self__.intercept,
-                __self__.slope,
-                __self__.fit_path,
-                figures_path,
-                __self__.raw_sum_and_bg,
-                __self__.FN,
-                __self__.iterator,
-                bar = __self__.bar)
-        __self__.bar.destroybar()
-        del __self__
-        gc.collect()
-
-    def locate_peaks(__self__,add_list=None,path="./"):
-        """ Locate peaks """
-
-        def find_nearest(array, value):
-            array = np.asarray(array)
-            idx = (np.abs(array - value)).argmin()
-            return array[idx]
-
-        peaks, matches = findpeak(
-                __self__.SUM,
-                __self__.continuum,
-                __self__.intercept,
-                __self__.slope,
-                __self__.energies,
-                path=path)
-
-        peaks, matches = recheck_peaks(peaks,matches)
-
-        #########################
-        # Add elements manually #
-        #########################
-
-        if add_list:
-            for el in add_list:
-
-                element_a = Elements.Energies[el]*1000
-                element_b = Elements.kbEnergies[el]*1000
-
-                logger.debug("Element {}, {}".format(element_a,element_b))
-                
-                #############################################
-                #NOTE: uses the theoretical energies to fit #
-                #############################################
-                idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
-                idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
-                el = [[el, idx_a[0][0], idx_b[0][0]]]
-                #############################################
-
-                #####################################################################
-                #NOTE: uses setROI function. This returns the index of the nearest  #
-                # peak to the theoretical value                                     #
-                #####################################################################
-                """
-                elka_peak = setROI(
-                        element_a,
-                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-                elkb_peak = setROI(
-                        element_b,
-                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-
-                logger.debug("setROI output: {}".format(elka_peak))
-                logger.debug("setROI output: {}".format(elkb_peak))
-
-                el = [[el,int((elka_peak[0]+elka_peak[1])/2),
-                        int((elkb_peak[0]+elkb_peak[1])/2)]]
-                """
-                #####################################################################
-
-                peaks, matches = add_elements(peaks,matches,el)
-                #except: logger.warning("Could not add element {} to chunk".format(el))
-
-        #########################
-
-        Constants.MATCHES = peaks, matches
-        logger.info("Elements being fitted: {}".format(matches))
-        return peaks, matches
-
-
-class MultiFit():
-    def __init__(__self__,path):
-        __self__.workers = []
-        __self__.name = Constants.MY_DATACUBE.name
-        __self__.save_plots_path = os.path.join(SpecRead.output_path,"Fit plots")
-        __self__.results = multiprocessing.Queue()
-        __self__.shutdown_event = multiprocessing.Event()
-        __self__.global_iterator = multiprocessing.Value('i',0)
-        __self__.global_iterator.value = 0
-        __self__.work_done = multiprocessing.Value('i',0)
-        __self__.work_done.value = 0
-        __self__.cores = Constants.CPUS
-        __self__.path = path
-        __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
-        __self__.intercept = __self__.energies[0]
-        __self__.slope = Constants.MY_DATACUBE.gain*1000
-        __self__.FN = Constants.MY_DATACUBE.FN
-        __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
-            -1,Constants.MY_DATACUBE.matrix.shape[-1])
-        
-        ###################################################################################
-        # Prepare the data. Spectra are filtered with a savgol filter and the global      #
-        # spectrum must be recalculated for the filtered data. The same for the continuum #
-        ###################################################################################
-
-        __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.update_text("Filtering data...")
-
-        prepare_data(__self__)
-
-        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
-            -1,Constants.MY_DATACUBE.background.shape[-1])
-        __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
-        __self__.bar.update_text("Thinking...")
-
-        ###################################################################################
-
-    def eat_data(__self__):
-
-        ##############################################################
-        # Split the data into blocks to distribute accross processes #
-        # Here, the continuum array has the same size as the counts  #
-        ##############################################################
-
-        __self__.bar.update_text("Splitting data...")
-        __self__.bar.updatebar(0)
-
-        counts, continuum,block = [],[],[]
-        if __self__.cores == 1: 
-            print("Only one core")
-            return
-        else:
-            bite_size = 0
-            while bite_size < 400:
-                bite_size = int(__self__.counts.shape[0]/__self__.cores)
-                leftovers = int(__self__.counts.shape[0]%__self__.cores)
-                print("bite size: ",bite_size,"leftovers ",leftovers)
-                __self__.cores -= 1
-            __self__.cores+=1
-            __self__.bite_size = bite_size
-            __self__.leftovers = leftovers
-
-            __self__.bar.progress["max"] = bite_size*__self__.cores
-                
-            #########################################
-            # Splits the data in pieces accordingly #
-            # Available RAM is also considered      #
-            #########################################
-
-            spec = 0
-            for k in range(__self__.cores):
-                print("Block ",k)
-                for i in range(bite_size):
-                    __self__.bar.updatebar(spec)
-                    counts.append(__self__.counts[spec])
-                    continuum.append(__self__.continuum[spec])
-                    spec += 1
-                data = (counts,continuum)
-                block.append(data)
-                counts, continuum = [],[]
-            if leftovers >= 1:
-                __self__.bar.update_text("Eating leftovers...")
-                __self__.bar.updatebar(0)
-                __self__.bar.progress["max"] = leftovers
-                for i in range(leftovers):
-                    __self__.bar.updatebar(i)
-                    counts.append(__self__.counts[spec])
-                    continuum.append(__self__.continuum[spec])
-                    spec += 1
-                leftovers = (counts,continuum)
-
-            #########################################
-
-            #######################################################################
-
-            block = np.asarray(block)
-            print("Data blocks shape: ",block.shape)
-
-            #######################################################################
-
-        return block, leftovers
-    
-    def locate_peaks(__self__,add_list=None,path="./"):
-
-        def find_nearest(array, value):
-            array = np.asarray(array)
-            idx = (np.abs(array - value)).argmin()
-            return array[idx]
-
-        ######################################################################
-        # The global continuum of the filtered spectra is parsed to findpeak #
-        # function. It uses this background as a criteria to select peaks    #
-        ######################################################################
-
-        continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
-
-        ######################################################################
-
-        peaks, matches = findpeak(
-                __self__.SUM,
-                continuum,
-                __self__.intercept,
-                __self__.slope,
-                __self__.energies,
-                path)
-
-        peaks, matches = recheck_peaks(peaks,matches)
-
-        ########################
-        # Add element manually #
-        ########################
-        
-        if add_list:
-            for el in add_list:
-            
-                element_a = Elements.Energies[el]*1000
-                element_b = Elements.kbEnergies[el]*1000
-                
-                #############################################
-                #NOTE: uses the theoretical energies to fit #
-                #############################################
-                idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
-                idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
-                el = [[el, idx_a[0][0], idx_b[0][0]]]
-                logger.info("{} alpha, Theoretical: {}, Matched: {}".format(el,element_a,__self__.energies[idx_a]))
-                logger.info("{} beta, Theoretical: {}, Matched: {}".format(el,element_b,__self__.energies[idx_b]))
-                #############################################
-
-                #####################################################################
-                #NOTE: uses setROI function. This returns the index of the nearest  #
-                # peak to the theoretical value                                     #
-                #####################################################################
-                """
-                elka_peak = SpecMath.setROI(
-                        element_a,
-                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-                elkb_peak = SpecMath.setROI(
-                        element_b,
-                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-
-                logger.debug("setROI output: {}".format(elka_peak))
-                logger.debug("setROI output: {}".format(elkb_peak))
-
-                el = [[el,int((elka_peak[0]+elka_peak[1])/2),
-                        int((elkb_peak[0]+elkb_peak[1])/2)]]
-                """
-                #####################################################################
-
-                try: peaks, matches = add_elements(peaks,matches,el)
-                except: logger.warning("Could not add element {} to chunk".format(el))
-
-        Constants.MATCHES = peaks, matches
-        logger.info("Elements being fitted: {}".format(matches))
-        return peaks, matches
-
-    def check_progress(__self__):
-        tot = int(__self__.cores*__self__.bite_size)+__self__.leftovers
-        while __self__.work_done.value < len(__self__.workers) \
-                and not __self__.bar.make_abortion:
-            __self__.bar.updatebar(__self__.global_iterator.value)
-            percent = __self__.global_iterator.value/tot*100
-            __self__.bar.update_text("Fitting data... {0:0.2f}%".format(percent))
-        try: 
-
-            __self__.bar.destroybar()
-            #########################################################################
-            # For long processes, kill processes and move on if any data is hanging #
-            #########################################################################
-
-            for p in __self__.workers:
-                print("shutting ",p)
-                __self__.shutdown_event.set()
-                p.terminate()
-                print(p,"SHUT")
-            del __self__
-            gc.collect()
-
-            #########################################################################
-
-            return 0
-        except: 
-            
-            __self__.bar.destroybar()
-            #############
-            # same here #
-            #############
-
-            for p in __self__.workers:
-                print("shutting ",p)
-                __self__.shutdown_event.set()
-                p.terminate()
-                print(p,"SHUT")
-            del __self__
-            gc.collect()
-
-            #############
-
-            return 1
-
-    def launch_workers(__self__,
-            cycles,
-            plot_save_interval,
-            save_plots):
-
-        del Constants.MY_DATACUBE.matrix
-        del Constants.MY_DATACUBE.background
-        
-        __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.updatebar(0)
-
-        peaks, matches = Constants.MATCHES
-        partial_ = []
-        chunk, it = 0,0
-        
-        #########################
-        # Create main processes #
-        #########################
-
-        bites, leftovers = __self__.eat_data()
-        __self__.bar.progress["max"] = len(bites)
-
-        for block in bites:
-
-            __self__.bar.update_text("Polling chunks...")
-
-            counts, continuum = np.asarray(copy.deepcopy(block),dtype="int32")
-            
-            counts = np.asarray(counts,dtype="int32")
-
-            it += 1
-            chunk += 1
-            p = multiprocessing.Process(target=find_and_fit,
-                    name="chunk_{}".format(chunk),
-                    args=(
-                        (counts,continuum),
-                        __self__.intercept,
-                        __self__.slope,
-                        __self__.path,
-                        __self__.save_plots_path,
-                        chunk,
-                        __self__.results,
-                        __self__.energies,
-                        __self__.FN,
-                        __self__.global_iterator,
-                        __self__.work_done,
-                        __self__.raw_sum_and_bg,
-                        peaks,
-                        matches,
-                        (cycles,plot_save_interval,save_plots)))
-
-            __self__.workers.append(p)
-            del block
-            del counts, continuum
-        del bites
-        gc.collect()
-
-        #########################
-
-        ######################################
-        # Create a process for the leftovers #
-        ######################################
-        
-        if isinstance(leftovers,tuple):
-            counts, continuum = leftovers
-            counts = np.asarray(counts,dtype="int32")
-            it += 1
-            chunk += 1
-            p = multiprocessing.Process(target=find_and_fit,
-                    name="chunk_{}".format(chunk),
-                    args=(
-                        (counts,continuum),
-                        __self__.intercept,
-                        __self__.slope,
-                        __self__.path,
-                        __self__.save_plots_path,
-                        chunk,
-                        __self__.results,
-                        __self__.energies,
-                        __self__.FN,
-                        __self__.global_iterator,
-                        __self__.work_done,
-                        __self__.raw_sum_and_bg,
-                        peaks,
-                        matches,
-                        (cycles,plot_save_interval,save_plots)))
-
-            __self__.workers.append(p)
-
-        ######################################
-
-        workers_count=0
-        __self__.bar.add_abort(__self__.workers,mode="auto_wizard")
-        __self__.bar.toggle_abort("off")
-        for p in __self__.workers:
-            workers_count+=1
-            print("\nPolling chunk ", workers_count)
-            __self__.bar.updatebar(workers_count)
-            p.daemon = True
-            p.start()
-        
-        __self__.bar.progress["max"]= \
-                int(__self__.cores*__self__.bite_size)+__self__.leftovers
-        __self__.bar.updatebar(0)
-        __self__.bar.update_text("Fitting data...")
-        __self__.bar.toggle_abort("on")
-        __self__.check_progress()
-    
-        #for i in range(chunk):
-        while not __self__.shutdown_event.is_set():
-            try:
-                data = __self__.results.get(block=True)
-                partial_.append(data)
-            except queue.Empty:
-                continue
-            if data == "END": break
-        __self__.results.close()
-        __self__.results.join_thread()
-        
-        for p in __self__.workers:
-            if p.exitcode !=0:
-                p.join()
-        return partial_ 
-
 def find_and_fit(
         data,
         intercept,
-        slope,
+        configurations,
         path,
         plots_save_path,
         chunk,
@@ -1498,6 +966,7 @@ def find_and_fit(
         clipped_global_spec; <1D-array> - obtained by summing the clipped data (clipped to 1)
     """
     
+    slope = configurations["gain"]*1000
     Constants.FIT_CYCLES = global_parameters[0]
     Constants.SAVE_INTERVAL = global_parameters[1]
     Constants.SAVE_FIT_FIGURES = global_parameters[2]
@@ -1514,7 +983,7 @@ def find_and_fit(
     #####################################################################################
 
     print("Chunk {} data size: ".format(chunk),convert_bytes(counts.nbytes))
-    print("Chunk {} data size (cont): ".format(chunk),convert_bytes(continuum.nbytes))
+    print("Chunk {} continuum size: ".format(chunk),convert_bytes(continuum.nbytes))
 
     del data
 
@@ -1545,6 +1014,7 @@ def find_and_fit(
             global_spec_and_bg,
             fano_and_noise,
             iterator,
+            configurations,
             bar=None,
             work_done=work_done,
             results=results)
@@ -1554,7 +1024,6 @@ def add_elements(peaks,matches,element_list):
     """ element_list: 2D list with element Z and peak position """
 
     print("INFO:\nAdding element {}...".format(element_list[0][0]))
-
 
     iterator = 0
     for element in element_list:
@@ -1598,7 +1067,6 @@ def recheck_peaks(peaks,matches):
             lower = theoretical_energies[peak] - (W*gain)
             high = (W*gain) + theoretical_energies[peak]
             pos = Constants.MY_DATACUBE.energyaxis[energies[key][peak]]*1000
-            #print(lower,pos,high)
             if len(matches[key])>1:
                 if lower <= pos <= high:
                     checked_matches[key].append(matches[key][peak])
@@ -1719,20 +1187,16 @@ def build_images(
     for frmfile in frames:
         frmcount += 1
         bar.update_text("Building images - {}/{}".format(frmcount,len(frames)))
-        #print("\nFrame {}".format(frmcount))
         frame = np.load(
                 os.path.abspath(os.path.join(frames_path,frmfile)),
                 allow_pickle=True)
         size = frame.shape[0]*len(element_list)
-        #print("Size: ",frame.shape[0]*len(element_list))
         if not elements: continue
         for key in elements:
             maximum_counts = 0
             for c in range(frame.shape[0]):
                 iteration+=1
                 percent = iteration/size
-                #print("Map {}: {}, pos {} x {}\t {:0.2f} percent complete...".format(
-                #    maps_count,element_list[maps_count],x,y,percent*100),end="\r")
                 for line in range(len(frame[c][key])):
                     if frame[c][key][line] > 0:
                         try: 
@@ -1748,7 +1212,6 @@ def build_images(
             bar.updatebar(maps_count)
             
         iteration, maps_count = 0,0
-        #print("\npos: ",pos)
         start_x, start_y, x, y = pos[0], pos[1], pos[0], pos[1]
 
     ####################################################
@@ -1757,17 +1220,6 @@ def build_images(
     # Gives ROI attribute to datacube object. It can be a tuple with the          #  
     # peaks indexes (for each element) or the curve, set at add_roi_to_datacube() #
     ###############################################################################
-
-    #try:
-    #    for key in Constants.MATCHES[1]:
-    #        if key != "Unmatched":
-    #            peak1 = Constants.MATCHES[0][Constants.MATCHES[1][key][0]]
-    #            try:
-    #                peak2 = Constants.MATCHES[0][Constants.MATCHES[1][key][1]]
-    #            except: peak2 = 0
-    #            Constants.MY_DATACUBE.ROI[Elements.ElementList[key]] = peak1, peak2
-    #except:
-    #    print("Running module alone, MATCHES variable may have not been declared.")
     
     add_roi_to_datacube()
     
@@ -1823,6 +1275,509 @@ def add_roi_to_datacube():
                 #############################################################################
         del spectrum
     return 0
+
+class Interrupt(Exception):
+    pass
+
+
+class SingleFit():
+    def __init__(__self__,path):
+        __self__.iterator = 0
+        __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
+        __self__.intercept = __self__.energies[0]
+        __self__.slope = Constants.MY_DATACUBE.gain*1000
+        __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
+                -1,Constants.MY_DATACUBE.matrix.shape[-1])
+        __self__.FN = Constants.MY_DATACUBE.FN
+
+        ###################################################################################
+        # Prepare the data. Spectra are filtered with a savgol filter and the global      #
+        # spectrum must be recalculated for the filtered data. The same for the continuum #
+        ###################################################################################
+
+        __self__.bar = Busy(len(__self__.counts),0)
+        __self__.bar.update_text("Filtering data...")
+
+        prepare_data(__self__)
+
+        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
+                -1,Constants.MY_DATACUBE.background.shape[-1])
+        __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
+        __self__.continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
+
+        __self__.bar.update_text("Thinking...")
+        __self__.fit_path = os.path.join(path,"Fit_Chunk_1.npy")
+
+
+    def run_fit(__self__):
+        import gc
+        figures_path = os.path.join(SpecRead.output_path,"Fit plots","Single")
+        try: os.makedirs(figures_path)
+        except: pass
+        peaks, matches = Constants.MATCHES
+        percent = __self__.iterator/len(__self__.counts)*100
+        __self__.bar = Busy(len(__self__.counts),0)
+        __self__.bar.add_abort(multiprocess=False,mode="auto_wizard")
+        del Constants.MY_DATACUBE.matrix
+        del Constants.MY_DATACUBE.background
+        fitted_spec = gausfit(
+                __self__.energies,              #energy axis (calibrated)
+                __self__.counts,                #data itself
+                __self__.continuum,             #data corresponding continuum estimation
+                peaks,                          #peaks energies
+                matches,                        #Z match dictionary
+                __self__.intercept,             #calibration zero
+                __self__.slope,                 #calibration gain
+                __self__.fit_path,              #path to save Fit_Chunk
+                figures_path,                   #path to save plots
+                __self__.raw_sum_and_bg,        #tuple with global spectrum and continuum
+                __self__.FN,                    #fano and noise
+                __self__.iterator,              #iterator
+                Constants.MY_DATACUBE.config,   #configurations
+                bar = __self__.bar)             #progressbar
+        __self__.bar.destroybar()
+        del __self__
+        gc.collect()
+
+    def locate_peaks(__self__,add_list=None,path="./"):
+        """ Locate peaks """
+
+        def find_nearest(array, value):
+            array = np.asarray(array)
+            idx = (np.abs(array - value)).argmin()
+            return array[idx]
+
+        peaks, matches = findpeak(
+                __self__.SUM,
+                __self__.continuum,
+                __self__.intercept,
+                __self__.slope,
+                __self__.energies,
+                path=path)
+
+        peaks, matches = recheck_peaks(peaks,matches)
+
+        #########################
+        # Add elements manually #
+        #########################
+
+        if add_list:
+            for el in add_list:
+
+                element_a = Elements.Energies[el]*1000
+                element_b = Elements.kbEnergies[el]*1000
+
+                logger.debug("Element {}, {}".format(element_a,element_b))
+
+                #############################################
+                #NOTE: uses the theoretical energies to fit #
+                #############################################
+                idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
+                idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
+                el = [[el, idx_a[0][0], idx_b[0][0]]]
+                #############################################
+
+                #####################################################################
+                #NOTE: uses setROI function. This returns the index of the nearest  #
+                # peak to the theoretical value                                     #
+                #####################################################################
+                """
+                elka_peak = setROI(
+                        element_a,
+                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
+                elkb_peak = setROI(
+                        element_b,
+                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
+
+                logger.debug("setROI output: {}".format(elka_peak))
+                logger.debug("setROI output: {}".format(elkb_peak))
+
+                el = [[el,int((elka_peak[0]+elka_peak[1])/2),
+                        int((elkb_peak[0]+elkb_peak[1])/2)]]
+                """
+                #####################################################################
+
+                peaks, matches = add_elements(peaks,matches,el)
+                #except: logger.warning("Could not add element {} to chunk".format(el))
+
+        #########################
+
+        Constants.MATCHES = peaks, matches
+        logger.info("Elements being fitted: {}".format(matches))
+        return peaks, matches
+
+
+class MultiFit():
+    def __init__(__self__,path):
+        __self__.workers = []
+        __self__.name = Constants.MY_DATACUBE.name
+        __self__.save_plots_path = os.path.join(SpecRead.output_path,"Fit plots")
+        __self__.results = multiprocessing.Queue()
+        __self__.shutdown_event = multiprocessing.Event()
+        __self__.global_iterator = multiprocessing.Value('i',0)
+        __self__.global_iterator.value = 0
+        __self__.work_done = multiprocessing.Value('i',0)
+        __self__.work_done.value = 0
+        __self__.cores = Constants.CPUS
+        __self__.path = path
+        __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
+        __self__.intercept = __self__.energies[0]
+        __self__.slope = Constants.MY_DATACUBE.gain*1000
+        __self__.FN = Constants.MY_DATACUBE.FN
+        __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
+            -1,Constants.MY_DATACUBE.matrix.shape[-1])
+
+        ###################################################################################
+        # Prepare the data. Spectra are filtered with a savgol filter and the global      #
+        # spectrum must be recalculated for the filtered data. The same for the continuum #
+        ###################################################################################
+
+        __self__.bar = Busy(len(__self__.counts),0)
+        __self__.bar.update_text("Filtering data...")
+
+        prepare_data(__self__)
+
+        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
+            -1,Constants.MY_DATACUBE.background.shape[-1])
+        __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
+        __self__.bar.update_text("Thinking...")
+
+        ###################################################################################
+
+    def eat_data(__self__):
+
+        ##############################################################
+        # Split the data into blocks to distribute accross processes #
+        # Here, the continuum array has the same size as the counts  #
+        ##############################################################
+
+        __self__.bar.update_text("Splitting data...")
+        __self__.bar.updatebar(0)
+
+        counts, continuum, block = [],[],[]
+        if __self__.cores == 1:
+            print("Only one core")
+            logger.warning("Sample is too small, running with one core only...")
+            return
+        else:
+            bite_size = 0
+            while bite_size < 400:
+                bite_size = int(__self__.counts.shape[0]/__self__.cores)
+                leftovers = int(__self__.counts.shape[0]%__self__.cores)
+                print("bite size: ",bite_size,"leftovers ",leftovers)
+                __self__.cores -= 1
+            __self__.cores+=1
+            __self__.bite_size = bite_size
+            __self__.leftovers = leftovers
+
+            __self__.bar.progress["max"] = bite_size*__self__.cores
+
+            #########################################
+            # Splits the data in pieces accordingly #
+            # Available RAM is also considered      #
+            #########################################
+
+            if Constants.MY_DATACUBE.config["bgstrip"] != "None":
+                spec = 0
+                for k in range(__self__.cores):
+                    print("Block ",k)
+                    for i in range(bite_size):
+                        __self__.bar.updatebar(spec)
+                        counts.append(__self__.counts[spec])
+                        continuum.append(__self__.continuum[spec])
+                        spec += 1
+                    data = (counts,continuum)
+                    block.append(data)
+                    counts, continuum = [],[]
+                if leftovers >= 1:
+                    __self__.bar.update_text("Eating leftovers...")
+                    __self__.bar.updatebar(0)
+                    __self__.bar.progress["max"] = leftovers
+                    for i in range(leftovers):
+                        __self__.bar.updatebar(i)
+                        counts.append(__self__.counts[spec])
+                        continuum.append(__self__.continuum[spec])
+                        spec += 1
+                    leftovers = (counts,continuum)
+
+            else:
+                spec = 0
+                for k in range(__self__.cores):
+                    print("Block ",k)
+                    for i in range(bite_size):
+                        __self__.bar.updatebar(spec)
+                        counts.append(__self__.counts[spec])
+                        spec += 1
+                    data = (counts)
+                    block.append(data)
+                    counts = []
+                if leftovers >= 1:
+                    __self__.bar.update_text("Eating leftovers...")
+                    __self__.bar.updatebar(0)
+                    __self__.bar.progress["max"] = leftovers
+                    for i in range(leftovers):
+                        __self__.bar.updatebar(i)
+                        counts.append(__self__.counts[spec])
+                        spec += 1
+                    leftovers = (counts)
+
+            #########################################
+
+            #######################################################################
+
+            block = np.asarray(block)
+            print("Data blocks shape: ",block.shape)
+
+            #######################################################################
+
+        return block, leftovers
+
+    def locate_peaks(__self__,add_list=None,path="./"):
+
+        def find_nearest(array, value):
+            array = np.asarray(array)
+            idx = (np.abs(array - value)).argmin()
+            return array[idx]
+
+        ######################################################################
+        # The global continuum of the filtered spectra is parsed to findpeak #
+        # function. It uses this background as a criteria to select peaks    #
+        ######################################################################
+
+        continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
+
+        ######################################################################
+
+        peaks, matches = findpeak(
+                __self__.SUM,
+                continuum,
+                __self__.intercept,
+                __self__.slope,
+                __self__.energies,
+                path)
+
+        peaks, matches = recheck_peaks(peaks,matches)
+
+        ########################
+        # Add element manually #
+        ########################
+
+        if add_list:
+            for el in add_list:
+
+                element_a = Elements.Energies[el]*1000
+                element_b = Elements.kbEnergies[el]*1000
+
+                #############################################
+                #NOTE: uses the theoretical energies to fit #
+                #############################################
+                idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
+                idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
+                el = [[el, idx_a[0][0], idx_b[0][0]]]
+                logger.info("{} alpha, Theoretical: {}, Matched: {}".format(el,element_a,__self__.energies[idx_a]))
+                logger.info("{} beta, Theoretical: {}, Matched: {}".format(el,element_b,__self__.energies[idx_b]))
+                #############################################
+
+                #####################################################################
+                #NOTE: uses setROI function. This returns the index of the nearest  #
+                # peak to the theoretical value                                     #
+                #####################################################################
+                """
+                elka_peak = SpecMath.setROI(
+                        element_a,
+                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
+                elkb_peak = SpecMath.setROI(
+                        element_b,
+                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
+
+                logger.debug("setROI output: {}".format(elka_peak))
+                logger.debug("setROI output: {}".format(elkb_peak))
+
+                el = [[el,int((elka_peak[0]+elka_peak[1])/2),
+                        int((elkb_peak[0]+elkb_peak[1])/2)]]
+                """
+                #####################################################################
+
+                try: peaks, matches = add_elements(peaks,matches,el)
+                except: logger.warning("Could not add element {} to chunk".format(el))
+
+        Constants.MATCHES = peaks, matches
+        logger.info("Elements being fitted: {}".format(matches))
+        return peaks, matches
+
+    def check_progress(__self__):
+        tot = int(__self__.cores*__self__.bite_size)+__self__.leftovers
+        while __self__.work_done.value < len(__self__.workers) \
+                and not __self__.bar.make_abortion:
+            __self__.bar.updatebar(__self__.global_iterator.value)
+            percent = __self__.global_iterator.value/tot*100
+            __self__.bar.update_text("Fitting data... {0:0.2f}%".format(percent))
+        try:
+
+            __self__.bar.destroybar()
+            #########################################################################
+            # For long processes, kill processes and move on if any data is hanging #
+            #########################################################################
+
+            for p in __self__.workers:
+                print("shutting ",p)
+                __self__.shutdown_event.set()
+                p.terminate()
+                print(p,"SHUT")
+            del __self__
+            gc.collect()
+
+            #########################################################################
+
+            return 0
+        except:
+
+            __self__.bar.destroybar()
+            #############
+            # same here #
+            #############
+
+            for p in __self__.workers:
+                print("shutting ",p)
+                __self__.shutdown_event.set()
+                p.terminate()
+                print(p,"SHUT")
+            del __self__
+            gc.collect()
+
+            #############
+
+            return 1
+
+    def launch_workers(__self__,
+            cycles,
+            plot_save_interval,
+            save_plots):
+
+        del Constants.MY_DATACUBE.matrix
+        del Constants.MY_DATACUBE.background
+
+        __self__.bar = Busy(len(__self__.counts),0)
+        __self__.bar.updatebar(0)
+
+        peaks, matches = Constants.MATCHES
+        partial_ = []
+        chunk, it = 0,0
+
+        #########################
+        # Create main processes #
+        #########################
+
+        bites, leftovers = __self__.eat_data()
+        __self__.bar.progress["max"] = len(bites)
+
+        for block in bites:
+
+            __self__.bar.update_text("Polling chunks...")
+
+            if Constants.MY_DATACUBE.config["bgstrip"] != "None":
+                counts, continuum = np.asarray(copy.deepcopy(block),dtype="int32")
+            else:
+                counts = np.asarray(copy.deepcopy(block),dtype="int32")
+                continuum = np.zeros([1,counts.shape[1]])
+
+            print("Counts shape", counts.shape)
+            print("Continuum shape", continuum.shape)
+            #counts = np.asarray(counts,dtype="int32")
+
+            it += 1
+            chunk += 1
+            p = multiprocessing.Process(target=find_and_fit,
+                    name="chunk_{}".format(chunk),
+                    args=(
+                        (counts,continuum),
+                        __self__.intercept,
+                        Constants.MY_DATACUBE.config,       #configurations (gain included)
+                        __self__.path,
+                        __self__.save_plots_path,
+                        chunk,
+                        __self__.results,
+                        __self__.energies,
+                        __self__.FN,
+                        __self__.global_iterator,
+                        __self__.work_done,
+                        __self__.raw_sum_and_bg,
+                        peaks,
+                        matches,
+                        (cycles,plot_save_interval,save_plots)))
+
+            __self__.workers.append(p)
+            del block
+            del counts, continuum
+        del bites
+        gc.collect()
+
+        #########################
+
+        ######################################
+        # Create a process for the leftovers #
+        ######################################
+
+        if isinstance(leftovers,tuple):
+            counts, continuum = leftovers
+            counts = np.asarray(counts,dtype="int32")
+            it += 1
+            chunk += 1
+            p = multiprocessing.Process(target=find_and_fit,
+                    name="chunk_{}".format(chunk),
+                    args=(
+                        (counts,continuum),
+                        __self__.intercept,
+                        Constants.MY_DATACUBE.config,       #configurations (gain included)
+                        __self__.path,
+                        __self__.save_plots_path,
+                        chunk,
+                        __self__.results,
+                        __self__.energies,
+                        __self__.FN,
+                        __self__.global_iterator,
+                        __self__.work_done,
+                        __self__.raw_sum_and_bg,
+                        peaks,
+                        matches,
+                        (cycles,plot_save_interval,save_plots)))
+
+            __self__.workers.append(p)
+
+        ######################################
+
+        workers_count=0
+        __self__.bar.add_abort(__self__.workers,mode="auto_wizard")
+        __self__.bar.toggle_abort("off")
+        for p in __self__.workers:
+            workers_count+=1
+            print("\nPolling chunk ", workers_count)
+            __self__.bar.updatebar(workers_count)
+            p.daemon = True
+            p.start()
+
+        __self__.bar.progress["max"]= \
+                int(__self__.cores*__self__.bite_size)+__self__.leftovers
+        __self__.bar.updatebar(0)
+        __self__.bar.update_text("Fitting data...")
+        __self__.bar.toggle_abort("on")
+        __self__.check_progress()
+
+        #for i in range(chunk):
+        while not __self__.shutdown_event.is_set():
+            try:
+                data = __self__.results.get(block=True)
+                partial_.append(data)
+            except queue.Empty:
+                continue
+            if data == "END": break
+        __self__.results.close()
+        __self__.results.join_thread()
+
+        for p in __self__.workers:
+            if p.exitcode !=0:
+                p.join()
+        return partial_
 
 if __name__.endswith('__main__'):
     """ Spectrum file path """
