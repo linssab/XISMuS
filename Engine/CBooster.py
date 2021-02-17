@@ -7,11 +7,14 @@
 
 import numpy as np
 import time
-import os
+import os, struct
 import ctypes
 from numpy.ctypeslib import ndpointer
 
-lib = os.path.join(os.path.dirname(__file__),"booster.dll")
+if struct.calcsize("P")*8 == 32:
+    lib = os.path.join(os.path.dirname(__file__),"boosterx86.dll")
+else:
+    lib = os.path.join(os.path.dirname(__file__),"booster.dll")
 dll = ctypes.cdll.LoadLibrary(lib);
 
 dll.apply_scaling.argtypes = [
