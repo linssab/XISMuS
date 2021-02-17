@@ -1713,11 +1713,6 @@ class ImageAnalyzer:
         __self__.canvas2.mpl_connect("button_press_event",
                 lambda event: __self__.pop(event,2))
 
-        #Grid.rowconfigure(canvas1,0,weight=1)
-        #Grid.columnconfigure(canvas1,0,weight=1)
-        #Grid.rowconfigure(canvas2,0,weight=1)
-        #Grid.columnconfigure(canvas2,0,weight=1)
-
         # image controls Threshold, LowPass and Smooth
         __self__.T1check = BooleanVar()
         __self__.LP1check = BooleanVar()
@@ -1873,12 +1868,6 @@ class ImageAnalyzer:
                 bd=1,
                 relief=SUNKEN,
                 anchor=W)
-        
-        # Disable sliders
-        __self__.T1Slider.config(state=DISABLED)
-        __self__.T2Slider.config(state=DISABLED)
-        __self__.LP1Slider.config(state=DISABLED)
-        __self__.LP2Slider.config(state=DISABLED)
 
         __self__.Map1Label.grid(row=0, column=0, sticky=E)
         __self__.Map1Combo.grid(row=0,column=1, sticky=W,padx=(16,16),pady=(8,4))
@@ -1923,6 +1912,13 @@ class ImageAnalyzer:
         
         icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
         __self__.master.iconbitmap(icon)  
+
+        # Disable sliders
+        # NOTE: in x86 systems, DISABLED must be called AFTER the widgets are on a grid or packed!!!
+        __self__.T1Slider.config(state=DISABLED)
+        __self__.T2Slider.config(state=DISABLED)
+        __self__.LP1Slider.config(state=DISABLED)
+        __self__.LP2Slider.config(state=DISABLED)
         
         # presents a first image, if no element maps exist, displays the sum map. 
         __self__.nomaps = False
@@ -2186,8 +2182,8 @@ class ImageAnalyzer:
         if scalemode: scalemode = 1
         else: scalemode = 0
         __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
-        __self__.newimage1 = __self__.transform1(__self__.CACHEMAP1)
-        __self__.newimage1 = fast_scaling(__self__.DATACUBE, __self__.newimage1, scalemode) 
+        __self__.newimage1 = fast_scaling(__self__.DATACUBE, __self__.CACHEMAP1, scalemode) 
+        __self__.newimage1 = __self__.transform1(__self__.newimage1)
         __self__.left_image.set_data(__self__.newimage1)
         __self__.left_image.set_clim(vmin=0, vmax=__self__.newimage1.max())
         __self__.left_image.set_cmap(Constants.COLORMAP)
@@ -2199,8 +2195,8 @@ class ImageAnalyzer:
         if scalemode: scalemode = 1
         else: scalemode = 0
         __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
-        __self__.newimage2 = __self__.transform2(__self__.CACHEMAP2)
-        __self__.newimage2 = fast_scaling(__self__.DATACUBE,__self__.newimage2, scalemode) 
+        __self__.newimage2 = fast_scaling(__self__.DATACUBE,__self__.CACHEMAP2, scalemode) 
+        __self__.newimage2 = __self__.transform2(__self__.newimage2)
         __self__.right_image.set_data(__self__.newimage2)
         __self__.right_image.set_clim(vmin=0, vmax=__self__.newimage2.max())
         __self__.right_image.set_cmap(Constants.COLORMAP)
