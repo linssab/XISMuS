@@ -1914,11 +1914,10 @@ class ImageAnalyzer:
         __self__.master.iconbitmap(icon)  
 
         # Disable sliders
-        # NOTE: in x86 systems, DISABLED must be called AFTER the widgets are on a grid or packed!!!
-        __self__.T1Slider.config(state=DISABLED)
-        __self__.T2Slider.config(state=DISABLED)
-        __self__.LP1Slider.config(state=DISABLED)
-        __self__.LP2Slider.config(state=DISABLED)
+        __self__.T1Slider.state(["disabled"])
+        __self__.T2Slider.state(["disabled"])
+        __self__.LP1Slider.state(["disabled"])
+        __self__.LP2Slider.state(["disabled"])
         
         # presents a first image, if no element maps exist, displays the sum map. 
         __self__.nomaps = False
@@ -2096,35 +2095,35 @@ class ImageAnalyzer:
         except: pass
     
     def switchT1LP1(__self__):
-        if __self__.LP1check.get() == True: __self__.LP1Slider.config(state=NORMAL)
-        else: __self__.LP1Slider.config(state=DISABLED)
+        if __self__.LP1check.get() == True: __self__.LP1Slider.state(["!disabled"])
+        else: __self__.LP1Slider.state(["disabled"])
         if __self__.T1check.get() == True: 
             __self__.T1check.set(False)
-            __self__.T1Slider.config(state=DISABLED)
+            __self__.T1Slider.state(["disabled"])
         __self__.draw_image1(0)
 
     def switchLP1T1(__self__):
-        if __self__.T1check.get() == True: __self__.T1Slider.config(state=NORMAL)
-        else: __self__.T1Slider.config(state=DISABLED)
+        if __self__.T1check.get() == True: __self__.T1Slider.state(["!disabled"])
+        else: __self__.T1Slider.state(["disabled"])
         if __self__.LP1check.get() == True: 
             __self__.LP1check.set(False)
-            __self__.LP1Slider.config(state=DISABLED)
+            __self__.LP1Slider.state(["disabled"])
         __self__.draw_image1(0)
 
     def switchT2LP2(__self__):
-        if __self__.LP2check.get() == True: __self__.LP2Slider.config(state=NORMAL)
-        else: __self__.LP2Slider.config(state=DISABLED)
+        if __self__.LP2check.get() == True: __self__.LP2Slider.state(["!disabled"])
+        else: __self__.LP2Slider.state(["disabled"])
         if __self__.T2check.get() == True: 
             __self__.T2check.set(False)
-            __self__.T2Slider.config(state=DISABLED)
+            __self__.T2Slider.state(["disabled"])
         __self__.draw_image2(0)
     
     def switchLP2T2(__self__):
-        if __self__.T2check.get() == True: __self__.T2Slider.config(state=NORMAL)
-        else: __self__.T2Slider.config(state=DISABLED)
+        if __self__.T2check.get() == True: __self__.T2Slider.state(["!disabled"])
+        else: __self__.T2Slider.state(["disabled"])
         if __self__.LP2check.get() == True: 
             __self__.LP2check.set(False)
-            __self__.LP2Slider.config(state=DISABLED)
+            __self__.LP2Slider.state(["disabled"])
         __self__.draw_image2(0)
 
     def transform1(__self__,image):
