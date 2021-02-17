@@ -820,8 +820,8 @@ class Welcome:
         __self__.button_frame = Frame(__self__.master)
         __self__.tag_button = ttk.Checkbutton(__self__.master, 
                 takefocus=False,
+                text="Do not show me again next time.",
                 variable=__self__.tag) 
-        __self__.tag_label = Label(__self__.master, text="Don't show me again on startup.")
         __self__.accept = ttk.Button(
                 __self__.button_frame, 
                 takefocus=False,
@@ -830,7 +830,6 @@ class Welcome:
 
         __self__.button_frame.grid(row=3,column=0,columnspan=2)
         __self__.tag_button.grid(row=2, column=0, padx=10)
-        __self__.tag_label.grid(row=2, column=1, sticky=W)
         __self__.accept.grid(pady=10)
         
         for i in range(5):
