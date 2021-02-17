@@ -7,10 +7,11 @@
 
 import numpy as np
 import time
+import os
 import ctypes
 from numpy.ctypeslib import ndpointer
 
-lib = "./booster.dll"
+lib = os.path.join(os.path.dirname(__file__),"booster.dll")
 dll = ctypes.cdll.LoadLibrary(lib);
 
 dll.apply_scaling.argtypes = [
