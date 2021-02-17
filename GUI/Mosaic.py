@@ -6,7 +6,7 @@
 #################################################################
 
 global LAYERS_DICT, VMAX
-global OVERRIDE
+global OVERRIDE, LOADED
 OVERRIDE = False
 VMAX = 0
 LAYERS_DICT = {}
@@ -97,6 +97,17 @@ def place_center(window1,window2):
     window2.deiconify()
     window2.focus_force()
 
+def print_layers():
+    global LAYERS_DICT
+    images = ["img","mask","matrix","dense"]
+    for layer in LAYERS_DICT.keys():
+        print("LAYER:", layer)
+        for key, value in LAYERS_DICT[layer].items():
+            if key in images:
+                print(key, value.shape)
+            else:
+                print(key,value)
+
 def truncate(f, n):
     """ Truncates/pads a float f to n decimal places without rounding """
     s = f"{f}"
@@ -119,7 +130,7 @@ def convert_layers_to_dict(MosaicAPI_class):
                 "min":MosaicAPI_class.layer[layer].dense.min(),
                 "layer":int(MosaicAPI_class.layer[layer].layer),
                 "matrix":MosaicAPI_class.layer[layer].matrix,
-                "mask":MosaicAPI_class.layer[layer].mask
+                "mask":MosaicAPI_class.layer[layer].last_saved_mask
                 }
         vmax_check.append(MosaicAPI_class.layer[layer].img_max)
     if vmax_check != []: VMAX = max(vmax_check)
@@ -265,6 +276,7 @@ class Layer:
         __self__.calibration = cube.calibration
         __self__.energyaxis = cube.energyaxis
         __self__.config = cube.config
+
         if element == "": 
             __self__.element = None
             #__self__.img = (cube.densitymap-cube.densitymap.min())*LEVELS/((cube.densitymap.max()-cube.densitymap.min()))
@@ -493,7 +505,7 @@ class Mosaic_API:
         __self__.container = Frame(__self__.RightPane,width=64,height=64)
 
         # container for options
-        __self__.options = LabelFrame(__self__.RightPane,text="Options ",
+        __self__.options = ttk.LabelFrame(__self__.RightPane,text="Options ",
                 width=1024-768-2*pad,
                 height=128)
 
@@ -576,38 +588,27 @@ class Mosaic_API:
         __self__.ScaleVarSum = BooleanVar()
         __self__.ScaleHist = BooleanVar()
 
-        __self__.scale_check = Checkbutton(__self__.options, 
+        __self__.scale_check = ttk.Checkbutton(__self__.options, 
                 variable=__self__.ScaleVarLinStr,
-                padx=pad,
+                text=" Linear stretching scaling",
                 command=__self__.check_scaling_method1)
-        __self__.scale_label = Label(__self__.options, text="Linear stretching scaling")
-        create_tooltip(__self__.scale_label,"Adjust the dynamic range in each datacube by expanding its contrast\nThis will ignore every manual changes to histogram made by you.")
+        create_tooltip(__self__.scale_check,"Adjust the dynamic range in each datacube by expanding its contrast\nThis will ignore every manual changes to histogram made by you.")
 
-        __self__.scale_check.grid(row=0,column=0,sticky=W)
-        __self__.scale_label.grid(row=0,column=1,sticky=W)
-
-        __self__.scale_check2 = Checkbutton(__self__.options, 
+        __self__.scale_check2 = ttk.Checkbutton(__self__.options, 
                 variable=__self__.ScaleVarSum,
-                padx=pad,
+                text=" Average counts/px scaling",
                 command=__self__.check_scaling_method2)
-        __self__.scale_label2 = Label(__self__.options, text="Average counts/px scaling")
-        create_tooltip(__self__.scale_label2,"Scales each datacube by an individual constant based on the average counts/pixel on it.\nThis will ignore every manual changes to histogram made by you.")
+        create_tooltip(__self__.scale_check2,"Scales each datacube by an individual constant based on the average counts/pixel on it.\nThis will ignore every manual changes to histogram made by you.")
 
-        __self__.scale_check2.grid(row=1,column=0,sticky=W)
-        __self__.scale_label2.grid(row=1,column=1,sticky=W)
-
-        __self__.scale_check3 = Checkbutton(__self__.options,
+        __self__.scale_check3 = ttk.Checkbutton(__self__.options,
                 variable=__self__.ScaleHist,
-                padx=pad,
+                text=" Histogram matching scaling",
                 command=__self__.check_scaling_method3)
-        __self__.scale_label3 = Label(__self__.options, text="Histogram matching scaling")
-        create_tooltip(__self__.scale_label3,"Automatically matches the histogram levels among all datacubes in canvas when merging.\nThis will ignore every manual changes to histogram made by you.")
-        __self__.scale_check3.grid(row=2,column=0,sticky=W)
-        __self__.scale_label3.grid(row=2,column=1,sticky=W)
+        create_tooltip(__self__.scale_check3,"Automatically matches the histogram levels among all datacubes in canvas when merging.\nThis will ignore every manual changes to histogram made by you.")
 
-        __self__.scale_label.bind("<Button-1>", __self__.check_scaling_method1)
-        __self__.scale_label2.bind("<Button-1>", __self__.check_scaling_method1)
-        __self__.scale_label3.bind("<Button-1>", __self__.check_scaling_method1)
+        __self__.scale_check.grid(row=0,column=0,sticky=W,padx=pad,pady=(12,0))
+        __self__.scale_check2.grid(row=1,column=0,sticky=W,padx=pad)
+        __self__.scale_check3.grid(row=2,column=0,sticky=W,padx=pad,pady=(0,12))
 
         __self__.layers_list.grid(row=0, column=0, rowspan=5)
         __self__.container.grid(row=0,column=1)
@@ -621,7 +622,7 @@ class Mosaic_API:
         __self__.del_layer.grid(row=4, column=1, padx=pad)
         __self__.cube_name_label.grid(row=5, column=0, padx=pad, pady=pad/2, sticky=E)
         __self__.cube_name.grid(row=5, column=1, sticky=W, padx=pad, pady=pad/2)
-        __self__.validate.grid(row=6, column=0, columnspan=2, pady=pad/2)
+        __self__.validate.grid(row=8, column=1, pady=(10,0))
         __self__.options.grid(row=7,column=0,columnspan=2,
                 sticky=W+E)
         __self__.save.grid(row=8, column=0,pady=(10,0))
@@ -682,22 +683,65 @@ class Mosaic_API:
 
     #################################################################################
 
-    """
-    def rotate(__self__,direction,active_layer="",e=""):
-        global LAYERS_DICT
-        if active_layer == "":
-            active_layer = __self__.layers_list.curselection()
-            if active_layer == (): return
-            else:
-                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
-                active_layer = active_layer.split("_")[0]
-        layer = __self__.layer[active_layer]
-        img = layer.img[:]
-        print(img)
+    def rotate_data(__self__, specific_layer=None):
 
-        LAYERS_DICT = convert_layers_to_dict(__self__)
-        __self__.build_image()
-    """
+        def clockwise(layer):
+            layer.matrix = np.rot90(layer.matrix,3)
+            print("I rotated the matrix",layer.matrix.shape)
+            layer.dense = np.rot90(layer.dense,3)
+            print("I rotated the densemap",layer.dense.shape)
+
+        def counter_clockwise(layer):
+            layer.matrix = np.rot90(layer.matrix)
+            print("I rotated the matrix",layer.matrix.shape)
+            layer.dense = np.rot90(layer.dense)
+            print("I rotated the densemap",layer.dense.shape)
+
+        if specific_layer is None:
+            for layer in __self__.layer:
+
+                layer = __self__.layer[layer]
+                rotate_factor = int(layer.rotation)
+                fine_factor = float(truncate(layer.rotation-(int(layer.rotation)),2))
+                print(rotate_factor)
+
+                if rotate_factor == 0:
+                    print("Zero")
+                elif rotate_factor == 2 or rotate_factor == -2:
+                    print("Upside-down")
+                    clockwise(layer)
+                    clockwise(layer)
+                elif rotate_factor == 1:
+                    print("Clockwise")
+                    clockwise(layer)
+                elif rotate_factor == -1:
+                    print("Counter-clockwise")
+                    counter_clockwise(layer)
+                else:
+                    pass
+        else: 
+
+            rotate_factor = int(specific_layer.rotation)
+            fine_factor = float(truncate(specific_layer.rotation-(int(specific_layer.rotation)),2))
+
+            if rotate_factor == 0:
+                print("Zero")
+                return
+            elif rotate_factor == 2 or rotate_factor == -2:
+                print("Upside-down")
+                clockwise(specific_layer)
+                clockwise(specific_layer)
+                return
+            elif rotate_factor == 1:
+                print("Clockwise")
+                clockwise(specific_layer)
+                return
+            elif rotate_factor == -1:
+                print("Counter-clockwise")
+                counter_clockwise(specific_layer)
+                return
+            else:
+                return
 
     def rotate(__self__, direction, active_layer="", e="", loading=False):
         global LAYERS_DICT
@@ -731,15 +775,19 @@ class Mosaic_API:
         if int(direction) == 1:
             img = layer.img[:]
             mask = layer.mask[:]
+            mask2 = layer.last_saved_mask[:]
             img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            print("I rotated the image",img.shape)
             mask = cv2.rotate(mask, cv2.ROTATE_90_CLOCKWISE)
+            mask2 = cv2.rotate(mask2, cv2.ROTATE_90_CLOCKWISE)
+            print("I rotated the mask",mask.shape)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
                 if end[i] > __self__.image.shape[i] and not loading:
                     return
-            layer.img, layer.end, layer.mask = img, end, mask
-            layer.matrix = np.rot90(layer.matrix,3)
-            layer.dense = np.rot90(layer.dense,3)
+            layer.img, layer.end = img, end
+            layer.mask = mask
+            layer.last_saved_mask = mask2
             layer.rotation += int(direction)
             if int(layer.rotation) >= 3: layer.rotation = -1 - fine
             elif int(layer.rotation) <= -3: layer.rotation = 1 + fine
@@ -747,19 +795,24 @@ class Mosaic_API:
         elif int(direction) == -1:
             img = layer.img[:]
             mask = layer.mask[:]
+            mask2 = layer.last_saved_mask[:]
             img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            print("I rotated the image",img.shape)
             mask = cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            mask2 = cv2.rotate(mask2, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            print("I rotated the mask",mask.shape)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
                 if end[i] > __self__.image.shape[i] and not loading:
                     return
-            layer.img, layer.end, layer.mask = img, end, mask
-            layer.matrix = np.rot90(layer.matrix)
-            layer.dense = np.rot90(layer.dense)
+            layer.img, layer.end = img, end
+            layer.mask = mask
+            layer.last_saved_mask = mask2
             layer.rotation += int(direction)
             if int(layer.rotation) >= 3: layer.rotation = -1 - fine
             elif int(layer.rotation) <= -3: layer.rotation = 1 + fine
 
+        print(layer.rotation)
         LAYERS_DICT = convert_layers_to_dict(__self__)
         __self__.build_image()
 
@@ -1010,10 +1063,17 @@ class Mosaic_API:
             loaded = __self__.layer[layer].config
             if loaded.__contains__("directory"): loaded.pop("directory")
             if loaded.__contains__("thickratio"): loaded.pop("thickratio")
-
+            if loaded.__contains__("ratio"): loaded.pop("ratio")
+            if loaded.__contains__("enhance"): loaded.pop("enhance")
+            if loaded.__contains__("peakmethod"): loaded.pop("peakmethod")
+            if loaded.__contains__("calibration"): loaded.pop("calibration")
             for key in loaded:
                 if candidate[key] != loaded[key]: 
                     divergence.append(key)
+
+        if __self__.zero_config.__contains__("directory"): __self__.zero_config.pop("directory")
+        if __self__.zero_config.__contains__("thickratio"): __self__.zero_config.pop("thickratio")
+
         if divergence != []: 
             i = 0
             for key in __self__.zero_config:
@@ -1021,7 +1081,17 @@ class Mosaic_API:
                 if i:
                     if key == "gain":
                         merge_config = \
-                        merge_config + ", " + str(key) + f": {__self__.zero_config[key]:.2f}";
+                        merge_config + ", " + str(key) + \
+                        f": {int(__self__.zero_config[key]*1000):3d} eV";
+                        continue
+                    
+                    if key == "bg_settings":
+                        if __self__.zero_config[key] == []:
+                            merge_config = merge_config + ", " + str(key) + ": Default"
+                        else:
+                            values = ""
+                            for i in __self__.zero_config[key]: values += f"{str(i) }"
+                            merge_config = merge_config + ", " + str(key) + ": " + values
                         continue
                     else:
                         merge_config = merge_config + ", " + str(key) + ": " + str(
@@ -1029,7 +1099,16 @@ class Mosaic_API:
                 else:
                     if key == "gain":
                         merge_config = \
-                        merge_config + str(key) + f": {__self__.zero_config[key]:.2f}";
+                        merge_config + str(key) + \
+                        f": {int(__self__.zero_config[key]*1000):3d} eV";
+                        continue
+                    if key == "bg_settings":
+                        if __self__.zero_config[key] == []: 
+                            merge_config = merge_config + str(key) + ": Default"
+                        else: 
+                            values = ""
+                            for i in __self__.zero_config[key]: values += f"{str(i) }"
+                            merge_config = merge_config + str(key) + ": " + values
                         continue
                     else:
                         merge_config = merge_config + str(key) + ": " + str(
@@ -1075,7 +1154,7 @@ class Mosaic_API:
 
         if __self__.layer.__contains__(selected_cube):
             messagebox.showinfo("Cube already imported!",
-                    "Cabn't add same cube twice!")
+                    "Can't add same cube twice!")
             __self__.refocus()
             return
         elif __self__.layer_count == 0: 
@@ -1146,6 +1225,8 @@ class Mosaic_API:
         for layer in __self__.layer:
             mask = __self__.layer[layer].mask
             mask = unrotate_mask(mask,__self__.layer[layer].rotation)
+            print("Mask UNROTATED",mask.shape)
+            print("Rotation:",__self__.layer[layer].rotation)
             npy_masks.append(mask)
             string = "{}\t{}\t{}\t{};{}\t{}\t{}\n".format(
                 __self__.layer[layer].name,
@@ -1175,7 +1256,7 @@ class Mosaic_API:
     ############################################
 
     def prompt_loadfile(__self__,e="",f=None):
-        global VMAX
+        global VMAX, LOADED
         if f == None:
             f = filedialog.askopenfilename(title="Open mosaic",
                     filetypes=[("Mosaic files","*.mosaic")])
@@ -1188,6 +1269,7 @@ class Mosaic_API:
             VMAX = 0
             npz = f.split(".mosaic")[0]+".npz"
             __self__.import_layers(loadfile=os.path.abspath(f),npz=npz)
+        LOADED = True
 
     def read_loadfile(__self__,loadfile,npz):
         layers = {}
@@ -1263,7 +1345,6 @@ class Mosaic_API:
             success = __self__.load_layer(layers_to_import[layer])
             if success == 0: break
         
-        #LAYERS_DICT = convert_layers_to_dict(__self__)
         __self__.reorder_layers()
         __self__.build_image()
         __self__.refocus()
@@ -1301,7 +1382,8 @@ class Mosaic_API:
         #verify is mask was loaded
         if "mask" in layer.keys(): 
             mask = layer["mask"]
-        else: mask = np.zeros(0)
+        else: 
+            mask = np.zeros(__self__.layer[layer["name"]].img.shape)
 
         #create layer object
         __self__.layer[layer["name"]] = Layer(
@@ -1312,6 +1394,7 @@ class Mosaic_API:
                 mask=mask) 
         
         # must rotate layer accordingly
+        # rotates display image and mask
 
         __self__.layer[layer["name"]].rotation = float(truncate(
                 layer["rotate"]-int(layer["rotate"]),2))
@@ -1435,12 +1518,16 @@ class Mosaic_API:
                 return
             proceed = messagebox.askquestion("Cube merge!","You are about to merge datacubes. This procedure may take a while depending on the size of the final image. Are you sure you want to proceed?")
         if proceed == "yes":
+            global LAYERS_DICT
+
             __self__.progress_bar = Busy(3,0)
             __self__.progress_bar.update_text("1/11 Reading layers...")
 
-            global LAYERS_DICT
+            __self__.rotate_data()
             LAYERS_DICT = convert_layers_to_dict(__self__)
+            print_layers()
             time.sleep(0.5)
+
             __self__.progress_bar.updatebar(1)
 
             #########################################
@@ -1515,13 +1602,14 @@ class Mosaic_API:
 
             if mode == 0:
                 # MANUAL
+                print_layers()
 
                 TARGET = np.zeros([2],dtype="float32")
                 cy_funcs.cy_build_densemap(scale_matrix,
                     np.asarray(__self__.image.shape,dtype="int32"),
                     LAYERS_DICT,
                     TARGET,
-                    2)
+                    2)  #Mode 2 reads LAYERS_DICT "mask" property instead of "dense"
             
                 #scale_matrix = normalize(scale_matrix)
 
@@ -1605,8 +1693,13 @@ class Mosaic_API:
 
             __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                     dtype="float32")
-            __self__.merge_bg = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
+
+            if __self__.zero_config["bgstrip"] == "None":
+                __self__.background = np.zeros([1,specsize], dtype="float32")
+            else:
+                __self__.background = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                     dtype="float32")
+
             x, iteration = 0,0
             x_bounds = [start_x,end_x]
             y_bounds = [start_y,end_y]
@@ -1620,7 +1713,7 @@ class Mosaic_API:
             #################################################
             # LOADING BAR IS CREATED INSIDE CYTHON FUNCTION #
             #################################################
-
+            
             void_array = np.zeros([specsize],dtype="int32")
             cy_funcs.cy_build_merge_cube(LAYERS_DICT,
                     np.asarray(x_bounds,dtype="int32"),
@@ -1645,6 +1738,7 @@ class Mosaic_API:
             # than in the __init__ method                                           #
             #########################################################################
             
+            print(__self__.zero_config)
             new_cube = Cube(["xrf"],__self__.zero_config,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
@@ -1653,14 +1747,13 @@ class Mosaic_API:
             new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],
                     new_cube.energyaxis.shape[0]],dtype='float32',order='C')
             new_cube.matrix = __self__.merge_matrix
-            new_cube.background = __self__.merge_bg
             del __self__.merge_matrix
-            del __self__.merge_bg
             gc.collect()
             
             new_cube.scale_matrix = __self__.cropped
             new_cube.scalable = True
             new_cube.matrix = new_cube.matrix.astype("int32")
+            new_cube.background = __self__.background
 
             __self__.progress_bar = Busy(11,0)
             __self__.progress_bar.updatebar(5)
@@ -1704,6 +1797,7 @@ class Mosaic_API:
         __self__.root.refresh_samples()
         __self__.kill()
 
+
 class HistogramWindow:
     def __init__(__self__, parent, layer_object):
         __self__.master = Toplevel(parent.master)
@@ -1713,6 +1807,7 @@ class HistogramWindow:
         icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
         __self__.master.iconbitmap(icon)
         __self__.parent = parent
+        __self__.previous_mask = layer_object.mask
         __self__.layer = layer_object
         __self__.img = layer_object.img
         __self__.img_max = __self__.img.max()
@@ -1834,7 +1929,7 @@ class HistogramWindow:
         __self__.kill()
 
     def save_and_die(__self__,e=""):
-        __self__.layer.last_saved_mask = __self__.layer.mask
+        __self__.layer.last_saved_mask *= __self__.layer.mask
         __self__.kill()
 
     def kill(__self__,e=""):
@@ -1879,9 +1974,6 @@ class LineAnchors:
         x1, y1 = __self__.x1+1, __self__.y1+1
         x2, y2 = __self__.x2+1, __self__.y2+1
         img = __self__.parent.img
-
-        # The line below was useful when VMAX was not yet implemented
-        #img = (LEVELS*img/__self__.parent.img_max) + 1
 
         img = img + 1
         if x1 >= x2:

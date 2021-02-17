@@ -29,7 +29,7 @@ void apply_scaling(float *scale_matrix,
 	int i;
 	int j;
 	for (i=0;i<size;i++){
-		if (mode == 1 && scale_matrix[i] != 0){
+		if (mode == 1){
 			image[i] = image[i] * scale_matrix[i];
 		} else if (mode == -1 && scale_matrix[i] !=0){ 
 			image[i] = image[i] / scale_matrix[i];
