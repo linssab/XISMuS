@@ -4702,7 +4702,7 @@ class MainGUI:
             __self__.ManualParam = []
         except:
             dimension = DimensionDiag(__self__)
-            __self__.master.wait_window(dimension.win) 
+            __self__.master.wait_window(dimension.master) 
             if dimension.exit_code == "cancel":
                 __self__.wipe()
                 return 0

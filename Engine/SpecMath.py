@@ -465,6 +465,7 @@ class datacube:
 
             else:
                 try:
+                    tot = __self__.progressbar.progress["maximum"]
                     for spec in Constants.FILE_POOL:
                         try: specdata = getdata(spec)
                         except: 
@@ -477,6 +478,8 @@ class datacube:
                         __self__.matrix[x][y] = specdata
                         scan = refresh_position(scan[0],scan[1],__self__.dimension)
                         x,y = scan[0],scan[1]
+                        prog = iterator/tot*100
+                        __self__.progressbar.update_text(f"Packing spectra... {prog:.2f}%")
                         __self__.progressbar.updatebar(iterator)
                         iterator += 1
                 except IndexError as e:
@@ -536,7 +539,10 @@ class datacube:
     def check(__self__):
         global iterator
         __self__.progressbar.update_text("Packing spectra...")
+        tot = __self__.progressbar.progress["maximum"]
         while iterator < __self__.img_size:
+            prog = iterator/tot*100
+            __self__.progressbar.update_text(f"Packing spectra... {prog:.2f}%")
             __self__.progressbar.updatebar(iterator)
         return 0
 

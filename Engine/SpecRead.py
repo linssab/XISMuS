@@ -402,14 +402,12 @@ def getdimension():
     dimension_file = Constants.DIMENSION_FILE
 
     if not os.path.exists(dimension_file):
-        dimension_file = os.path.join(Constants.SAMPLES_FOLDER,"colonneXrighe.txt")
+        dimension_file = os.path.join(output_path,"colonneXrighe.txt")
         if not os.path.exists(dimension_file):
-            dimension_file = os.path.join(output_path,"colonneXrighe.txt")
+            dimension_file = os.path.join(__PERSONAL__,
+                    "Example Data",Constants.DIRECTORY,"colonneXrighe.txt") 
             if not os.path.exists(dimension_file):
-                dimension_file = os.path.join(__PERSONAL__,
-                        "Example Data",Constants.DIRECTORY,"colonneXrighe.txt") 
-                if not os.path.exists(dimension_file):
-                    raise IOError("Dimension file not found!") 
+                raise IOError("Dimension file not found!") 
     user_input = False
     dm_file = open(dimension_file, "r")
     line = dm_file.readline()
