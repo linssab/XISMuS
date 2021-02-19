@@ -340,7 +340,8 @@ def cy_build_merge_cube(dict layers,
         int[:] y_limit, 
         int[:] spectrum,
         float[:,:,:] cube_matrix,
-        int size):
+        int size,
+        bar = None):
     
     cdef int total_iterations = 0
     total_iterations = (x_limit[1]-x_limit[0])
@@ -355,9 +356,10 @@ def cy_build_merge_cube(dict layers,
     cdef int y = 0
     cdef int iterator = 0
     
-    print("Started packing")
-    mec = Busy(total_iterations,0)
-    mec.update_text("3/11 Merging...")
+    #mec = Busy(total_iterations,0)
+    bar.progress["maximum"] = total_iterations
+    bar.progress["value"] = 0
+    bar.update_text("Merging...")
     for i in range(x_limit[0],x_limit[1]):
         for j in range(y_limit[0],y_limit[1]):
             cy_pack_spectra(
@@ -374,9 +376,8 @@ def cy_build_merge_cube(dict layers,
         y = 0
         x+=1
         iterator += 1
-        mec.updatebar(iterator)
-    mec.destroybar()
-    print("Finished packing, bar destroyed")
+        bar.updatebar(iterator)
+    #mec.destroybar()
     return 1
 
 def cy_pack_spectra(dict layers, 
@@ -475,10 +476,12 @@ def cy_build_scaling_matrix(float[:,:] scale_matrix,
         dict all_layers,
         float[:] target,
         int gross,
-        int mode):
+        int mode,
+        bar = None):
     
-    mec = Busy(size[0],0)
-    mec.update_text("2/11 Creating scale matrix...")
+    #mec = Busy(size[0],0)
+    bar.progress["maximum"] = size[0]
+    bar.update_text("Creating scale matrix...")
     cdef int i = 0
     cdef int j = 0
     cdef int iterator = 0
@@ -491,8 +494,8 @@ def cy_build_scaling_matrix(float[:,:] scale_matrix,
                 scale_matrix[i,j] = cy_get_sum_scaling(all_layers,i,j,gross)
             else:
                 return scale_matrix
-        mec.updatebar(i)
-    mec.destroybar()
+        bar.updatebar(i)
+    #mec.destroybar()
     return scale_matrix
 
 def cy_get_linstr_scaling(dict layers, int i, int j, float[:] target):

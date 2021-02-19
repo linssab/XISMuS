@@ -116,6 +116,14 @@ def truncate(f, n):
     i, p, d = s.partition(".")
     return ".".join([i, (d+"0"*n)[:n]])
 
+def check_configuration_integrity(config):
+    if not config.__contains__("bgstrip"): config["bgstrip"] = "SNIPBG"
+    if not config.__contains__("ratio"): config["ratio"] = False
+    if not config.__contains__("calibration"): config["calibration"] = "simple"
+    if not config.__contains__("enhance"): config["enhance"] = False
+    if not config.__contains__("peakmethod"): config["peakmethod"] = "simple_roi"
+    if not config.__contains__("bg_settings"): config["bg_settings"] = ""
+
 def convert_layers_to_dict(MosaicAPI_class):
     global LAYERS_DICT, VMAX
     new_dict, vmax_check = {}, []
@@ -1521,8 +1529,7 @@ class Mosaic_API:
             global LAYERS_DICT
 
             __self__.progress_bar = Busy(3,0)
-            __self__.progress_bar.update_text("1/11 Reading layers...")
-
+            __self__.progress_bar.update_text("Reading layers...")
             __self__.rotate_data()
             LAYERS_DICT = convert_layers_to_dict(__self__)
             print_layers()
@@ -1558,7 +1565,8 @@ class Mosaic_API:
                     gross = int(inst_gross)
             __self__.progress_bar.updatebar(3)
             time.sleep(0.5)
-            __self__.progress_bar.destroybar()
+
+            #__self__.progress_bar.destroybar()
 
             ########################################
             # Get start and end position of canvas #
@@ -1593,9 +1601,9 @@ class Mosaic_API:
 
             ######################################
 
-            ######################################################
-            # Obs: LOADING BAR IS CREATED INSIDE CYTHON FUNCTION #
-            ######################################################
+            ##########################################################
+            # Obs: LOADING BAR IS NOW CREATED INSIDE CYTHON FUNCTION #
+            ##########################################################
             
             scale_matrix = np.zeros([__self__.image.shape[0],
                     __self__.image.shape[1]],dtype="float32")
@@ -1623,7 +1631,8 @@ class Mosaic_API:
                         LAYERS_DICT,
                         TARGET,
                         gross,
-                        mode)
+                        mode,
+                        bar = __self__.progress_bar)
 
             #################################################
 
@@ -1720,7 +1729,8 @@ class Mosaic_API:
                     np.asarray(y_bounds,dtype="int32"),
                     void_array,
                     __self__.merge_matrix,
-                    specsize)
+                    specsize,
+                    bar = __self__.progress_bar)
 
             #################################################
 
@@ -1738,7 +1748,9 @@ class Mosaic_API:
             # than in the __init__ method                                           #
             #########################################################################
             
-            print(__self__.zero_config)
+            check_configuration_integrity(__self__.zero_config)
+            for key  in __self__.zero_config:
+                print(f"{key:10}\t{__self__.zero_config[key]}")
             new_cube = Cube(["xrf"],__self__.zero_config,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
@@ -1757,7 +1769,7 @@ class Mosaic_API:
 
             __self__.progress_bar = Busy(11,0)
             __self__.progress_bar.updatebar(5)
-            __self__.progress_bar.update_text("5/11 Digesting...")
+            __self__.progress_bar.update_text("Digesting...")
             time.sleep(1)
             new_cube.calibration = __self__.layer[layers[0]].calibration
             new_cube.config["gain"] = new_cube.gain

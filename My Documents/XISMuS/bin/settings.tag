@@ -9,5 +9,5 @@ C:\
 <Sensitivity>	9.0
 <Suppression>	1.3
 <WizTolerance>	8.0
-<SaveInterval>	50
+<SaveInterval>	200
 <SavePlot>	True

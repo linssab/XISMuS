@@ -5,12 +5,26 @@
 *.ipynb
 *.svg
 *.ico
+*.obj
+*.exe
+*.exp
+*.lib
+*.in
+*.log
+*.pyd
+*.ini
+*.swp
+*.tag
 
-.\__pycache\
-.\ipynb_checkpoints\
-.\build\
-.\Build Essentials\
-.\CustomScripts\
-.\dist\
-.\xismus.egg-info\
-.\setup.py
+setup.py
+calculator.py
+config.cfg
+
+/__pycache__
+/ipynb_checkpoints
+/build
+/Build Essentials
+/CustomScripts
+/dist
+/xismus.egg-info
+/GUI/wheel.gif

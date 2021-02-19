@@ -532,8 +532,6 @@ def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
     factor = target_size/max(imagsize)
     newX,newY = int(factor*imagex),int(factor*imagey)
 
-    fig, axs = plt.subplots(1,len(element_list),sharey=True)
-    
     fig_list = []
     for Element in range(len(element_list)):
         for line in range(lines.shape[0]):
@@ -557,14 +555,6 @@ def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
             #plt.hist(datacube.__dict__[element_list[Element]],bins='auto')
             #plt.show()
             
-            if len(element_list) > 1: ax = axs[Element]
-            else: ax=axs
-            fig_list.append(ax.imshow(image,cmap='gray'))
-            colorbar(fig_list[Element])
-            if datacube.config['ratio'] == False:
-                ax.set_title(element_list[Element]+' alpha line')
-            else: ax.set_title(element_list[Element])
-            
             if imagex > target_size or imagey > target_size: 
                 large_image = image/image.max()*255
             else: 
@@ -587,18 +577,12 @@ def split_and_save(datacube,map_array,element_list,force_alfa_and_beta=False):
             
     ##################################################
     
-    fig.savefig(SpecRead.workpath+'/output/'+Constants.DIRECTORY+
-            '/elements_plot_bgtrip={0}_ratio={1}_enhance={2}_peakmethod={3}.png'\
-            .format(datacube.config.get('bgstrip'),datacube.config.get('ratio')\
-            ,datacube.config.get('enhance'),datacube.config.get('peakmethod'))) 
-    
     if any("temp" in x for x in datacube.datatypes): pass
     else: datacube.save_cube() 
     logger.warning("cube has been saved and {} packed!".format(element_list))
     IMAGE_PATH = str(SpecRead.workpath+'\output\\'+Constants.DIRECTORY+'\\')
     logger.info("\nImage(s) saved in {0}\nResized dimension: {1} pixels".format(
         IMAGE_PATH,(newY,newX)))
-    fig.clf()
     return
 
 def write_image(image, resize, path, enhance=False, merge=False, save=True):

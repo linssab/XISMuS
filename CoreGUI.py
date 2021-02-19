@@ -2302,6 +2302,7 @@ class PlotWin:
         __self__.figure = Figure(figsize=(5,4), dpi=75)
         __self__.plot = __self__.figure.add_subplot(111)
         __self__.plot.grid(which='both',axis='both')
+        __self__.plot.grid(color="black", ls="--", lw=0.5)
         __self__.plot.axis('On')
         __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
         __self__.canvas.draw()
@@ -2344,7 +2345,7 @@ class PlotWin:
             Constants.DIRECTORY),**__self__.plot_font)
         __self__.plot.plot(channels,__self__.plotdata,label="Calibration curve")
         for pair in anchors:
-            __self__.plot.plot(pair[0],pair[1], marker='+',mew=1,ms=10,
+            __self__.plot.plot(pair[0],pair[1], marker='+',mew=3,ms=12,
                     label="{0}".format(pair))
         __self__.plot.set_ylabel("Energy (KeV)")
         __self__.plot.set_xlabel("Channel")
@@ -2424,8 +2425,14 @@ class PlotWin:
                                 label=element,linewidth=__self__.lw)
                             energy_list=[]
 
+                mode_string = "- "
+                if len(mode)>1:
+                    for i in range(len(mode)): 
+                        if not i: mode_string = mode_string + mode[i] + " & "
+                        else: mode_string = mode_string + mode[i]
+                else: mode_string = "- " + mode[0]
                 __self__.plot.set_title('{0} {1}'.format(
-                    Constants.DIRECTORY,mode),**__self__.plot_font)
+                    Constants.DIRECTORY, mode_string),**__self__.plot_font)
                 __self__.plot.set_xlabel("Energy (KeV)")
                 __self__.plot.legend(
                         fancybox=True,
@@ -2558,6 +2565,8 @@ class PlotWin:
         __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
         __self__.plot.set_xlabel("Size [pixel]",fontsize=16)
         __self__.plot.set_ylabel("Size [pixel]",fontsize=16)
+        __self__.plot.axis("Off")
+        __self__.plot.grid(b=None, which="both", axis="both")
         fixed_image = write_image(Constants.MY_DATACUBE.densitymap,
                 resize=Constants.TARGET_RES,
                 path=None,
@@ -2764,7 +2773,8 @@ class Samples:
                         
             """ Lists all possible samples """
             samples = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
-                    if os.path.isdir(os.path.join(Constants.SAMPLES_FOLDER,name))]
+                    if os.path.isdir(os.path.join(Constants.SAMPLES_FOLDER,name)) and \
+                    name not in Constants.USER_DATABASE.keys()]
             
             """ Verifies which samples have a compiled datacube in output folder """
             for folder in samples:
@@ -2840,6 +2850,7 @@ class Samples:
                                     len(files),
                                     mca_extension,
                                     indexing)
+                            logger.info(f"Wrote {folder} to database")
             logger.info("Done.")
 
         except IOError as exception:
@@ -2931,6 +2942,7 @@ class Samples:
                                 len(files),
                                 mca_extension,
                                 indexing)
+                        logger.info(f"Wrote {folder} to database")
             logger.info("Done.")
         
         except IOError as exception:
@@ -6385,9 +6397,10 @@ class PeriodicTable:
         __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
 
+if __name__.endswith("__main__"):         
+    from multiprocessing import freeze_support
+    freeze_support()
 
-#if __name__.endswith('__main__'):         
-if __name__ == "__main__":
     import time
     import Constants
     from Graphics import *
@@ -6443,10 +6456,6 @@ if __name__ == "__main__":
     splash.update("Importing utilities... garbage collector")
     time.sleep(t)
     import gc
-    splash.update("Importing utilities... freeze support")
-    time.sleep(t)
-    from multiprocessing import freeze_support
-    freeze_support()
     
     # matplotlib imports
     splash.update("Importing plot tools...")

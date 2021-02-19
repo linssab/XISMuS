@@ -7,7 +7,9 @@
 
 from tkinter import *
 from tkinter import ttk
+import os
 import logging
+import threading
 import Constants
 logger = logging.getLogger("logfile")
 
@@ -268,29 +270,36 @@ class ThinkingWheel:
         __self__.master.resizable(False,False)
         __self__.master.overrideredirect(True)
         __self__.speed = speed
+        __self__.alive = True
         __self__.idx = 0
+        GIF = os.path.join(os.path.dirname(__file__),"wheel.gif")
         spawn_x = __self__.master.winfo_screenwidth()
         spawn_y = __self__.master.winfo_screenheight()
         win_x = __self__.master.winfo_width()
         win_y = __self__.master.winfo_height()
         __self__.master.geometry('{}x{}+{}+{}'.format(x, y,
                 int((spawn_x/2)-x/2), int((spawn_y/2)-y/2)))
-        __self__.gif = [PhotoImage(file="./tnk.gif",format = 'gif -index %i' %(i),
+        __self__.gif = [PhotoImage(file=GIF,format = 'gif -index %i' %(i),
             master = __self__.master) for i in range(8)]
-        __self__.image = Label(__self__.master,
+        __self__.image = ttk.Label(__self__.master,
                 text="Thinking...", image=__self__.gif[__self__.idx],
                 compound=BOTTOM)
         __self__.image.grid(row=0,column=0)       
         __self__.master.grab_set()
-        if auto == True: __self__.master.after(__self__.speed,__self__.update_frame)
+        if auto == True: 
+            __self__.master.after(
+                    __self__.speed,
+                    threading.Thread(target=__self__.update_frame).start()
+                    )
 
     def update_frame(__self__):
-        __self__.idx += 1
-        if __self__.idx >= 8: __self__.idx = 0
-        __self__.frame = __self__.gif[__self__.idx]
-        __self__.image.configure(image=__self__.frame)
-        __self__.parent.after(__self__.speed, __self__.update_frame)
-        __self__.master.update()
+        while __self__.alive:
+            __self__.idx += 1
+            if __self__.idx >= 8: __self__.idx = 0
+            __self__.frame = __self__.gif[__self__.idx]
+            __self__.image.configure(image=__self__.frame)
+            __self__.master.update()
+            time.sleep(__self__.speed)
 
     def next_frame(__self__):
         __self__.idx += 1

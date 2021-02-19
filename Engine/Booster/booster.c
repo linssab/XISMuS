@@ -6,10 +6,18 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "booster.h"
 
 int N = 2250000;
+#define ARRAYSIZE(a) (sizeof(a) / sizeof(a[0]))
+
+void print_arr(float *arr, int dim){
+	for (int i=0;i<dim;i++){
+		printf("\n%f",arr[i]);
+	}
+}
 
 float average(int arr[], int dim){
 	int i;
@@ -169,12 +177,90 @@ void apply_smooth(float *arr,
 	}
 }
 
-void print_arr(float *arr, int dim){
-	for (int i=0;i<dim;i++){
-		printf("\n%f",arr[i]);
+void strippeaks(float *arr,
+		int len,
+		int cycles,
+		int width){
+
+	float m;
+	int high;
+	int low;
+	
+	for (int k=0;k<cycles;k++){
+		if (k>=cycles-8){width = width/1.4142135623730950;}
+		for (int l=0;l<len;l++){
+			if (l-width<0){ low=0; }
+			else { low=l-width; }
+			if (l+width>=len){ high=len-1; }
+			else { high= l+width; }
+
+			m = (arr[low] + arr[high])*0.5;
+
+			if (m<1){ m=1; }
+			if (arr[l]>m){ arr[l]=m; }
+		}
 	}
 }
 
+float *snipbg(float *arr,
+		int len,
+		int cycles,
+		int width,
+		int sg_window,
+		int sg_order){
+
+	/*float *sqr = calloc(len, sizeof *sqr);
+
+	if (!sqr){
+		perror("calloc array");
+		exit (EXIT_FAILURE);
+	}
+	*/
+
+	for (int i=0;i<len;i++){
+		arr[i] = sqrt(arr[i]);		
+	}
+	
+	//savgol_filter(sqr, len, sg_window, sg_order);
+
+	for (int i=0;i<len;i++){
+		if (arr[i]<0){
+			arr[i] = 0;
+		}
+	}
+
+	strippeaks(arr, len, cycles, width);
+
+	for (int i=0;i<len;i++){
+		arr[i] = pow(arr[i],2);
+	}
+	return arr;
+}
+
+float **batch_snipbg(float **matrix,
+		int dim_x,
+		int dim_y,
+		int nchan,
+		int progress,
+		struct PARAM bg_params){
+	printf("\nSTART!");
+	for(int i=0;i<(dim_x*dim_x);i++){
+		progress++;
+		//printf("\nBefore");
+		//print_arr(matrix[i],nchan);
+		matrix[i] = snipbg(
+				matrix[i],
+				nchan,
+				bg_params.cycles,
+				bg_params.window,
+				bg_params.sav_window,
+				bg_params.sav_order);
+		//printf("\nAfter");
+		//print_arr(matrix[i],nchan);
+		//printf("\n");
+	}
+	return *matrix; 
+}
 
 int main(){
 	float arr[20] = {1,1,1,1,1,
@@ -182,20 +268,47 @@ int main(){
 			2,2,2,2,2,
 			1,1,1,1,1};
 	float arr2[20] = {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2};
-	printf("\nBefore");
-	print_arr(arr,20);
+	float arr3[20] = {1,1,2,8,56,234,75,23,3,2,2,2,55,125,230,87,12,2,2};
+
+	int dimx = 4;
+	int dimy = 4;
+	int NCHAN = 100;
+	float **data;
+	float *out;
+
+	float test[16][10];
+	
+	float iter = 0;
+	for (int x=0;x<dimx*dimy;x++){
+		for (int y=0;y<10;y++){
+			test[x][y] = iter;
+			iter ++;
+			//printf("\n%f",test[x][y]);
+		}
+	}
+
+	//printf("\nBefore");
+	//print_arr(arr3,20);
 
 	//apply_scaling(arr2, arr,1,20);
 	//threshold(arr,1,10,20);
 	
-	float a;
-	a = arr[pos(2,3,5)];
-	
-	apply_smooth(arr, 1, 4, 5);
+	//apply_smooth(arr, 1, 4, 5);
+	//out = snipbg(arr3,20,24,7,7,3);
 
-	printf("\nAfter.");
-	print_arr(arr,20);
+	//printf("\nAfter.");
+	//print_arr(out,20);
 
-	printf("\n pixel 2,3 (14) is %f",a);
+	struct PARAM params;
+	params.cycles = 24;
+	params.window = 5;
+	params.sav_window = 5;
+	params.sav_order = 3;
+
+	//print_arr(test[0],10);
+	//batch_snipbg(test,4,4,10,0,params);
+	//print_arr(test[0],10);
+	printf("\nDONE!");
+
 	return 0;
 }

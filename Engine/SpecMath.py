@@ -32,7 +32,9 @@ calibrate,
 updatespectra)
 from .ImgMath import LEVELS
 from .Mapping import getdensitymap
+from .CBooster import *
 from GUI.ProgressBar import Busy
+from GUI.ProgressBar import ThinkingWheel
 import Constants
 import cy_funcs
 #################
@@ -125,7 +127,7 @@ class datacube:
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
 
-    def fit_fano_and_noise(__self__):
+    def fit_fano_and_noise(__self__, bar=None):
         __self__.FN = FN_fit_gaus(__self__.sum,
                 __self__.sum_bg,
                 __self__.energyaxis,
@@ -212,6 +214,19 @@ class datacube:
             recalculating=False,
             progressbar=None):
 
+        def spawn_wheel(progressbar):
+            print("started wheel")
+            __self__.t00_stop = False
+            if progressbar is not None:
+                progressbar.progress["maximum"] = 3
+                i = 0
+                while not __self__.t00_stop:
+                    print(i)
+                    progressbar.updatebar(i)
+                    if i <4: i += 1
+                    else: i = 0
+                    time.sleep(0.333)
+
         """ Calculates the background contribution to each invidual spectrum.
         The calculated data is saved into the datacube object.
         bgstrip; a string """
@@ -246,11 +261,13 @@ class datacube:
         if bgstrip == "SNIPBG":
             progressbar.update_text("Calculating SNIPBG")
             tot = progressbar.progress["maximum"]
+            
+            #fast_snipbg(__self__)
+            
             try: cycles, window,savgol,order= __self__.config["bg_settings"] 
             except: cycles, window, savgol, order = 24,5,5,3
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
-                    # default cycle and sampling window = 24,5
                     stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
                     __self__.background[x,y] = stripped
                     counter = counter + 1
@@ -292,12 +309,6 @@ class datacube:
             # NOTE:
             # looping to fill in __self__.background is too slow. Better user numpy reshape
 
-            #for x in range(__self__.matrix.shape[0]):
-            #    for y in range(__self__.matrix.shape[1]):
-            #        counter += 1 #ignores first continuum which is the global one
-            #        __self__.background[x][y] = y_cont[counter]
-            #        progressbar.updatebar(counter)
-
             del y_cont
 
         #plt.semilogy(__self__.background.sum(0).sum(0),label="bg")
@@ -312,7 +323,6 @@ class datacube:
 
     def create_densemap(__self__):
         """ Calls getdensitymap and attributes the 2D-array output to the object """
-
         __self__.densitymap = getdensitymap(__self__)
 
     def save_cube(__self__):
@@ -336,36 +346,38 @@ class datacube:
     def digest_merge(__self__,bar=None):
         if bar != None: 
             time.sleep(0.5)
-            bar.update_text("6/11 Calculating MPS...")
+            bar.update_text("Calculating MPS...")
             bar.updatebar(6)
         mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
         __self__.MPS(mps)
         __self__.mps = mps
         if bar != None: 
-            bar.update_text("7/11 Calculating Stacksum...")
+            bar.update_text("Calculating Stacksum...")
             bar.updatebar(7)
         __self__.stacksum()
         __self__.write_sum()
         if bar != None:
-            bar.update_text("8/11 Creating densemap...")
+            bar.update_text("Creating densemap...")
             bar.updatebar(8)
         __self__.create_densemap()
         if bar != None:
-            bar.update_text("9/11 Calculating continuum...")
+            bar.update_text("Calculating continuum...")
             bar.updatebar(9)
         __self__.strip_background(
                 recalculating=True,
                 bgstrip=__self__.config["bgstrip"],
                 progressbar=bar)
         if bar != None:
-            bar.progress["maximum"] = 11
-            bar.update_text("10/11 Fitting F & N...")
+            bar.progress["maximum"] = 11    #strip_background shares 
+                                            #the bar and changes the maximum value
+
+            bar.update_text("Fitting F & N...")
             bar.updatebar(10)
-        __self__.fit_fano_and_noise()
+        __self__.fit_fano_and_noise(bar=bar)
         if bar != None:
-            bar.update_text("11/11 Writing to disk...")
+            bar.update_text("Writing to disk...")   #save_cube is invoked within Mosaic
             bar.updatebar(11)
-        #__self__.save_cube()
+
 
     def compile_cube(__self__):
         """ Iterate over the spectra dataset, reading each spectrum file saving it to the 
@@ -476,45 +488,45 @@ class datacube:
 
         logger.debug("Calculating MPS...")
         __self__.progressbar.progress["maximum"] = 6
-        __self__.progressbar.update_text("1/6 Calculating MPS...")
+        __self__.progressbar.update_text("Calculating MPS...")
         __self__.progressbar.updatebar(1)
         mps = np.zeros([__self__.matrix.shape[2]],dtype="int32")
-        datacube.MPS(__self__,mps)
+        __self__.MPS(mps)
         __self__.mps = mps
 
         logger.debug("Calculating summation spectrum...")
-        __self__.progressbar.update_text("2/6 Calculating sum spec...")
+        __self__.progressbar.update_text("Calculating sum spec...")
         __self__.progressbar.updatebar(2)
-        datacube.stacksum(__self__)
+        __self__.stacksum()
         #datacube.cut_zeros(__self__)
         __self__.energyaxis, __self__.gain, __self__.zero = calibrate(
                 specsize=__self__.matrix.shape[2])
         __self__.config["gain"] = __self__.gain
         
         logger.debug("Stripping background...")
-        __self__.progressbar.update_text("3/6 Stripping background...")
+        __self__.progressbar.update_text("Stripping background...")
         __self__.progressbar.updatebar(3)
         __self__.strip_background()
         __self__.progressbar.progress["maximum"] = 6
         
         logger.debug("Calculating sum map...")
-        __self__.progressbar.update_text("4/6 Calculating sum map...")
+        __self__.progressbar.update_text("Calculating sum map...")
         __self__.progressbar.updatebar(4)
-        datacube.create_densemap(__self__)
+        __self__.create_densemap()
         
         logger.debug("Writing summation mca and ANSII files...")
-        datacube.write_sum(__self__)
+        __self__.write_sum()
 
-        __self__.progressbar.update_text("5/6 Finding Noise and Fano...")
+        __self__.progressbar.update_text("Finding Noise and Fano...")
         __self__.progressbar.updatebar(5)
-        datacube.fit_fano_and_noise(__self__)
+        __self__.fit_fano_and_noise()
 
         logger.debug("Saving cube file to disk...")
-        __self__.progressbar.update_text("6/6 Writing to disk...")
+        __self__.progressbar.update_text("Writing to disk...")
         __self__.progressbar.updatebar(6)
         __self__.progressbar.destroybar()
         del __self__.progressbar 
-        datacube.save_cube(__self__)
+        __self__.save_cube()
         logger.debug("Finished packing.")
         return 0,None
     
@@ -673,34 +685,33 @@ def converth5():
     progressbar = Busy(5,0)
 
     logger.debug("Calculating MPS...")
-    progressbar.update_text("1/5 Calculating MPS...")
+    progressbar.update_text("Calculating MPS...")
     progressbar.updatebar(1)
     mps = np.zeros([cube.matrix.shape[2]],dtype="int32")
     cube.MPS(mps)
     cube.mps = mps
 
     logger.debug("Calculating summation spectrum...")
-    progressbar.update_text("2/5 Calculating sum spec...")
+    progressbar.update_text("Calculating sum spec...")
     progressbar.updatebar(2)
     cube.stacksum()
     cube.energyaxis, cube.gain, cube.zero = calibrate(specsize=cube.matrix.shape[2])
     cube.config["gain"] = cube.gain
 
     logger.debug("Stripping background...")
-    progressbar.update_text("3/5 Stripping background...")
+    progressbar.update_text("Stripping background...")
     progressbar.updatebar(3)
-    progressbar.progress["maximum"] = cube.img_size
     cube.strip_background(progressbar=progressbar)
 
     logger.debug("Calculating sum map...")
-    progressbar.update_text("4/5 Calculating sum map...")
+    progressbar.update_text("Calculating sum map...")
     progressbar.progress["maximum"] = 5
     progressbar.updatebar(4)
     cube.create_densemap()
 
-    progressbar.update_text("5/5 Finding Noise and Fano...")
+    progressbar.update_text("Finding Noise and Fano...")
     progressbar.updatebar(5)
-    cube.fit_fano_and_noise()
+    cube.fit_fano_and_noise(bar=progressbar)
     progressbar.destroybar()
     del progressbar
     return cube
