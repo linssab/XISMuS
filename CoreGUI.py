@@ -3646,53 +3646,65 @@ class MainGUI:
         # create buttons
         __self__.ButtonLoad = ttk.Button(
                 __self__.ButtonsFrame, 
-                text="  Create Mosaic", 
+                #text="  Create Mosaic", 
                 image=__self__.ButtonLoad_icon, 
                 style="main.TButton",
-                compound=LEFT, 
-                width=15,
+                #compound=LEFT, 
+                #width=15,
                 command=__self__.open_mosaic)
         __self__.ButtonReset =ttk.Button(
                 __self__.ButtonsFrame, 
-                text="  Reset Sample", 
+                #text="  Reset Sample", 
                 image=__self__.ButtonReset_icon, 
                 style="main.TButton",
-                compound=LEFT, 
-                width=15,
+                #compound=LEFT, 
+                #width=15,
                 command=__self__.reset_sample)
         __self__.ImgAnalButton =ttk.Button(
                 __self__.ButtonsFrame, 
-                text="  Image Analyzer", 
+                #text="  Image Analyzer", 
                 image=__self__.ImgAnalButton_icon, 
                 style="main.TButton",
-                compound=LEFT, 
-                width=15,
+                #compound=LEFT, 
+                #width=15,
                 command=__self__.open_analyzer)
         __self__.FindElementButton =ttk.Button(
                 __self__.ButtonsFrame, 
-                text="  Map Elements", 
+                #text="  Map Elements", 
                 image=__self__.FindElementButton_icon, 
                 style="main.TButton",
-                compound=LEFT, 
-                width=15,
+                #compound=LEFT, 
+                #width=15,
                 command=__self__.find_elements)
         __self__.QuitButton =ttk.Button(
                 __self__.ButtonsFrame, 
-                text="  Quit", 
+                #text="  Quit", 
                 image=__self__.QuitButton_icon, 
                 style="main.TButton",
-                compound=LEFT, 
-                width=15,
+                #compound=LEFT, 
+                #width=15,
                 command=__self__.root_quit)
         __self__.SettingsButton =ttk.Button(
                 __self__.ButtonsFrame, 
-                text="  Settings", 
+                #text="  Settings", 
                 image=__self__.SettingsButton_icon, 
                 style="main.TButton",
-                compound=LEFT, 
-                width=15,
+                #compound=LEFT, 
+                #width=15,
                 command=__self__.call_settings)
         
+        create_tooltip(__self__.ButtonLoad,"Create a new Mosaic (M)")
+        create_tooltip(__self__.ButtonReset,"Reset loaded sample (R)")
+        create_tooltip(__self__.ImgAnalButton,"Open Image Analyzer (A)")
+        create_tooltip(__self__.FindElementButton,"Create maps (E)")
+        create_tooltip(__self__.SettingsButton,"Settings (S)")
+        create_tooltip(__self__.QuitButton,"Exit")
+
+        __self__.master.bind("m",__self__.open_mosaic)
+        __self__.master.bind("r",__self__.reset_sample)
+        __self__.master.bind("a",__self__.open_analyzer)
+        __self__.master.bind("e",__self__.find_elements)
+        __self__.master.bind("s",__self__.call_settings)
         #####
 
         __self__.SampleVar = StringVar()
@@ -3756,15 +3768,15 @@ class MainGUI:
         __self__.SamplesWindow.popup.add_command(
                 label="Remove from database",
                 command=__self__.remove_sample)
-        
 
-        __self__.ButtonsFrame.grid(row=0, column=0, padx=(32,8+8), pady=(32+8,0), sticky="")
-        __self__.ButtonLoad.grid(row=0,column=0, sticky=W+E)
-        __self__.ButtonReset.grid(row=0,column=1, sticky=W+E)
-        __self__.ImgAnalButton.grid(row=1,column=0, sticky=W+E)
-        __self__.FindElementButton.grid(row=1,column=1, sticky=W+E)
-        __self__.SettingsButton.grid(row=2,column=0, sticky=W+E)
-        __self__.QuitButton.grid(row=2,column=1, sticky=W+E)
+        pad = (3,3)
+        __self__.ButtonsFrame.grid(row=0, column=0, padx=(32,8+8), pady=(32+8,0), sticky=W)
+        __self__.ButtonLoad.grid(row=0,column=0, sticky=W, padx=pad)
+        __self__.ButtonReset.grid(row=0,column=1, sticky=W, padx=pad)
+        __self__.ImgAnalButton.grid(row=0,column=2, sticky=W, padx=pad)
+        __self__.FindElementButton.grid(row=0,column=3, sticky=W, padx=pad)
+        __self__.SettingsButton.grid(row=0,column=4, sticky=W, padx=pad)
+        __self__.QuitButton.grid(row=0,column=6, sticky=W, padx=pad)
 
         __self__.ImageCanvas.grid(row=1, column=0, padx=(16+8,8), pady=(32,16), sticky=N+W+S+E)
         __self__.magnifier.grid(row=1, column=0, sticky=S+W, padx=(16+8+3,0), pady=(0,18+1))
@@ -3884,6 +3896,9 @@ class MainGUI:
     
     def toggle_(__self__,toggle='on'):
         if toggle == 'on':
+            __self__.master.bind("r",__self__.reset_sample)
+            __self__.master.bind("a",__self__.open_analyzer)
+            __self__.master.bind("e",__self__.find_elements)
             __self__.Toolbox.entryconfig("Derived spectra", state=NORMAL)
             __self__.Toolbox.entryconfig("Image Analyzer . . .", state=NORMAL)
             __self__.ButtonReset.config(state=NORMAL)
@@ -3896,6 +3911,9 @@ class MainGUI:
             __self__.re_configure.config(state=NORMAL)
             __self__.magnifier.config(state=NORMAL)
         if toggle == 'off':
+            __self__.master.unbind("r")
+            __self__.master.unbind("a")
+            __self__.master.unbind("e")
             __self__.Toolbox.entryconfig("Derived spectra", state=DISABLED)
             __self__.Toolbox.entryconfig("Image Analyzer . . .", state=DISABLED)
             __self__.ButtonReset.config(state=DISABLED)
@@ -4076,7 +4094,7 @@ class MainGUI:
             else: return
             return
 
-    def find_elements(__self__):
+    def find_elements(__self__,e=""):
         mode = Constants.MY_DATACUBE.config["peakmethod"]
         if Constants.MY_DATACUBE.config["peakmethod"] == "auto_wizard" and\
                 any("temp" in x for x in Constants.MY_DATACUBE.datatypes):
@@ -4789,7 +4807,7 @@ class MainGUI:
         except:
             __self__.AboutWin = About(__self__)
 
-    def call_settings(__self__):
+    def call_settings(__self__,e=""):
         try:
             if __self__.SettingsWin.Settings.winfo_exists() == False:
                 __self__.SettingsWin = Settings(__self__)
@@ -4800,7 +4818,7 @@ class MainGUI:
         except:
             __self__.SettingsWin = Settings(__self__)
 
-    def open_mosaic(__self__):
+    def open_mosaic(__self__,e=""):
         CanvasSizeDialog(__self__)
     
     def prompt_mosaic_load_file(__self__):
@@ -4812,7 +4830,7 @@ class MainGUI:
             size = [int(i) for i in s.readlines()[0].split("shape:")[-1].split("x")]
             Mosaic_API(size, root, loadfile=f)
 
-    def open_analyzer(__self__):
+    def open_analyzer(__self__,e=""):
         API = ImageAnalyzer(__self__,Constants.MY_DATACUBE)
         __self__.ImageAnalyzers.append(API) 
 
@@ -4966,7 +4984,7 @@ class MainGUI:
         __self__.TableLeft.config(state=DISABLED)
         __self__.TableMiddle.config(state=DISABLED)
        
-    def reset_sample(__self__):
+    def reset_sample(__self__,e=""):
         def repack(__self__, sample):
             logger.warning("Cube {} and its output contents were erased!".format(sample))
             shutil.rmtree(sp.output_path)

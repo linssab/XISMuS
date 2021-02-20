@@ -6,7 +6,8 @@
 #################################################################
 
 import numpy as np
-import xraylib as xlib
+try: import xraylib as xlib
+except: pass
 from . import EnergyLib
 
 CompoundList = {
