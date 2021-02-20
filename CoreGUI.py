@@ -342,6 +342,29 @@ def call_compilecube():
         root.toggle_(toggle="on")
         root.list_samples()
 
+def convert_cube(cube):
+    global root
+    logger.warning("Obsolete cube loaded! Updating ...")
+    messagebox.showinfo("Update!","Obsolete cube loaded. We will update it to the newest version...")
+    attributes = cube.__dict__.keys()
+
+    bar = Busy(len(attributes)-1,0)
+    bar.update_text("Updating cube...")
+    i=0
+
+    sp.setup_from_datacube(cube,root.samples)
+    specbatch = Cube(["h5","upgrade"],Constants.MY_DATACUBE.config)
+    for atr in attributes:
+        bar.updatebar(i)
+        if atr != "version":
+            specbatch.__dict__[atr] = cube.__dict__[atr]
+            logger.info(f"Assigned {atr} to new cube...")
+            i+=1
+    bar.update_text("Writing to disk...")
+    specbatch.save_cube()
+    load_cube()
+    bar.destroybar()
+
 def load_cube():
     global root
     """ Loads cube to memory (unpickle). Cube name is passed according to
@@ -357,6 +380,16 @@ def load_cube():
         except: pass
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
+        if hasattr(Constants.MY_DATACUBE,"version"):
+            version = [int(i) for i in Constants.MY_DATACUBE.version.split("v")[-1].split(".")]
+            version[0] = version[0]*100
+            version[1] = version[1]*10
+            version[2] = version[2]*1
+            version = sum(version)
+            if version < 134:
+                convert_cube(Constants.MY_DATACUBE)
+        else: convert_cube(Constants.MY_DATACUBE)
+
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
         root.busy.notbusy()
@@ -1720,7 +1753,7 @@ class ImageAnalyzer:
         __self__.BVar = BooleanVar()
         __self__.GVar = BooleanVar()
         __self__.WVar = BooleanVar()
-        __self__.WVar.set(True)
+        __self__.BVar.set(True)
         __self__.T2check = BooleanVar()
         __self__.LP2check = BooleanVar()
         __self__.S2check = BooleanVar()
@@ -1963,18 +1996,22 @@ class ImageAnalyzer:
             __self__.export.config(state=NORMAL)
 
         __self__.master.minsize(x,y)
+        __self__.set_bg("#3b3b38")
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     def set_bg(__self__,colour="white"):
         if colour == "white":
+            __self__.WVar.set(True)
             __self__.GVar.set(False)
             __self__.BVar.set(False)
         elif colour == "#3b3b38":
             __self__.WVar.set(False)
+            __self__.GVar.set(True)
             __self__.BVar.set(False)
         elif colour == "black":
             __self__.WVar.set(False)
             __self__.GVar.set(False)
+            __self__.BVar.set(True)
 
         __self__.LeftCanvas.config(bg=colour)
         __self__.RightCanvas.config(bg=colour)

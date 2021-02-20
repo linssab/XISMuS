@@ -82,13 +82,26 @@ class datacube:
 
         try: specsize = getdata(getfirstfile())
         except:
-            if any("h5" in x for x in __self__.datatypes):
+            if any("upgrade" in x for x in __self__.datatypes):
+                specsize = Constants.MY_DATACUBE.matrix.shape[2]
+            elif any("h5" in x for x in __self__.datatypes):
                 specsize = Constants.MY_DATACUBE.shape[2]
                 __self__.path = ""
             else:
                 specsize = 0
 
-        if mode != "merge" and "mca" in __self__.datatypes:
+        if any("upgrade" in x for x in __self__.datatypes):
+            shape = Constants.MY_DATACUBE.matrix.shape
+            __self__.dimension = (shape[0],shape[1],True)
+            __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],
+                shape[2]],dtype="int32",order='C')
+            __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+            __self__.config = configuration
+            __self__.calibration = getcalibration()
+            __self__.mps = np.zeros(specsize,dtype="int32")
+            gc.collect()
+
+        elif mode != "merge" and "mca" in __self__.datatypes:
             __self__.dimension = getdimension()
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
             __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],
@@ -1016,7 +1029,7 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
                 sigma=uncertainty,
                 maxfev=Constants.FIT_CYCLES)
     except: 
-        logger.warning("Failed to fit fano and noise. Continuiung with default")
+        logger.warning("Failed to fit fano and noise. Continuing with default")
         return Fano, Noise
 
     #print(popt_gaus.shape)
