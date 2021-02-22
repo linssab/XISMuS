@@ -508,12 +508,14 @@ def _init_numpy_mkl():
     if env not in os.environ:
         os.environ[env] = '1'
     try:
-        _core = ".\\MKLs"
+        _core = os.path.dirname(__file__)
         for _dll in ('mkl_rt', 'libiomp5md', 'mkl_core', 'mkl_intel_thread', 
                      'libmmd', 'libifcoremd', 'libimalloc'):
-            ctypes.cdll.LoadLibrary(os.path.join(_core,_dll))
-            print("Loaded {}".format(_dll))
-            splash.update(f"Loaded {_dll}")
+            try: 
+                ctypes.cdll.LoadLibrary(os.path.join(_core,_dll))
+                splash.update(f"Loaded {_dll}")
+            except:
+                splash.update(f"Failed to load {_dll}")
             time.sleep(0.100)
     except Exception:
         pass
