@@ -23,7 +23,6 @@ try:
     Constants.USEXLIB = True
     xlib.SetErrorMessages(0)
 except: 
-    logger.warning("xraylib module not found!")
     print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.\
             check https://github.com/tschoonj/xraylib/wiki for further information.")
     Constants.USEXLIB = False

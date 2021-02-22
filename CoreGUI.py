@@ -342,7 +342,10 @@ def call_compilecube():
         root.toggle_(toggle="on")
         root.list_samples()
 
-def convert_cube(cube):
+def upgrade_cube(cube):
+    """ pre 1.3 cubes will remain without 'version' attribute. Other cubes will maintain the
+    value, plus a string to identify they were updated """
+
     global root
     logger.warning("Obsolete cube loaded! Updating ...")
     messagebox.showinfo("Update!","Obsolete cube loaded. We will update it to the newest version...")
@@ -354,12 +357,21 @@ def convert_cube(cube):
 
     sp.setup_from_datacube(cube,root.samples)
     specbatch = Cube(["h5","upgrade"],Constants.MY_DATACUBE.config)
+    specbatch.__dict__.pop("version")   #remove automatically assigned version
     for atr in attributes:
         bar.updatebar(i)
         if atr != "version":
             specbatch.__dict__[atr] = cube.__dict__[atr]
             logger.info(f"Assigned {atr} to new cube...")
             i+=1
+        elif atr == "version":
+            original_version = cube.version.split(" ")[0]
+            specbatch.__dict__[atr] = Constants.VERSION
+            specbatch.update_info = f"{original_version} -> {Constants.VERSION}"
+            i+=1
+    if "version" not in attributes: 
+        specbatch.update_info = f"pre v1.3 -> {Constants.VERSION}"
+
     bar.update_text("Writing to disk...")
     specbatch.save_cube()
     load_cube()
@@ -387,8 +399,9 @@ def load_cube():
             version[2] = version[2]*1
             version = sum(version)
             if version < 134:
-                convert_cube(Constants.MY_DATACUBE)
-        else: convert_cube(Constants.MY_DATACUBE)
+                upgrade_cube(Constants.MY_DATACUBE)
+        elif not hasattr(Constants.MY_DATACUBE,"update_info"): 
+            upgrade_cube(Constants.MY_DATACUBE)
 
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
@@ -1669,15 +1682,21 @@ class ImageAnalyzer:
     def get_version(__self__):
         """ version attribute was implemented in XISMuS 1.3.0, 
         any cube prior to this version has no version attribute """
+        
+        def get_old_version():
+            if hasattr(__self__.DATACUBE,"update_info"):
+                return __self__.DATACUBE.update_info
+            elif hasattr(__self__.DATACUBE,"version"): return __self__.DATACUBE.version
+            else: return "pre v1.3"
 
         if hasattr(__self__.DATACUBE,"version"):
-            __self__.cube_version = "Cube version: "+__self__.DATACUBE.version
+            __self__.cube_version = "Cube version: "+get_old_version()
             if hasattr(__self__.DATACUBE,"scalable"):
                 __self__.scale.config(state=NORMAL)
             else:
                 __self__.scale.config(state=DISABLED)
         else:
-            __self__.cube_version = "Cube version: pre-1.3"
+            __self__.cube_version = "Cube version: "+get_old_version()
             __self__.scale.config(state=DISABLED)
 
     def build_widgets(__self__):
@@ -3541,6 +3560,8 @@ class MainGUI:
         __self__.StatusBox = Listbox(__self__.DataBox, 
                 yscrollcommand=__self__.StatusScroller.set,
                 bd=0,
+                bg=Theme.BG["Listbox"],
+                fg=Theme.FG["Listbox"],
                 highlightthickness=0)
 
         __self__.ConfigFrame = ttk.LabelFrame(
@@ -3558,11 +3579,11 @@ class MainGUI:
         __self__.TableLabel3 = ttk.Label(__self__.ConfigFrame,text="Configuration")
         __self__.TableLeft = Listbox(__self__.ConfigFrame, bd=0,
                 highlightthickness=0,
-                bg=Constants.DEFAULTBTN_COLOR)
+                bg=__self__.master.cget("background"))
         __self__.TableMiddle = Listbox(__self__.ConfigFrame, 
                 width=int(__self__.TableLeft.winfo_reqwidth()/3), bd=0, 
                 highlightthickness=0,
-                bg=Constants.DEFAULTBTN_COLOR)
+                bg=__self__.master.cget("background"))
         re_configure_icon = PhotoImage(data=ICO_REFRESH)
         __self__.re_configure_icon = re_configure_icon.subsample(1,1)
         __self__.re_configure = ttk.Button(
@@ -3693,21 +3714,24 @@ class MainGUI:
                 #width=15,
                 command=__self__.call_settings)
         
-        create_tooltip(__self__.ButtonLoad,"Create a new Mosaic (M)")
-        create_tooltip(__self__.ButtonReset,"Reset loaded sample (R)")
-        create_tooltip(__self__.ImgAnalButton,"Open Image Analyzer (A)")
-        create_tooltip(__self__.FindElementButton,"Create maps (E)")
-        create_tooltip(__self__.SettingsButton,"Settings (S)")
+        create_tooltip(__self__.ButtonLoad,"Create a new Mosaic (Alt-M)")
+        create_tooltip(__self__.ButtonReset,"Reset loaded sample (Alt-R)")
+        create_tooltip(__self__.ImgAnalButton,"Open Image Analyzer (Alt-A)")
+        create_tooltip(__self__.FindElementButton,"Create maps (Alt-E)")
+        create_tooltip(__self__.SettingsButton,"Settings (Alt-S)")
         create_tooltip(__self__.QuitButton,"Exit")
 
-        __self__.master.bind("m",__self__.open_mosaic)
-        __self__.master.bind("r",__self__.reset_sample)
-        __self__.master.bind("a",__self__.open_analyzer)
-        __self__.master.bind("e",__self__.find_elements)
-        __self__.master.bind("s",__self__.call_settings)
+        __self__.master.bind("<Alt-m>",__self__.open_mosaic)
+        __self__.master.bind("<Alt-r>",__self__.reset_sample)
+        __self__.master.bind("<Alt-a>",__self__.open_analyzer)
+        __self__.master.bind("<Alt-e>",__self__.find_elements)
+        __self__.master.bind("<Alt-s>",__self__.call_settings)
         #####
 
         __self__.SampleVar = StringVar()
+        __self__.SearchText = StringVar()
+        __self__.SearchText.trace("w",__self__.search_samples)
+
         __self__.SampleVar.set("Sample on memory: "+Constants.DIRECTORY)
         __self__.StatusBar = Label(
                 __self__.master, 
@@ -3718,14 +3742,29 @@ class MainGUI:
         __self__.master.protocol("WM_DELETE_WINDOW", __self__.root_quit)
 
         __self__.SamplesWindow = ttk.LabelFrame(__self__.DataFrame, text="Samples")
+        __self__.SamplesFilters = ttk.Frame(__self__.SamplesWindow)
+
+        __self__.sort_mode = True
+        __self__.SamplesSort = Button(__self__.SamplesFilters, 
+                text="Sort A-Z", 
+                font=tkFont.Font(family="Tahoma",size=8,underline=1),
+                bd=0,
+                bg=Theme.BG["Button"],
+                fg=Theme.FG["Button"],
+                command=__self__.sort_samples)
+        __self__.SamplesSearch = ttk.Entry(__self__.SamplesFilters, 
+                textvariable=__self__.SearchText, 
+                width=27)
 
         __self__.SampleScroller = ttk.Scrollbar(__self__.SamplesWindow)
         __self__.SamplesWindow_TableLeft = Listbox(
                 __self__.SamplesWindow,
                 yscrollcommand=__self__.SampleScroller.set,
                 height=__self__.SamplesWindow.winfo_height(),
-                width=22,
+                width=28,
                 cursor="hand2",
+                bg=Theme.BG["Listbox"],
+                fg=Theme.FG["Listbox"],
                 bd=1)
         __self__.SamplesWindow_TableRight = Listbox(
                 __self__.SamplesWindow,
@@ -3735,12 +3774,16 @@ class MainGUI:
                 __self__.SamplesWindow,
                 text = "Export multiple maps",
                 bd=2,
+                bg=Theme.BG["Button"],
+                fg=Theme.FG["Button"],
                 width=13,
                 command=__self__.select_multiple)
         __self__.SamplesWindow_ok = Button(
                 __self__.SamplesWindow,
                 text = "Validate",
                 bd=2,
+                bg=Theme.BG["Button"],
+                fg=Theme.FG["Button"],
                 width=13,
                 command=__self__.digestmaps)
 
@@ -3778,13 +3821,15 @@ class MainGUI:
         __self__.SettingsButton.grid(row=0,column=4, sticky=W, padx=pad)
         __self__.QuitButton.grid(row=0,column=6, sticky=W, padx=pad)
 
-        __self__.ImageCanvas.grid(row=1, column=0, padx=(16+8,8), pady=(32,16), sticky=N+W+S+E)
-        __self__.magnifier.grid(row=1, column=0, sticky=S+W, padx=(16+8+3,0), pady=(0,18+1))
+        __self__.ImageCanvas.grid(row=1, column=0, padx=(16+8,8), pady=(32,16),
+                sticky=N+W+S+E)
+        __self__.magnifier.grid(row=1, column=0, padx=(16+8+3,0), pady=(0,18+1),
+                sticky=S+W)
 
         __self__.DataFrame.grid(row=0, column=1, rowspan=2, 
                 padx=(16,8), pady=16, sticky=N+W+E+S)
-        __self__.DataBox.grid(row=0, column=0, columnspan=2, sticky=N+W+E+S, 
-                padx=16, pady=16)
+        __self__.DataBox.grid(row=0, column=0, columnspan=2, 
+                padx=16, pady=16, sticky=N+W+E+S)
         __self__.StatusBox.grid(row=0, column=0, sticky=W+E+N+S)
         __self__.StatusScroller.grid(row=0, column=1, sticky=N+S)
 
@@ -3804,12 +3849,26 @@ class MainGUI:
         __self__.StatusBar.grid(row=3, column=0, columnspan=3, sticky=W+E)
 
         __self__.SamplesWindow.grid(row=0, column=2, rowspan=2, 
-                sticky=N+W+S+E, padx=(8,16+8), pady=(16,0))
+                padx=(8,16+8), pady=(16,0), sticky=N+W+S+E)
+        __self__.SamplesFilters.grid(row=0, column=0, columnspan=2, 
+                padx=(12,12), pady=(6,0), sticky=N+E+W+S)
+        __self__.SamplesFilters.propagate(1)
+
+        __self__.SamplesSort.grid(row=0, column=1, sticky=E)
+        __self__.SamplesSearch.grid(row=1, column=0, columnspan=2, padx=(0,20), sticky=E)
+        ttk.Label(__self__.SamplesFilters, text="Search").grid(row=0, column=0, sticky=W)
+        Button(__self__.SamplesFilters, text="X", 
+                font=tkFont.Font(family="Tahoma",weight="bold",size=10), bd=0,
+                command=__self__.sort_samples_clear).grid(row=1, column=1, 
+                        pady=(0,3), sticky=E)
+
         __self__.SamplesWindow_TableLeft.grid(row=1, column=0, sticky=N+S, pady=(12,10), 
                 padx=(12,0))
         __self__.SampleScroller.grid(row=1, column=1, sticky=N+S, pady=(12,12), padx=(2,12))
-        __self__.SamplesWindow_multi.grid(row=2, column=0, columnspan=2, sticky=W+E, pady=(0,2),padx=(12,12))
-        __self__.SamplesWindow_ok.grid(row=3, column=0, columnspan=2, sticky=W+E, pady=(2,12),padx=(12,12))
+        __self__.SamplesWindow_multi.grid(row=2, column=0, columnspan=2, 
+                sticky=W+E, pady=(0,2),padx=(12,12))
+        __self__.SamplesWindow_ok.grid(row=3, column=0, columnspan=2, 
+                sticky=W+E, pady=(2,12),padx=(12,12))
         __self__.SamplesWindow_ok.config(state=DISABLED)
 
         __self__.ImageCanvas.propagate(1)
@@ -3823,6 +3882,8 @@ class MainGUI:
         Grid.rowconfigure(__self__.DataFrame, 1, weight=1)
         Grid.columnconfigure(__self__.DataFrame, 0, weight=1)
         Grid.columnconfigure(__self__.DataFrame, 1, weight=1)
+        Grid.columnconfigure(__self__.SamplesFilters, 0, weight=1)
+        Grid.columnconfigure(__self__.SamplesFilters, 1, weight=1)
         Grid.rowconfigure(__self__.DataBox, 0, weight=1)
         Grid.rowconfigure(__self__.ConfigFrame, 1, weight=1)
         Grid.columnconfigure(__self__.ConfigFrame, 0, weight=1)
@@ -3896,9 +3957,9 @@ class MainGUI:
     
     def toggle_(__self__,toggle='on'):
         if toggle == 'on':
-            __self__.master.bind("r",__self__.reset_sample)
-            __self__.master.bind("a",__self__.open_analyzer)
-            __self__.master.bind("e",__self__.find_elements)
+            __self__.master.bind("<Alt-r>",__self__.reset_sample)
+            __self__.master.bind("<Alt-a>",__self__.open_analyzer)
+            __self__.master.bind("<Alt-e>",__self__.find_elements)
             __self__.Toolbox.entryconfig("Derived spectra", state=NORMAL)
             __self__.Toolbox.entryconfig("Image Analyzer . . .", state=NORMAL)
             __self__.ButtonReset.config(state=NORMAL)
@@ -3911,9 +3972,9 @@ class MainGUI:
             __self__.re_configure.config(state=NORMAL)
             __self__.magnifier.config(state=NORMAL)
         if toggle == 'off':
-            __self__.master.unbind("r")
-            __self__.master.unbind("a")
-            __self__.master.unbind("e")
+            __self__.master.unbind("<Alt-r>")
+            __self__.master.unbind("<Alt-a>")
+            __self__.master.unbind("<Alt-e>")
             __self__.Toolbox.entryconfig("Derived spectra", state=DISABLED)
             __self__.Toolbox.entryconfig("Image Analyzer . . .", state=DISABLED)
             __self__.ButtonReset.config(state=DISABLED)
@@ -4174,7 +4235,7 @@ class MainGUI:
         else: 
             __self__.SamplesWindow_TableLeft.selection_clear(0, END)
             __self__.SamplesWindow_TableLeft.config(selectmode=SINGLE)
-            __self__.SamplesWindow_multi.config(relief="raised",fg="black")
+            __self__.SamplesWindow_multi.config(relief="raised",fg=Theme.FG["Button"])
             __self__.SamplesWindow_ok.config(state=DISABLED)
 
     def digestmaps(__self__):
@@ -4280,6 +4341,35 @@ class MainGUI:
             __self__.SamplesWindow_TableRight.insert(END,"{}".format(\
                     __self__.samples[key]))
         __self__.SamplesWindow_TableLeft.focus_set()
+
+    def sort_samples(__self__, e=""):
+        """ Sorts the samples listed in the panel. Only works for the newer interface 2.0,
+        where the panel with MCA prefixes does not exist """
+        __self__.sort_mode = not __self__.sort_mode
+        names = __self__.SamplesWindow_TableLeft.get(0,END)
+        names = sorted(names, reverse=__self__.sort_mode)
+        __self__.SamplesWindow_TableLeft.delete(0,END)
+        for name in names:
+            __self__.SamplesWindow_TableLeft.insert(END,f"{name}")
+        __self__.SamplesWindow_TableLeft.focus_set()
+
+    def sort_samples_clear(__self__, e=""):
+        __self__.SearchText.set("")
+        __self__.SamplesWindow_TableLeft.delete(0,END)
+        names = __self__.samples.keys()
+        for name in names:
+            __self__.SamplesWindow_TableLeft.insert(END,f"{name}")
+        __self__.SamplesWindow_TableLeft.focus_set()
+
+    def search_samples(__self__, var, index, mode):
+        __self__.sort_mode = False
+        names = __self__.samples.keys()
+        __self__.SamplesWindow_TableLeft.delete(0,END)
+        search = __self__.SearchText.get().lower()
+        results = [name for name in names if name.lower().startswith(search)]
+        results = sorted(results)
+        for name in results:
+            __self__.SamplesWindow_TableLeft.insert(END,f"{name}")
 
     def scroll_y_R(__self__,event):
         """ Right table triggers. Scrolls Left """
