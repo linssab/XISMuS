@@ -1391,7 +1391,7 @@ class Mosaic_API:
         if "mask" in layer.keys(): 
             mask = layer["mask"]
         else: 
-            mask = np.zeros(__self__.layer[layer["name"]].img.shape)
+            mask = np.zeros(cube.densitymap.shape)
 
         #create layer object
         __self__.layer[layer["name"]] = Layer(
