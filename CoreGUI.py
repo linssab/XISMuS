@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 2.0.0 - Feb - 2021            #
+#                        version: 2.0.1 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 global root

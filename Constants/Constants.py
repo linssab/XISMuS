@@ -8,8 +8,8 @@
 import logging
 from psutil import cpu_count
 
-VERSION = "2.0.0"
-VERSION_MOS = "2.0.0"
+VERSION = "2.0.1"
+VERSION_MOS = "2.0.1"
 LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None
