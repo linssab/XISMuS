@@ -2151,6 +2151,40 @@ class ImageAnalyzer:
             __self__.annotator.wipe_annotator()
             del __self__.plot
         except: pass
+
+    def prepare_to_correlate(__self__):
+        scalemode = __self__.apply_scale_mask.get()
+
+        unpacker1 = __self__.Map1Var.get()
+        unpacker2 = __self__.Map2Var.get()
+        unpacker1 = unpacker1.split("_")
+        unpacker2 = unpacker2.split("_")
+        Map1 = __self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
+        Map2 = __self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
+
+        CACHEMAP1 = copy.deepcopy(Map1)
+        image1 = fast_scaling(__self__.DATACUBE, CACHEMAP1, scalemode)
+        CACHEMAP2 = copy.deepcopy(Map2)
+        image2 = fast_scaling(__self__.DATACUBE, CACHEMAP2, scalemode)
+
+        th1 = __self__.T1Slider.get()*image1.max()/LEVELS
+        tl1 = __self__.LP1Slider.get()*image1.max()/LEVELS
+
+        th2 = __self__.T2Slider.get()*image2.max()/LEVELS
+        tl2 = __self__.LP2Slider.get()*image2.max()/LEVELS
+
+        print(th1, tl1)
+        print(th2, tl2)
+
+        if __self__.T1check.get() == True:
+            image1 = fast_threshold(image1,0,th1)
+        elif __self__.LP1check.get() == True:
+            image1 = fast_threshold(image1,1,tl1)
+        if __self__.T2check.get() == True:
+            image2 = fast_threshold(image2,0,th2)
+        elif __self__.LP2check.get() == True:
+            image2 = fast_threshold(image2,1,tl2)
+        return image1, image2
     
     def switchT1LP1(__self__):
         if __self__.LP1check.get() == True: __self__.LP1Slider.state(["!disabled"])
@@ -2271,8 +2305,10 @@ class ImageAnalyzer:
         iterations), the gain in performance is more important in filtering than correlating
         maps """
 
-        Map1 = copy.deepcopy(__self__.newimage1)
-        Map2 = copy.deepcopy(__self__.newimage2)
+        #Map1 = copy.deepcopy(__self__.newimage1)
+        #Map2 = copy.deepcopy(__self__.newimage2)
+
+        Map1, Map2 = __self__.prepare_to_correlate()
 
         """ Correlation region must now be limited according to the transformed area
         (any applied filter) and to selected area made with set ROI tool (Annotator class) """
@@ -2594,7 +2630,49 @@ class PlotWin:
                 handles=patches,
 		loc="upper right")
 
+    def place_anchor(__self__, e=""):
+        if __self__.MASK_ENABLE: 
+            x, y = e.xdata, e.ydata
+            if Mask.is_complete(e, __self__.anchors):
+                __self__.toggle_mask(complete=True)
+                print("I'm complete")
+            elif not Mask.is_too_close(e, __self__.anchors): 
+                anchor = Mask.Anchor(x,y,__self__.anchor_width,__self__.anchor_height)
+                __self__.plot.add_patch(anchor.dot)
+                __self__.anchors.append(anchor)
+                __self__.canvas.draw()
+            else: print("Too close")
+        else: print("Can't place anchor")
+
+    def toggle_mask(__self__, complete=False):
+        if not __self__.MASK_ENABLE:
+            print("Enabling mask")
+            __self__.anchors = []
+            __self__.MASK_ENABLE = 1
+            __self__.MaskBtn.config(relief=SUNKEN, bg="yellow")
+            __self__.canvas.mpl_connect("button_press_event",__self__.place_anchor)
+        elif __self__.MASK_ENABLE:
+            print("Disabling mask")
+            Mask.NUMBER = 0
+            __self__.MASK_ENABLE = 0
+            __self__.MaskBtn.config(relief=RAISED, bg=__self__.master.cget("background"))
+            __self__.canvas.mpl_connect("button_press_event",None)
+            if not complete:
+                __self__.plot.patches = []
+                __self__.canvas.draw()
+
     def draw_correlation(__self__,corr,labels):
+        __self__.anchor_width = 5 
+        __self__.anchor_height = 5
+        __self__.MASK_ENABLE = 0
+        
+        def spawn_mask_button():
+            __self__.add_ons = Frame(__self__.master)
+            __self__.add_ons.pack(side=LEFT,fill=X)
+            __self__.MaskBtn = Button(__self__.add_ons, text="Draw mask", 
+                    command= lambda:__self__.toggle_mask())
+            __self__.MaskBtn.grid(row=0, column=0, sticky=W)
+
         A, B, R = linregress(corr[0],corr[1]) 
         fit = []
         labelx,macrox = labels[0].split("_")[0],labels[0].split("_")[1]
@@ -2617,6 +2695,7 @@ class PlotWin:
         __self__.plot.plot(fit, color="blue", 
                 label="y(x) = {0:0.2f}x {1} {2:0.2f}\nR = {3:0.4f}".format(A,sig,abs(B),R))
         __self__.plot.legend(shadow=True,fontsize=10,facecolor="white",loc="upper right")
+        spawn_mask_button()
         place_topright(__self__.master.master,__self__.master)
 
     def draw_map(__self__):
@@ -6652,10 +6731,11 @@ if __name__.endswith("__main__"):
 
     splash.update("Preparing GUI...")
     time.sleep(t)
+    from GUI import Mask
     from GUI import Theme
+    from GUI import AdvCalib
+    from GUI import Busy, BusyManager, create_tooltip
     from GUI.Mosaic import Mosaic_API
-    from GUI.AdvCalibration import AdvCalib
-    from GUI.ProgressBar import Busy, BusyManager, create_tooltip
 
     splash.update("Revving Engine...")
     time.sleep(t)
