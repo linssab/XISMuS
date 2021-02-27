@@ -1,3 +1,9 @@
-New in Version v2.0.1
+New in Version v2.1.0
 
-- Mosaics without an npz file were not loading (fixed)
+- Masking option added to correlation plots
+- Overall performance improvements
+
+Fixed issues:
+- Correlations are made for 0-255 images instead of raw (fixed)
+- Correlations accounts smooth filter (fixed)
+- Sorting ignores case (fixed)

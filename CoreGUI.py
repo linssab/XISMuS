@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 2.0.1 - Feb - 2021            #
+#                        version: 2.1.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 global root
@@ -2173,9 +2173,6 @@ class ImageAnalyzer:
         th2 = __self__.T2Slider.get()*image2.max()/LEVELS
         tl2 = __self__.LP2Slider.get()*image2.max()/LEVELS
 
-        print(th1, tl1)
-        print(th2, tl2)
-
         if __self__.T1check.get() == True:
             image1 = fast_threshold(image1,0,th1)
         elif __self__.LP1check.get() == True:
@@ -2342,7 +2339,7 @@ class ImageAnalyzer:
             return
         bar.update_text("Loading plot...")
         corr_plot = PlotWin(__self__)
-        corr_plot.draw_correlation(corr,labels)
+        corr_plot.draw_correlation(corr,labels,images=[Map1,Map2])
         bar.destroybar()
 
     def export_clicked(__self__):
@@ -2378,6 +2375,7 @@ class PlotWin:
         __self__.master = Toplevel(master=parent.master)
         __self__.master.attributes("-alpha",0.0)
         __self__.alt = False
+        __self__.parent = parent
         __self__.master.bind("<Alt_L>",__self__.AltOn)
         __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
         __self__.master.bind("<Return>",__self__.maximize)
@@ -2393,7 +2391,7 @@ class PlotWin:
         __self__.lower = Frame(__self__.master,height=35)
         __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
         
-        __self__.figure = Figure(figsize=(5,4), dpi=75)
+        __self__.figure = Figure(figsize=(5,4), dpi=60)
         __self__.plot = __self__.figure.add_subplot(111)
         __self__.plot.grid(which='both',axis='both')
         __self__.plot.grid(color="black", ls="--", lw=0.5)
@@ -2630,72 +2628,222 @@ class PlotWin:
                 handles=patches,
 		loc="upper right")
 
+    def filter_images(__self__):
+
+        def filterXx(X,x,k):
+            a = X.min()
+            b = X.max()
+            v = np.zeros(k+1)
+            newX = np.zeros(X.shape[0])
+            for elem in x:
+                v[int((elem-a)*k/(b-a))] = 1
+            for i in range(X.shape[0]):
+                if v[int((X[i]-a)*k/(b-a))] == 1:
+                    newX[i] = X[i]
+            return newX.astype(np.float32)
+
+        shape = __self__.map1.shape
+        img1 = __self__.map1.flatten()
+        img2 = __self__.map2.flatten()
+       
+        x = __self__.selection[0]
+        y = __self__.selection[1]
+        
+        __self__.parent.newimage1 = filterXx(img1,x,LEVELS)
+        __self__.parent.newimage2 = filterXx(img2,y,LEVELS)
+        
+        __self__.parent.newimage1.shape = (shape)
+        __self__.parent.newimage2.shape = (shape)
+        __self__.parent.left_image.set_data(__self__.parent.newimage1)
+        __self__.parent.left_image.set_clim(vmin=0, vmax=__self__.parent.newimage1.max())
+        __self__.parent.left_image.set_cmap(Constants.COLORMAP)
+        __self__.parent.right_image.set_data(__self__.parent.newimage2)
+        __self__.parent.right_image.set_clim(vmin=0, vmax=__self__.parent.newimage2.max())
+        __self__.parent.right_image.set_cmap(Constants.COLORMAP)
+        __self__.parent.canvas1.draw()
+        __self__.parent.canvas2.draw()
+        __self__.canvas.draw_idle()
+
     def place_anchor(__self__, e=""):
+        def make_selection():
+            mask = Mask.polygon(__self__.anchors)
+
+            #i = 0
+            #a = np.zeros(__self__.corrplot.get_offsets().shape[0],bool)
+            #for point in __self__.corrplot.get_offsets(): 
+            #   a[i] = Mask.isInside(mask,point)
+            #   i+=1
+
+            xys = __self__.corrplot.get_offsets()
+            idxs = np.nonzero(mask.contains_points(xys))[0]
+            __self__.selection = np.asarray(xys[idxs])
+            __self__.selection = [__self__.selection[:,0],__self__.selection[:,1]]
+
+            root.busy.busy()
+            __self__.SelectionPlot = __self__.plot.scatter(__self__.selection[0],__self__.selection[1], color="purple")
+            __self__.canvas.draw()
+            __self__.filter_images()
+            root.busy.notbusy()
+
         if __self__.MASK_ENABLE: 
             x, y = e.xdata, e.ydata
+            
+            # MASK COMPLETE
             if Mask.is_complete(e, __self__.anchors):
+                line_x, line_y = Mask.line(__self__.anchors[-1], __self__.anchors[0])
+                __self__.MaskLines.append(
+                    __self__.plot.plot(line_x,line_y,linewidth=0.5,color="blue"))
+                __self__.canvas.draw()
+
+                make_selection()
+
                 __self__.toggle_mask(complete=True)
-                print("I'm complete")
+
+            # NOT NOMPLETE
             elif not Mask.is_too_close(e, __self__.anchors): 
-                anchor = Mask.Anchor(x,y,__self__.anchor_width,__self__.anchor_height)
+                anchor = Mask.Anchor(x,y,
+                        __self__.anchor_width,__self__.anchor_height,
+                        __self__.AnchorCount)
+                if anchor.dot is None: return
+                __self__.AnchorCount += 1
                 __self__.plot.add_patch(anchor.dot)
+                __self__.plot.set_xlim(__self__.limit_x)
+                __self__.plot.set_ylim(__self__.limit_y)
+                if __self__.AnchorCount > 1: #only draw line if not adding the first anchor 
+                    line_x, line_y = Mask.line(__self__.anchors[-1], anchor)
+                    __self__.MaskLines.append(
+                        __self__.plot.plot(line_x,line_y,linewidth=1,color="blue"))
                 __self__.anchors.append(anchor)
                 __self__.canvas.draw()
-            else: print("Too close")
-        else: print("Can't place anchor")
+            else: pass
+        else: pass
+
+    def clear_mask(__self__):
+        for line in __self__.MaskLines: line.pop(0).remove()
+        try: __self__.SelectionPlot.remove()
+        except: pass
+        __self__.AnchorCount = 0
+        __self__.anchors = []
+        __self__.MaskLines = []
+        __self__.plot.patches = []
+        __self__.selection = __self__.data
+        __self__.parent.draw_image1(0)
+        __self__.parent.draw_image2(0)
+        __self__.canvas.draw_idle()
+
+    def toggle_regression(__self__, e=""):
+        if __self__.linregress: 
+            __self__.LinRegressBtn.config(image=__self__.LINREGRESS_NORMAL_ICO)
+            __self__.linregress.pop(0).remove()
+            __self__.linregress = 0
+            __self__.plot.get_legend().remove()
+            __self__.canvas.draw_idle()
+        else:
+            __self__.LinRegressBtn.config(image=__self__.LINREGRESS_TOGGLED_ICO)
+            corr = __self__.selection
+            A, B, R = linregress(corr[0],corr[1])
+            fit = []
+            for i in range(int(corr[0].max())):
+                value = A*i+B
+                if value < corr[1].max():
+                    fit.append(value)
+                if B < 0: sig = "-"
+                else: sig = "+"
+            __self__.linregress = __self__.plot.plot(fit, color="blue",
+                    label="y(x) = {0:0.2f}x {1} {2:0.2f}\nR = {3:0.4f}".format(
+                        A,sig,abs(B),R))
+            __self__.plot.legend(shadow=True,fontsize=10,facecolor="white",loc="upper right")
+            __self__.canvas.draw_idle()
 
     def toggle_mask(__self__, complete=False):
+        __self__.anchors = []
         if not __self__.MASK_ENABLE:
-            print("Enabling mask")
-            __self__.anchors = []
+            __self__.clear_mask()
             __self__.MASK_ENABLE = 1
-            __self__.MaskBtn.config(relief=SUNKEN, bg="yellow")
-            __self__.canvas.mpl_connect("button_press_event",__self__.place_anchor)
+            #__self__.MaskBtn.config(relief=SUNKEN, bg="yellow")
+            __self__.MaskBtn.config(image=__self__.MASK_TOGGLED_ICO)
+            __self__.connection = __self__.canvas.mpl_connect(
+                    "button_press_event",__self__.place_anchor)
         elif __self__.MASK_ENABLE:
-            print("Disabling mask")
-            Mask.NUMBER = 0
             __self__.MASK_ENABLE = 0
-            __self__.MaskBtn.config(relief=RAISED, bg=__self__.master.cget("background"))
-            __self__.canvas.mpl_connect("button_press_event",None)
-            if not complete:
-                __self__.plot.patches = []
-                __self__.canvas.draw()
+            #__self__.MaskBtn.config(relief=RAISED, bg=__self__.master.cget("background"))
+            __self__.MaskBtn.config(image=__self__.MASK_NORMAL_ICO)
+            __self__.canvas.mpl_disconnect(__self__.connection)
+            if not complete: __self__.clear_mask() 
 
-    def draw_correlation(__self__,corr,labels):
-        __self__.anchor_width = 5 
-        __self__.anchor_height = 5
+    def draw_correlation(__self__,corr,labels,images):
+        __self__.map1 = images[0]
+        __self__.map2 = images[1]
+        __self__.anchors = []
+        __self__.AnchorCount = 0
+        __self__.MaskLines = []
+        __self__.data = corr
+        __self__.selection = __self__.data
+        max_xy = corr[0].max(), corr[1].max()
+        __self__.limit_x = [-max_xy[0]*0.10,max_xy[0]*1.10]
+        __self__.limit_y = [-max_xy[1]*0.10,max_xy[1]*1.10]
+        __self__.anchor_width = corr[0].max()*0.015
+        __self__.anchor_height = corr[1].max()*0.015
+        __self__.plot.set_xlim(__self__.limit_x)
+        __self__.plot.set_ylim(__self__.limit_y)
         __self__.MASK_ENABLE = 0
-        
-        def spawn_mask_button():
-            __self__.add_ons = Frame(__self__.master)
-            __self__.add_ons.pack(side=LEFT,fill=X)
-            __self__.MaskBtn = Button(__self__.add_ons, text="Draw mask", 
-                    command= lambda:__self__.toggle_mask())
-            __self__.MaskBtn.grid(row=0, column=0, sticky=W)
 
-        A, B, R = linregress(corr[0],corr[1]) 
-        fit = []
+        def spawn_mask_button():
+            mask_normal_icon = PhotoImage(data=ICO_MASK_NORMAL)
+            mask_toggled_icon = PhotoImage(data=ICO_MASK_TOGGLED)
+            clear_icon = PhotoImage(data=ICO_CLEAR)
+            linregress_normal_icon = PhotoImage(data=ICO_LINREGRESS_NORMAL)
+            linregress_toggled_icon = PhotoImage(data=ICO_LINREGRESS_TOGGLED)
+            __self__.MASK_NORMAL_ICO = mask_normal_icon.subsample(1,1)
+            __self__.MASK_TOGGLED_ICO = mask_toggled_icon.subsample(1,1)
+            __self__.CLEAR_ICO = clear_icon.subsample(1,1)
+            __self__.LINREGRESS_NORMAL_ICO = linregress_normal_icon.subsample(1,1)
+            __self__.LINREGRESS_TOGGLED_ICO = linregress_toggled_icon.subsample(1,1)
+
+            __self__.add_ons = Frame(__self__.master, bg=__self__.master.cget("background"))
+            __self__.add_ons.pack(side=BOTTOM,fill=X)
+            __self__.linregress = 0
+            __self__.MaskBtn = Button(__self__.add_ons, 
+                    image=__self__.MASK_NORMAL_ICO,
+                    command= lambda:__self__.toggle_mask(), 
+                    bd=0,
+                    bg=__self__.master.cget("background"))
+            __self__.MaskBtn.pack(side=LEFT)
+            Button(__self__.add_ons, 
+                    image=__self__.CLEAR_ICO,
+                    bd=0,
+                    bg=__self__.master.cget("background"), 
+                    command= lambda: __self__.clear_mask()).pack(side=LEFT)
+            Info = Button(__self__.add_ons,
+                    text="?",
+                    bg=__self__.master.cget("background"),
+                    font=tkFont.Font(family="Tahoma",weight="bold",size=10), 
+                    bd=0)
+            Info.pack(side=LEFT)
+            Info.config(state=DISABLED)
+
+            __self__.LinRegressBtn = Button(__self__.add_ons,
+                    image=__self__.LINREGRESS_NORMAL_ICO,
+                    bg=__self__.master.cget("background"),
+                    bd=0,
+                    command= lambda: __self__.toggle_regression(corr))
+            __self__.LinRegressBtn.pack(side=RIGHT, anchor=E)
+
+            create_tooltip(Info,"Click on the plot to place anchors. To close the mask, click the purple anchor.\nWhen the mask is complete, \"Draw mask\" will be toggled off.")
+        
+        __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
         labelx,macrox = labels[0].split("_")[0],labels[0].split("_")[1]
         linex = which_macro(labelx)
         labelx = labelx+" "+linex+macrox
         labely,macroy = labels[1].split("_")[0],labels[1].split("_")[1]
         liney = which_macro(labely)
         labely = labely+" "+liney+macroy
-
-        __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
         __self__.plot.set_xlabel(labelx,fontsize=16)
         __self__.plot.set_ylabel(labely,fontsize=16)
-        __self__.plot.scatter(corr[0],corr[1])
-        for i in range(int(corr[0].max())):
-            value = A*i+B
-            if value < corr[1].max(): 
-                fit.append(value)
-            if B < 0: sig = "-"
-            else: sig = "+"
-        __self__.plot.plot(fit, color="blue", 
-                label="y(x) = {0:0.2f}x {1} {2:0.2f}\nR = {3:0.4f}".format(A,sig,abs(B),R))
-        __self__.plot.legend(shadow=True,fontsize=10,facecolor="white",loc="upper right")
+        __self__.corrplot = __self__.plot.scatter(corr[0],corr[1])
+
         spawn_mask_button()
+
         place_topright(__self__.master.master,__self__.master)
 
     def draw_map(__self__):
@@ -2721,17 +2869,18 @@ class PlotWin:
         
         if not refresh:
             
-            save_icon = PhotoImage(data=ICO_SAVE)
-            __self__.SAVE_ICO = save_icon.subsample(1,1)
+            save_icon = PhotoImage(data=ICO_SAVE_SPEC)
+            __self__.SAVE_SPEC_ICO = save_icon.subsample(1,1)
 
             __self__.add_ons = Frame(__self__.master)
             __self__.add_ons.pack(side=RIGHT,fill=X)
             __self__.save_raw_btn = Button(__self__.add_ons,
-                    text=" Save ROI spectrum",
-                    image=__self__.SAVE_ICO,
-                    compound=LEFT,
-                    width=160,
-                    bd=1,
+                    #text=" Save ROI spectrum",
+                    image=__self__.SAVE_SPEC_ICO,
+                    #compound=LEFT,
+                    #width=160,
+                    bd=0,
+                    bg=__self__.master.cget("background"),
                     command=lambda: save_raw_spectrum())
             __self__.save_raw_btn.grid(row=0,column=0,sticky="")
 
@@ -2826,7 +2975,6 @@ class Samples:
         __self__.mcacount = {}
         __self__.mca_indexing = {}
         __self__.mca_extension = {}
-        
 
     def kill(__self__):
         __self__.popup.grab_set()
@@ -2924,10 +3072,11 @@ class Samples:
                                 splash=splash,
                                 text=f"Cube for {folder} already compiled, skipping mca\'s")
                             __self__.skip_list.append(name.split(".cube")[0])
+                if folder in __self__.skip_list: break
                 
                 """ Lists the spectra files """            
                 files = [name for name in os.listdir(os.path.join(Constants.SAMPLES_FOLDER,
-                    folder))if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                    folder)) if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
                 extension = files[:]
 
                 """ If spectra are found, list and get the files prefix, 
@@ -3022,6 +3171,7 @@ class Samples:
                         splash=splash,
                         text= f"Cube for {folder} already compiled, skipping mca\'s")
                         __self__.skip_list.append(name.split(".cube")[0])
+
             files = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
                     if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
             extension = files[:]
@@ -3091,7 +3241,6 @@ class Samples:
             else: pass
         
         try:
-
             """ Try looking for training_data """
 
             folder = "Example Data"
@@ -3152,7 +3301,6 @@ class Samples:
         except: logger.info("Could not locate Training Data.")
 
         try:
-                                        
             """ Verify packed cubes """
 
             output_folder = os.path.join(sp.__PERSONAL__,"output")
@@ -4428,7 +4576,7 @@ class MainGUI:
         where the panel with MCA prefixes does not exist """
         __self__.sort_mode = not __self__.sort_mode
         names = __self__.SamplesWindow_TableLeft.get(0,END)
-        names = sorted(names, reverse=__self__.sort_mode)
+        names = sorted(names, key=str.casefold, reverse=__self__.sort_mode)
         __self__.SamplesWindow_TableLeft.delete(0,END)
         for name in names:
             __self__.SamplesWindow_TableLeft.insert(END,f"{name}")
@@ -4633,12 +4781,12 @@ class MainGUI:
                     cmap=Constants.COLORMAP, 
                     vmin=0,
                     vmax=Constants.MY_DATACUBE.densitymap.max(),)
-            __self__.plot_canvas.draw()
+            __self__.plot_canvas.draw_idle()
         except: 
             __self__.sample_plot.imshow(np.ones([20,20]), cmap=Constants.COLORMAP,
                     vmin=0,
                     vmax=1)
-            __self__.plot_canvas.draw()
+            __self__.plot_canvas.draw_idle()
     
     def open_files_location_from_cube(__self__,event=""):
         try:
@@ -4813,7 +4961,13 @@ class MainGUI:
     def h5loader(__self__):
         def readh5(name):
             with h5py.File(name, "r") as f:
-                a_group_key = list(f.keys())[0]
+                group_keys = list(f.keys())
+                for key in group_keys:
+                    shape = np.array(f[key]).shape
+                    if len(shape) >= 3: #data matrix has 3 dimensions
+                        if shape[2] >= 256: #spectra have to have at least 256 channels
+                            a_group_key = key
+                        break
                 data = list(f[a_group_key])
                 matrix = np.asarray(data, dtype="int32", order="C")
                 del data

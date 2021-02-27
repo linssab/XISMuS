@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 2.0.1 - Feb - 2021            #
+#                        version: 2.1.0 - Feb - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -1468,7 +1468,7 @@ class Mosaic_API:
                     limit,
                     LAYERS_DICT)
             __self__.im_plot.set_data(__self__.image)
-            __self__.canvas.draw()
+            __self__.canvas.draw_idle()
             return
         if bound == True:
             if limit == None:
@@ -1480,7 +1480,7 @@ class Mosaic_API:
                     limit,
                     LAYERS_DICT)
             __self__.im_plot.set_data(__self__.image)
-            __self__.canvas.draw()
+            __self__.canvas.draw_idle()
             return
 
     def pack_spectra(__self__,i,j,void_spectrum):
