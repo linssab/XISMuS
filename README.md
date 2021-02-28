@@ -11,7 +11,7 @@ A comprehensive User Guide PDF is provided in [this link][UserGuide].
 To install XISMuS, simply double-click the executable downloaded from one of the links above (32- or 64-bit depending on your system), carefully read the license agreement and follow the instructions on screen.
 <br>
 <br>
-At the present time, a [PATCH][PATCH] has been released. Be sure to download it and apply it after XISMuS Installation.
+An [update][PATCH] is available. Be sure to download an run it after XISMuS Installation. The update is intended for version v2.x.x onwards. If upgrading from a previous version (v1.x.x), please use the newest installer and only then apply the update.
 <br>
 
 **Note:** XISMuS uses xraylib version 3.3.0. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture.<ins> Note: If XISMuS fails to launch due to missing DLL's, please install xraylib.</ins><br>
@@ -67,8 +67,8 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 [xraylib]: http://lvserver.ugent.be/xraylib/
 [x64]: https://sourceforge.net/projects/xismus/files/XISMuSx64_2.0.0_Setup.exe/download
 [x86]: https://sourceforge.net/projects/xismus/files/XISMuSx86_2.0.0_Setup.exe/download
-[PATCH]: https://sourceforge.net/projects/xismus/files/XISMuS-v2.0.1-Patch.exe/download
-[UserGuide]: https://sourceforge.net/projects/xismus/files/XISMuS_User_Manual_2.0.0.pdf/download
+[PATCH]: https://sourceforge.net/projects/xismus/files/XISMuS-v2.1.0-Update.exe/download
+[UserGuide]: https://sourceforge.net/projects/xismus/files/XISMuS_User_Manual_2.1.0.pdf/download
 [compounds]: https://github.com/linssab/XISMuS/blob/master/COMPOUNDS.md
 
 ## Funding
