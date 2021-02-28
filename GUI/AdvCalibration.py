@@ -258,7 +258,6 @@ class AdvCalib():
         if event.xdata is not None:
             if __self__.xhover-3 < event.xdata < __self__.xhover+3:
                 __self__.popup(event.x, event.y)
-                print(f"This is peak {__self__.selected_peak}")
         else: return
 
     def popup(__self__, x,y):
@@ -309,8 +308,16 @@ class AdvCalib():
         en_.focus_set()
     
     def kill_popup(__self__, e=""):
-        __self__.win.destroy()
-        del __self__.win 
+        try:
+            if __self__.win.focus_get().cget("text") == "Ok":
+                __self__.add_values()
+                return
+            else:  
+                __self__.win.destroy()
+                del __self__.win 
+        except:
+            __self__.win.destroy()
+            del __self__.win 
 
     def add_values(__self__, e=""):
         try: ch, en = __self__.ch.get(), __self__.en.get()
