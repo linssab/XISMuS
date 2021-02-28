@@ -165,11 +165,9 @@ void apply_smooth(float *arr,
 	int i;
 	int idx = 0;
 	for (i=0;i<iter+1;i++){
-		//printf("\nIter = %d",i);
 		for (int x=0;x<rows;x++){
 			for (int y=0;y<cols;y++){
 				arr[idx] = get_pixel(arr,x,y,rows,cols);
-				//printf("\nIndex %d = %f",idx,arr[idx]);
 				idx++;
 			}
 		}
@@ -209,14 +207,6 @@ float *snipbg(float *arr,
 		int sg_window,
 		int sg_order){
 
-	/*float *sqr = calloc(len, sizeof *sqr);
-
-	if (!sqr){
-		perror("calloc array");
-		exit (EXIT_FAILURE);
-	}
-	*/
-
 	for (int i=0;i<len;i++){
 		arr[i] = sqrt(arr[i]);		
 	}
@@ -237,17 +227,14 @@ float *snipbg(float *arr,
 	return arr;
 }
 
-float **batch_snipbg(float **matrix,
+float batch_snipbg(float **matrix,
 		int dim_x,
 		int dim_y,
 		int nchan,
 		int progress,
 		struct PARAM bg_params){
-	printf("\nSTART!");
 	for(int i=0;i<(dim_x*dim_x);i++){
 		progress++;
-		//printf("\nBefore");
-		//print_arr(matrix[i],nchan);
 		matrix[i] = snipbg(
 				matrix[i],
 				nchan,
@@ -255,11 +242,47 @@ float **batch_snipbg(float **matrix,
 				bg_params.window,
 				bg_params.sav_window,
 				bg_params.sav_order);
-		//printf("\nAfter");
-		//print_arr(matrix[i],nchan);
-		//printf("\n");
 	}
-	return *matrix; 
+	return **matrix; 
+}
+
+struct pair{
+  float min;
+  float max;
+};
+
+struct pair getMinMax(float arr[], int n){
+  struct pair minmax;
+  int i;
+
+  if (n == 1)
+  {
+     minmax.max = arr[0];
+     minmax.min = arr[0];
+     return minmax;
+  }
+
+  if (arr[0] > arr[1])
+  {
+      minmax.max = arr[0];
+      minmax.min = arr[1];
+  }
+  else
+  {
+      minmax.max = arr[1];
+      minmax.min = arr[0];
+  }
+
+  for (i = 2; i<n; i++)
+  {
+    if (arr[i] >  minmax.max)
+      minmax.max = arr[i];
+
+    else if (arr[i] <  minmax.min)
+      minmax.min = arr[i];
+  }
+
+  return minmax;
 }
 
 int main(){

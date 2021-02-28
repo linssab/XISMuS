@@ -188,7 +188,6 @@ def fast_snipbg(cube, bar=None):
     #plt.semilogy(cube.matrix[0][0], color="black")
     #plt.semilogy(cube.bg_matrix[0][0], color="green")
     #plt.show()
-
     return
 
 if __name__.endswith("__main__"):

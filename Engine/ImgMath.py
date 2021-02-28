@@ -672,6 +672,8 @@ def binary_thresh(image,thresh):
 
 def subtract(image1, image2,norm=True):
     """ Subtracts image2 from image1 """
+    if image1.shape[0] != image2.shape[0] or image1.shape[1] != image2.shape[1]:
+        return
 
     output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
     if norm == True:
@@ -693,6 +695,8 @@ def subtract(image1, image2,norm=True):
  
 def add(image1, image2,norm=True):
     """ Subtracts image2 from image1 """
+    if image1.shape[0] != image2.shape[0] or image1.shape[1] != image2.shape[1]:
+        return
 
     output = np.zeros([image1.shape[0],image1.shape[1]],dtype="float32")
     if norm == True:

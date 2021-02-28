@@ -1702,7 +1702,6 @@ class ImageAnalyzer:
             __self__.scale.config(state=DISABLED)
 
     def build_widgets(__self__):
-
         __self__.Map1Var = StringVar()
         __self__.Map1Counts = StringVar()
         __self__.Map1Counts.set("Select an element")
@@ -2124,7 +2123,7 @@ class ImageAnalyzer:
             __self__.annotator.wipe_annotator()
             __self__.plot.wipe_plot()
  
-    def update_sample1(__self__,event):
+    def update_sample1(__self__,event=""):
         label1 = "Maximum net counts: {}".format(
                 int(__self__.DATACUBE.max_counts[__self__.Map1Var.get()]))
         __self__.Map1Counts.set(label1)
@@ -2132,13 +2131,15 @@ class ImageAnalyzer:
         unpacker = unpacker.split("_")
         __self__.ElementalMap1 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap1 = __self__.ElementalMap1/__self__.ElementalMap1.max()*LEVELS
+        __self__.left_image.set_extent([0,__self__.ElementalMap1.shape[1],
+            0,__self__.ElementalMap1.shape[0]])
         __self__.draw_image1(0)
         try: 
             __self__.annotator.wipe_annotator()
             del __self__.plot
         except: pass
      
-    def update_sample2(__self__,event):
+    def update_sample2(__self__,event=""):
         label2 = "Maximum net counts: {}".format(
                 int(__self__.DATACUBE.max_counts[__self__.Map2Var.get()]))
         __self__.Map2Counts.set(label2)
@@ -2146,6 +2147,8 @@ class ImageAnalyzer:
         unpacker = unpacker.split("_")
         __self__.ElementalMap2 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap2 = __self__.ElementalMap2/__self__.ElementalMap2.max()*LEVELS
+        __self__.right_image.set_extent([0,__self__.ElementalMap2.shape[1],
+            0,__self__.ElementalMap2.shape[0]])
         __self__.draw_image2(0)
         try: 
             __self__.annotator.wipe_annotator()
@@ -2312,19 +2315,11 @@ class ImageAnalyzer:
         bar = Busy(1,0)
         bar.update_text("Thinking...")
         
-        """
-        i = 0 
-        for x in range(__self__.newimage1.shape[0]):
-            for y in range(__self__.newimage1.shape[1]):
-                if __self__.newimage1[x,y] <= 0: Map1[x,y] = 0
-                if __self__.newimage2[x,y] <= 0: Map2[x,y] = 0
-            bar.updatebar(i)
-            i = i+1
-        """
 
-        if __self__.annotate.config("relief")[-1] == "sunken":
+        if __self__.annotate.config("relief")[-1] == "sunken" and \
+                __self__.annotator.x0 is not None:
             x = [__self__.annotator.x0, __self__.annotator.x1]
-            y = [__self__.annotator.y0, __self__.annotator.y1]
+            y = [Map1.shape[0]-__self__.annotator.y0-1, Map1.shape[0]-__self__.annotator.y1-1]
             x.sort()
             y.sort()
             Map1 = Map1[y[0]:y[1],x[0]:x[1]]
@@ -2634,13 +2629,13 @@ class PlotWin:
             a = X.min()
             b = X.max()
             v = np.zeros(k+1)
-            newX = np.zeros(X.shape[0])
+            newX = np.zeros(X.shape[0], dtype=np.float32)
             for elem in x:
                 v[int((elem-a)*k/(b-a))] = 1
             for i in range(X.shape[0]):
                 if v[int((X[i]-a)*k/(b-a))] == 1:
                     newX[i] = X[i]
-            return newX.astype(np.float32)
+            return newX
 
         shape = __self__.map1.shape
         img1 = __self__.map1.flatten()
@@ -2649,19 +2644,24 @@ class PlotWin:
         x = __self__.selection[0]
         y = __self__.selection[1]
         
-        __self__.parent.newimage1 = filterXx(img1,x,LEVELS)
-        __self__.parent.newimage2 = filterXx(img2,y,LEVELS)
+        __self__.parent.ElementalMap1 = filterXx(img1,x,2*LEVELS)
+        __self__.parent.ElementalMap2 = filterXx(img2,y,2*LEVELS)
+        __self__.parent.ElementalMap1 = __self__.parent.ElementalMap1*LEVELS/__self__.parent.ElementalMap1.max()
+        __self__.parent.ElementalMap2 = __self__.parent.ElementalMap2*LEVELS/__self__.parent.ElementalMap2.max()
         
-        __self__.parent.newimage1.shape = (shape)
-        __self__.parent.newimage2.shape = (shape)
-        __self__.parent.left_image.set_data(__self__.parent.newimage1)
-        __self__.parent.left_image.set_clim(vmin=0, vmax=__self__.parent.newimage1.max())
+        __self__.parent.ElementalMap1.shape = (shape)
+        __self__.parent.ElementalMap2.shape = (shape)
+        __self__.parent.left_image.set_data(__self__.parent.ElementalMap1)
+        __self__.parent.left_image.set_clim(vmin=0, vmax=LEVELS)
         __self__.parent.left_image.set_cmap(Constants.COLORMAP)
-        __self__.parent.right_image.set_data(__self__.parent.newimage2)
-        __self__.parent.right_image.set_clim(vmin=0, vmax=__self__.parent.newimage2.max())
+        __self__.parent.left_image.set_extent([0,shape[1],0,shape[0]])
+        __self__.parent.right_image.set_data(__self__.parent.ElementalMap2)
+        __self__.parent.right_image.set_clim(vmin=0, vmax=LEVELS)
         __self__.parent.right_image.set_cmap(Constants.COLORMAP)
-        __self__.parent.canvas1.draw()
-        __self__.parent.canvas2.draw()
+        __self__.parent.right_image.set_extent([0,shape[1],0,shape[0]])
+        #__self__.parent.canvas1.draw()
+        #__self__.parent.canvas2.draw()
+        __self__.parent.refresh()
         __self__.canvas.draw_idle()
 
     def place_anchor(__self__, e=""):
@@ -2676,7 +2676,7 @@ class PlotWin:
 
             xys = __self__.corrplot.get_offsets()
             idxs = np.nonzero(mask.contains_points(xys))[0]
-            __self__.selection = np.asarray(xys[idxs])
+            __self__.selection = np.asarray(xys[idxs], dtype=np.float32)
             __self__.selection = [__self__.selection[:,0],__self__.selection[:,1]]
 
             root.busy.busy()
@@ -2727,8 +2727,8 @@ class PlotWin:
         __self__.MaskLines = []
         __self__.plot.patches = []
         __self__.selection = __self__.data
-        __self__.parent.draw_image1(0)
-        __self__.parent.draw_image2(0)
+        __self__.parent.update_sample1()
+        __self__.parent.update_sample2()
         __self__.canvas.draw_idle()
 
     def toggle_regression(__self__, e=""):
@@ -2760,13 +2760,11 @@ class PlotWin:
         if not __self__.MASK_ENABLE:
             __self__.clear_mask()
             __self__.MASK_ENABLE = 1
-            #__self__.MaskBtn.config(relief=SUNKEN, bg="yellow")
             __self__.MaskBtn.config(image=__self__.MASK_TOGGLED_ICO)
             __self__.connection = __self__.canvas.mpl_connect(
                     "button_press_event",__self__.place_anchor)
         elif __self__.MASK_ENABLE:
             __self__.MASK_ENABLE = 0
-            #__self__.MaskBtn.config(relief=RAISED, bg=__self__.master.cget("background"))
             __self__.MaskBtn.config(image=__self__.MASK_NORMAL_ICO)
             __self__.canvas.mpl_disconnect(__self__.connection)
             if not complete: __self__.clear_mask() 
@@ -2789,6 +2787,7 @@ class PlotWin:
         __self__.MASK_ENABLE = 0
 
         def spawn_mask_button():
+            __self__.original_shape = __self__.parent.newimage1.shape
             mask_normal_icon = PhotoImage(data=ICO_MASK_NORMAL)
             mask_toggled_icon = PhotoImage(data=ICO_MASK_TOGGLED)
             clear_icon = PhotoImage(data=ICO_CLEAR)
@@ -6244,6 +6243,9 @@ class ImageOperationWarning:
             output = add_(__self__.parent.newimage1,
                     __self__.parent.newimage2,norm=True)
         else: pass
+        if output is None: 
+            messagebox.showerror("Error!","Images have incompatible shapes!")
+            return
         if __self__.scaled:
             output = fast_scaling(__self__.parent.DATACUBE, output, -1)
         ImageOperationOutput(output,__self__.parent.Map1Var.get(),
