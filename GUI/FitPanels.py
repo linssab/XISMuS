@@ -53,6 +53,8 @@ from .ProgressBar import BusyManager
 from Graphics import *
 from Elements import *
 ####################
+global SELECTED_ELEMENT
+SELECTED_ELEMENT = ""
 
 class SimpleFitPanel:
     def __init__(__self__,parent,configuration):
@@ -182,6 +184,10 @@ class SimpleFitPanel:
         items = __self__.Pool.selection()
         for item in items:
             __self__.Pool.delete(item)
+        for element in __self__.Pool.get_children():
+            if bool(__self__.Pool.get_children(element)):
+                pass
+            else: __self__.Pool.delete(element)
 
     def add_to_tree(__self__):
         global SELECTED_ELEMENT
@@ -190,6 +196,7 @@ class SimpleFitPanel:
         lines = []
         for i in idxs:
             lines.append(__self__.LinesList.get(i))
+        if lines == []: return
         if __self__.Pool.exists(element):
             for line in lines:
                 if not __self__.Pool.exists(element+line):
