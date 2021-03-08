@@ -1,9 +1,11 @@
-New in Version v2.1.0
-
-- Masking option added to correlation plots
-- Overall performance improvements
+# New in Version v2.2.0 #
+ROI spectrum fitting added to Image Analyzer
+Performance improvements for auto_wizard
+Sample re-calibration is now possible via the Re-Configuration Panel
 
 Fixed issues:
-- Correlations are made for 0-255 images instead of raw (fixed)
-- Correlations accounts smooth filter (fixed)
-- Sorting ignores case (fixed)
+- Pre-v1.3 datacubes unable to use auto_wizard (fixed)
+- AdvCalib sometimes would pick an out-of-bounds mca (fixed)
+- Attempting to save a datacube while another one was loaded could cause the cube to save in the wrong path (fixed)
+- Replacing images in cube when a different cube was loaded replaces the image
+in the last loaded cube instead (fixed)

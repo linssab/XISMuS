@@ -341,17 +341,19 @@ class datacube:
     def save_cube(__self__):
         """ Writes (pickle) the datacube object to memory, if the cube already exists, it is
         replaced (updated) """ 
+        from .SpecRead import __PERSONAL__
 
-        from .SpecRead import output_path, cube_path
-        __self__.self_path = cube_path
+        cube_path = os.path.join(__PERSONAL__,"output",
+            __self__.name,f"{__self__.name}.cube")
+        output_path = os.path.join(__PERSONAL__,"output",__self__.name)
+
         try: 
             if not os.path.exists(output_path):
-                logger.info("Creating outputh path {0}".forma(output_path))
+                logger.info("Creating outputh path {0}".format(output_path))
                 os.mkdir(output_path)
             else: logger.debug("Output path exists")
         except: 
             logger.warning("Could not create output folder {}".format(output_path))
-            pass
         p_output = open(cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
@@ -390,7 +392,6 @@ class datacube:
         if bar != None:
             bar.update_text("Writing to disk...")   #save_cube is invoked within Mosaic
             bar.updatebar(11)
-
 
     def compile_cube(__self__):
         """ Iterate over the spectra dataset, reading each spectrum file saving it to the 
@@ -682,6 +683,11 @@ class datacube:
         element_list = [i.split("_")[0] for i in __self__.check_packed_elements()]
         __self__.prepack_elements(element_list,wipe=True)
         __self__.save_cube()
+
+    def recalibrate(__self__,anchors):
+        __self__.energyaxis, __self__.gain, __self__.zero = calibrate(anchors=anchors)
+        __self__.calibration = anchors
+        __self__.config["calibration"] = "advanced"
 
     def replace_map(__self__,image,element):
         __self__.__dict__[element] = image
@@ -1197,7 +1203,6 @@ def linregress(x, y, sigmay=None, full_output=False):
 
 def energyaxis():
     """ Returns the energyaxis array according to input calibration parameters (anchors) """
-    
     calibration = calibrate()
     return calibration[0]
 

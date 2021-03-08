@@ -60,7 +60,7 @@ def setup(prefix, indexing, extension):
     
     return np.nan
 
-def setup_from_datacube(datacube,sample_database):
+def setup_from_datacube(datacube,sample_database=None):
     """ Read Cube class object configuration and sets up the application
     configuration parameters accordingly """
 
@@ -76,8 +76,8 @@ def setup_from_datacube(datacube,sample_database):
             Constants.DIRECTORY,"{}.cube".format(Constants.DIRECTORY))
     output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
     Constants.DIMENSION_FILE = os.path.join(datacube.path, "colonneXrighe.txt")
-    Constants.FIRSTFILE_ABSPATH = sample_database[Constants.DIRECTORY]
-    
+    if sample_database is not None:
+        Constants.FIRSTFILE_ABSPATH = sample_database[Constants.DIRECTORY]
     return np.nan 
 
 def conditional_setup(name="None",path="auto"):
@@ -100,7 +100,6 @@ def conditional_setup(name="None",path="auto"):
     output_path = os.path.join(workpath,"output",Constants.DIRECTORY)
     Constants.DIMENSION_FILE = os.path.join(Constants.SAMPLE_PATH, "colonneXrighe.txt")
     Constants.FIRSTFILE_ABSPATH = os.path.join(Constants.SAMPLE_PATH, name)
-
     return np.nan
 
 def load_cube():
@@ -190,7 +189,6 @@ def getcalibration():
     """ Extracts the calibration anchors from source 
     if configuration is set to manual, returns the anchors input by
     user via GUI. """
-
    
     if Constants.CONFIG['calibration'] == 'from_source':
         param = []
@@ -311,13 +309,15 @@ def getdata(mca):
         Data = np.asarray(ObjectData)
     return Data
 
-def calibrate(lead=0, tail=0, specsize=None):
+def calibrate(lead=0, tail=0, specsize=None, anchors=None):
     """ Returns the energy axis and gain of the calibrated axis
     The parameters are taken from config.cfg if calibration is set to manual
     or from the mca files if calibration is set to from_source """
     from .SpecMath import linregress
 
-    param = getcalibration()
+    if anchors is None:
+        param = getcalibration()
+    else: param = anchors
     x=[]
     y=[]
     for i in range(len(param)):
@@ -344,14 +344,8 @@ def calibrate(lead=0, tail=0, specsize=None):
 
 def getgain():
     """ Calculates the energy axis and returns only the gain """
-
-    calibration = calibrate()
-    curve = calibration[0]
-    n = len(curve)
-    GAIN=0
-    for i in range(n-1):
-        GAIN+=curve[i+1]-curve[i]
-    return GAIN/n
+    calibration,GAIN,intercept = calibrate()
+    return GAIN
    
 def updatespectra(specfile,size,from_list=False):
     """ Returns the next spectrum file to be read

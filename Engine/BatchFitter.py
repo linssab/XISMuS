@@ -165,10 +165,10 @@ def save_plot(
             fontsize=10,
             bbox={'facecolor':'None', 'edgecolor':'None', 'pad':10})
 
-    ax[0].semilogy(x,Y_CONT,linewidth=1,zorder=1,label='Continuum',color="green")
+    ax[0].plot(x,Y_CONT,linewidth=1,zorder=1,label='Continuum',color="green")
     ax[0].plot(x,Y_DATA,linewidth=1,zorder=1, label='Counts',color="blue")
     ax[0].plot(x,y_gaus,label='Fit')
-    ax[0].set_ylim([1,Y_DATA.max()])
+    ax[0].set_ylim([-1,Y_DATA.max()])
     element = [*Z_dict][:-1] #To be plotted elements
 
     #######################################################################
@@ -268,7 +268,7 @@ def gausfit(
         gain,               #Calibration gain
         fit_path,           #Path to save FRAMEs
         figures_path,       #Path to save plots
-        SUM,                #Gloabl sum spectrum and cprresponding continuum (tuple)
+        SUM,                #Global sum spectrum and corresponding continuum (tuple) RAW
         FN,                 #Fano and Noise tuple
         iterator,           #Progressbar iterator (uses lock)
         configurations,     #Datacube configuration
@@ -358,6 +358,10 @@ def gausfit(
                     y_savgol[it],
                     p0=params_gaus[it],
                     sigma=uncertainty[it],
+                    ftol=1,
+                    xtol=1,
+                    epsfcn=gain,
+                    method="lm",
                     maxfev=cycles) #Clean Gaus
             else:
                  popt_gaus, pcov_gaus = curve_fit(lambda x,*A: gaus(
@@ -366,6 +370,10 @@ def gausfit(
                     y_savgol[it],
                     p0=params_gaus[it],
                     sigma=uncertainty[it],
+                    ftol=1,
+                    xtol=1,
+                    epsfcn=gain,
+                    method="lm",
                     maxfev=cycles) #Clean Gaus
         except:
             print("WARNING:\nFit failed for spec {}".format(it))
@@ -1244,7 +1252,6 @@ def add_roi_to_datacube():
 
     #######################################
     
-    fit = np.zeros(Constants.MY_DATACUBE.matrix.shape[2])
     E_axis = Constants.MY_DATACUBE.energyaxis
     it = 0
     for f,o in zip(spectra_paths,elements_order_paths):
@@ -1269,6 +1276,7 @@ def add_roi_to_datacube():
                 if not np.isnan(np.sum(spectrum[idx])):
                     Constants.MY_DATACUBE.ROI[
                 Elements.ElementList[int(key)]]+=(spectrum[idx]-Constants.MY_DATACUBE.sum_bg)
+            
             Constants.MY_DATACUBE.ROI[
                     Elements.ElementList[int(key)]]+=Constants.MY_DATACUBE.sum_bg
 
@@ -1683,7 +1691,6 @@ class MultiFit():
 
             print("Counts shape", counts.shape)
             print("Continuum shape", continuum.shape)
-            #counts = np.asarray(counts,dtype="int32")
 
             it += 1
             chunk += 1
