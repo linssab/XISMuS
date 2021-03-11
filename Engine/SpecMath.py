@@ -141,6 +141,7 @@ class datacube:
                 __self__.sum += __self__.matrix[x,y]
 
     def fit_fano_and_noise(__self__, bar=None):
+        print("Fitting Fano and Noise")
         __self__.FN = FN_fit_gaus(__self__.sum,
                 __self__.sum_bg,
                 __self__.energyaxis,
@@ -989,6 +990,8 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
     #########################
     # perform deconvolution #
     #########################
+    print(Constants.PEAK_TOLERANCE)
+    print(Constants.CONTINUUM_SUPPRESSION)
 
     w = Constants.PEAK_TOLERANCE
     v = int(w/2)+1
@@ -1051,6 +1054,7 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
     #plt.semilogy(energyaxis,y_cont,label="Continuum")
     #plt.legend()
     #plt.show()
+    print(popt_gaus[1], popt_gaus[0])
 
     return popt_gaus[1], popt_gaus[0]
     

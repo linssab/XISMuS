@@ -2968,29 +2968,32 @@ class PlotWin:
         else: return
 
     def export_fit(__self__):
-        from FastFit import CsvWriter
         f = filedialog.asksaveasfile(mode='w',
                         defaultextension=".csv",
                         filetypes=[("Comma separated values", "*.csv")],
                         title="Save as...")
         if f is not None:
-           writer = CsvWriter(__self__.results,f.name) 
+           writer = Engine.CsvWriter(__self__.results,f.name) 
            writer.dump()
 
     def fit_roi(__self__):
         root.busy.busy()
-        from FastFit import fit_single_spectrum
         x,spec = __self__.DATA.get_data()
         if __self__.fit_plots != []:
             for plot in __self__.fit_plots: 
                 try: plot.pop(0).remove()
                 except: pass
         if __self__.parent.DATACUBE.fit_config["bg"]:
-            try: cycles, window, savgol, order= __self__.parent.DATACUBE.config["bg_settings"]
-            except: cycles, window, savgol, order = 24,5,5,3
+            try: 
+                cycles, window, savgol, order = \
+                    __self__.parent.DATACUBE.config["bg_settings"]
+            except: 
+                cycles, window, savgol, order = 24,5,5,3
             continuum = peakstrip(spec,cycles,window,savgol,order)
+            __self__.parent.DATACUBE.fit_fano_and_noise()
+
         else: continuum = np.ones(spec.shape[0])
-        areas, curves = fit_single_spectrum(
+        areas, curves = Engine.fit_single_spectrum(
                 __self__.parent.DATACUBE,
                 spec,
                 continuum,
@@ -5353,6 +5356,28 @@ class MainGUI:
             
     def write_stat(__self__):
         __self__.no_sample = True
+
+        def write_to_subpanel():
+            values_cube, values_cfg, values_keys = [],[],[]
+            for key in Constants.MY_DATACUBE.config:
+                if key == "gain":
+                    values_keys.append("Gain")
+                    values_cube.append(str(int(float(Constants.MY_DATACUBE.config[key])*1000))+" eV")
+                elif key == "bg_settings" and Constants.MY_DATACUBE.config[key] == []:
+                    values_keys.append("Bgstrip Settings")
+                    values_cube.append("Default values")
+                else:
+                    values_keys.append(str(key))
+                    values_cube.append(str(Constants.MY_DATACUBE.config[key]))
+            if hasattr(Constants.MY_DATACUBE,"FN"):
+                values_keys.append("Fano")
+                values_cube.append(f"{Constants.MY_DATACUBE.FN[0]:.3f}")
+                values_keys.append("Noise")
+                values_cube.append(f"{Constants.MY_DATACUBE.FN[1]:.3f}")
+            for item in range(len(values_cube)):
+                __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
+                __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+            return
         
         __self__.TableMiddle.config(state=NORMAL)
         __self__.TableLeft.config(state=NORMAL)
@@ -5418,20 +5443,7 @@ class MainGUI:
                         ########################################
                         # WRITES THE CONFIGURATION TO SUBPANEL #
                         ########################################
-                        values_cube, values_cfg, values_keys = [],[],[]
-                        for key in Constants.MY_DATACUBE.config:
-                            values_keys.append(str(key))
-                            if key == "gain":
-                                values_cube.append(str(int(float(
-                                    Constants.MY_DATACUBE.config[key])*1000))+" eV")
-                            elif key == "bg_settings" and \
-                                    Constants.MY_DATACUBE.config[key] == []:
-                                values_cube.append("Default values")
-                            else:
-                                values_cube.append(str(Constants.MY_DATACUBE.config[key]))
-                        for item in range(len(values_cube)):
-                            __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
-                            __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+                        write_to_subpanel()
                         __self__.no_sample = False
                         ########################################
 
@@ -5462,20 +5474,7 @@ class MainGUI:
             #######################################################################
             # write datacube configuration to panel 9  (see user manual for ref.) #
             #######################################################################
-
-            values_cube, values_cfg, values_keys = [],[],[]
-            for key in Constants.MY_DATACUBE.config:
-                values_keys.append(str(key))
-                if key == "gain":
-                    values_cube.append(str(int(float(Constants.MY_DATACUBE.config[key])*1000))+" eV")
-                elif key == "bg_settings" and Constants.MY_DATACUBE.config[key] == []:
-                    values_cube.append("Default values")
-                else:
-                    values_cube.append(str(Constants.MY_DATACUBE.config[key]))
-            for item in range(len(values_cube)):
-                __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
-                __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
-
+            write_to_subpanel()
             #######################################################################
         
         elif __self__.no_sample == True:

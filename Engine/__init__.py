@@ -3,6 +3,8 @@ from .SpecRead import __PERSONAL__, __BIN__
 logger = logging.getLogger("logfile")
 logger.info("Booting Engine...")
 
+logger.info("Importing Advcanced Fit...")
+from .AdvFit import *
 logger.info("Importing SpecMath...")
 from .SpecMath import *
 logger.info("Importing SpecRead...")
