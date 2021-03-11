@@ -55,9 +55,10 @@ from Graphics import *
 
 class AdvCalib():
 
-    def __init__(__self__, parent, root):
+    def __init__(__self__, parent, root, hascube=0):
         __self__.master = Toplevel(master = parent.master)
         __self__.master.title("Advanced calibration")
+        __self__.hascube = hascube
         icon = os.path.join(os.getcwd(),"images","icons","adv.ico")
         __self__.master.iconbitmap(icon)
         __self__.master.attributes("-alpha",0.0)
@@ -120,7 +121,7 @@ class AdvCalib():
     def random_generator(__self__):
         n = 0
         while n not in __self__.loaded:
-            n = random.randint(1,__self__.spec_no-1)
+            n = random.randint(1,__self__.spec_no-5)
             __self__.loaded.append(n)
         return n
 
@@ -146,7 +147,11 @@ class AdvCalib():
                         __self__.root.mca_extension[__self__.folder]))
         return mca
     
-    def create_reference_spectrum(__self__):
+    def create_reference_spectrum(__self__,hascube=0):
+        if hascube: 
+            __self__.spectrum = Constants.MY_DATACUBE.sum
+            return
+
         __self__.get_spectrum_length()
 
         limit = int(__self__.spec_no*0.20)
@@ -230,8 +235,14 @@ class AdvCalib():
         except: pass
         __self__.master.grab_release()
         __self__.parent.master.focus_set()
+        __self__.parent.master.grab_set()
         __self__.master.destroy()
         del __self__
+        return
+
+    def cancel(__self__, e=""):
+        __self__.parent.calibration_params = None
+        __self__.kill()
         return
 
     def hover_line(__self__, event):
@@ -351,6 +362,11 @@ class AdvCalib():
     def validate(__self__):
         parameters = [[i,j] for i,j in zip(__self__.channels.get(0,END),
             __self__.energies.get(0,END))]
+        if __self__.hascube:
+            __self__.parent.calibration_params = parameters
+            __self__.plot.clear()
+            __self__.kill()
+            return
         __self__.parent.save_param(advparams=parameters)
         __self__.plot.clear()
 
@@ -394,7 +410,7 @@ class AdvCalib():
         __self__.save_and_exit = ttk.Button(__self__.frame2, text="Save and Compile",
                 command=__self__.validate)
         __self__.cancel = ttk.Button(__self__.frame2, text="Cancel",
-                command=__self__.kill)
+                command=__self__.cancel)
 
         __self__.listlabel.grid(row=0, column=0, columnspan=2, sticky=W+E)
         __self__.channels.grid(row=1, column=0, sticky=N+S)
@@ -433,11 +449,25 @@ class AdvCalib():
 
 
         # execute 
-        __self__.create_reference_spectrum()
-        __self__.plot.data, = __self__.plot.plot(__self__.spectrum)
-        __self__.refresh()
+        if __self__.hascube == False:
+            __self__.create_reference_spectrum()
+            __self__.plot.data, = __self__.plot.plot(__self__.spectrum)
+            __self__.refresh()
+        else: 
+            __self__.create_reference_spectrum(hascube=1)
+            __self__.plot.data, = __self__.plot.plot(__self__.spectrum)
+            __self__.save_and_exit.config(text="Save")
+            print(__self__.parent.calibration_params)
+            if __self__.parent.calibration_params is not None:
+                for anchor in __self__.parent.calibration_params:
+                    __self__.channels.insert(END,anchor[0])
+                    __self__.energies.insert(END,anchor[1])
+                    __self__.add_values()
+            __self__.refresh()
+
         x = __self__.master.winfo_width()
         y = __self__.master.winfo_height()
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+
 

@@ -173,8 +173,58 @@ def SetPeakLines():
     PeakConfigDict = {"{0}".format(ElementList[element]):ConfigLines[element] for element in range(len(ElementList))}
     return PeakConfigDict
 
-def set_energies_from_xlib():
+def set_all_lines_dict():
     global ALL_LINES
+    lines = {}
+    elt = 0
+    while elt in range(len(ElementList)):
+        while ElementList[elt] != "Mt": 
+            try:
+                lines[elt] = {}
+                lines[elt]["KA1"] = xlib.LineEnergy(elt,xlib.KA1_LINE), xlib.RadRate(elt,xlib.KA1_LINE)
+                lines[elt]["KA2"] = xlib.LineEnergy(elt,xlib.KA2_LINE), xlib.RadRate(elt,xlib.KA2_LINE)
+                lines[elt]["KA3"] = xlib.LineEnergy(elt,xlib.KA3_LINE), xlib.RadRate(elt,xlib.KA3_LINE)
+                lines[elt]["KB1"] = xlib.LineEnergy(elt,xlib.KB1_LINE), xlib.RadRate(elt,xlib.KB1_LINE)
+                lines[elt]["KB2"] = xlib.LineEnergy(elt,xlib.KB2_LINE), xlib.RadRate(elt,xlib.KB2_LINE)
+                lines[elt]["KB3"] = xlib.LineEnergy(elt,xlib.KB3_LINE), xlib.RadRate(elt,xlib.KB3_LINE)
+                lines[elt]["KB4"] = xlib.LineEnergy(elt,xlib.KB4_LINE), xlib.RadRate(elt,xlib.KB4_LINE)
+                lines[elt]["KB5"] = xlib.LineEnergy(elt,xlib.KB5_LINE), xlib.RadRate(elt,xlib.KB5_LINE)
+                lines[elt]["LA1"] = xlib.LineEnergy(elt,xlib.LA1_LINE), xlib.RadRate(elt,xlib.LA1_LINE)
+                lines[elt]["LB1"] = xlib.LineEnergy(elt,xlib.LB1_LINE), xlib.RadRate(elt,xlib.LB1_LINE)
+                lines[elt]["LA2"] = xlib.LineEnergy(elt,xlib.LA2_LINE), xlib.RadRate(elt,xlib.LA2_LINE)
+                lines[elt]["LB1"] = xlib.LineEnergy(elt,xlib.LB1_LINE), xlib.RadRate(elt,xlib.LB1_LINE)
+                lines[elt]["LB2"] = xlib.LineEnergy(elt,xlib.LB2_LINE), xlib.RadRate(elt,xlib.LB2_LINE)
+                lines[elt]["LB3"] = xlib.LineEnergy(elt,xlib.LB3_LINE), xlib.RadRate(elt,xlib.LB3_LINE)
+                lines[elt]["LB4"] = xlib.LineEnergy(elt,xlib.LB4_LINE), xlib.RadRate(elt,xlib.LB4_LINE)
+                lines[elt]["LB5"] = xlib.LineEnergy(elt,xlib.LB5_LINE), xlib.RadRate(elt,xlib.LB5_LINE)
+                lines[elt]["LB6"] = xlib.LineEnergy(elt,xlib.LB6_LINE), xlib.RadRate(elt,xlib.LB6_LINE)
+                lines[elt]["LB7"] = xlib.LineEnergy(elt,xlib.LB7_LINE), xlib.RadRate(elt,xlib.LB7_LINE)
+                lines[elt]["LB9"] = xlib.LineEnergy(elt,xlib.LB9_LINE), xlib.RadRate(elt,xlib.LB9_LINE)
+                lines[elt]["LB10"] = xlib.LineEnergy(elt,xlib.LB10_LINE), xlib.RadRate(elt,xlib.LB10_LINE)
+                lines[elt]["LB15"] = xlib.LineEnergy(elt,xlib.LB15_LINE), xlib.RadRate(elt,xlib.LB15_LINE)
+                lines[elt]["LB17"] = xlib.LineEnergy(elt,xlib.LB17_LINE), xlib.RadRate(elt,xlib.LB17_LINE)
+                lines[elt]["LG1"] = xlib.LineEnergy(elt,xlib.LG1_LINE), xlib.RadRate(elt,xlib.LG1_LINE)
+                lines[elt]["LG2"] = xlib.LineEnergy(elt,xlib.LG2_LINE), xlib.RadRate(elt,xlib.LG2_LINE)
+                lines[elt]["LG3"] = xlib.LineEnergy(elt,xlib.LG3_LINE), xlib.RadRate(elt,xlib.LG3_LINE)
+                lines[elt]["LG4"] = xlib.LineEnergy(elt,xlib.LG4_LINE), xlib.RadRate(elt,xlib.LG4_LINE)
+                lines[elt]["LG5"] = xlib.LineEnergy(elt,xlib.LG5_LINE), xlib.RadRate(elt,xlib.LG5_LINE)
+                lines[elt]["LG6"] = xlib.LineEnergy(elt,xlib.LG6_LINE), xlib.RadRate(elt,xlib.LG6_LINE)
+                lines[elt]["LG8"] = xlib.LineEnergy(elt,xlib.LG8_LINE), xlib.RadRate(elt,xlib.LG8_LINE)
+                lines[elt]["MA1"] = xlib.LineEnergy(elt,xlib.MA1_LINE), xlib.RadRate(elt,xlib.MA1_LINE)
+                lines[elt]["MA2"] = xlib.LineEnergy(elt,xlib.MA2_LINE), xlib.RadRate(elt,xlib.MA2_LINE)
+                lines[elt]["MB"] = xlib.LineEnergy(elt,xlib.MB_LINE), xlib.RadRate(elt,xlib.MB_LINE)
+                lines[elt]["MG"] = xlib.LineEnergy(elt,xlib.MG_LINE), xlib.RadRate(elt,xlib.MG_LINE)
+                elt += 1
+            except:
+                pass
+        break
+    for key in lines.keys():
+        ALL_LINES[key] = {}
+        for line in lines[key]:
+            if lines[key][line][0] > 1:
+                ALL_LINES[key][line] = lines[key][line]
+
+def set_energies_from_xlib():
     cutoff = 0.25
     cutoff_K = 0.05
     EnergyList, EnergyListKb, plottables_, plottables_dict = [],[],[],{}
@@ -194,76 +244,52 @@ def set_energies_from_xlib():
                         EnergyListKb.append(xlib.LineEnergy(elt,3))
                         if xlib.RadRate(elt,xlib.LA1_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LA1_LINE))
-                            ALL_LINES[elt]["LA1"] = xlib.LineEnergy(elt,xlib.LA1_LINE)
                         if xlib.RadRate(elt,xlib.LA2_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LA2_LINE))
-                            ALL_LINES[elt]["LA2"] = xlib.LineEnergy(elt,xlib.LA2_LINE)
                         if xlib.RadRate(elt,xlib.LB1_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB1_LINE))
-                            ALL_LINES[elt]["LB1"] = xlib.LineEnergy(elt,xlib.LB1_LINE)
                         if xlib.RadRate(elt,xlib.LB2_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB2_LINE))
-                            ALL_LINES[elt]["LB2"] = xlib.LineEnergy(elt,xlib.LB2_LINE)
                         if xlib.RadRate(elt,xlib.LB3_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB3_LINE))
-                            ALL_LINES[elt]["LB3"] = xlib.LineEnergy(elt,xlib.LB3_LINE)
                         if xlib.RadRate(elt,xlib.LB4_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB4_LINE))
-                            ALL_LINES[elt]["LB4"] = xlib.LineEnergy(elt,xlib.LB4_LINE)
                         if xlib.RadRate(elt,xlib.LB5_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB5_LINE))
-                            ALL_LINES[elt]["LB5"] = xlib.LineEnergy(elt,xlib.LB5_LINE)
                         if xlib.RadRate(elt,xlib.LB6_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB6_LINE))
-                            ALL_LINES[elt]["LB6"] = xlib.LineEnergy(elt,xlib.LB6_LINE)
                         if xlib.RadRate(elt,xlib.LB7_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB7_LINE))
-                            ALL_LINES[elt]["LB7"] = xlib.LineEnergy(elt,xlib.LB7_LINE)
                         if xlib.RadRate(elt,xlib.LB9_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB9_LINE))
-                            ALL_LINES[elt]["LB9"] = xlib.LineEnergy(elt,xlib.LB9_LINE)
                         if xlib.RadRate(elt,xlib.LB10_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB10_LINE))
-                            ALL_LINES[elt]["LB10"] = xlib.LineEnergy(elt,xlib.LB10_LINE)
                         if xlib.RadRate(elt,xlib.LB15_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB15_LINE))
-                            ALL_LINES[elt]["LB15"] = xlib.LineEnergy(elt,xlib.LB15_LINE)
                         if xlib.RadRate(elt,xlib.LB17_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LB17_LINE))
-                            ALL_LINES[elt]["LB17"] = xlib.LineEnergy(elt,xlib.LB17_LINE)
                         if xlib.RadRate(elt,xlib.LG1_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LG1_LINE))
-                            ALL_LINES[elt]["LG1"] = xlib.LineEnergy(elt,xlib.LG1_LINE)
                         if xlib.RadRate(elt,xlib.LG2_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LG2_LINE))
-                            ALL_LINES[elt]["LG2"] = xlib.LineEnergy(elt,xlib.LG2_LINE)
                         if xlib.RadRate(elt,xlib.LG3_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LG3_LINE))
-                            ALL_LINES[elt]["LG3"] = xlib.LineEnergy(elt,xlib.LG3_LINE)
                         if xlib.RadRate(elt,xlib.LG4_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LG4_LINE))
-                            ALL_LINES[elt]["LG4"] = xlib.LineEnergy(elt,xlib.LG4_LINE)
                         if xlib.RadRate(elt,xlib.LG5_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LG5_LINE))
-                            ALL_LINES[elt]["LG5"] = xlib.LineEnergy(elt,xlib.LG5_LINE)
                         if xlib.RadRate(elt,xlib.LG6_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LG6_LINE))
-                            ALL_LINES[elt]["LG6"] = xlib.LineEnergy(elt,xlib.LG6_LINE)
                         if xlib.RadRate(elt,xlib.LG8_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.LG8_LINE))
-                            ALL_LINES[elt]["LG8"] = xlib.LineEnergy(elt,xlib.LG8_LINE)
                         if xlib.RadRate(elt,xlib.MA1_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.MA1_LINE))
-                            ALL_LINES[elt]["MA1"] = xlib.LineEnergy(elt,xlib.MA1_LINE)
                         if xlib.RadRate(elt,xlib.MA2_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.MA2_LINE))
-                            ALL_LINES[elt]["MA2"] = xlib.LineEnergy(elt,xlib.MA2_LINE)
                         if xlib.RadRate(elt,xlib.MB_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.MB_LINE))
-                            ALL_LINES[elt]["MB"] = xlib.LineEnergy(elt,xlib.MB_LINE)
                         if xlib.RadRate(elt,xlib.MG_LINE) > cutoff:
                             plottables_.append(xlib.LineEnergy(elt,xlib.MG_LINE))
-                            ALL_LINES[elt]["MG"] = xlib.LineEnergy(elt,xlib.MG_LINE)
                         plottables_dict[ElementList[elt]] = plottables_
                         plottables_ = []
                         elt += 1
@@ -275,28 +301,20 @@ def set_energies_from_xlib():
                 EnergyListKb.append(xlib.LineEnergy(elt,1))
                 if xlib.RadRate(elt,xlib.KA1_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KA1_LINE))
-                    ALL_LINES[elt]["KA1"] = xlib.LineEnergy(elt,xlib.KA1_LINE)
                 if xlib.RadRate(elt,xlib.KA2_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KA2_LINE))
-                    ALL_LINES[elt]["KA2"] = xlib.LineEnergy(elt,xlib.KA2_LINE)
                 if xlib.RadRate(elt,xlib.KA3_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KA3_LINE))
-                    ALL_LINES[elt]["KA3"] = xlib.LineEnergy(elt,xlib.KA3_LINE)
                 if xlib.RadRate(elt,xlib.KB1_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KB1_LINE))
-                    ALL_LINES[elt]["KB1"] = xlib.LineEnergy(elt,xlib.KB1_LINE)
                 if xlib.RadRate(elt,xlib.KB2_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KB2_LINE))
-                    ALL_LINES[elt]["KB2"] = xlib.LineEnergy(elt,xlib.KB2_LINE)
                 if xlib.RadRate(elt,xlib.KB3_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KB3_LINE))
-                    ALL_LINES[elt]["KB3"] = xlib.LineEnergy(elt,xlib.KB3_LINE)
                 if xlib.RadRate(elt,xlib.KB4_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KB4_LINE))
-                    ALL_LINES[elt]["KB4"] = xlib.LineEnergy(elt,xlib.KB4_LINE)
                 if xlib.RadRate(elt,xlib.KB5_LINE) > cutoff_K:
                     plottables_.append(xlib.LineEnergy(elt,xlib.KB5_LINE))
-                    ALL_LINES[elt]["KB5"] = xlib.LineEnergy(elt,xlib.KB5_LINE)
                 plottables_dict[ElementList[elt]] = plottables_
                 plottables_ = []
                 elt += 1
@@ -344,6 +362,8 @@ if Constants.USEXLIB == True:
 AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
 ElementColors = {}
+
+set_all_lines_dict()
 
 # Read the color code for the elements
 # if colours.txt does not exist, it generates random colours. 

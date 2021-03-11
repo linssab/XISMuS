@@ -19,6 +19,7 @@
 setup.py
 calculator.py
 config.cfg
+FastFit.py
 
 /__pycache__
 /ipynb_checkpoints

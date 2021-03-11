@@ -340,6 +340,7 @@ class datacube:
         if bar != None:
             bar.update_text("11/11 Writing to disk...")
             bar.updatebar(11)
+        # Mosaic saves the cube. There are few operations left
         #__self__.save_cube()
 
     def compile_cube(__self__):

@@ -242,6 +242,32 @@ def call_help():
     else:
         return 0
 
+def verify_calibration_parameters(caller, anchors):
+    if anchors == []:
+        messagebox.showerror("Calibration Error",
+                "No acceptable calibration parameters passed!")
+        try: __self__.caller.master.focus_set()
+        except: pass
+        raise ValueError("No acceptable calibration parameters passed!")
+        return 1
+    elif len(anchors) <= 1:
+        messagebox.showerror("Calibration Error",
+                "Need at least two anchors!")
+        try: __self__.caller.master.focus_set()
+        except: pass
+        raise ValueError("Calibration need at least two anchors!")
+        return 1
+    for index in range(len(anchors)):
+        if anchors[index][0] > 0 and anchors[index][1] > 0:
+            pass
+        elif anchors[index][0] <= 0 or anchors[index][1] <= 0:
+            messagebox.showerror("Calibration Error",
+                    "Can't receive negative or zero values!")
+            raise ValueError("Can't receive negative or zero values!")
+            return 1
+        ##############################
+    return 0
+
 def call_compilecube():
     global root
     """ Tries to create output folder (name is Constants.CONFIG['directory']) 
@@ -335,7 +361,6 @@ def call_compilecube():
                 messagebox.showerror("Error!",
                         "Could not read {} file! Aborting compilation".format(fail[1]))
                 shutil.rmtree(sp.output_path) 
-
         root.SamplesWindow_TableLeft.config(state=NORMAL)
         root.SamplesWindow_multi.config(state=NORMAL)
         root.SamplesWindow_ok.config(state=NORMAL)
@@ -371,6 +396,7 @@ def upgrade_cube(cube):
             i+=1
     if "version" not in attributes: 
         specbatch.update_info = f"pre v1.3 -> {Constants.VERSION}"
+        specbatch.fit_fano_and_noise()
 
     bar.update_text("Writing to disk...")
     specbatch.save_cube()
@@ -1488,6 +1514,7 @@ class Annotator:
         __self__.parent.plot2.add_patch(__self__.area2)
 
     def wipe_annotator(__self__):
+        __self__.parent.plot.fit_plots = []
         __self__.area1.remove()
         __self__.area2.remove()
         __self__.parent.canvas1.draw()
@@ -1512,6 +1539,11 @@ class Annotator:
         return
 
     def refresh_roi_plot(__self__):
+        if __self__.parent.plot.fit_plots != []:
+            for plot in __self__.parent.plot.fit_plots: 
+                try: plot.pop(0).remove()
+                except: pass
+        __self__.parent.plot.fit_plots = []
         if len(Constants.FIND_ELEMENT_LIST) > 0: 
             lines = True
         else: 
@@ -2364,29 +2396,32 @@ class ImageAnalyzer:
 
 
 class PlotWin:
+    global root
     def __init__(__self__,parent):
-        __self__.plot_font = {'fontname':'Arial','fontsize':14}
-        __self__.lw = 3
+        __self__.parent = parent
         __self__.master = Toplevel(master=parent.master)
         __self__.master.attributes("-alpha",0.0)
         __self__.alt = False
-        __self__.parent = parent
         __self__.master.bind("<Alt_L>",__self__.AltOn)
         __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
         __self__.master.bind("<Return>",__self__.maximize)
-
         __self__.master.title("Plot")
         __self__.master.tagged = None
         __self__.master.minsize(width=600,height=480)
         __self__.master.configure(bg='white')
         __self__.master.resizable(True,True) 
+        __self__.plot_font = {'fontname':'Arial','fontsize':14}
+        __self__.lw = 3
+        __self__.menubar = Menu(__self__.master, tearoff=0)
+        __self__.options = Menu(__self__.menubar, tearoff=0)
         __self__.upper = Canvas(__self__.master)
         __self__.upper.config(bg='white')
-        __self__.upper.pack(side=TOP, expand=True, fill=BOTH, padx=(16,16),pady=(16,16))
         __self__.lower = Frame(__self__.master,height=35)
+
+        __self__.upper.pack(side=TOP, expand=True, fill=BOTH, padx=(16,16),pady=(16,16))
         __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
         
-        __self__.figure = Figure(figsize=(5,4), dpi=60)
+        __self__.figure = Figure(figsize=(4,3), dpi=60)
         __self__.plot = __self__.figure.add_subplot(111)
         __self__.plot.grid(which='both',axis='both')
         __self__.plot.grid(color="black", ls="--", lw=0.5)
@@ -2399,6 +2434,16 @@ class PlotWin:
         __self__.toolbar.update()
         __self__.canvas._tkcanvas.pack()
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
+
+        __self__.plot.spines["top"].set_color("black")
+        __self__.plot.spines["top"].set_linewidth(2)
+        __self__.plot.spines["bottom"].set_color("black")
+        __self__.plot.spines["bottom"].set_linewidth(2)
+        __self__.plot.spines["left"].set_color("black")
+        __self__.plot.spines["left"].set_linewidth(2)
+        __self__.plot.spines["right"].set_color("black")
+        __self__.plot.spines["right"].set_linewidth(2)
+
         icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
         __self__.master.iconbitmap(icon)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
@@ -2446,6 +2491,16 @@ class PlotWin:
                 facecolor="white")
 
     def draw_spec(__self__,mode,display_mode=None,lines=False):
+        __self__.lw = 1.8 
+        __self__.master.minsize(width=800,height=450)
+        __self__.plot.grid(which='both',axis='both')
+        __self__.plot.grid(color="gray", ls="--", lw=1)
+        __self__.plot.axis('On')
+        __self__.plot.set_facecolor("white")
+        __self__.plot.set_xlim([
+            Constants.MY_DATACUBE.energyaxis.min(),
+            Constants.MY_DATACUBE.energyaxis.max()])
+
         energy_list=[]
         __self__.master.tagged = False
         if __self__.master.winfo_exists() == True:
@@ -2458,7 +2513,7 @@ class PlotWin:
                     __self__.plotdata = getstackplot(Constants.MY_DATACUBE,option)
                     __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
                     __self__.plot.semilogy(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,
-                            label=str(option),color=colors[i])
+                            label=str(option),color=colors[i],lw=2)
                     i+=1
                 if lines==True:
                     __self__.master.tagged = True
@@ -2489,8 +2544,8 @@ class PlotWin:
                 for option in mode:
                     __self__.plotdata = getstackplot(Constants.MY_DATACUBE,option)
                     __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                    __self__.plot.plot(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,\
-                            label=str(option),color=colors[i])
+                    __self__.plot.plot(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,
+                            label=str(option),color=colors[i],lw=2)
                     i+=1
                 if lines==True:
                     __self__.master.tagged = True
@@ -2532,14 +2587,26 @@ class PlotWin:
             __self__.canvas.draw()
     
     def draw_ROI(__self__):
+        __self__.master.minsize(width=1280,height=720)
+        __self__.plot.grid(which='both',axis='both')
+        __self__.plot.grid(color="gray", ls="--", lw=1)
+        __self__.plot.axis('On')
+        __self__.plot.set_facecolor("white")
+        __self__.plot.set_xlim([
+            Constants.MY_DATACUBE.energyaxis.min(), 
+            Constants.MY_DATACUBE.energyaxis.max()])
+
         __self__.master.tagged = True
+
         patches = []
         for element in Constants.MY_DATACUBE.ROI:
             __self__.plotdata = Constants.MY_DATACUBE.ROI[element]
+
             if Constants.MY_DATACUBE.max_counts[element+"_a"] == 0:
                 try: net = (Constants.MY_DATACUBE.max_counts[element+"_b"],"Beta")
                 except: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
             else: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
+
             roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
             if element != "custom":
 
@@ -2569,8 +2636,12 @@ class PlotWin:
                         where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
                         alpha=0.85,
                         interpolate=True,
-                        linewidth=3,
+                        linewidth=0,
                         zorder=1)
+                __self__.plot.plot(Constants.MY_DATACUBE.energyaxis,
+                        __self__.plotdata,
+                        color="black",
+                        linewidth=0.8)
                 patches.append(
                         mpatches.Patch(
                             color=ElementColors[element], 
@@ -2589,25 +2660,54 @@ class PlotWin:
                             color=ElementColors["Custom"], 
                             label=roi_label))
 
-        __self__.plot.semilogy(
-                Constants.MY_DATACUBE.energyaxis,
-                Constants.MY_DATACUBE.sum,
-                color="blue",
-                label="Sum spectrum",
-                linewidth=3)
-        patches.append(mpatches.Patch(
+        if Constants.PLOTSCALE == "-semilogy":
+            __self__.plot.semilogy(
+                    Constants.MY_DATACUBE.energyaxis,
+                    Constants.MY_DATACUBE.sum,
                     color="blue",
-                    label="Sum spectrum"))
-        __self__.plot.semilogy(
-                Constants.MY_DATACUBE.energyaxis,
-                Constants.MY_DATACUBE.sum_bg,
-                color="green",
-                label="Continuum",
-                linewidth=3)
+                    label="Sum spectrum",
+                    linewidth=3)
+            if hasattr(Constants.MY_DATACUBE,"sum_fit"):
+                __self__.plot.semilogy(
+                        Constants.MY_DATACUBE.energyaxis,
+                        Constants.MY_DATACUBE.sum_fit,
+                        color="red",
+                        label="Fit",
+                        linewidth=2)
+            __self__.plot.semilogy(
+                    Constants.MY_DATACUBE.energyaxis,
+                    Constants.MY_DATACUBE.sum_bg,
+                    color="green",
+                    label="Continuum",
+                    linewidth=3)
+        else:
+            __self__.plot.plot(
+                    Constants.MY_DATACUBE.energyaxis,
+                    Constants.MY_DATACUBE.sum,
+                    color="blue",
+                    label="Sum spectrum",
+                    linewidth=2)
+            if hasattr(Constants.MY_DATACUBE,"sum_fit"):
+                __self__.plot.plot(
+                        Constants.MY_DATACUBE.energyaxis,
+                        Constants.MY_DATACUBE.sum_fit,
+                        color="red",
+                        label="Fit",
+                        linewidth=2)
+            __self__.plot.plot(
+                    Constants.MY_DATACUBE.energyaxis,
+                    Constants.MY_DATACUBE.sum_bg,
+                    color="green",
+                    label="Continuum",
+                    linewidth=2)
+            
+        patches.append(mpatches.Patch(
+                        color="blue",
+                        label="Sum spectrum"))
         patches.append(mpatches.Patch(
                     color="green",
                     label="Continuum"))
-        __self__.plot.grid(color="black", ls="--", lw=0.5)
+
         __self__.plot.set_title("{0} Stacked ROI's sum for all spectra".format(
             Constants.DIRECTORY),**__self__.plot_font)
         __self__.plot.set_ylabel("Counts")
@@ -2624,7 +2724,6 @@ class PlotWin:
 		loc="upper right")
 
     def filter_images(__self__):
-
         def filterXx(X,x,k):
             a = X.min()
             b = X.max()
@@ -2859,29 +2958,113 @@ class PlotWin:
         __self__.plot.imshow(fixed_image, cmap=Constants.COLORMAP, vmin=0)
         place_topright(__self__.master.master,__self__.master)
 
+    def configure_fit(__self__):
+        if __self__.parent.Panel is None:
+            fit_config = {}
+            if hasattr(__self__.parent.DATACUBE, "fit_config"):
+                fit_config = __self__.parent.DATACUBE.fit_config
+            __self__.parent.Panel = SimpleFitPanel(__self__.parent, fit_config)
+            """ __self__.parent is the ImageAnalyzer window """
+        else: return
+
+    def export_fit(__self__):
+        f = filedialog.asksaveasfile(mode='w',
+                        defaultextension=".csv",
+                        filetypes=[("Comma separated values", "*.csv")],
+                        title="Save as...")
+        if f is not None:
+           writer = Engine.CsvWriter(__self__.results,f.name) 
+           writer.dump()
+
+    def fit_roi(__self__):
+        root.busy.busy()
+        x,spec = __self__.DATA.get_data()
+        if __self__.fit_plots != []:
+            for plot in __self__.fit_plots: 
+                try: plot.pop(0).remove()
+                except: pass
+        if __self__.parent.DATACUBE.fit_config["bg"]:
+            try: 
+                cycles, window, savgol, order = \
+                    __self__.parent.DATACUBE.config["bg_settings"]
+            except: 
+                cycles, window, savgol, order = 24,5,5,3
+            continuum = peakstrip(spec,cycles,window,savgol,order)
+            __self__.parent.DATACUBE.fit_fano_and_noise()
+
+        else: continuum = np.ones(spec.shape[0])
+        areas, curves = Engine.fit_single_spectrum(
+                __self__.parent.DATACUBE,
+                spec,
+                continuum,
+                __self__.parent.DATACUBE.fit_config)
+        for element in areas.keys():
+            __self__.fit_plots.append(
+                    __self__.plot.semilogy(
+                        __self__.parent.DATACUBE.energyaxis, curves[element], 
+                    label=element, color=ElementColors[element],linestyle="--"))
+
+        __self__.plot.set_ylim([1,spec.max()*1.20])
+        __self__.canvas.draw()
+        __self__.results = areas
+        __self__.options.entryconfig("Export fit data . . .", state=NORMAL)
+        root.busy.notbusy()
+
     def draw_selective_sum(__self__,
             DATACUBE,
             y_data,
             display_mode=None,
             lines=False,
             refresh=False):
-        
-        if not refresh:
-            
-            save_icon = PhotoImage(data=ICO_SAVE_SPEC)
-            __self__.SAVE_SPEC_ICO = save_icon.subsample(1,1)
 
-            __self__.add_ons = Frame(__self__.master)
-            __self__.add_ons.pack(side=RIGHT,fill=X)
+        __self__.fit_plots = []
+        __self__.parent.Panel = None
+
+        __self__.plot.grid(which='both',axis='both')
+        __self__.plot.grid(color="gray", ls="--", lw=1)
+        __self__.plot.axis('On')
+        __self__.plot.set_facecolor("white")
+        __self__.plot.set_xlim([
+            __self__.parent.DATACUBE.energyaxis.min(),
+            __self__.parent.DATACUBE.energyaxis.max()])
+
+
+        def add_buttons():
+            save_icon = PhotoImage(data=ICO_SAVE_SPEC)
+            fit_normal_icon = PhotoImage(data=ICO_FIT_NORMAL)
+            fit_disabled_icon = PhotoImage(data=ICO_FIT_DISABLED)
+            __self__.SAVE_SPEC_ICO = save_icon.subsample(1,1)
+            __self__.FIT_NORMAL_ICO = fit_normal_icon.subsample(1,1)
+            __self__.FIT_DISABLED_ICO = fit_disabled_icon.subsample(1,1)
+            __self__.master.config(menu=__self__.menubar)
+            __self__.menubar.add_cascade(label="Options", menu=__self__.options)
+            __self__.options.add_command(label="Configure fit . . .",
+                    command=__self__.configure_fit)
+            __self__.options.add_command(label="Export fit data . . .",
+                    command=__self__.export_fit)
+
+            __self__.add_ons = Frame(__self__.master, 
+                    bg=__self__.master.cget("background"))
             __self__.save_raw_btn = Button(__self__.add_ons,
-                    #text=" Save ROI spectrum",
                     image=__self__.SAVE_SPEC_ICO,
-                    #compound=LEFT,
-                    #width=160,
                     bd=0,
                     bg=__self__.master.cget("background"),
                     command=lambda: save_raw_spectrum())
-            __self__.save_raw_btn.grid(row=0,column=0,sticky="")
+            __self__.fit_btn = Button(__self__.add_ons,
+                    image=__self__.FIT_NORMAL_ICO,
+                    bd=0,
+                    bg=__self__.master.cget("background"),
+                    command=__self__.fit_roi)
+
+            __self__.add_ons.pack(side=TOP,fill=X)
+            __self__.save_raw_btn.pack(side=RIGHT)
+            __self__.fit_btn.pack(side=LEFT)
+            
+            if not hasattr(__self__.parent.DATACUBE,"fit_config"):
+                __self__.fit_btn.config(state=DISABLED)
+
+            __self__.options.entryconfig("Export fit data . . .", state=DISABLED)
+            return
 
         def save_raw_spectrum():
             x,spec = __self__.DATA.get_data()
@@ -2914,6 +3097,9 @@ class PlotWin:
                 sum_file.close()
                 __self__.master.focus_set()
             else: return
+        
+        if not refresh:
+            add_buttons()
    
         __self__.plot.clear()
         colors = ["blue","red","green"]
@@ -3071,12 +3257,14 @@ class Samples:
                                 splash=splash,
                                 text=f"Cube for {folder} already compiled, skipping mca\'s")
                             __self__.skip_list.append(name.split(".cube")[0])
-                if folder in __self__.skip_list: break
+                if folder not in __self__.skip_list: 
+                    
+                    """ Lists the spectra files """            
+                    files = [name for name in os.listdir(os.path.join(Constants.SAMPLES_FOLDER,
+                        folder)) if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
+                    extension = files[:]
                 
-                """ Lists the spectra files """            
-                files = [name for name in os.listdir(os.path.join(Constants.SAMPLES_FOLDER,
-                    folder)) if name.lower().endswith(".mca") or name.lower().endswith(".txt")]
-                extension = files[:]
+                else: files = []
 
                 """ If spectra are found, list and get the files prefix, 
                 indexing and extension """
@@ -3862,9 +4050,9 @@ class MainGUI:
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Map elements", 
                 command=__self__.find_elements)
-        __self__.Toolbox.add_command(label="Create Mosaic...", 
+        __self__.Toolbox.add_command(label="Create Mosaic . . .", 
                 command=__self__.open_mosaic)
-        __self__.Toolbox.add_command(label="Load Mosaic...", 
+        __self__.Toolbox.add_command(label="Load Mosaic . . .", 
                 command=__self__.prompt_mosaic_load_file)
         __self__.Toolbox.add_command(label="Image Analyzer . . .", 
                 command=__self__.open_analyzer)
@@ -4742,7 +4930,7 @@ class MainGUI:
         """Displays a pop-up window with information on the software"""
         __self__.master.geometry()
         __self__.master.update_idletasks()
-        w, h = __self__.master.winfo_width(), __self__.master.winfo_height()
+        w, h = __self__.master.winfo_width(), __self__.master.winfo_height()+150
         __self__.master.minsize(w,h)
         __self__.master.state("zoomed")
         if Constants.WELCOME == True:
@@ -5168,6 +5356,28 @@ class MainGUI:
             
     def write_stat(__self__):
         __self__.no_sample = True
+
+        def write_to_subpanel():
+            values_cube, values_cfg, values_keys = [],[],[]
+            for key in Constants.MY_DATACUBE.config:
+                if key == "gain":
+                    values_keys.append("Gain")
+                    values_cube.append(str(int(float(Constants.MY_DATACUBE.config[key])*1000))+" eV")
+                elif key == "bg_settings" and Constants.MY_DATACUBE.config[key] == []:
+                    values_keys.append("Bgstrip Settings")
+                    values_cube.append("Default values")
+                else:
+                    values_keys.append(str(key))
+                    values_cube.append(str(Constants.MY_DATACUBE.config[key]))
+            if hasattr(Constants.MY_DATACUBE,"FN"):
+                values_keys.append("Fano")
+                values_cube.append(f"{Constants.MY_DATACUBE.FN[0]:.3f}")
+                values_keys.append("Noise")
+                values_cube.append(f"{Constants.MY_DATACUBE.FN[1]:.3f}")
+            for item in range(len(values_cube)):
+                __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
+                __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+            return
         
         __self__.TableMiddle.config(state=NORMAL)
         __self__.TableLeft.config(state=NORMAL)
@@ -5233,20 +5443,7 @@ class MainGUI:
                         ########################################
                         # WRITES THE CONFIGURATION TO SUBPANEL #
                         ########################################
-                        values_cube, values_cfg, values_keys = [],[],[]
-                        for key in Constants.MY_DATACUBE.config:
-                            values_keys.append(str(key))
-                            if key == "gain":
-                                values_cube.append(str(int(float(
-                                    Constants.MY_DATACUBE.config[key])*1000))+" eV")
-                            elif key == "bg_settings" and \
-                                    Constants.MY_DATACUBE.config[key] == []:
-                                values_cube.append("Default values")
-                            else:
-                                values_cube.append(str(Constants.MY_DATACUBE.config[key]))
-                        for item in range(len(values_cube)):
-                            __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
-                            __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
+                        write_to_subpanel()
                         __self__.no_sample = False
                         ########################################
 
@@ -5277,20 +5474,7 @@ class MainGUI:
             #######################################################################
             # write datacube configuration to panel 9  (see user manual for ref.) #
             #######################################################################
-
-            values_cube, values_cfg, values_keys = [],[],[]
-            for key in Constants.MY_DATACUBE.config:
-                values_keys.append(str(key))
-                if key == "gain":
-                    values_cube.append(str(int(float(Constants.MY_DATACUBE.config[key])*1000))+" eV")
-                elif key == "bg_settings" and Constants.MY_DATACUBE.config[key] == []:
-                    values_cube.append("Default values")
-                else:
-                    values_cube.append(str(Constants.MY_DATACUBE.config[key]))
-            for item in range(len(values_cube)):
-                __self__.TableLeft.insert(END, "{}".format(values_keys[item]))
-                __self__.TableMiddle.insert(END, "{}".format(values_cube[item]))
-
+            write_to_subpanel()
             #######################################################################
         
         elif __self__.no_sample == True:
@@ -5400,6 +5584,7 @@ class MainGUI:
         
 
 class ReConfigDiag:
+    global root
     def __init__(__self__, master):
         __self__.master = Toplevel(master = master)
         __self__.master.grab_set()
@@ -5408,13 +5593,12 @@ class ReConfigDiag:
         __self__.master.bind("<Escape>",__self__.kill)
         __self__.master.bind("<Return>",__self__.kill)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
-        __self__.Frame = Frame(__self__.master,padx=15,pady=15)
-        __self__.Labels = Frame(__self__.master,padx=15,pady=15)
-        __self__.MergeSettings = LabelFrame(__self__.master,padx=15,pady=15, 
-                text="Merged Cube Settings:")
-        __self__.MergeSettings.grid(row=1, column=0,columnspan=2)
-        __self__.Frame.grid(row=0, column=1)
-        __self__.Labels.grid(row=0, column=0)
+        __self__.calibration_params = None
+        __self__.Frame = Frame(__self__.master, padx=15, pady=15)
+        __self__.MergeSettings = LabelFrame(__self__.master,text="Merged Cube Settings:",
+                padx=15, pady=15)
+        __self__.MergeSettings.grid(row=1, column=0, columnspan=2, padx=15, pady=(0,15))
+        __self__.Frame.grid(row=0, column=0, padx=15, pady=(0,15))
         __self__.build_widgets()
 
     def get_version(__self__):
@@ -5440,23 +5624,14 @@ class ReConfigDiag:
                 __self__.Label5.config(state=DISABLED)
     
     def build_widgets(__self__):
-        Label2 = Label(__self__.Labels, text="Area method:")
-        Label3 = Label(__self__.Labels, text="Enhance image?")
-        Label4 = Label(__self__.Labels, text="Calculate ratios?")
-        __self__.Label5 = Label(__self__.MergeSettings, text="Scale data? (for versions < 1.3)")
-        __self__.Label6 = Label(__self__.MergeSettings, text="Re-calculate continuum?")
+        Label2 = Label(__self__.Frame, text="Area method:")
+        Label3 = Label(__self__.Frame, text="Enhance image?")
+        Label4 = Label(__self__.Frame, text="Calculate ratios?")
+        __self__.Label5 = Label(__self__.MergeSettings, 
+                text="Scale data? (for versions < 1.3)")
+        __self__.Label6 = Label(__self__.MergeSettings, 
+                text="Re-calculate continuum?")
         
-        Label2.grid(row=2,column=0,sticky=W,pady=2)
-        Label3.grid(row=3,column=0,sticky=W,pady=2)
-        Label4.grid(row=4,column=0,sticky=W,pady=2)
-        __self__.Label5.grid(row=0,column=1,sticky=W,pady=2)
-        __self__.Label6.grid(row=1,column=1,sticky=W,pady=2)
-        
-        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes")
-        ConfigDiagEnhanceYes.grid(row=3,column=1,sticky=E,pady=2)
-        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes")
-        ConfigDiagRatioYes.grid(row=4,column=1,sticky=E,pady=2)
-
         __self__.BgstripVar = StringVar()
         __self__.DirectoryVar = StringVar()
         __self__.RatioVar = BooleanVar()
@@ -5472,12 +5647,12 @@ class ReConfigDiag:
         
         __self__.ConfigDiagRatio =ttk.Checkbutton(__self__.Frame, 
                 takefocus=False,
+                text="Yes",
                 variable=__self__.RatioVar)
-        
         __self__.ConfigDiagEnhance =ttk.Checkbutton(__self__.Frame, 
                 takefocus=False,
+                text="Yes",
                 variable=__self__.EnhanceVar)
-        
         __self__.ConfigDiagMethod = ttk.Combobox(
                 __self__.Frame, 
                 textvariable=__self__.MethodVar, 
@@ -5485,15 +5660,10 @@ class ReConfigDiag:
                 state="readonly",
                 width=13)
         
-        __self__.ConfigDiagMethod.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagEnhance.grid(row=3,column=0,sticky=E,pady=2)
-        __self__.ConfigDiagRatio.grid(row=4,column=0,sticky=E,pady=2)
-        
         dimension_text = "Image size = {0} x {1} pixels".format(
                 Constants.MY_DATACUBE.dimension[0],
                 Constants.MY_DATACUBE.dimension[1])
         img_dimension_display = Label(__self__.master,text=dimension_text)
-        img_dimension_display.grid(row=2,column=0,sticky=W,padx=17,pady=2)
         
         __self__.scale =ttk.Checkbutton(__self__.MergeSettings, 
                 takefocus=False,
@@ -5501,25 +5671,43 @@ class ReConfigDiag:
         __self__.cont =ttk.Checkbutton(__self__.MergeSettings, 
                 takefocus=False,
                 variable=__self__.ContVar)
-        __self__.scale.grid(row=0,column=0)
-        __self__.cont.grid(row=1,column=0)
+
+        RecalibrateBtn = ttk.Button(__self__.master,
+                text="Re-calibrate",
+                width=15,
+                takefocus=False,
+                command=__self__.call_advcalib)
 
         ButtonsFrame = Frame(__self__.master)
-        ButtonsFrame.grid(row=5,columnspan=2,pady=10,padx=10)
         SaveButton = ttk.Button(
                 ButtonsFrame, 
                 text="Save", 
                 width=10,
                 takefocus=False,
                 command=__self__.save)
-        SaveButton.grid(row=5,column=0,sticky=S)
         CancelButton = ttk.Button(
                 ButtonsFrame, 
                 text="Cancel", 
                 width=10,
                 takefocus=False,
                 command=__self__.kill)
-        CancelButton.grid(row=5,column=1,sticky=S)
+
+       
+        Label2.grid(row=0,sticky=W,pady=2)
+        Label3.grid(row=1,sticky=W,pady=2)
+        Label4.grid(row=2,sticky=W,pady=2)
+        __self__.Label5.grid(row=0,column=1,sticky=W,pady=2)
+        __self__.Label6.grid(row=1,column=1,sticky=W,pady=2)
+        __self__.ConfigDiagMethod.grid(row=0,column=1,sticky=E,pady=2,padx=(35,0))
+        __self__.ConfigDiagEnhance.grid(row=1,column=1,sticky=E,pady=2,padx=(35,0))
+        __self__.ConfigDiagRatio.grid(row=2,column=1,sticky=E,pady=2,padx=(35,0))
+        RecalibrateBtn.grid(row=2,column=0,sticky=W,padx=(17,0))
+        img_dimension_display.grid(row=3,column=0,sticky=W,padx=17,pady=2)
+        __self__.scale.grid(row=0,column=0)
+        __self__.cont.grid(row=1,column=0)
+        ButtonsFrame.grid(row=4,columnspan=2,pady=10,padx=10)
+        SaveButton.grid(row=0,column=0,sticky=S)
+        CancelButton.grid(row=0,column=1,sticky=S)
 
         if hasattr(Constants.MY_DATACUBE,"scalable"):
             __self__.toggle("on")
@@ -5532,7 +5720,23 @@ class ReConfigDiag:
         __self__.master.iconbitmap(icon)
         root.master.wait_window(__self__.master)
 
+    def call_advcalib(__self__):
+        AdvCalib(__self__,root,hascube=1) 
+
     def save(__self__):
+        save_cube = 0   #NOTE: will save if not merged or h5 anyways!!
+                        #This is just to avoid saving unnecessarily large merged cubes
+                        #Recalibrated cubes will always be saved
+
+        if __self__.calibration_params is not None:
+            failed = verify_calibration_parameters(__self__, __self__.calibration_params)
+            print("failed calibration?",failed)
+            if not failed:
+                print("Recalibrating")
+                Constants.MY_DATACUBE.recalibrate(__self__.calibration_params)
+                save_cube = 1
+            else: return
+
         Constants.MY_DATACUBE.config["enhance"] = __self__.EnhanceVar.get()
         Constants.MY_DATACUBE.config["peakmethod"] = __self__.MethodVar.get()
         Constants.MY_DATACUBE.config["ratio"] = __self__.RatioVar.get()
@@ -5603,8 +5807,10 @@ class ReConfigDiag:
 
             root.draw_map()
 
-        if "mca" in Constants.MY_DATACUBE.datatypes:
-            Constants.MY_DATACUBE.save_cube()
+        if "mca" in Constants.MY_DATACUBE.datatypes or save_cube:
+            if not "h5-temp" in Constants.MY_DATACUBE.datatypes:
+                Constants.MY_DATACUBE.save_cube()
+                print("Writing cube to disk")
         root.write_stat()
         __self__.kill()
 
@@ -6069,9 +6275,10 @@ class ConfigDiag:
 
 
 class ImageOperationOutput:
-    def __init__(__self__,image,el1,el2,operation,cube_datatypes):
+    def __init__(__self__, image, el1, el2, operation, cube_datatypes, cube):
         __self__.image = image
         __self__.master = Toplevel(master=root.master)
+        __self__.cube = cube
         __self__.master.attributes("-alpha",0.0)
         __self__.alt = False
         __self__.master.bind("<Alt_L>",__self__.AltOn)
@@ -6151,7 +6358,8 @@ class ImageOperationOutput:
     def replace_on_cube(__self__,image,element):
         p = messagebox.askquestion("Warning!","You are about to replace {} map in your datacube with the output image. This operation is irreversible. Do you want to proceed?".format(element))
         if p =="yes":
-            Constants.MY_DATACUBE.replace_map(image,element)
+            __self__.cube.replace_map(image,element)
+            __self__.master.focus_set()
             return
         else: 
             __self__.master.focus_set()
@@ -6249,7 +6457,8 @@ class ImageOperationWarning:
         if __self__.scaled:
             output = fast_scaling(__self__.parent.DATACUBE, output, -1)
         ImageOperationOutput(output,__self__.parent.Map1Var.get(),
-                __self__.parent.Map2Var.get(),operation, __self__.parent.DATACUBE.datatypes)
+                __self__.parent.Map2Var.get(),operation, 
+                __self__.parent.DATACUBE.datatypes, __self__.parent.DATACUBE)
         __self__.master.grab_release()
         __self__.master.destroy()
 
@@ -6889,7 +7098,7 @@ if __name__.endswith("__main__"):
     time.sleep(t)
     from GUI import Mask
     from GUI import Theme
-    from GUI import AdvCalib
+    from GUI import AdvCalib, SimpleFitPanel
     from GUI import Busy, BusyManager, create_tooltip
     from GUI.Mosaic import Mosaic_API
 

@@ -30,6 +30,7 @@ def unpack_icons():
     global ICO_ACCEPT, ICO_CCW, ICO_CW, ICO_DOWN
     global ICO_ERASE, ICO_EXPORT1, ICO_EXPORT2, ICO_EXPORT_MERGE, ICO_IMGANAL
     global ICO_LOAD, ICO_NEXT, ICO_PREVIOUS, ICO_QUIT, ICO_REFRESH, ICO_RESET
+    global ICO_FIT_NORMAL, ICO_FIT_DISABLED
     global ICO_REJECT, ICO_RUBIK, ICO_SETTINGS, ICO_UP, ICO_MAGNIFIER
     global ICO_SAVE, ICO_SAVE_SPEC, ICO_LOG, ICO_LIN, ICO_ADVCALIB
     global ICO_MASK_NORMAL, ICO_MASK_TOGGLED 
@@ -47,6 +48,8 @@ def unpack_icons():
     ICO_EXPORT1 = icons_file.read(4548)
     ICO_EXPORT2 = icons_file.read(4512)
     ICO_EXPORT_MERGE = icons_file.read(4664)
+    ICO_FIT_DISABLED = icons_file.read(6252)
+    ICO_FIT_NORMAL = icons_file.read(7176)
     ICO_IMGANAL = icons_file.read(2416)
     ICO_LIN = icons_file.read(4020)
     ICO_LINREGRESS_NORMAL = icons_file.read(7732)
