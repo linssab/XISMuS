@@ -212,22 +212,23 @@ def fit_peaks(e_axis, spectrum, continuum, PARAMS, p0=None,
 
     if LEASTSQ:
         popt = least_squares(
-                residuals,
-                p0,
-                bounds=[np.zeros(peaks.size),
-                    np.array(spectrum[indexes]*p0*spectrum.sum(0)).clip(1)],
-                args=(e_axis, spectrum, continuum, params))
+            residuals,
+            p0,
+            bounds=[np.zeros(peaks.shape[0])-1,
+                np.array(spectrum[indexes]*p0*gain*peaks.size)],
+            args=(e_axis, spectrum, continuum, params))
         pcov = 0
         popt = popt.x
     else:
         popt, pcov = curve_fit(lambda x, *A: gaus(
-        e_axis, peaks, rad_rates, gain, noise, fano, sigma[indexes], *A) + continuum,
-        e_axis,
-        spectrum,
-        sigma=np.sqrt(spectrum).clip(1),
-        bounds=[np.zeros(peaks.size),np.array(spectrum[indexes]*p0*spectrum.sum(0)).clip(1)],
-        p0=p0,
-        maxfev=cycles)
+            e_axis, peaks, rad_rates, gain, noise, fano, sigma[indexes], *A) + continuum,
+            e_axis,
+            spectrum,
+            sigma=np.sqrt(spectrum).clip(1),
+            bounds=[np.zeros(peaks.size)-1,
+                np.array(spectrum[indexes]*p0*peaks.size)],
+            p0=p0,
+            maxfev=cycles)
     return popt, pcov
 
 def fit_single_spectrum(CUBE,spectrum,continuum,pool):
