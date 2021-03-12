@@ -15,6 +15,7 @@
 *.ini
 *.swp
 *.tag
+*.npy
 
 setup.py
 calculator.py

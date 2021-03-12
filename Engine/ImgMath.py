@@ -606,11 +606,15 @@ def write_image(image, resize, path, enhance=False, merge=False, save=True):
     else: raise ValueError("Can't have negative resize shape")
     newX,newY = int(factor*imagex),int(factor*imagey)
     
+    max_ = image.max()
+    if max_ == 0: 
+        print("Empty image!")
+        return
     if imagex > resize or imagey > resize: 
-        large_image = image*255/image.max()
+        large_image = image*255/max_
     else: 
         if image.max() > 0: 
-            large_image = image*255/image.max()
+            large_image = image*255/max_
         else:
             large_image = image
         if enhance == False:
