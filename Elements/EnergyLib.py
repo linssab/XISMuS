@@ -32,6 +32,11 @@ except:
 global ALL_LINES
 ALL_LINES = {}
 
+global SIEGBAHN
+SIEGBAHN = ["KA1","KA2","KA3","KB1","KB2","KB3","KB4","KB5",
+        "LA1","LB1","LA2","LB1","LB2","LB3","LB4","LB5","LB6","LB7","LB9","LB10","LB15",
+        "LB17","LG1","LG2","LG3","LG4","LG5","LG6","LG8","MA1","MA2","MB","MG"]
+
 ElementsInfo = [
    ["Custom", 0.0001, 1.01,   0,      0,     0,      0,      0,      0,      0], 
    ["H",    0.0007, 1.01,   0,          0,          0.3695, 0.384,  0.3803, 0.3912, 0.3883],
