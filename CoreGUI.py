@@ -1766,7 +1766,7 @@ class ImageAnalyzer:
                 __self__.sampler, 
                 textvariable=__self__.Map1Var,
                 values=__self__.packed_elements,
-                width=7,
+                width=10,
                 state="readonly")
         
         # map 2
@@ -1778,7 +1778,7 @@ class ImageAnalyzer:
                 __self__.sampler, 
                 textvariable=__self__.Map2Var,
                 values=__self__.packed_elements,
-                width=7,
+                width=10,
                 state="readonly")
 
         # matplotlib canvases
@@ -2601,11 +2601,23 @@ class PlotWin:
         patches = []
         for element in Constants.MY_DATACUBE.ROI:
             __self__.plotdata = Constants.MY_DATACUBE.ROI[element]
-
+            
+            net = [0,""]
+            #############################################
             if Constants.MY_DATACUBE.max_counts[element+"_a"] == 0:
-                try: net = (Constants.MY_DATACUBE.max_counts[element+"_b"],"Beta")
-                except: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
-            else: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
+                try: net = [Constants.MY_DATACUBE.max_counts[element+"_b"],"Beta"]
+                except: net = [Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha"]
+            else: net = [Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha"]
+            #############################################
+            # NEW DATACUBES SUPPORT ALL SIEGBAHN MACROS #
+            #############################################
+            try: 
+                for line in SIEGBAHN:
+                    max_ = Constants.MY_DATACUBE.max_counts[element + f"_{line}"]
+                    if max_ > net[0]:
+                        net = [max_, line]
+            except: pass
+            #############################################
 
             roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
             if element != "custom":
@@ -2988,7 +3000,7 @@ class PlotWin:
                 cycles, window, savgol, order = \
                     __self__.parent.DATACUBE.config["bg_settings"]
             except: 
-                cycles, window, savgol, order = 24,5,5,3
+                cycles, window, savgol, order = Constants.SNIPBG_DEFAULTS
             continuum = peakstrip(spec,cycles,window,savgol,order)
             __self__.parent.DATACUBE.fit_fano_and_noise()
 
@@ -2998,6 +3010,13 @@ class PlotWin:
                 spec,
                 continuum,
                 __self__.parent.DATACUBE.fit_config)
+        if areas is None:
+            messagebox.showinfo("Fit failed!","Fit failed!")
+            root.busy.notbusy()
+            __self__.parent.master.focus_set()
+            __self__.master.focus_set()
+            __self__.options.entryconfig("Export fit data . . .", state=DISABLED)
+            return
         for element in areas.keys():
             __self__.fit_plots.append(
                     __self__.plot.semilogy(
@@ -3055,10 +3074,19 @@ class PlotWin:
                     bd=0,
                     bg=__self__.master.cget("background"),
                     command=__self__.fit_roi)
+            Info = Button(__self__.add_ons,
+                    text="?",
+                    bg=__self__.master.cget("background"),
+                    font=tkFont.Font(family="Tahoma",weight="bold",size=10),
+                    bd=0)
+
+            create_tooltip(Info,"Datacube fitting configurations must be first set via the \n\"Options\" menu on top. When using background, SNIPBG method \nwill be used to calculate the continuum for the selected ROI.")
 
             __self__.add_ons.pack(side=TOP,fill=X)
             __self__.save_raw_btn.pack(side=RIGHT)
             __self__.fit_btn.pack(side=LEFT)
+            Info.pack(side=LEFT)
+            Info.config(state=DISABLED)
             
             if not hasattr(__self__.parent.DATACUBE,"fit_config"):
                 __self__.fit_btn.config(state=DISABLED)
@@ -4920,8 +4948,10 @@ class MainGUI:
         p = messagebox.askquestion("Attention!",
                 "This will remove all elemental maps packed in datacube {}. Are you sure you want to proceed?".format(Constants.MY_DATACUBE.name))
         if p == "yes":
+            __self__.master.config(cursor="watch")
             Constants.MY_DATACUBE.wipe_maps()
             __self__.write_stat()
+            __self__.master.config(cursor="arrow")
         else: return 0
 
     def pop_welcome(__self__):
@@ -6712,6 +6742,7 @@ class PeriodicTable:
                 partialtimer = time.time()
                 iterator = 0
                 for element in Constants.FIND_ELEMENT_LIST:
+                    print(f"Grabbing element {element}")
                     iterator += 1
                     __self__.progress.update_text(
                             "Grabbing element {}...".format(element))
