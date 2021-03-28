@@ -45,8 +45,8 @@ def ListDatabase():
     """ Prints all compounds on database """
 
     Database = dict(CompoundList,**WeightList)
-    for key in Database:
-        print(key,Database[key])
+    #for key in Database:
+    #    print(key,Database[key])
     return Database
 
 
