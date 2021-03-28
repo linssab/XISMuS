@@ -24,7 +24,7 @@ def b64_to_array(uri):
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
     image_file = open(os.path.join(os.path.dirname(__file__),"graphics.tz"),"rb")
-    IMG_SPLASH = image_file.read(751316)
+    IMG_SPLASH = image_file.read(751436)
 
 def unpack_icons():
     global ICO_ACCEPT, ICO_CCW, ICO_CW, ICO_DOWN
