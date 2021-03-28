@@ -279,7 +279,7 @@ class datacube:
             #fast_snipbg(__self__)
             
             try: cycles, window,savgol,order= __self__.config["bg_settings"] 
-            except: cycles, window, savgol, order = 24,5,5,3
+            except: cycles, window, savgol, order = Constants.SNIPBG_DEFAULTS
             for x in range(__self__.matrix.shape[0]):
                 for y in range(__self__.matrix.shape[1]):
                     stripped = peakstrip(__self__.matrix[x,y],cycles,window,savgol,order)
@@ -599,9 +599,16 @@ class datacube:
         element; a string
         line; a string """
 
-        from .SpecRead import output_path, cube_path
-        __self__.__dict__[element+"_"+line] = image
-        logger.info("Packed {0} map to datacube {1}".format(element,cube_path))
+        if image.max() <= 1: 
+            logger.info(f"Can't pack an empty map to datacube {__self__.name}. \
+                    Map name: {element}_{line}")
+            print(f"Can't pack an empty map to datacube {__self__.name}. \
+                    Map name: {element}_{line}")
+            return
+
+        __self__.__dict__[element + f"_{line}"] = image
+        __self__.max_counts[element + f"_{line}"] = image.max()
+        logger.info("Packed {0} map to datacube {1}".format(element,__self__.name))
     
     def pack_hist(__self__,hist,bins,element):
         """ Saves the histogram of the last calculated elemental distribution map. 
@@ -638,16 +645,19 @@ class datacube:
 
         packed = []
         for element in Elements.ElementList:
-            if hasattr(__self__,element+"_a"):
-                if hasattr(__self__,element+"_b"):
-                    if __self__.__dict__[element+"_a"].max() > 0:
-                        packed.append(element+"_a")
-                    if __self__.__dict__[element+"_b"].max() > 0:
-                        packed.append(element+"_b")
+            if hasattr(__self__,element + "_a"):
+                if hasattr(__self__,element + "_b"):
+                    if __self__.__dict__[element + "_a"].max() > 0:
+                        packed.append(element + "_a")
+                    if __self__.__dict__[element + "_b"].max() > 0:
+                        packed.append(element + "_b")
                 else:
-                    if __self__.__dict__[element+"_a"].max() > 0:
-                        packed.append(element+"_a")
-            else: pass
+                    if __self__.__dict__[element + "_a"].max() > 0:
+                        packed.append(element + "_a")
+            for line in Elements.SIEGBAHN:
+                if hasattr(__self__,element + f"_{line}"):
+                    if __self__.__dict__[element + f"_{line}"].max() > 0:
+                        packed.append(element + f"_{line}")
         if hasattr(__self__,"custom_a"): packed.append("custom_a")
         return packed
 
@@ -656,23 +666,25 @@ class datacube:
         for element in set(element_list):
 
             if wipe == False:
-                __self__.__dict__[element+"_a"] = np.zeros([__self__.dimension[0],
-                    __self__.dimension[1]],dtype="float32")
-                __self__.__dict__[element+"_b"] = np.zeros([__self__.dimension[0],
-                    __self__.dimension[1]],dtype="float32")
-                __self__.ROI[element] = np.zeros([__self__.energyaxis.shape[0]],
-                        dtype="float32")
-                __self__.max_counts[element+"_a"] = 0
-                __self__.max_counts[element+"_b"] = 0
+                __self__.__dict__[element + "_a"] = np.zeros(1)
+                __self__.__dict__[element + "_b"] = np.zeros(1)
+                __self__.ROI[element] = np.zeros(__self__.matrix.shape[-1])
+                __self__.max_counts[element + "_a"] = 0
+                __self__.max_counts[element + "_b"] = 0
                 __self__.hist[element] = [np.zeros([__self__.img_size]),np.zeros([LEVELS])]
-            __self__.__dict__["custom"] = np.zeros(
-                    [__self__.dimension[0],__self__.dimension[1]],dtype="float32")
+                for line in Elements.SIEGBAHN:
+                    __self__.__dict__[element + f"_{line}"] = np.zeros(1)
+                    __self__.max_counts[element + f"_{line}"] = 0
+            __self__.__dict__["custom"] = np.zeros(1)
 
             if wipe == True: 
                 try: del __self__.__dict__[element+"_a"]
-                except KeyError: print("No alpha map for {}".format(element))
+                except KeyError: print(f"No alpha map for {element}")
                 try: del __self__.__dict__[element+"_b"]
-                except KeyError: print("No beta map for {}".format(element))
+                except KeyError: print(f"No beta map for {element}")
+                for line in Elements.SIEGBAHN:
+                    try: del __self__.__dict__[element+f"_{line}"]
+                    except KeyError: print(f"No {line} map for {element}")
         if wipe == True:
             __self__.max_counts = {}
             __self__.hist = {}

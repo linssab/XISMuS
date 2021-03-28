@@ -50,7 +50,7 @@ def work_results(popt, element_pool, element_params, lines):
         results[key] = {}
         parameters[key] = {}
         lines_no = len(lines[key])
-        results[key]["Areas"] = popt[i:i+lines_no]
+        results[key]["Areas"] = np.asarray(popt[i:i+lines_no])
         results[key]["Lines"] = lines[key]
         parameters[key]["indexes"] = element_params["indexes"][i:i+lines_no]
         parameters[key]["peaks"] = element_params["peaks"][i:i+lines_no]
@@ -98,7 +98,7 @@ def work_elements(e_axis, pool, gain, global_spec, split=0):
         peaks = [energies[i][0] for i in range(len(energies))]
         indexes = np.asarray([e[1] for e in energies])
 
-        lines[element_pool[i]] = pool_lines.keys()
+        lines[element_pool[i]] = list(pool_lines.keys())
         element[element_pool[i]]["indexes"] = np.asarray(indexes,dtype=np.int32)
         element[element_pool[i]]["peaks"] = np.asarray(peaks,dtype=np.float32)
         element[element_pool[i]]["rad_rates"] = np.asarray(rad_rates,dtype=np.float32)
@@ -169,12 +169,12 @@ def work_elements(e_axis, pool, gain, global_spec, split=0):
         """
         return big_batch, lines
 
-def run_spectrum(spectrum,        #spectrum to be fitted
-        continuum,
-        e_axis,                 #calibrated energy axis in KeV
-        fano_and_noise,
-        elements_parameters,
-        gain,
+def run_spectrum(spectrum,      #spectrum to be fitted
+        continuum,              #spectrum continuum
+        e_axis,                 #calibrated energy axis in eV
+        fano_and_noise,         #tuple with fano factor and noise contribution
+        elements_parameters,    
+        gain,                   #gain in eV
         sigma_array,
         p0=None):
 
@@ -190,10 +190,10 @@ def run_spectrum(spectrum,        #spectrum to be fitted
 
 def residuals(popt, x, y, y_, parameters):
     indexes, energies, rad_rates, gain, noise, fano, s = parameters
-    return gaus(x, energies, rad_rates, gain, noise, fano, s[indexes], popt) - (y-y_)
+    return GAUSS(x, energies, rad_rates, gain, noise, fano, s[indexes], popt) - (y-y_)
 
-def gaus(x, E_peak, rad_rate, gain, Noise, Fano, s, *A):
-    return np.sum((A*rad_rate)/(s*2.5066282746310002)*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
+def GAUSS(x, E_peak, rad_rate, gain, Noise, Fano, s, *A):
+    return gain*np.sum((A*rad_rate)/(s*2.5066282746310002)*np.exp(-np.square(x[:,None]-E_peak)/(2*np.square(s))),1)
 
 def fit_peaks(e_axis, spectrum, continuum, PARAMS, p0=None,
         cycles=Constants.FIT_CYCLES):
@@ -214,19 +214,20 @@ def fit_peaks(e_axis, spectrum, continuum, PARAMS, p0=None,
         popt = least_squares(
             residuals,
             p0,
+            #bounds=[np.array([-np.inf for i in range(indexes.shape[0])]),
             bounds=[np.zeros(peaks.shape[0])-1,
-                np.array(spectrum[indexes]*p0*gain*peaks.size)],
+                np.array(spectrum[indexes]*p0*gain)],
             args=(e_axis, spectrum, continuum, params))
         pcov = 0
         popt = popt.x
     else:
-        popt, pcov = curve_fit(lambda x, *A: gaus(
+        popt, pcov = curve_fit(lambda x, *A: GAUSS(
             e_axis, peaks, rad_rates, gain, noise, fano, sigma[indexes], *A) + continuum,
             e_axis,
             spectrum,
             sigma=np.sqrt(spectrum).clip(1),
             bounds=[np.zeros(peaks.size)-1,
-                np.array(spectrum[indexes]*p0*peaks.size)],
+                np.array(spectrum[indexes]*p0*gain)],
             p0=p0,
             maxfev=cycles)
     return popt, pcov
@@ -243,9 +244,11 @@ def fit_single_spectrum(CUBE,spectrum,continuum,pool):
 
     sigma = SIGMA(noise, fano, e_axis)
 
-    output = run_spectrum(spectrum, continuum,
+    try: output = run_spectrum(spectrum, continuum,
         e_axis, [fano,noise],
         elements_parameters, gain, sigma)
+    except ValueError:
+        return None, None
 
     results, parameters = work_results(output, list(pool["elements"].keys()),
             elements_parameters, lines)
@@ -255,7 +258,7 @@ def fit_single_spectrum(CUBE,spectrum,continuum,pool):
         indexes = parameters[element]["indexes"]
         peaks = parameters[element]["peaks"]
         rad_rates = parameters[element]["rad_rates"]
-        plots[element] = gaus(e_axis, peaks, rad_rates, gain, noise, fano, sigma[indexes],
+        plots[element] = GAUSS(e_axis, peaks, rad_rates, gain, noise, fano, sigma[indexes],
             results[element]["Areas"])+continuum
     return results, plots
 

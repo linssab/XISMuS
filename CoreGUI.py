@@ -860,7 +860,7 @@ class Welcome:
                 justify=CENTER,
                 wraplength=400,
                 width=70,
-                height=7,
+                height=8,
                 padx=5,
                 bg=Constants.DEFAULTBTN_COLOR, 
                 relief=FLAT)
@@ -917,18 +917,18 @@ class Welcome:
         except:
             return 
         lines = f.readlines()
-        tot = int(len(lines)/5)
+        tot = int(len(lines)/7)
         message,counter,page = [""],0,1
         for i in range(len(lines)):
             line = lines[i]
             counter += 1
-            if counter >= 5:
+            if counter >= 7:
                 counter = 0
-                message[page-1] += "\nLog {} of {}".format(page,tot+1)
+                #message[page-1] += "\nLog {} of {}".format(page,tot+1)
                 message.append("")
                 page += 1
             message[page-1] += line
-            if i == len(lines)-1: message[page-1] += "\nLog {} of {}".format(page,tot+1)
+            #if i == len(lines)-1: message[page-1] += "\nLog {} of {}".format(page,tot+1)
         f.close()
         return message
         
@@ -967,7 +967,6 @@ class Welcome:
         else: pass
         
     def checkout(__self__,e=""):
-
         """ Writes the welcome setting (spawn or not at startup) to settings.tag file """
 
         checker = True
@@ -1601,10 +1600,17 @@ class Annotator:
         unpacker1 = __self__.element1.split("_")
         unpacker2 = __self__.element2.split("_")
         
-        y_ = [__self__.x0,__self__.x1] #indexes from matplotlib canvas and image index are inverted.
-        x_ = [__self__.y0,__self__.y1]
-        x_.sort()
+        # in matplotlib canvas directions are swapped
+        y_ = [__self__.x0,__self__.x1]
+        x_ = [-__self__.y0+__self__.parent.DATACUBE.dimension[0],
+                -__self__.y1+__self__.parent.DATACUBE.dimension[0]]
+        #print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
         y_.sort()
+        x_.sort()
+
+        #print("x",x_)
+        #print("y",y_)
+        #print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
         
         ###############################################################################
         # unpacks raw image, notice no normalization is done to match LEVELS          # 
@@ -1629,10 +1635,36 @@ class Annotator:
             """
             return
         ################################################################
+
+        #################################################################################
+        #NOTE: if the image on display in the panel is a result of masking with         #
+        # the correlation plot window, we need to crop the unpacked image to match what #
+        # is displayed. Then, coordinates must be changed to pick the corresponding spec#
+        #################################################################################
+        if __self__.parent.masked:
+            x = __self__.parent.crop_y
+            y = __self__.parent.crop_x #NOTE: coordinates in matplotlib canvas are swapped
+            image1 = image1[x[0]:x[1],y[0]:y[1]]
+            image2 = image2[x[0]:x[1],y[0]:y[1]]
+            x_ = [-__self__.y0+image1.shape[0],
+                -__self__.y1+image1.shape[0]]
+            x_.sort()
+            cx = [x_[0]+x[0], x_[0]+x[0]+(x_[1]-x_[0])]
+            cy = [y_[0]+y[0], y_[0]+y[0]+(y_[1]-y_[0])]
+            print("*"*15)
+            print("x_:", x_)
+            print("y_:", y_)
+            print(cx)
+            print(cy)
+            __self__.parent.sum_spectrum = \
+                    __self__.parent.DATACUBE.matrix[cx[0]:cx[1],cy[0]:cy[1]].sum(0).sum(0)
+        else:
+            __self__.parent.sum_spectrum = \
+                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
+        #################################################################################
         
         __self__.area1_sum = image1[x_[0]:x_[1],y_[0]:y_[1]].sum()
         __self__.area2_sum = image2[x_[0]:x_[1],y_[0]:y_[1]].sum()
-        __self__.parent.sum_spectrum = __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
         __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
         """
         for x in range(y_[0],y_[1]):
@@ -1653,6 +1685,7 @@ class ImageAnalyzer:
     global root
     def __init__(__self__,parent,datacube):
         __self__.DATACUBE = datacube
+        __self__.masked = 0
         __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
         __self__.sum_spectrum = __self__.DATACUBE.sum
         __self__.master = Toplevel(master=parent.master)
@@ -1766,7 +1799,7 @@ class ImageAnalyzer:
                 __self__.sampler, 
                 textvariable=__self__.Map1Var,
                 values=__self__.packed_elements,
-                width=7,
+                width=10,
                 state="readonly")
         
         # map 2
@@ -1778,7 +1811,7 @@ class ImageAnalyzer:
                 __self__.sampler, 
                 textvariable=__self__.Map2Var,
                 values=__self__.packed_elements,
-                width=7,
+                width=10,
                 state="readonly")
 
         # matplotlib canvases
@@ -2170,6 +2203,9 @@ class ImageAnalyzer:
             __self__.annotator.wipe_annotator()
             del __self__.plot
         except: pass
+        if __self__.masked: 
+            __self__.masked = 0
+            __self__.update_sample2()
      
     def update_sample2(__self__,event=""):
         label2 = "Maximum net counts: {}".format(
@@ -2186,6 +2222,9 @@ class ImageAnalyzer:
             __self__.annotator.wipe_annotator()
             del __self__.plot
         except: pass
+        if __self__.masked:
+            __self__.masked = 0
+            __self__.update_sample1()
 
     def prepare_to_correlate(__self__):
         scalemode = __self__.apply_scale_mask.get()
@@ -2356,6 +2395,11 @@ class ImageAnalyzer:
             y.sort()
             Map1 = Map1[y[0]:y[1],x[0]:x[1]]
             Map2 = Map2[y[0]:y[1],x[0]:x[1]]
+            __self__.crop_x = x
+            __self__.crop_y = y
+            print("#"*10 + " Copping")
+            print(__self__.crop_x)
+            print(__self__.crop_y)
         dim = Map1.shape[0]
         bar.progress["maximum"] = dim
 
@@ -2601,11 +2645,23 @@ class PlotWin:
         patches = []
         for element in Constants.MY_DATACUBE.ROI:
             __self__.plotdata = Constants.MY_DATACUBE.ROI[element]
-
+            
+            net = [0,""]
+            #############################################
             if Constants.MY_DATACUBE.max_counts[element+"_a"] == 0:
-                try: net = (Constants.MY_DATACUBE.max_counts[element+"_b"],"Beta")
-                except: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
-            else: net = (Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha")
+                try: net = [Constants.MY_DATACUBE.max_counts[element+"_b"],"Beta"]
+                except: net = [Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha"]
+            else: net = [Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha"]
+            #############################################
+            # NEW DATACUBES SUPPORT ALL SIEGBAHN MACROS #
+            #############################################
+            try: 
+                for line in SIEGBAHN:
+                    max_ = Constants.MY_DATACUBE.max_counts[element + f"_{line}"]
+                    if max_ > net[0]:
+                        net = [max_, line]
+            except: pass
+            #############################################
 
             roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
             if element != "custom":
@@ -2758,8 +2814,6 @@ class PlotWin:
         __self__.parent.right_image.set_clim(vmin=0, vmax=LEVELS)
         __self__.parent.right_image.set_cmap(Constants.COLORMAP)
         __self__.parent.right_image.set_extent([0,shape[1],0,shape[0]])
-        #__self__.parent.canvas1.draw()
-        #__self__.parent.canvas2.draw()
         __self__.parent.refresh()
         __self__.canvas.draw_idle()
 
@@ -2782,6 +2836,7 @@ class PlotWin:
             __self__.SelectionPlot = __self__.plot.scatter(__self__.selection[0],__self__.selection[1], color="purple")
             __self__.canvas.draw()
             __self__.filter_images()
+            __self__.parent.masked = 1
             root.busy.notbusy()
 
         if __self__.MASK_ENABLE: 
@@ -2828,6 +2883,7 @@ class PlotWin:
         __self__.selection = __self__.data
         __self__.parent.update_sample1()
         __self__.parent.update_sample2()
+        __self__.parent.masked = 0
         __self__.canvas.draw_idle()
 
     def toggle_regression(__self__, e=""):
@@ -2988,7 +3044,7 @@ class PlotWin:
                 cycles, window, savgol, order = \
                     __self__.parent.DATACUBE.config["bg_settings"]
             except: 
-                cycles, window, savgol, order = 24,5,5,3
+                cycles, window, savgol, order = Constants.SNIPBG_DEFAULTS
             continuum = peakstrip(spec,cycles,window,savgol,order)
             __self__.parent.DATACUBE.fit_fano_and_noise()
 
@@ -2998,6 +3054,13 @@ class PlotWin:
                 spec,
                 continuum,
                 __self__.parent.DATACUBE.fit_config)
+        if areas is None:
+            messagebox.showinfo("Fit failed!","Fit failed!")
+            root.busy.notbusy()
+            __self__.parent.master.focus_set()
+            __self__.master.focus_set()
+            __self__.options.entryconfig("Export fit data . . .", state=DISABLED)
+            return
         for element in areas.keys():
             __self__.fit_plots.append(
                     __self__.plot.semilogy(
@@ -3055,10 +3118,19 @@ class PlotWin:
                     bd=0,
                     bg=__self__.master.cget("background"),
                     command=__self__.fit_roi)
+            Info = Button(__self__.add_ons,
+                    text="?",
+                    bg=__self__.master.cget("background"),
+                    font=tkFont.Font(family="Tahoma",weight="bold",size=10),
+                    bd=0)
+
+            create_tooltip(Info,"Datacube fitting configurations must be first set via the \n\"Options\" menu on top. When using background, SNIPBG method \nwill be used to calculate the continuum for the selected ROI.")
 
             __self__.add_ons.pack(side=TOP,fill=X)
             __self__.save_raw_btn.pack(side=RIGHT)
             __self__.fit_btn.pack(side=LEFT)
+            Info.pack(side=LEFT)
+            Info.config(state=DISABLED)
             
             if not hasattr(__self__.parent.DATACUBE,"fit_config"):
                 __self__.fit_btn.config(state=DISABLED)
@@ -4920,8 +4992,10 @@ class MainGUI:
         p = messagebox.askquestion("Attention!",
                 "This will remove all elemental maps packed in datacube {}. Are you sure you want to proceed?".format(Constants.MY_DATACUBE.name))
         if p == "yes":
+            __self__.master.config(cursor="watch")
             Constants.MY_DATACUBE.wipe_maps()
             __self__.write_stat()
+            __self__.master.config(cursor="arrow")
         else: return 0
 
     def pop_welcome(__self__):
@@ -6712,6 +6786,7 @@ class PeriodicTable:
                 partialtimer = time.time()
                 iterator = 0
                 for element in Constants.FIND_ELEMENT_LIST:
+                    print(f"Grabbing element {element}")
                     iterator += 1
                     __self__.progress.update_text(
                             "Grabbing element {}...".format(element))

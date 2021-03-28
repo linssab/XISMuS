@@ -101,7 +101,8 @@ class SimpleFitPanel:
                 command=__self__.add_to_tree)
         __self__.RemoveBtn = Button(__self__.AddRemovePane, text="<<<", bd=0,
                 command=__self__.remove_from_tree)
-        __self__.SaveBtn = ttk.Button(__self__.LowerPanel, text="Save")
+        __self__.CancelBtn = ttk.Button(__self__.LowerPanel, text="Cancel",
+                command=__self__.kill)
         __self__.EmbedBtn = ttk.Button(__self__.LowerPanel, 
                 text="Embed to Cube", command=__self__.embed_to_cube)
         
@@ -122,8 +123,8 @@ class SimpleFitPanel:
         __self__.LinesScroll.grid(row=0,column=1,sticky=N+S)
         __self__.AddBtn.grid(row=0)
         __self__.RemoveBtn.grid(row=1)
-        __self__.SaveBtn.grid(row=0, column=0, padx=(0,5), sticky=E)
-        __self__.EmbedBtn.grid(row=0, column=1, padx=(5,0), sticky=E)
+        __self__.CancelBtn.grid(row=0, column=1, padx=(5,0), sticky=E)
+        __self__.EmbedBtn.grid(row=0, column=0, padx=(0,5), sticky=E)
         __self__.Pool.grid(row=0,column=0,sticky=N+S+W+E)
         __self__.PoolScroll.grid(row=0,column=1,sticky=N+S)
         __self__.ElementsScroll.config(command=__self__.ElementsList.yview)

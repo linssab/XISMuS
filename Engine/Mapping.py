@@ -46,11 +46,9 @@ def select_lines(element,ratio):
     kbenergy = Elements.kbEnergies[element_idx]*1000
     
     if  ratio == True:
-        max_counts = [0,0]
         line_no = 2
         lines = [kaenergy,kbenergy]
     else: 
-        max_counts = [0]
         line_no = 1
         lines = [kaenergy,0]
     return lines
@@ -324,11 +322,6 @@ def getpeakmap(element_list,datacube):
                         elmap[currentx][currenty][1][Element] = kb
                     
                     elmap[currentx][currenty][0][Element] = ka
-
-                    if datacube.max_counts[element_list[Element]+"_a"] < ka:
-                        datacube.max_counts[element_list[Element]+"_a"] = ka
-                    if datacube.max_counts[element_list[Element]+"_b"] < kb:
-                        datacube.max_counts[element_list[Element]+"_b"] = kb
 
                 elif peakmethod == "insert new spectra iterative methods here":
                     pass
