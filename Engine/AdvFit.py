@@ -169,12 +169,12 @@ def work_elements(e_axis, pool, gain, global_spec, split=0):
         """
         return big_batch, lines
 
-def run_spectrum(spectrum,        #spectrum to be fitted
-        continuum,
-        e_axis,                 #calibrated energy axis in KeV
-        fano_and_noise,
-        elements_parameters,
-        gain,
+def run_spectrum(spectrum,      #spectrum to be fitted
+        continuum,              #spectrum continuum
+        e_axis,                 #calibrated energy axis in eV
+        fano_and_noise,         #tuple with fano factor and noise contribution
+        elements_parameters,    
+        gain,                   #gain in eV
         sigma_array,
         p0=None):
 
@@ -214,8 +214,9 @@ def fit_peaks(e_axis, spectrum, continuum, PARAMS, p0=None,
         popt = least_squares(
             residuals,
             p0,
+            #bounds=[np.array([-np.inf for i in range(indexes.shape[0])]),
             bounds=[np.zeros(peaks.shape[0])-1,
-                np.array(spectrum[indexes]*p0*gain*peaks.size)],
+                np.array(spectrum[indexes]*p0*gain)],
             args=(e_axis, spectrum, continuum, params))
         pcov = 0
         popt = popt.x
@@ -226,7 +227,7 @@ def fit_peaks(e_axis, spectrum, continuum, PARAMS, p0=None,
             spectrum,
             sigma=np.sqrt(spectrum).clip(1),
             bounds=[np.zeros(peaks.size)-1,
-                np.array(spectrum[indexes]*p0*gain*peaks.size)],
+                np.array(spectrum[indexes]*p0*gain)],
             p0=p0,
             maxfev=cycles)
     return popt, pcov
