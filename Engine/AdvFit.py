@@ -185,7 +185,8 @@ def run_spectrum(spectrum,      #spectrum to be fitted
     peaks = elements_parameters["peaks"]
     rad_rates = elements_parameters["rad_rates"]
     params = [gain, noise, fano],[indexes, peaks, rad_rates],sigma_array
-    popt, pcov = fit_peaks(e_axis, spectrum, continuum, params, p0=p0)
+    try: popt, pcov = fit_peaks(e_axis, spectrum, continuum, params, p0=p0)
+    except ValueError: return None 
     return popt.clip(0)
 
 def residuals(popt, x, y, y_, parameters):
@@ -244,11 +245,10 @@ def fit_single_spectrum(CUBE,spectrum,continuum,pool):
 
     sigma = SIGMA(noise, fano, e_axis)
 
-    try: output = run_spectrum(spectrum, continuum,
+    output = run_spectrum(spectrum, continuum,
         e_axis, [fano,noise],
         elements_parameters, gain, sigma)
-    except ValueError:
-        return None, None
+    if output is None: return None, None
 
     results, parameters = work_results(output, list(pool["elements"].keys()),
             elements_parameters, lines)

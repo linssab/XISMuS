@@ -88,7 +88,7 @@ class SimpleFitPanel:
         __self__.LinesList = Listbox(__self__.LinesPane,
                 yscrollcommand=__self__.LinesScroll.set)
         __self__.BG = BooleanVar()
-        __self__.BgOption = ttk.Checkbutton(__self__.UpperPanel,
+        __self__.BgOption = ttk.Checkbutton(__self__.LowerPanel,
                 variable=__self__.BG,
                 text="Use background?")
         __self__.PoolPane = Frame(__self__.MainPanel)
@@ -115,7 +115,6 @@ class SimpleFitPanel:
         Grid.rowconfigure(__self__.ElementsPane, 0, weight=1)
         Grid.rowconfigure(__self__.LinesPane, 0, weight=1)
         Grid.rowconfigure(__self__.PoolPane, 0, weight=1)
-        __self__.BgOption.grid(padx=15,pady=(15,0),sticky=W)
         __self__.ElementsList.grid(row=0,column=0,sticky=N+S+W+E)
         __self__.ElementsScroll.grid(row=0,column=1,sticky=N+S)
         __self__.LinesList.grid(row=0,column=0,sticky=N+S+W+E)
@@ -123,8 +122,9 @@ class SimpleFitPanel:
         __self__.LinesScroll.grid(row=0,column=1,sticky=N+S)
         __self__.AddBtn.grid(row=0)
         __self__.RemoveBtn.grid(row=1)
-        __self__.CancelBtn.grid(row=0, column=1, padx=(5,0), sticky=E)
-        __self__.EmbedBtn.grid(row=0, column=0, padx=(0,5), sticky=E)
+        __self__.BgOption.grid(row=0, column=0, padx=(0,25), sticky=W)
+        __self__.EmbedBtn.grid(row=0, column=1, padx=(0,5), sticky=E)
+        __self__.CancelBtn.grid(row=0, column=2, padx=(5,0), sticky=E)
         __self__.Pool.grid(row=0,column=0,sticky=N+S+W+E)
         __self__.PoolScroll.grid(row=0,column=1,sticky=N+S)
         __self__.ElementsScroll.config(command=__self__.ElementsList.yview)

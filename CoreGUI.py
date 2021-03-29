@@ -10,6 +10,7 @@ def start_up():
     global root
     """ Initializes sp global variables and paths """
 
+    splash.update("Configuring environment...")
     sp.conditional_setup()
     logger.info("Setting up...")
     try: load_cube()
@@ -1651,11 +1652,6 @@ class Annotator:
             x_.sort()
             cx = [x_[0]+x[0], x_[0]+x[0]+(x_[1]-x_[0])]
             cy = [y_[0]+y[0], y_[0]+y[0]+(y_[1]-y_[0])]
-            print("*"*15)
-            print("x_:", x_)
-            print("y_:", y_)
-            print(cx)
-            print(cy)
             __self__.parent.sum_spectrum = \
                     __self__.parent.DATACUBE.matrix[cx[0]:cx[1],cy[0]:cy[1]].sum(0).sum(0)
         else:
@@ -2205,6 +2201,7 @@ class ImageAnalyzer:
         except: pass
         if __self__.masked: 
             __self__.masked = 0
+            __self__.correlate.state(["!disabled"])
             __self__.update_sample2()
      
     def update_sample2(__self__,event=""):
@@ -2224,6 +2221,7 @@ class ImageAnalyzer:
         except: pass
         if __self__.masked:
             __self__.masked = 0
+            __self__.correlate.state(["!disabled"])
             __self__.update_sample1()
 
     def prepare_to_correlate(__self__):
@@ -2397,9 +2395,6 @@ class ImageAnalyzer:
             Map2 = Map2[y[0]:y[1],x[0]:x[1]]
             __self__.crop_x = x
             __self__.crop_y = y
-            print("#"*10 + " Copping")
-            print(__self__.crop_x)
-            print(__self__.crop_y)
         dim = Map1.shape[0]
         bar.progress["maximum"] = dim
 
@@ -2837,6 +2832,7 @@ class PlotWin:
             __self__.canvas.draw()
             __self__.filter_images()
             __self__.parent.masked = 1
+            __self__.parent.correlate.state(["disabled"])
             root.busy.notbusy()
 
         if __self__.MASK_ENABLE: 
@@ -2884,6 +2880,7 @@ class PlotWin:
         __self__.parent.update_sample1()
         __self__.parent.update_sample2()
         __self__.parent.masked = 0
+        __self__.parent.correlate.state(["!disabled"])
         __self__.canvas.draw_idle()
 
     def toggle_regression(__self__, e=""):
@@ -3311,6 +3308,9 @@ class Samples:
         mca_prefix = None
         
         try:
+            __self__.update_label(
+                    splash=splash,
+                    text=f"Reading tree {Constants.SAMPLES_FOLDER}...")
             logger.info(f"Checking tree {Constants.SAMPLES_FOLDER}")
                         
             """ Lists all possible samples """
