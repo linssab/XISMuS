@@ -629,13 +629,12 @@ class datacube:
         element; a string
         line; a string """
 
-        from .SpecRead import output_path, cube_path
         try:
             unpacked = __self__.__dict__[element+"_"+line]
-            logger.info("Unpacked {0} map from datacube {1}".format(element,cube_path))
             return unpacked
         except KeyError as exception:
             logger.info("Failed to unpack {}{} map from {}".format(element,line,__self__.name))
+            print("Failed to unpack {}{} map from {}".format(element,line,__self__.name))
             return np.zeros([__self__.dimension[0],
                     __self__.dimension[1]],dtype="float32")
 

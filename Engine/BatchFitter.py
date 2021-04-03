@@ -287,7 +287,9 @@ def gausfit(
     ######################################################################################
 
     y_savgol = np.insert(y_savgol,0,SUM[0],axis=0) 
-    y_cont[0] = SUM[1]
+    y_cont = np.insert(y_cont,0,SUM[1],axis=0) 
+    print("y_savgol shape",y_savgol.shape)
+    print("y_cont shape",y_cont.shape)
 
     ######################################################################################
 
@@ -335,18 +337,18 @@ def gausfit(
     A0 = y_peak*np.sqrt(((Noise0/2.3548)**2)+(3.85*Fano0*E_peak))*2.5066282746310002/gain
     params_gaus = A0
 
-    tot = len(y_savgol)
-    for it in range(tot):
+    for it in range(y_savgol.shape[0]):
         time0 = timeit.default_timer()
 
-        if bar!=None and not bar.make_abortion: 
+        if bar!=None and not bar.make_abortion and it: 
             iterator += 1
             percent = iterator/tot*100
             bar.updatebar(iterator)
             bar.update_text("Fitting data... {0:0.2f}%".format(percent))
         elif bar!=None and bar.make_abortion: return
-        else:
+        elif it:
             with lock: iterator.value = iterator.value + 1
+        else: pass
 
         time_fit = timeit.default_timer()
         ''' Gaussian Fit '''
@@ -978,17 +980,7 @@ def find_and_fit(
     Constants.FIT_CYCLES = global_parameters[0]
     Constants.SAVE_INTERVAL = global_parameters[1]
     Constants.SAVE_FIT_FIGURES = global_parameters[2]
-
-    #####################################################################################
-    # regardless of the continuum mode selected by the user, here, the SNIPBG           #
-    # method is always used. It doen's matter much, since the global spectrum in the    #
-    # chunks is always overlooked                                                       #
-    #####################################################################################
-
     counts, continuum = np.asarray(data[0]), np.asarray(data[1])
-    continuum = np.insert(continuum,0,global_spec_and_bg, axis=0)
-
-    #####################################################################################
 
     print("Chunk {} data size: ".format(chunk),convert_bytes(counts.nbytes))
     print("Chunk {} continuum size: ".format(chunk),convert_bytes(continuum.nbytes))
@@ -1488,12 +1480,20 @@ class MultiFit():
             if Constants.MY_DATACUBE.config["bgstrip"] != "None":
                 spec = 0
                 for k in range(__self__.cores):
+                    chunk0 = k*bite_size
+                    chunk1 = chunk0+bite_size
                     print("Block ",k)
+                    counts = __self__.counts[chunk0:chunk1]
+                    continuum = __self__.continuum[chunk0:chunk1]
+                    for i in range(bite_size):
+                        spec +=1
+                    """
                     for i in range(bite_size):
                         __self__.bar.updatebar(spec)
                         counts.append(__self__.counts[spec])
                         continuum.append(__self__.continuum[spec])
                         spec += 1
+                    """
                     data = (counts,continuum)
                     block.append(data)
                     counts, continuum = [],[]
@@ -1507,7 +1507,6 @@ class MultiFit():
                         continuum.append(__self__.continuum[spec])
                         spec += 1
                     leftovers = (counts,continuum)
-
             else:
                 spec = 0
                 for k in range(__self__.cores):
