@@ -1,13 +1,4 @@
-# New in Version v2.2.0 #
-#########################
-- ROI spectrum fitting added to Image Analyzer
-- Performance improvements for auto_wizard
-- Sample re-calibration is now possible via the Re-Configuration Panel
-- Plot windows look better now
+New in Version v2.2.1
 
-# Fixed issues #
-- Pre-v1.3 datacubes unable to use auto_wizard (fixed)
-- AdvCalib sometimes would pick an out-of-bounds mca (fixed)
-- Attempting to save a datacube while another one was loaded could cause the cube to save in the wrong path (fixed)
-- Replacing images in cube when a different cube was loaded replaces the image in the last loaded cube instead (fixed)
-- Setting ROI in a masked image would cause ROI to pick wrong spectra (fixed)
+- Chunks splitting with auto_wizard improved
+- n-dead pixels appears when using n-cores with auto_wizard (fixed)

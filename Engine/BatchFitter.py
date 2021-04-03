@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 2.0.0 - Feb - 2021            #
+#                        version: 2.2.1 - Apr - 2021            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -337,7 +337,8 @@ def gausfit(
     A0 = y_peak*np.sqrt(((Noise0/2.3548)**2)+(3.85*Fano0*E_peak))*2.5066282746310002/gain
     params_gaus = A0
 
-    for it in range(y_savgol.shape[0]):
+    tot = y_savgol.shape[0]
+    for it in range(tot):
         time0 = timeit.default_timer()
 
         if bar!=None and not bar.make_abortion and it: 
