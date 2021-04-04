@@ -1,10 +1,82 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 2.1.0 - Feb - 2021            #
+#                        version: 2.2.1 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 global root
+
+def update_version():
+    from urllib import request
+    import io
+    import subprocess
+
+    def download_file(destination, URL):
+        r = request.urlopen(URL)
+        Length = r.getheader('content-length')
+        BlockSize = 1000000  # default value
+        if Length:
+            Length = int(Length)
+            BlockSize = max(4096, Length // 20)
+        #print("UrlLib len, blocksize: ", Length, BlockSize)
+        BufferAll = io.BytesIO()
+        Size = 0
+        bar = Busy(100,0)
+        bar.update_text("Downloading patch...")
+        while True:
+            BufferNow = r.read(BlockSize)
+            if not BufferNow:
+                break
+            BufferAll.write(BufferNow)
+            Size += len(BufferNow)
+            if Length:
+                Percent = int((Size / Length)*100)
+                bar.updatebar(Percent)
+        #print("Buffer All len:", len(BufferAll.getvalue()))
+        with open(destination, "wb") as f:
+            f.write(BufferAll.getvalue())
+        return
+
+    def get_version(version):
+        version = version.split(".")
+        version[0] = int(version[0])*100
+        version[1] = int(version[1])*10
+        version[2] = int(version[2])*1
+        return sum(version)
+
+    def request_patch():
+        package = request.urlopen("https://xismus.sourceforge.io/__version__.txt")
+        version = package.read().decode("utf-8").replace("v","")
+        
+        if get_version(version) > get_version(Constants.VERSION):
+            question = messagebox.askyesno("New version available!",
+    "There is a new version of XISMuS available. Would you like to update the software?")
+            if question == True:
+                destination = os.path.join(os.path.dirname(__file__),"patch.exe")
+                try:
+                    if os.path.exists(destination):
+                        logger.info("Patche file already exists!") 
+                        return 1
+                    else:
+                        download_file(destination,"https://xismus.sourceforge.io/latest.exe") 
+                        logger.info("Downloaded patch!")
+                        return 1
+                except OSError:
+                    messagebox.showerror("Failed to get patch!",
+                            "Something went wrong trying to download the patch file!")
+                    return 0
+        else: return 0
+    if request_patch():
+        patch_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"patch.exe"))
+        xismus_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"XISMuS.exe"))
+        xismus_path = "\"C:\Program Files (x86)\XISMuS\XISMuS.exe\""
+        args = [patch_path, xismus_path]
+        try:
+            subprocess.Popen([r"update.exe"] + args)
+            sys.exit()
+        except: 
+            messagebox.showerror("Update error!","Failed to launch update.exe!")
+            return
 
 def start_up():
     global root
@@ -992,6 +1064,7 @@ class Welcome:
         ini.close()
         __self__.parent.master.focus_set()
         __self__.parent.master.focus_force()
+        __self__.master.after(250,update_version())
         __self__.master.destroy()
 
 
@@ -5011,7 +5084,7 @@ class MainGUI:
             __self__.welcome_window = Welcome(__self__)
             __self__.welcome_window.master.grab_set()
             place_center(__self__.master, __self__.welcome_window.master)
-        else: pass
+        else: update_version()
 
     def sample_popup(__self__,event):
         """Call the right-click menu for SampleList"""

@@ -136,7 +136,6 @@ class Busy:
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     def updatebar(__self__,value):
-
         """ update bar progress. Value is the progress literal value. The maximum value is 
         defined according to the amount of spectra to be read. """
 
@@ -144,14 +143,12 @@ class Busy:
         __self__.progress.update()
 
     def update_text(__self__,text):
-
         """ update text displayed on bar """
 
         __self__.master.label["text"] = text
         __self__.master.update()
 
     def destroybar(__self__):
-
         """ Destroys the bar window """
 
         __self__.master.grab_release()
@@ -159,7 +156,6 @@ class Busy:
         del __self__
 
     def interrupt(__self__,mca,timeout):
-
         """ In case of read failure, progress is interrupted """
 
         __self__.progress["maximum"] = timeout
@@ -182,7 +178,6 @@ class Busy:
         __self__.set_size()
 
     def abort(__self__):
-
         import pickle, os
         import Constants
         import Engine.SpecRead as sp
