@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 2.1.0 - Feb - 2021            #
+#                        version: 2.2.1 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -336,7 +336,8 @@ class Mosaic_API:
         icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
         __self__.master.iconbitmap(icon)
         __self__.master.title("XISMuS - Mosaic v{}".format(VERSION))
-        __self__.master.geometry("1024x768")
+        __self__.master.geometry("1048x768")
+        __self__.master.minsize(1048,768)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.NameVar = StringVar()
         __self__.NameVar.set("New Cube")
@@ -345,7 +346,6 @@ class Mosaic_API:
         __self__.layer = {}
         __self__.ActiveChildrenHistogram ={}
         __self__.master.resizable(True,True)
-        __self__.master.minsize(1024,768)
         __self__.layer_count = 0
         __self__.layer_numbering = {}
 
@@ -517,7 +517,10 @@ class Mosaic_API:
                 width=1024-768-2*pad,
                 height=128)
 
-        __self__.layers_list = Listbox(__self__.RightPane, height=10)
+        __self__.LayersPane = Frame(__self__.RightPane)
+        __self__.layers_scroll = ttk.Scrollbar(__self__.LayersPane)
+        __self__.layers_list = Listbox(__self__.LayersPane, height=10,
+                yscrollcommand=__self__.layers_scroll.set)
         __self__.layers_list.myId = "layers_list"
         __self__.layers_list.bind("<Button-1>",__self__.draw_patch)
         __self__.layers_list.bind("<Leave>",__self__.remove_patch)
@@ -618,7 +621,9 @@ class Mosaic_API:
         __self__.scale_check2.grid(row=1,column=0,sticky=W,padx=pad)
         __self__.scale_check3.grid(row=2,column=0,sticky=W,padx=pad,pady=(0,12))
 
-        __self__.layers_list.grid(row=0, column=0, rowspan=5)
+        __self__.LayersPane.grid(row=0, column=0, rowspan=5)
+        __self__.layers_list.grid(row=0, column=0, sticky=N+S)
+        __self__.layers_scroll.grid(row=0, column=1, sticky=N+S)
         __self__.container.grid(row=0,column=1)
         
         __self__.layer_up.grid(row=0, column=0)
@@ -636,6 +641,8 @@ class Mosaic_API:
         __self__.save.grid(row=8, column=0,pady=(10,0))
         __self__.load.grid(row=9, column=0,pady=(0,10))
         
+        Grid.columnconfigure(__self__.LayersPane, 0, weight=1)
+        __self__.layers_scroll.config(command=__self__.layers_list.yview)
         __self__.master.after(200,__self__.master.attributes,"-alpha",1.0)
         __self__.canvas.draw()
 
@@ -692,7 +699,6 @@ class Mosaic_API:
     #################################################################################
 
     def rotate_data(__self__, specific_layer=None):
-
         def clockwise(layer):
             layer.matrix = np.rot90(layer.matrix,3)
             print("I rotated the matrix",layer.matrix.shape)
@@ -923,20 +929,27 @@ class Mosaic_API:
         __self__.maps_window.title("Available samples")
         __self__.maps_window.iconbitmap(icon)
         __self__.maps_window.resizable(False, False)
-        __self__.maps_window.geometry("240x180")
-        __self__.maps_list = Listbox(__self__.maps_window)
-        __self__.maps_list.pack(side=TOP, fill=X)
+        __self__.maps_window.geometry("240x320")
+        __self__.maps_scrollbar = ttk.Scrollbar(__self__.maps_window)
+        __self__.maps_list = Listbox(__self__.maps_window,
+                yscrollcommand=__self__.maps_scrollbar.set)
         __self__.maps_list.config(selectmode=SINGLE)
         for key in cube_dict:
             item = cube_dict[key]
             __self__.maps_list.insert(END,"{}".format(item))
-        __self__.ok_btn = Button(
+        __self__.ok_btn = ttk.Button(
                 __self__.maps_window, 
                 text="Import", 
-                bd=3, 
-                width=13,
+                takefocus=False,
                 command=__self__.grep_cube)
-        __self__.ok_btn.pack(side=BOTTOM, pady=3)
+
+        __self__.maps_list.grid(row=0, column=0, sticky=N+W+S+E, padx=(6,0), pady=6)
+        __self__.maps_scrollbar.grid(row=0, column=1, sticky=N+S, padx=(0,6), pady=6)
+        __self__.ok_btn.grid(row=1, column=0, columnspan=2, pady=(0,6))
+        __self__.maps_scrollbar.config(command=__self__.maps_list.yview)
+        Grid.rowconfigure(__self__.maps_window, 0, weight=1)
+        Grid.columnconfigure(__self__.maps_window, 0, weight=1)
+
         place_center(__self__.master, __self__.maps_window)
         __self__.maps_window.deiconify()
         __self__.maps_window.focus_force()
@@ -2110,11 +2123,7 @@ class LineAnchors:
 
    
 if __name__.endswith('__main__'):         
-    """ This is an independent module, which can be run separately from CoreGUI.py """
-
     optimum_resolution = (1920,1080)
-
-    
     sp.conditional_setup()
     mosaic_root = Mosaic_API((500,500))
     mosaic_root.master.mainloop()

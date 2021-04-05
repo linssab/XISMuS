@@ -94,7 +94,7 @@ class SimpleFitPanel:
         __self__.PoolPane = Frame(__self__.MainPanel)
         __self__.PoolScroll = ttk.Scrollbar(__self__.PoolPane)
         __self__.Pool = ttk.Treeview(__self__.PoolPane, takefocus=False,
-                yscrollcomman=__self__.PoolScroll.set)
+                yscrollcommand=__self__.PoolScroll.set)
         __self__.Pool.heading("#0",text="Pool")
         __self__.AddRemovePane = Frame(__self__.MainPanel)
         __self__.AddBtn = Button(__self__.AddRemovePane, text=">>>", bd=0,

@@ -45,8 +45,11 @@ def update_version():
         return sum(version)
 
     def request_patch():
-        package = request.urlopen("https://xismus.sourceforge.io/__version__.txt")
-        version = package.read().decode("utf-8").replace("v","")
+        try: 
+            package = request.urlopen("https://xismus.sourceforge.io/__version__.txt")
+            version = package.read().decode("utf-8").replace("v","")
+        except:
+            return 0
         
         if get_version(version) > get_version(Constants.VERSION):
             question = messagebox.askyesno("New version available!",
@@ -55,7 +58,7 @@ def update_version():
                 destination = os.path.join(os.path.dirname(__file__),"patch.exe")
                 try:
                     if os.path.exists(destination):
-                        logger.info("Patche file already exists!") 
+                        logger.info("Patch file already exists!") 
                         return 1
                     else:
                         download_file(destination,"https://xismus.sourceforge.io/latest.exe") 
@@ -708,11 +711,11 @@ class CanvasSizeDialog:
         try:
             size = (__self__.x.get(),__self__.y.get())
             __self__.kill()
-            Mosaic_API(size, root)
         except: 
             messagebox.showerror("Ivalid dimension!",
                     "Can't create {}x{} canvas!".format(__self__.x.get(),__self__.y.get()))
             return
+        Mosaic_API(size, root)
 
 
 class Convert_File_Name:
