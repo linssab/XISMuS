@@ -2500,6 +2500,9 @@ class ImageAnalyzer:
             Map2 = Map2[y[0]:y[1],x[0]:x[1]]
             __self__.crop_x = x
             __self__.crop_y = y
+        else: 
+            __self__.crop_x = [0,Map1.shape[0]]
+            __self__.crop_y = [0,Map1.shape[1]]
         dim = Map1.shape[0]
         bar.progress["maximum"] = dim
 
