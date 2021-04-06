@@ -1,4 +1,6 @@
 New in Version v2.2.1
 
 - Chunks splitting with auto_wizard improved
+- Automatic update tool added
+- Added missing scrollbars to Mosaic GUI
 - n-dead pixels appears when using n-cores with auto_wizard (fixed)
