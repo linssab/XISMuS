@@ -101,11 +101,10 @@ def update_version():
 
     if request_patch(latest):
         patch_path = os.path.abspath(os.path.join(os.path.dirname("__file__"),"patch.exe"))
-        patch_path = "\""+patch_path+"\""
+        patch_path = patch_path.replace(os.sep,"/")
         args = [patch_path]
         try: 
-            subprocess.Popen([r"update.exe"] + args, stdout=subprocess.PIPE, 
-                close_fds=True)
+            subprocess.Popen([r"update.exe"] + args, stdout=subprocess.PIPE)
         except:
             messagebox.showerror("Update error!","Failed to launch update.exe!")
             return
