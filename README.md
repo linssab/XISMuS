@@ -67,7 +67,7 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 [xraylib]: http://lvserver.ugent.be/xraylib/
 [x64]: https://sourceforge.net/projects/xismus/files/XISMuSx64_2.0.0_Setup.exe/download
 [x86]: https://sourceforge.net/projects/xismus/files/XISMuSx86_2.0.0_Setup.exe/download
-[PATCH]: https://sourceforge.net/projects/xismus/files/XISMuS-v2.2.0-Update.exe/download
+[PATCH]: https://sourceforge.net/projects/xismus/files/XISMuS-v2.2.1-Update.exe/download
 [UserGuide]: https://sourceforge.net/projects/xismus/files/XISMuS_User_Manual_2.2.0.pdf/download
 [compounds]: https://github.com/linssab/XISMuS/blob/master/COMPOUNDS.md
 

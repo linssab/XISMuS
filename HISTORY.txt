@@ -1,5 +1,4 @@
 New in Version v2.2.1
-
 - Chunks splitting with auto_wizard improved
 - Automatic update tool added
 - Added missing scrollbars to Mosaic GUI
