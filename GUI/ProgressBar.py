@@ -150,7 +150,6 @@ class Busy:
 
     def destroybar(__self__):
         """ Destroys the bar window """
-
         __self__.master.grab_release()
         __self__.master.destroy()
         del __self__
@@ -165,6 +164,17 @@ class Busy:
             __self__.updatebar(timeout-i)
             time.sleep(1)
         __self__.destroybar()
+    
+    def add_cancel_btn(__self__):
+        def cancel():
+            __self__.destroybar()
+            return
+        __self__.abort_btn = ttk.Button(__self__.outerframe,
+                text="Cancel",
+                width=7,
+                command=cancel)
+        __self__.abort_btn.grid(row=2,column=0,pady=3)
+        __self__.set_size()
 
     def add_abort(__self__,workers=None,multiprocess=Constants.MULTICORE,mode=None):
         __self__.mode=mode

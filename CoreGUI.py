@@ -7,21 +7,23 @@
 global root
 
 def update_version():
-    from urllib import request
     import io
     import subprocess
+    global latest
 
     def download_file(destination, URL):
-        r = request.urlopen(URL)
+        r = request.Request(URL)
+        r.add_header("Cache-Control", "max-age=0")
+        r = request.urlopen(r)
         Length = r.getheader('content-length')
         BlockSize = 1000000  # default value
         if Length:
             Length = int(Length)
             BlockSize = max(4096, Length // 20)
-        #print("UrlLib len, blocksize: ", Length, BlockSize)
         BufferAll = io.BytesIO()
         Size = 0
         bar = Busy(100,0)
+        bar.add_cancel_btn()
         bar.update_text("Downloading patch...")
         while True:
             BufferNow = r.read(BlockSize)
@@ -31,11 +33,17 @@ def update_version():
             Size += len(BufferNow)
             if Length:
                 Percent = int((Size / Length)*100)
-                bar.updatebar(Percent)
-        #print("Buffer All len:", len(BufferAll.getvalue()))
-        with open(destination, "wb") as f:
-            f.write(BufferAll.getvalue())
-        return
+                try: bar.updatebar(Percent)
+                except: 
+                    logger.info("Patch download cancelled.")
+                    del r
+                    del BufferAll
+                    return 0
+        f = open(destination, "wb")
+        f.write(BufferAll.getvalue())
+        f.close()
+        bar.destroybar()
+        return 1
 
     def get_version(version):
         version = version.split(".")
@@ -44,42 +52,64 @@ def update_version():
         version[2] = int(version[2])*1
         return sum(version)
 
-    def request_patch():
-        try: 
-            package = request.urlopen("https://xismus.sourceforge.io/__version__.txt")
-            version = package.read().decode("utf-8").replace("v","")
-        except:
+    def request_version():
+        global latest
+        try:
+            logger.info("Requesting latest version...")
+            package = request.Request("https://xismus.sourceforge.io/__version__.txt")
+            package.add_header("Cache-Control","max-age=0")
+            version = request.urlopen(package).read().decode("utf-8").replace("v","")
+            latest = version
+            logger.info(f"Latest version available: {latest}")
             return 0
-        
+        except:
+            logger.info("Failed to connect!")
+            latest = "0.0.0"
+            return 1
+
+    def request_patch(version):
+        destination = os.path.join(os.path.dirname("__file__"),"patch.exe")
         if get_version(version) > get_version(Constants.VERSION):
             question = messagebox.askyesno("New version available!",
     "There is a new version of XISMuS available. Would you like to update the software?")
             if question == True:
-                destination = os.path.join(os.path.dirname(__file__),"patch.exe")
+                logger.info("Connecting to servers...")
                 try:
                     if os.path.exists(destination):
                         logger.info("Patch file already exists!") 
                         return 1
                     else:
-                        download_file(destination,"https://xismus.sourceforge.io/latest.exe") 
-                        logger.info("Downloaded patch!")
-                        return 1
+                        p = download_file(destination,
+                                "https://xismus.sourceforge.io/latest.exe") 
+                        if p:
+                            logger.info("Downloaded patch!")
+                            return 1
+                        else: return 0
                 except OSError:
                     messagebox.showerror("Failed to get patch!",
                             "Something went wrong trying to download the patch file!")
                     return 0
-        else: return 0
-    if request_patch():
-        patch_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"patch.exe"))
-        xismus_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"XISMuS.exe"))
-        xismus_path = "\"C:\Program Files (x86)\XISMuS\XISMuS.exe\""
-        args = [patch_path, xismus_path]
-        try:
-            subprocess.Popen([r"update.exe"] + args)
-            sys.exit()
-        except: 
+        else: 
+            if os.path.exists(destination):
+                os.remove(destination) 
+            return 0
+    logger.info("Attempting to connect to sourceforge servers...")
+    t0 = threading.Thread(target=request_version)
+    t0.daemon = True
+    t0.start()
+    t0.join()
+
+    if request_patch(latest):
+        patch_path = os.path.abspath(os.path.join(os.path.dirname("__file__"),"patch.exe"))
+        patch_path = "\""+patch_path+"\""
+        args = [patch_path]
+        try: 
+            subprocess.Popen([r"update.exe"] + args, stdout=subprocess.PIPE, 
+                close_fds=True)
+        except:
             messagebox.showerror("Update error!","Failed to launch update.exe!")
             return
+        root.root_quit(force=1)
 
 def start_up():
     global root
@@ -99,6 +129,7 @@ def start_up():
     root = MainGUI()
     root.boot(database)
     root.busy = BusyManager(root.master)
+    update_version()
 
 def open_log():
     from ReadConfig import __PERSONAL__
@@ -1067,7 +1098,6 @@ class Welcome:
         ini.close()
         __self__.parent.master.focus_set()
         __self__.parent.master.focus_force()
-        __self__.master.after(250,update_version())
         __self__.master.destroy()
 
 
@@ -4491,7 +4521,12 @@ class MainGUI:
             pass
         return 0
                
-    def root_quit(__self__):
+    def root_quit(__self__,force=0):
+        if force:
+            __self__.master.quit()
+            del __self__
+            gc.collect()
+            sys.exit(0)
         r = messagebox.askquestion("Attention","Are you sure you want to exit?")
         if r == "yes":
             for widget in __self__.master.winfo_children():
@@ -5087,7 +5122,8 @@ class MainGUI:
             __self__.welcome_window = Welcome(__self__)
             __self__.welcome_window.master.grab_set()
             place_center(__self__.master, __self__.welcome_window.master)
-        else: update_version()
+            return 0
+        else: return 1
 
     def sample_popup(__self__,event):
         """Call the right-click menu for SampleList"""
@@ -6763,7 +6799,6 @@ class PeriodicTable:
             refresh_plots()
      
     def save_and_run(__self__,mode=None):
-        
         try: cube_status = os.stat(sp.cube_path)
         except: 
             try: cube_status = os.stat(root.h5path)
@@ -7189,6 +7224,7 @@ if __name__.endswith("__main__"):
     splash.update("Importing utilities... webbrowser")
     time.sleep(t)
     import webbrowser
+    from urllib import request
     splash.update("Importing utilities... virtual memory")
     time.sleep(t)
     from psutil import virtual_memory
@@ -7231,8 +7267,8 @@ if __name__.endswith("__main__"):
     splash.update("Reading configuration...")
     from ReadConfig import checkout_config, set_settings 
 
-    splash.update("Booting Engine...")
     time.sleep(t)
+    splash.update("Booting Engine...")
     import Engine
     import Engine.SpecRead as sp
     from Engine.ImgMath import LEVELS, correlate
@@ -7258,6 +7294,7 @@ if __name__.endswith("__main__"):
     from Engine.Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Engine.MappingParallel import Cube_reader, sort_results, digest_results
     from Engine.BatchFitter import MultiFit, SingleFit, build_images
+    import threading
 
     logger.info("#"*3+" Configuring environment "+"#"*3)
     start_up()
