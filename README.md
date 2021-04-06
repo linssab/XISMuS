@@ -24,6 +24,10 @@ If you rather run it from the source, on your local Python environment interpret
 `git clone https://github.com/linssab/XISMuS`<br>
 <br>
 Be sure to have all the required Python modules installed! They are listed in the section below.<br>
+You can install the proper corresponding versions using the "requirements.txt" file provided by typing the following command:<br>
+<br>
+`pip install -r .\requirements.txt`<br>
+<br>
 You will have to compile the Cython code, by typing in the following command on your terminal:<br>
 <br>
 `python .\setup_cy.py build_ext --inplace`<br>
@@ -34,6 +38,7 @@ Finally, add `My Documents` content inside your user documents folder.<br>
 ## As a package
 XISMuS Elements module is available as a package<br>
 To install it, simply type:
+<br>
 <br>
 `pip install compwizard`<br>
 <br>
@@ -57,6 +62,11 @@ The packages whose versions are mentioned are the stable versions working with X
 * psutil<br>
 * pywin32 (for 32-bit system builds)<br>
 * matplotlib<br>
+
+You can install the proper corresponding versions using the "requirements.txt" file provided by typing the following command:<br>
+<br>
+`pip install -r .\requirements.txt`<br>
+<br>
 
 #### xraylib _v 3.3.0_
 XISMuS uses xraylib version 3.3.0. You can download it for free [here][xraylib]. Be sure to download the corresponding version to your system architecture. <ins>Note: If XISMuS fails to launch due to missing DLL's, please install xraylib.</ins><br>
