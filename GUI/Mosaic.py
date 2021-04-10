@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 2.2.1 - Apr - 2021            #
+#                        version: 2.2.2 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -27,8 +27,10 @@ import threading
 import numpy as np
 import cv2
 import gc
+from psutil import virtual_memory
 import sys, os, copy, pickle, stat, random
 import logging, time
+logger = logging.getLogger("logfile")
 #############
 
 ######################
@@ -62,16 +64,32 @@ from .ProgressBar import Busy, create_tooltip
 #################
 VERSION = Constants.VERSION_MOS
 
+def convert_bytes(num):
+    """ Obtained from https://stackoverflow.com/questions/210408 """
+
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+
 def load_cube(cube=""):
+    sys_mem = dict(virtual_memory()._asdict())
+    available_memory = sys_mem["available"]
     path = os.path.join(__PERSONAL__,
         "output",cube,"{}.cube".format(cube))
     if os.path.exists(path):
+        cube_stats = os.stat(path)
+        cube_size = cube_stats.st_size
+        if cube_size > available_memory:
+            messagebox.showerror("Memory error!",
+                    f"No RAM available! Cube size: {convert_bytes(cube_size)}, Memory available: {convert_bytes(available_memory)}.")
+            return
         cube_file = open(path,"rb")
         try: cube = pickle.load(cube_file)
         except MemoryError as exception:
             messagebox.showerror("MemoryError",
                     "Unable to unpickle datacube {}.cube!".format(cube))
-            sys.exit(1)
+            return
         cube_file.close()
         return cube
     else:
@@ -1712,15 +1730,33 @@ class Mosaic_API:
             ######################################## 
             # allocate memory for the new datacube #
             ######################################## 
-
-            __self__.merge_matrix = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
-                    dtype="float32")
-
-            if __self__.zero_config["bgstrip"] == "None":
-                __self__.background = np.zeros([1,specsize], dtype="float32")
-            else:
-                __self__.background = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
-                    dtype="float32")
+            
+            sys_mem = dict(virtual_memory()._asdict())
+            mem = sys_mem["available"]
+            try:
+                if (end_x-start_x) * (end_y-start_y) * specsize * sys.getsizeof(float) > mem: 
+                    raise MemoryError("Insufficient memory!")
+                else:
+                    __self__.merge_matrix = np.zeros(
+                            [(end_x-start_x),(end_y-start_y),specsize],
+                            dtype="float32")
+                    sys_mem = dict(virtual_memory()._asdict())
+                    mem = sys_mem["available"]
+                if __self__.zero_config["bgstrip"] == "None":
+                    __self__.background = np.zeros([1,specsize], dtype="float32")
+                elif (end_x-start_x) * (end_y-start_y) * (sys.getsizeof(float)) < mem:
+                    __self__.background = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
+                        dtype="float32")
+                else: raise MemoryError("Insufficient memory!")
+            except MemoryError as exception:
+                logger.warning(
+                    f"Failed to merge datacube {__self__.NameVar.get()}. Insufficient RAM!")
+                messagebox.showerror("Failed!",
+                    f"Failed to merge datacube {__self__.NameVar.get()}. Insufficient RAM!")
+                __self__.progress_bar.destroybar()
+                __self__.master.focus_set()
+                __self__.master.grab_set()
+                return
 
             x, iteration = 0,0
             x_bounds = [start_x,end_x]
@@ -1769,8 +1805,6 @@ class Mosaic_API:
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
             new_cube.img_size = new_cube.dimension[0] * new_cube.dimension[1]
-            new_cube.matrix = np.zeros([new_cube.dimension[0],new_cube.dimension[1],
-                    new_cube.energyaxis.shape[0]],dtype='float32',order='C')
             new_cube.matrix = __self__.merge_matrix
             del __self__.merge_matrix
             gc.collect()
@@ -1779,6 +1813,8 @@ class Mosaic_API:
             new_cube.scalable = True
             new_cube.matrix = new_cube.matrix.astype("int32")
             new_cube.background = __self__.background
+            del __self__.background
+            gc.collect()
 
             __self__.progress_bar = Busy(11,0)
             __self__.progress_bar.updatebar(5)

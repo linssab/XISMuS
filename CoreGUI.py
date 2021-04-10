@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 2.2.1 - Apr - 2021            #
+#                        version: 2.2.2 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 global root
@@ -515,13 +515,36 @@ def load_cube():
     latest sp parameters. See setup conditions inside Engine.SpecRead module.
     Returns the datacube object """
 
+    def check_memory():
+        sys_mem = dict(virtual_memory()._asdict())
+        available_memory = sys_mem["available"]
+        cube_stats = os.stat(sp.cube_path)
+        cube_size = cube_stats.st_size
+        if hasattr(Constants.MY_DATACUBE,"matrix"):
+            m_size = Constants.MY_DATACUBE.matrix.itemsize
+            b_size = Constants.MY_DATACUBE.background.itemsize
+            temp_mem = Constants.MY_DATACUBE.matrix.size * m_size + \
+                    Constants.MY_DATACUBE.background.size * b_size
+        else: temp_mem = 0
+        if cube_size > ( available_memory - temp_mem ):
+            logger.warning(f"Cannot load cube {sp.cube_path}! Not enough RAM!")
+            messagebox.showerror("Memory error!",f"No RAM available! Cube size: {convert_bytes(cube_size)}, Memory available: {convert_bytes(available_memory)}.")
+            return 1
+        else: return 0
+
     logger.debug("Trying to load cube file.")
     logger.debug(sp.cube_path)
     if os.path.exists(sp.cube_path):
         root.busy.busy()
         cube_file = open(sp.cube_path,'rb')
-        try: del Constants.MY_DATACUBE
-        except: pass
+        if check_memory():
+            return
+        else: pass
+        try: 
+            del Constants.MY_DATACUBE
+            gc.collect()
+        except: 
+            pass
         Constants.MY_DATACUBE = pickle.load(cube_file)
         cube_file.close()
         if hasattr(Constants.MY_DATACUBE,"version"):
