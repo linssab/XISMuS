@@ -1747,7 +1747,10 @@ class Mosaic_API:
                 elif (end_x-start_x) * (end_y-start_y) * (sys.getsizeof(float)) < mem:
                     __self__.background = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                         dtype="float32")
-                else: raise MemoryError("Insufficient memory!")
+                else: 
+                    del __self__.merge_matrix
+                    gc.collect()
+                    raise MemoryError("Insufficient memory!")
             except MemoryError as exception:
                 logger.warning(
                     f"Failed to merge datacube {__self__.NameVar.get()}. Insufficient RAM!")
@@ -1845,11 +1848,15 @@ class Mosaic_API:
         __self__.master.focus_set()
 
     def kill(__self__,e=""):
+        del globals()["LAYERS_DICT"]
+        del __self__.layer
+        gc.collect()
         for widget in __self__.master.winfo_children():
             try: widget.destroy()
             except: pass
         __self__.master.grab_release()
         __self__.master.destroy()
+        del __self__
 
     def tis_cool_i_leave_now(__self__):
         __self__.master.grab_release()

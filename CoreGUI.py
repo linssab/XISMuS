@@ -526,9 +526,11 @@ def load_cube():
             temp_mem = Constants.MY_DATACUBE.matrix.size * m_size + \
                     Constants.MY_DATACUBE.background.size * b_size
         else: temp_mem = 0
-        if cube_size > ( available_memory - temp_mem ):
+        if cube_size > ( available_memory + temp_mem ):
+            print("Cube",cube_size, "\nAvailable:",available_memory, "\nTemp:",temp_mem)
             logger.warning(f"Cannot load cube {sp.cube_path}! Not enough RAM!")
             messagebox.showerror("Memory error!",f"No RAM available! Cube size: {convert_bytes(cube_size)}, Memory available: {convert_bytes(available_memory)}.")
+            root.busy.notbusy()
             return 1
         else: return 0
 
@@ -538,7 +540,7 @@ def load_cube():
         root.busy.busy()
         cube_file = open(sp.cube_path,'rb')
         if check_memory():
-            return
+            raise MemoryError(f"Could not load datacube {sp.cube_path}")
         else: pass
         try: 
             del Constants.MY_DATACUBE
@@ -5106,7 +5108,8 @@ class MainGUI:
         local_cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
         if os.path.exists(local_cube_path): 
             sp.cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
-            load_cube()
+            try: load_cube()
+            except: return
             sp.setup_from_datacube(Constants.MY_DATACUBE,__self__.samples)
             __self__.SampleVar.set("Sample on memory: "+Constants.SAMPLE_PATH)
             __self__.toggle_(toggle="on")    
