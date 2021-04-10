@@ -1299,7 +1299,7 @@ class SingleFit():
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.update_text("Filtering data...")
 
-        prepare_data(__self__)
+        if Constants.FILTER: prepare_data(__self__)
 
         __self__.continuum = Constants.MY_DATACUBE.background.reshape(
                 -1,Constants.MY_DATACUBE.background.shape[-1])
@@ -1436,7 +1436,7 @@ class MultiFit():
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.update_text("Filtering data...")
 
-        prepare_data(__self__)
+        if Constants.FILTER: prepare_data(__self__)
 
         __self__.continuum = Constants.MY_DATACUBE.background.reshape(
             -1,Constants.MY_DATACUBE.background.shape[-1])
@@ -1488,13 +1488,6 @@ class MultiFit():
                     continuum = __self__.continuum[chunk0:chunk1]
                     for i in range(bite_size):
                         spec +=1
-                    """
-                    for i in range(bite_size):
-                        __self__.bar.updatebar(spec)
-                        counts.append(__self__.counts[spec])
-                        continuum.append(__self__.continuum[spec])
-                        spec += 1
-                    """
                     data = (counts,continuum)
                     block.append(data)
                     counts, continuum = [],[]
@@ -1511,10 +1504,11 @@ class MultiFit():
             else:
                 spec = 0
                 for k in range(__self__.cores):
+                    chunk0 = k*bite_size
+                    chunk1 = chunk0+bite_size
                     print("Block ",k)
+                    counts = __self__.counts[chunk0:chunk1]
                     for i in range(bite_size):
-                        __self__.bar.updatebar(spec)
-                        counts.append(__self__.counts[spec])
                         spec += 1
                     data = (counts)
                     block.append(data)
@@ -1537,7 +1531,9 @@ class MultiFit():
             print("Data blocks shape: ",block.shape)
 
             #######################################################################
-
+        del __self__.counts
+        del __self__.continuum
+        gc.collect()
         return block, leftovers
 
     def locate_peaks(__self__,add_list=None,path="./"):
@@ -1664,6 +1660,7 @@ class MultiFit():
 
         del Constants.MY_DATACUBE.matrix
         del Constants.MY_DATACUBE.background
+        gc.collect()
 
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.updatebar(0)
@@ -1688,6 +1685,7 @@ class MultiFit():
             else:
                 counts = np.asarray(copy.deepcopy(block),dtype="int32")
                 continuum = np.zeros([1,counts.shape[1]])
+            del block
 
             print("Counts shape", counts.shape)
             print("Continuum shape", continuum.shape)
@@ -1714,8 +1712,8 @@ class MultiFit():
                         (cycles,plot_save_interval,save_plots)))
 
             __self__.workers.append(p)
-            del block
             del counts, continuum
+            gc.collect()
         del bites
         gc.collect()
 
