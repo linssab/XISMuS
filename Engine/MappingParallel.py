@@ -9,7 +9,6 @@
 # Utilities #
 #############
 import os, sys, logging, multiprocessing
-logger = logging.getLogger("logfile")
 import numpy as np
 import gc
 from multiprocessing import freeze_support
@@ -32,9 +31,9 @@ from . import SpecRead
 from . import ImgMath
 #################
 lock = multiprocessing.Lock()
+logger = logging.getLogger("logfile")
 
 def convert_bytes(num):
-
     """ Obtained from https://stackoverflow.com/questions/210408 """
     for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0:
@@ -42,7 +41,6 @@ def convert_bytes(num):
         num /= 1024.0
 
 def break_list(element_list,max_instances):
-    
     """ cores variable governs how many instances can be 
     called and divides the chuncks """
 
@@ -69,7 +67,6 @@ def break_list(element_list,max_instances):
     return chunks
 
 def grab_line(cube,lines,iterator,Element):
-
     """ Uses SpecMath library to get the net area of the energies passed as
     arguments to this funcion
     This funcion is called by call_peakmethod inside start_reader function  """
@@ -205,7 +202,6 @@ def sort_results(results,element_list):
     return sorted_results
 
 def start_reader(cube,Element,iterator,results,F,N,TOL):
-
     SpecMath.FN_set(F,N)
     Constants.SETROI_TOLERANCE = TOL
     print("Fano {} Noise {} and Tolerance {} in autoroi-multicore".format(F,N,TOL))
@@ -245,8 +241,8 @@ def start_reader(cube,Element,iterator,results,F,N,TOL):
     call_peakmethod(cube,Element,iterator,results) 
     return results
 
+
 class Cube_reader():
-    
     """ To avoid unnecessarily copying all datacube information to each of the
     workers, a dictionary is created with only the relevant information and passed on """
 
@@ -376,7 +372,6 @@ class Cube_reader():
 
     def periodic_check(__self__):
         __self__.checkbar()
-      
     
 if __name__=="__main__":
     """
