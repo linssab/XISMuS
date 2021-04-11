@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 2.2.1 - Apr - 2021            #
+#                        version: 2.2.2 - Apr - 2021            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -15,8 +15,10 @@ import sys, os, multiprocessing, copy, pickle
 from multiprocessing import freeze_support
 lock = multiprocessing.Lock()
 freeze_support()
+from psutil import cpu_count
 import numpy as np
 import time,timeit
+import threading
 #############
 
 #################
@@ -50,19 +52,92 @@ def convert_bytes(num):
             return "%3.1f %s" % (num, x)
         num /= 1024.0
 
-def prepare_data(FitClassObject):
-    for i in range(len(FitClassObject.counts)):
-        FitClassObject.bar.updatebar(i)
-        FitClassObject.counts[i] = SpecMath.savgol_filter(
-                FitClassObject.counts[i],5,3).clip(0)
-    FitClassObject.SUM = np.sum(FitClassObject.counts.clip(1),0)
-    FitClassObject.global_continuum = batch_continuum_for_wizard(
-            FitClassObject.counts,
+def prepare_data(FitClass):
+    global progress
+    progress = 0
+    FitClass.bar.KILL = 0
+
+    threads = []
+    cpus = cpu_count() #NOTE: includes logical cores
+    lock = threading.Lock()
+
+    if cpus == 1:
+        print("Only one core")
+        logger.warning("Sample is too small, running with one core only...")
+    else:
+        bite_size = 0
+        while bite_size < 400:
+            bite_size = int(FitClass.counts.shape[0]/cpus)
+            leftovers = int(FitClass.counts.shape[0]%cpus)
+            print("bite size: ",bite_size,"leftovers ",leftovers)
+            cpus -= 1
+        cpus += 1
+        bite_size = bite_size
+        leftovers = leftovers
+
+    global kill
+    kill = 0
+    def filter_specs(spec_arr, bar, lock):
+        global progress
+        global kill
+        for i in range(spec_arr.shape[0]):
+            if kill: 
+                print("Thread killed")
+                return 0
+            with lock: 
+                spec_arr[i] = SpecMath.savgol_filter(spec_arr[i],5,3).clip(0)
+                progress += 1
+        return
+    
+    def check(bar, lim):
+        global progress
+        global kill
+        try: 
+            while progress < lim: 
+                bar.updatebar(progress)
+                print(f"Progress: {progress}/{lim}", end="\r")
+        except: 
+            print("Bar is no more.")
+            kill = 1
+        return
+
+    spec = 0
+    for k in range(cpus):
+        chunk0 = k*bite_size
+        chunk1 = chunk0+bite_size
+        t = threading.Thread(target=filter_specs, 
+                args=(FitClass.counts[chunk0:chunk1], 
+                    FitClass.bar, lock))
+        threads.append(t)
+        for i in range(bite_size):
+            spec += 1
+    if leftovers >= 1:
+        for i in range(leftovers):
+            FitClass.counts[spec] = SpecMath.savgol_filter(
+                    FitClass.counts[spec],5,3).clip(0)
+            spec += 1
+
+    #for i in range(len(FitClass.counts)):
+    #    FitClass.bar.updatebar(i)
+    #    FitClass.counts[i] = SpecMath.savgol_filter(
+    #            FitClass.counts[i],5,3).clip(0)
+
+    progress += leftovers
+    for t in threads:
+        t.start()
+    FitClass.bar.add_cancel_btn()
+    check(FitClass.bar, FitClass.counts.shape[0])
+    for t in threads:
+        t.join()
+
+    FitClass.SUM = np.sum(FitClass.counts.clip(1),0)
+    FitClass.global_continuum = batch_continuum_for_wizard(
+            FitClass.counts,
             bgstrip=Constants.MY_DATACUBE.config["bgstrip"],
             bgparams=Constants.MY_DATACUBE.config["bg_settings"],
-            bar=FitClassObject.bar,
-            global_spectrum=FitClassObject.SUM)
-    return
+            bar=FitClass.bar,
+            global_spectrum=FitClass.SUM)
+    return 0
 
 def batch_continuum_for_wizard(
         spectra_batch,
@@ -1281,133 +1356,6 @@ class Interrupt(Exception):
     pass
 
 
-class SingleFit():
-    def __init__(__self__,path):
-        __self__.iterator = 0
-        __self__.energies = Constants.MY_DATACUBE.energyaxis*1000
-        __self__.intercept = __self__.energies[0]
-        __self__.slope = Constants.MY_DATACUBE.gain*1000
-        __self__.counts = Constants.MY_DATACUBE.matrix.reshape(
-                -1,Constants.MY_DATACUBE.matrix.shape[-1])
-        __self__.FN = Constants.MY_DATACUBE.FN
-
-        ###################################################################################
-        # Prepare the data. Spectra are filtered with a savgol filter and the global      #
-        # spectrum must be recalculated for the filtered data. The same for the continuum #
-        ###################################################################################
-
-        __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.update_text("Filtering data...")
-
-        if Constants.FILTER: prepare_data(__self__)
-
-        __self__.continuum = Constants.MY_DATACUBE.background.reshape(
-                -1,Constants.MY_DATACUBE.background.shape[-1])
-        __self__.raw_sum_and_bg = Constants.MY_DATACUBE.sum, Constants.MY_DATACUBE.sum_bg
-        __self__.continuum = np.insert(__self__.continuum,0,__self__.global_continuum, axis=0)
-
-        __self__.bar.update_text("Thinking...")
-        __self__.fit_path = os.path.join(path,"Fit_Chunk_1.npy")
-
-
-    def run_fit(__self__):
-        import gc
-        figures_path = os.path.join(SpecRead.output_path,"Fit plots","Single")
-        try: os.makedirs(figures_path)
-        except: pass
-        peaks, matches = Constants.MATCHES
-        percent = __self__.iterator/len(__self__.counts)*100
-        __self__.bar = Busy(len(__self__.counts),0)
-        __self__.bar.add_abort(multiprocess=False,mode="auto_wizard")
-        del Constants.MY_DATACUBE.matrix
-        del Constants.MY_DATACUBE.background
-        fitted_spec = gausfit(
-                __self__.energies,              #energy axis (calibrated)
-                __self__.counts,                #data itself
-                __self__.continuum,             #data corresponding continuum estimation
-                peaks,                          #peaks energies
-                matches,                        #Z match dictionary
-                __self__.intercept,             #calibration zero
-                __self__.slope,                 #calibration gain
-                __self__.fit_path,              #path to save Fit_Chunk
-                figures_path,                   #path to save plots
-                __self__.raw_sum_and_bg,        #tuple with global spectrum and continuum
-                __self__.FN,                    #fano and noise
-                __self__.iterator,              #iterator
-                Constants.MY_DATACUBE.config,   #configurations
-                bar = __self__.bar)             #progressbar
-        __self__.bar.destroybar()
-        del __self__
-        gc.collect()
-
-    def locate_peaks(__self__,add_list=None,path="./"):
-        """ Locate peaks """
-
-        def find_nearest(array, value):
-            array = np.asarray(array)
-            idx = (np.abs(array - value)).argmin()
-            return array[idx]
-
-        peaks, matches = findpeak(
-                __self__.SUM,
-                __self__.continuum,
-                __self__.intercept,
-                __self__.slope,
-                __self__.energies,
-                path=path)
-
-        peaks, matches = recheck_peaks(peaks,matches)
-
-        #########################
-        # Add elements manually #
-        #########################
-
-        if add_list:
-            for el in add_list:
-
-                element_a = Elements.Energies[el]*1000
-                element_b = Elements.kbEnergies[el]*1000
-
-                logger.debug("Element {}, {}".format(element_a,element_b))
-
-                #############################################
-                #NOTE: uses the theoretical energies to fit #
-                #############################################
-                idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
-                idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
-                el = [[el, idx_a[0][0], idx_b[0][0]]]
-                #############################################
-
-                #####################################################################
-                #NOTE: uses setROI function. This returns the index of the nearest  #
-                # peak to the theoretical value                                     #
-                #####################################################################
-                """
-                elka_peak = setROI(
-                        element_a,
-                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-                elkb_peak = setROI(
-                        element_b,
-                        __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
-
-                logger.debug("setROI output: {}".format(elka_peak))
-                logger.debug("setROI output: {}".format(elkb_peak))
-
-                el = [[el,int((elka_peak[0]+elka_peak[1])/2),
-                        int((elkb_peak[0]+elkb_peak[1])/2)]]
-                """
-                #####################################################################
-
-                peaks, matches = add_elements(peaks,matches,el)
-                #except: logger.warning("Could not add element {} to chunk".format(el))
-
-        #########################
-
-        Constants.MATCHES = peaks, matches
-        logger.info("Elements being fitted: {}".format(matches))
-        return peaks, matches
-
-
 class MultiFit():
     def __init__(__self__,path):
         __self__.workers = []
@@ -1436,7 +1384,9 @@ class MultiFit():
         __self__.bar = Busy(len(__self__.counts),0)
         __self__.bar.update_text("Filtering data...")
 
-        if Constants.FILTER: prepare_data(__self__)
+        prepare_data(__self__)
+        if __self__.bar.KILL:
+            return
 
         __self__.continuum = Constants.MY_DATACUBE.background.reshape(
             -1,Constants.MY_DATACUBE.background.shape[-1])
@@ -1459,7 +1409,9 @@ class MultiFit():
         if __self__.cores == 1:
             print("Only one core")
             logger.warning("Sample is too small, running with one core only...")
-            return
+            __self__.bite_size = __self__.counts.shape[0]
+            __self__.leftovers = 0
+            return [(__self__.counts, __self__.continuum)], []
         else:
             bite_size = 0
             while bite_size < 400:

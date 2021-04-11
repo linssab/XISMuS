@@ -10,6 +10,7 @@ def update_version():
     import io
     import subprocess
     global latest
+    return
 
     def download_file(destination, URL):
         r = request.Request(URL)
@@ -4696,7 +4697,11 @@ class MainGUI:
                         Constants.MY_DATACUBE.img_size > 400:
                     root.Fitter = MultiFit(fit_path)
                 else:
-                    root.Fitter = SingleFit(fit_path)
+                    root.Fitter = MultiFit(fit_path)
+                    root.Fitter.cores = 1
+                if root.Fitter.bar.KILL: 
+                    messagebox.showinfo("ABORTED!","Process aborted by user.")
+                    return
                 
                 save_path = os.path.join(sp.output_path,"peak_find.png")
                 __self__.peaks, __self__.matches = root.Fitter.locate_peaks(path=save_path)
@@ -4731,20 +4736,15 @@ class MainGUI:
                 elif p2 == False:
 
                     start_time = time.time()
-                    if Constants.MULTICORE == True and \
-                            Constants.CPUS>1 and\
-                            Constants.MY_DATACUBE.img_size > 400:
-                        root.Fitter.launch_workers(
-                                Constants.FIT_CYCLES,
-                                Constants.SAVE_INTERVAL,
-                                Constants.SAVE_FIT_FIGURES)
-                    else: 
-                        root.Fitter.run_fit()
-                        del root.Fitter
+                    root.Fitter.launch_workers(
+                            Constants.FIT_CYCLES,
+                            Constants.SAVE_INTERVAL,
+                            Constants.SAVE_FIT_FIGURES)
 
                     root.bar = Busy(1,0)
                     root.bar.update_text("Building images...")
                     build_images(fit_path,bar=root.bar)
+                    del root.Fitter
 
                     timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
                     timestamps.write(
@@ -7321,7 +7321,7 @@ if __name__.endswith("__main__"):
     time.sleep(t)
     from Engine.Mapping import getpeakmap, grab_simple_roi_image, select_lines 
     from Engine.MappingParallel import Cube_reader, sort_results, digest_results
-    from Engine.BatchFitter import MultiFit, SingleFit, build_images
+    from Engine.BatchFitter import MultiFit, build_images
     import threading
 
     logger.info("#"*3+" Configuring environment "+"#"*3)

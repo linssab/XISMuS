@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          CONSTANTS                                            #
-#                        version: 2.2.1 - Apr - 2021            #
+#                        version: 2.2.2 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -43,6 +43,7 @@ PLOTMODE = "Logarithmic"
 PLOTSCALE = "-semilogy"
 RAM_LIMIT = None
 WELCOME = False
+FILTER = 1
 CPUS = cpu_count(logical=False)
 
 def list_all():
