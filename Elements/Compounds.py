@@ -6,9 +6,12 @@
 #################################################################
 
 import numpy as np
-try: import xraylib as xlib
-except: pass
 from . import EnergyLib
+try:
+    import xraylib as xlib
+    xlib.SetErrorMessages(0)
+except:
+    print("FAILED TO LOAD XRAYLIB MODULE\nCompounds library will not work!")
 
 CompoundList = {
         'Air'           :{'O':2,'N':2,},

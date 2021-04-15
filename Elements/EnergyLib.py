@@ -23,8 +23,7 @@ try:
     Constants.USEXLIB = True
     xlib.SetErrorMessages(0)
 except: 
-    print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur.\
-            check https://github.com/tschoonj/xraylib/wiki for further information.")
+    print("FAILED TO LOAD XRAYLIB MODULE\nContinuing with internal library, errors may occur. Check https://github.com/tschoonj/xraylib/wiki for further information.")
     Constants.USEXLIB = False
 
 "ELEMENT, ,DENSITY, MASS, KA OR LA, KB OR LB, MU(20KeV), MU(PB-LA), MU(PB-LB), MU(CU-KA), MU(CU-KB)"

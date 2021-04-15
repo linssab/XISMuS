@@ -1,6 +1,5 @@
-New in Version v2.2.1
+New in Version v2.2.2
 
-- Chunks splitting with auto_wizard improved
-- Automatic update tool added
-- Added missing scrollbars to Mosaic GUI
-- n-dead pixels appears when using n-cores with auto_wizard (fixed)
+- Improved memory managed
+- Auto-wizard data pre-treatment speed significantly improved
+- Large datasets (900k+ spectra) were causing the program to crash when using auto_wizard (fixed)

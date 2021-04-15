@@ -1733,8 +1733,9 @@ class Mosaic_API:
             
             sys_mem = dict(virtual_memory()._asdict())
             mem = sys_mem["available"]
+            float_size = np.float32(0.0).itemsize
             try:
-                if (end_x-start_x) * (end_y-start_y) * specsize * sys.getsizeof(float) > mem: 
+                if (end_x-start_x) * (end_y-start_y) * specsize * float_size > mem: 
                     raise MemoryError("Insufficient memory!")
                 else:
                     __self__.merge_matrix = np.zeros(
@@ -1744,7 +1745,7 @@ class Mosaic_API:
                     mem = sys_mem["available"]
                 if __self__.zero_config["bgstrip"] == "None":
                     __self__.background = np.zeros([1,specsize], dtype="float32")
-                elif (end_x-start_x) * (end_y-start_y) * (sys.getsizeof(float)) < mem:
+                elif (end_x-start_x) * (end_y-start_y) * (float_size) < mem:
                     __self__.background = np.zeros([(end_x-start_x),(end_y-start_y),specsize],
                         dtype="float32")
                 else: 

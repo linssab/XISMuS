@@ -54,7 +54,6 @@ from Graphics import *
 ####################
 
 class AdvCalib():
-
     def __init__(__self__, parent, root, hascube=0):
         __self__.master = Toplevel(master = parent.master)
         __self__.master.title("Advanced calibration")

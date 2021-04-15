@@ -34,7 +34,6 @@ from .ImgMath import LEVELS
 from .Mapping import getdensitymap
 from .CBooster import *
 from GUI.ProgressBar import Busy
-from GUI.ProgressBar import ThinkingWheel
 import Constants
 import cy_funcs
 #################
@@ -1763,12 +1762,6 @@ def findpeaks(spectrum,w=9,r=1):
     for i in indexes:
         if y[i]>r*(var[i]**0.5):
             selected_peaks.append(i)
-    #plt.semilogy(spectrum)
-    #plt.semilogy(y,color="green")
-    #plt.semilogy(var,color="tomato")
-    #for idx in indexes:
-    #    plt.axvline(x=idx)
-    #plt.show()
     return selected_peaks
 
 def gaus(x, E_peak, gain, Noise, Fano, *A):

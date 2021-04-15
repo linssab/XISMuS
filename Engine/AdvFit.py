@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Advanced fit                                         #
-#                        version: 2.2.0 - Mar - 2021            #
+#                        version: 2.2.2 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -83,17 +83,6 @@ def work_elements(e_axis, pool, gain, global_spec, split=0):
         duplicates = []
         energies = [idx for idx in [nearest(e_axis, 1000*pool_lines[line][0]) for line in line_names]]
 
-        """
-        for j in range(len(line_names)-1):
-            if energies[j+1][0]==energies[j][0] or \
-                    abs(energies[j+1][0]-energies[j][0]) < gain*2:
-                duplicates.append(j+1)
-                del pool_lines[line_names[j+1]]
-        for dp in duplicates: energies[dp] = -1
-        while -1 in energies:
-            energies.remove(-1)
-        """
-
         rad_rates = [pool_lines[line][1] for line in pool_lines.keys()]
         peaks = [energies[i][0] for i in range(len(energies))]
         indexes = np.asarray([e[1] for e in energies])
@@ -102,10 +91,6 @@ def work_elements(e_axis, pool, gain, global_spec, split=0):
         element[element_pool[i]]["indexes"] = np.asarray(indexes,dtype=np.int32)
         element[element_pool[i]]["peaks"] = np.asarray(peaks,dtype=np.float32)
         element[element_pool[i]]["rad_rates"] = np.asarray(rad_rates,dtype=np.float32)
-        #print("#"*10)
-        #print(element[element_pool[i]])
-        #print(lines)
-        #print("#"*10)
 
     if split:
         return element, lines
@@ -129,44 +114,6 @@ def work_elements(e_axis, pool, gain, global_spec, split=0):
         big_batch["peaks"] = np.asarray(big_batch["peaks"], dtype=np.float32)
         big_batch["rad_rates"] = np.asarray(big_batch["rad_rates"], dtype=np.float32)
 
-        """
-        peaks_positions = findpeaks(global_spec)
-        tolerance = Constants.SETROI_TOLERANCE
-        peaks = big_batch["peaks"]
-        indexes = big_batch["indexes"]
-        rad_rates = big_batch["rad_rates"]
-        print(Constants.SETROI_TOLERANCE)
-        for p in range(peaks.shape[0]):
-            located_peaks = e_axis[peaks_positions]
-            for lc in range(len(located_peaks)):
-                if peaks[p] < 4800: w = Constants.SETROI_TOLERANCE[0]
-                elif peaks[p] > 12000:
-                    w = Constants.SETROI_TOLERANCE[2]
-                else: w = Constants.SETROI_TOLERANCE[1]
-                if peaks[p]-(w*gain) < located_peaks[lc] < peaks[p]+(w*gain):
-                    # checks if findpeaks peak is within acceptable range
-                    # of the theoretical position.
-                    # Then, checks if there is a peak previously detected there
-                    print("\nPEAK CAN BE SHIFTED")
-                    print(peaks[p],indexes[p],"|",located_peaks[lc],np.where(peaks==located_peaks[lc])[0])
-                    doublet = np.where(peaks==located_peaks[lc])[0]
-                    replace = 0
-                    if doublet.size == 0: replace = 1
-                    else:
-                        for db in doublet:
-                            if rad_rates[db] < rad_rates[p]:
-                                replace += 1
-                        if replace == len(doublet): replace = 1
-                        else: replace = 0
-                    if replace:
-                        print("before",peaks[p], indexes[p])
-                        big_batch["peaks"][p] = located_peaks[lc]
-                        big_batch["indexes"][p] = peaks_positions[lc]
-                        print("fixed",big_batch["peaks"][p], big_batch["indexes"][p])
-                        #big_batch["indexes"] = np.delete(big_batch["indexes"],doublet)
-                        #big_batch["rad_rates"] = np.delete(big_batch["rad_rates"],doublet)
-                        #big_batch["peaks"] = np.delete(big_batch["peaks"],doublet)
-        """
         return big_batch, lines
 
 def run_spectrum(spectrum,      #spectrum to be fitted
@@ -217,7 +164,7 @@ def fit_peaks(e_axis, spectrum, continuum, PARAMS, p0=None,
             p0,
             #bounds=[np.array([-np.inf for i in range(indexes.shape[0])]),
             bounds=[np.zeros(peaks.shape[0])-1,
-                np.array(spectrum[indexes]*p0*gain)],
+                np.array(spectrum[indexes]*p0*Constants.PEAK_TOLERANCE*gain)],
             args=(e_axis, spectrum, continuum, params))
         pcov = 0
         popt = popt.x
@@ -228,7 +175,7 @@ def fit_peaks(e_axis, spectrum, continuum, PARAMS, p0=None,
             spectrum,
             sigma=np.sqrt(spectrum).clip(1),
             bounds=[np.zeros(peaks.size)-1,
-                np.array(spectrum[indexes]*p0*gain)],
+                np.array(spectrum[indexes]*p0*Constants.PEAK_TOLERANCE*gain)],
             p0=p0,
             maxfev=cycles)
     return popt, pcov

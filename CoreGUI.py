@@ -2288,7 +2288,6 @@ class ImageAnalyzer:
         hi_t = __self__.RightCanvas.winfo_height()
 
     def toggle_annotator(__self__):
-        
         """ passes the current datacube, so if the user changes it, 
         for the current ImgAnal api open when
         using the annotation function, the cube is still the 
