@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC MATHEMATICS                                     #
-#                        version: 2.0.0 - Feb - 2021            #
+#                        version: 2.3.0 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 TESTFNC = False
@@ -23,11 +23,13 @@ import random
 #################
 # Local imports #
 #################
+logger.info("In SpecMath: Importing local modules...")
 import Elements
 from .SpecRead import (getdata,
 getdimension,
 getcalibration,
 getfirstfile,
+getftirdata,
 calibrate,
 updatespectra)
 from .ImgMath import LEVELS
@@ -78,16 +80,29 @@ class datacube:
         
         __self__.datatypes = np.array(["{0}".format(
             dtypes[type]) for type in range(len(dtypes))])
+        print(__self__.datatypes)
+        
+        ########################################################
+    
+        if any("mca" in x for x in __self__.datatypes):
+            specsize = getdata(getfirstfile())
+        elif any("upgrade" in x for x in __self__.datatypes):
+            specsize = Constants.MY_DATACUBE.matrix.shape[2]
+        elif any("h5" in x for x in __self__.datatypes):
+            specsize = Constants.MY_DATACUBE.shape[2]
+            __self__.path = ""
+        elif any("ftir" in x for x in __self__.datatypes):
+            specsize = getftirdata(getfirstfile()).size
+            __self__.dimension = getdimension()
+            __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+            __self__.matrix = np.zeros([__self__.dimension[0],__self__.dimension[1],
+                specsize],dtype="float32",order='C')
+            __self__.config = configuration
+            __self__.calibration = getcalibration()
+        else:
+            specsize = 0
 
-        try: specsize = getdata(getfirstfile())
-        except:
-            if any("upgrade" in x for x in __self__.datatypes):
-                specsize = Constants.MY_DATACUBE.matrix.shape[2]
-            elif any("h5" in x for x in __self__.datatypes):
-                specsize = Constants.MY_DATACUBE.shape[2]
-                __self__.path = ""
-            else:
-                specsize = 0
+        ########################################################
 
         if any("upgrade" in x for x in __self__.datatypes):
             shape = Constants.MY_DATACUBE.matrix.shape
@@ -129,12 +144,14 @@ class datacube:
 
         size = int(len(mps))
         shape = np.asarray(__self__.matrix.shape)
+        if any("ftir" in x for x in __self__.datatypes):
+            return
         cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
 
     def stacksum(__self__):
         """ Reall all data in datacube.matrix and return the summation derived spectrum """
 
-        __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype="int32")
+        __self__.sum = np.zeros([__self__.matrix.shape[2]],dtype="float32")
         for x in range(__self__.matrix.shape[0]):
             for y in range(__self__.matrix.shape[1]):
                 __self__.sum += __self__.matrix[x,y]
@@ -445,27 +462,42 @@ class datacube:
 
                     pool_chunk = Constants.FILE_POOL[a:b]
 
-                    t = threading.Thread(target=read_pool, 
-                            args=(start,
-                                end,
-                                pool_chunk,
-                                __self__.dimension,
-                                __self__.matrix,))
+                    if any("ftir" in x for x in __self__.datatypes):
+                        t = threading.Thread(target=read_ftir_pool, 
+                                args=(start,
+                                    end,
+                                    pool_chunk,
+                                    __self__.dimension,
+                                    __self__.matrix,))
+                    else:
+                        t = threading.Thread(target=read_pool,
+                                args=(start,
+                                    end,
+                                    pool_chunk,
+                                    __self__.dimension,
+                                    __self__.matrix,))
                     running_chunks.append(t)
                     logger.info("Polling chunk {}. Leftovers: {}".format(chunk,leftovers))
 
                 if leftovers > 0:
-
                     start = (__self__.dimension[0]-leftovers)
                     end = __self__.dimension[0]
                     a = (__self__.img_size - (leftovers*__self__.dimension[1]))
                     pool_chunk = Constants.FILE_POOL[a:]
-                    t = threading.Thread(target=read_pool, 
-                            args=(start,
-                                end,
-                                pool_chunk,
-                                __self__.dimension,
-                                __self__.matrix,))
+                    if any("ftir" in x for x in __self__.datatypes):
+                        t = threading.Thread(target=read_ftir_pool,
+                                args=(start,
+                                    end,
+                                    pool_chunk,
+                                    __self__.dimension,
+                                    __self__.matrix,))
+                    else:
+                        t = threading.Thread(target=read_pool,
+                                args=(start,
+                                    end,
+                                    pool_chunk,
+                                    __self__.dimension,
+                                    __self__.matrix,))
                     running_chunks.append(t)
                     logger.info("Polling Leftovers")
 
@@ -481,9 +513,13 @@ class datacube:
                 try:
                     tot = __self__.progressbar.progress["maximum"]
                     for spec in Constants.FILE_POOL:
-                        try: specdata = getdata(spec)
+                        try: 
+                            if any("ftir" in x for x in __self__.datatypes):
+                                specdata = getftirdata(spec)
+                            else: specdata = getdata(spec)
                         except: 
                             __self__.progressbar.destroybar()
+                            Constants.FTIR_DATA = 0
                             return 1, spec
                         if isinstance(specdata,np.ndarray) == False: 
                             __self__.progressbar.interrupt(specdata,5)
@@ -497,6 +533,7 @@ class datacube:
                         __self__.progressbar.updatebar(iterator)
                         iterator += 1
                 except IndexError as e:
+                    Constants.FTIR_DATA = 0
                     __self__.progressbar.destroybar()
                     return 1, spec
             logger.info("Packed spectra in {} seconds".format(time.time()-timer))
@@ -533,7 +570,6 @@ class datacube:
         
         logger.debug("Writing summation mca and ANSII files...")
         __self__.write_sum()
-
         __self__.progressbar.update_text("Finding Noise and Fano...")
         __self__.progressbar.updatebar(5)
         __self__.fit_fano_and_noise()
@@ -657,6 +693,8 @@ class datacube:
                     if __self__.__dict__[element + f"_{line}"].max() > 0:
                         packed.append(element + f"_{line}")
         if hasattr(__self__,"custom_a"): packed.append("custom_a")
+        for key in __self__.__dict__.keys():
+            if "Slice" in key: packed.append(key)
         return packed
 
     def prepack_elements(__self__,element_list,wipe=False):
@@ -772,6 +810,24 @@ def build_pool(size):
         spec = os.path.join(Constants.SAMPLE_PATH,
                 str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
         Constants.FILE_POOL.append(spec)
+
+def read_ftir_pool(start,end,pool,dimension,m):
+    """ INPUT:
+        - start: int; starting row
+        - end: int; lower boundary row
+        - pool: list; contains the spectra to be read
+        - dimension: int; row length
+        - m: np.array (int); spectra matrix """
+
+    global iterator
+    scan = (start,0)
+    x, y = scan[0], scan[1]
+    for spec in pool:
+        logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+        with lock: m[x][y] = getftirdata(spec)
+        scan = refresh_position(scan[0],scan[1],dimension)
+        x,y = scan[0],scan[1]
+        with lock: iterator += 1
 
 def read_pool(start,end,pool,dimension,m):
     """ INPUT:
@@ -1222,7 +1278,6 @@ def energyaxis():
 
 def getstackplot(datacube,mode=None):
     """ Returns the requested derived spectrum from datacube object """
-    
     stack = datacube.sum
     mps = datacube.mps
     bg = datacube.sum_bg

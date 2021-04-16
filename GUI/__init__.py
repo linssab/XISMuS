@@ -6,6 +6,8 @@ logger.info("Importing AdvCalibration...")
 from .AdvCalibration import *
 logger.info("Importing FitPanels...")
 from .FitPanels import *
+logger.info("Importing IndexNavigator...")
+from .IndexNavigator import *
 logger.info("Importing ProgressBar...")
 from .ProgressBar import *
 logger.info("Importing Theme...")

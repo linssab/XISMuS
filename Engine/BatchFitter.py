@@ -24,6 +24,7 @@ import threading
 #################
 # Local imports #
 #################
+logger.info("In BatchFitter: Importing local modules...")
 import Constants
 import Elements
 from . import SpecRead

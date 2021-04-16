@@ -1,15 +1,15 @@
 #################################################################
 #                                                               #
 #          CONSTANTS                                            #
-#                        version: 2.2.2 - Apr - 2021            #
+#                        version: 2.3.0 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import logging
 from psutil import cpu_count
 
-VERSION = "2.2.1"
-VERSION_MOS = "2.2.1"
+VERSION = "2.3.0"
+VERSION_MOS = "2.3.0"
 LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None
@@ -45,6 +45,7 @@ RAM_LIMIT = None
 WELCOME = False
 FILTER = 1
 CPUS = cpu_count(logical=False)
+FTIR_DATA = 0
 
 def list_all():
     return {"version":VERSION,

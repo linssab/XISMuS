@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 2.2.2 - Apr - 2021            #
+#                        version: 2.3.0 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 global root
@@ -10,7 +10,6 @@ def update_version():
     import io
     import subprocess
     global latest
-    return
 
     def download_file(destination, URL):
         r = request.Request(URL)
@@ -449,7 +448,10 @@ def call_compilecube():
 
             ############################################################
 
-            specbatch = Cube(["mca"],Constants.CONFIG)
+            if Constants.FTIR_DATA: 
+                datatype="ftir"
+            else: datatype="mca"
+            specbatch = Cube([datatype],Constants.CONFIG)
             fail = specbatch.compile_cube()
             root.ButtonLoad.config(state=NORMAL)
             root.MenuBar.entryconfig("Toolbox", state=NORMAL)
@@ -563,6 +565,7 @@ def load_cube():
 
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
+        
         root.busy.notbusy()
     elif os.path.exists(os.path.join(sp.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
@@ -634,13 +637,20 @@ def refresh_plots(exclusive=""):
             root.combined.update_idletasks()
         except: pass
         for API in root.ImageAnalyzers:
-            try :
-                API.plot.draw_selective_sum(API.DATACUBE,
-                        API.sum_spectrum,
-                        display_mode = Constants.PLOTSCALE,
-                        lines = lines,
-                        refresh=True)
-                API.plot.master.update_idletasks()
+            try:
+                if hasattr(API,"plot"):
+                    API.plot.draw_selective_sum(API.DATACUBE,
+                            API.sum_spectrum,
+                            display_mode = Constants.PLOTSCALE,
+                            lines = lines,
+                            refresh=True)
+                    API.plot.master.update_idletasks()
+                if hasattr(API,"IndexNavigator"):
+                    if Constants.PLOTSCALE == "-semilogy":
+                        mode = "log"
+                    else: mode = "linear"
+                    API.IndexNavigator.PlotRight.set_yscale(mode)
+                    API.IndexNavigator.PlotCanvasR.draw_idle()
             except: pass
 
 def check_screen_resolution(resolution_tuple):
@@ -1819,6 +1829,12 @@ class ImageAnalyzer:
         __self__.master.attributes("-alpha",0.0)
         __self__.master.tagged = False
         __self__.master.title("Image Analyzer")
+        __self__.MenuBar = Menu(__self__.master, tearoff=0)
+        __self__.Menu = Menu(__self__.MenuBar, tearoff=0)
+        __self__.MenuBar.add_cascade(label="More", menu=__self__.Menu)
+        __self__.Menu.add_command(
+                label="Navigate by index . . .",
+                command=__self__.call_index_navigator)
         __self__.alt = False
 
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
@@ -1870,8 +1886,16 @@ class ImageAnalyzer:
         __self__.master.grid_columnconfigure(0,weight=1)
         __self__.master.grid_columnconfigure(1,weight=1)
         __self__.master.grid_rowconfigure(1,weight=1)
+        __self__.master.config(menu=__self__.MenuBar)
 
         __self__.build_widgets()
+
+    def call_index_navigator(__self__):
+        if hasattr(__self__,"IndexNavigator"):
+            pass
+        else:
+            __self__.IndexNavigator = Navigator(__self__)
+        __self__.IndexNavigator.master.focus_set()
 
     def get_version(__self__):
         """ version attribute was implemented in XISMuS 1.3.0, 
@@ -2194,6 +2218,13 @@ class ImageAnalyzer:
         x = __self__.master.winfo_width()
         y = __self__.master.winfo_height()
 
+        __self__.toggle_() 
+
+        __self__.master.minsize(x,y)
+        __self__.set_bg("#3b3b38")
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+
+    def toggle_(__self__):
         if __self__.nomaps == True:
             __self__.add_btn.config(state=DISABLED)
             __self__.subtract_btn.config(state=DISABLED)
@@ -2206,10 +2237,6 @@ class ImageAnalyzer:
             __self__.annotate.config(state=NORMAL)
             __self__.correlate.config(state=NORMAL)
             __self__.export.config(state=NORMAL)
-
-        __self__.master.minsize(x,y)
-        __self__.set_bg("#3b3b38")
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     def set_bg(__self__,colour="white"):
         if colour == "white":
@@ -2233,12 +2260,13 @@ class ImageAnalyzer:
         __self__.canvas2.draw()
 
     def kill(__self__):
+        global root
         for widget in __self__.master.winfo_children():
             widget.destroy()
-            checkout_config()
-            __self__.master.destroy()   
+        __self__.master.destroy()   
         try: __self__.plot.wipe_plot()
         except: pass
+        root.ImageAnalyzers.remove(__self__)
         gc.collect()
         del __self__
 
@@ -3117,11 +3145,9 @@ class PlotWin:
         
         __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
         labelx,macrox = labels[0].split("_")[0],labels[0].split("_")[1]
-        linex = which_macro(labelx)
-        labelx = labelx+" "+linex+macrox
+        labelx = labelx+" "+macrox
         labely,macroy = labels[1].split("_")[0],labels[1].split("_")[1]
-        liney = which_macro(labely)
-        labely = labely+" "+liney+macroy
+        labely = labely+" "+macroy
         __self__.plot.set_xlabel(labelx,fontsize=16)
         __self__.plot.set_ylabel(labely,fontsize=16)
         __self__.corrplot = __self__.plot.scatter(corr[0],corr[1])
@@ -4244,6 +4270,8 @@ class MainGUI:
                 command=__self__.batch)
         __self__.Toolbox.add_command(label="Load h5 file . . .",
                 command=__self__.h5loader)
+        __self__.Toolbox.add_command(label="Load ftir data [experimental] . . .",
+                command= lambda:__self__.batch(ftir=1))
         __self__.Toolbox.add_command(label="Convert spectra name . . .",
                 command=__self__.converter)
         __self__.Toolbox.add_separator()
@@ -4572,6 +4600,9 @@ class MainGUI:
         try:
             for ImgAnal in __self__.ImageAnalyzers:
                 try:
+                    if hasattr(ImgAnal,"IndexNavigator"):
+                        ImgAnal.IndexNavigator.LeftImage.set_cmap(Constants.COLORMAP)
+                        ImgAnal.IndexNavigator.PlotCanvasL.draw()
                     ImgAnal.left_image.set_cmap(Constants.COLORMAP)
                     ImgAnal.right_image.set_cmap(Constants.COLORMAP)
                     ImgAnal.canvas1.draw()
@@ -4612,6 +4643,13 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.re_configure.config(state=DISABLED)
             __self__.magnifier.config(state=DISABLED)
+        if Constants.MY_DATACUBE is not None:
+            if any("ftir" in x for x in Constants.MY_DATACUBE.datatypes):
+                __self__.FindElementButton.state(["disabled"])
+                __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
+            else:
+                __self__.FindElementButton.state(["!disabled"])
+                __self__.Toolbox.entryconfig("Map elements",state=NORMAL)
         __self__.master.update_idletasks()
     
     def pop(__self__,event):
@@ -5132,9 +5170,16 @@ class MainGUI:
         if p == "yes":
             __self__.master.config(cursor="watch")
             Constants.MY_DATACUBE.wipe_maps()
+            __self__.check_open_analyzers() 
             __self__.write_stat()
             __self__.master.config(cursor="arrow")
         else: return 0
+
+    def check_open_analyzers(__self__):
+        for ImgAnal in __self__.ImageAnalyzers:
+            if Constants.MY_DATACUBE.name == ImgAnal.DATACUBE.name:
+                ImgAnal.kill()
+                break
 
     def pop_welcome(__self__):
         __self__.master.attributes("-alpha",1.0)
@@ -5446,15 +5491,25 @@ class MainGUI:
         __self__.ConfigDiag = ConfigDiag(__self__.master,matrix=Constants.MY_DATACUBE)
         __self__.ConfigDiag.build_widgets()
 
-    def batch(__self__):
+    def batch(__self__,**kwargs):
         #1 prompt for files
-        file_batch = filedialog.askopenfilenames(parent=__self__.master, 
-                title="Select spectra",                        
-                filetypes=(
-                    ("MCA Files", "*.mca"),
-                    ("Text Files", "*.txt"),
-                    ("All files", "*.*")))
-        if file_batch == "": return
+        if "ftir" in kwargs:
+            Constants.FTIR_DATA = 1
+            file_batch = filedialog.askopenfilenames(parent=__self__.master,
+                title="Select FTIR spectra",
+                filetype=[
+                    ("Comma Separated Values", "*.csv")])
+            if file_batch == "": 
+                Constants.FTIR_DATA = 0
+                return
+        else:
+            file_batch = filedialog.askopenfilenames(parent=__self__.master, 
+                    title="Select spectra",                        
+                    filetypes=(
+                        ("MCA Files", "*.mca"),
+                        ("Text Files", "*.txt"),
+                        ("All files", "*.*")))
+            if file_batch == "": return
         
         #1.1 get the name of parent directory
         try: sample_name = str(file_batch[0]).split("/")[-2]
@@ -5726,6 +5781,7 @@ class MainGUI:
             try: __self__.combined.master.destroy()
             except: pass
 
+            __self__.check_open_analyzers() 
             load_cube()
             __self__.write_stat()
             __self__.toggle_(toggle='off')
@@ -5835,6 +5891,18 @@ class ReConfigDiag:
             else:
                 __self__.scale.config(state=DISABLED)
                 __self__.Label5.config(state=DISABLED)
+
+    def check_datatype(__self__):
+        if any("ftir" in x for x in Constants.MY_DATACUBE.datatypes):
+            __self__.ConfigDiagRatio.state(["disabled"])
+            __self__.ConfigDiagMethod.state(["disabled"])
+            __self__.ConfigDiagRatio.state(["disabled"])
+            __self__.RecalibrateBtn.state(["disabled"])
+        else:
+            __self__.ConfigDiagRatio.state(["!disabled"])
+            __self__.ConfigDiagMethod.state(["!disabled"])
+            __self__.ConfigDiagRatio.state(["!disabled"])
+            __self__.RecalibrateBtn.state(["!disabled"])
     
     def build_widgets(__self__):
         Label2 = Label(__self__.Frame, text="Area method:")
@@ -5878,14 +5946,14 @@ class ReConfigDiag:
                 Constants.MY_DATACUBE.dimension[1])
         img_dimension_display = Label(__self__.master,text=dimension_text)
         
-        __self__.scale =ttk.Checkbutton(__self__.MergeSettings, 
+        __self__.scale = ttk.Checkbutton(__self__.MergeSettings, 
                 takefocus=False,
                 variable=__self__.ScaleVar)
-        __self__.cont =ttk.Checkbutton(__self__.MergeSettings, 
+        __self__.cont = ttk.Checkbutton(__self__.MergeSettings, 
                 takefocus=False,
                 variable=__self__.ContVar)
 
-        RecalibrateBtn = ttk.Button(__self__.master,
+        __self__.RecalibrateBtn = ttk.Button(__self__.master,
                 text="Re-calibrate",
                 width=15,
                 takefocus=False,
@@ -5914,7 +5982,7 @@ class ReConfigDiag:
         __self__.ConfigDiagMethod.grid(row=0,column=1,sticky=E,pady=2,padx=(35,0))
         __self__.ConfigDiagEnhance.grid(row=1,column=1,sticky=E,pady=2,padx=(35,0))
         __self__.ConfigDiagRatio.grid(row=2,column=1,sticky=E,pady=2,padx=(35,0))
-        RecalibrateBtn.grid(row=2,column=0,sticky=W,padx=(17,0))
+        __self__.RecalibrateBtn.grid(row=2,column=0,sticky=W,padx=(17,0))
         img_dimension_display.grid(row=3,column=0,sticky=W,padx=17,pady=2)
         __self__.scale.grid(row=0,column=0)
         __self__.cont.grid(row=1,column=0)
@@ -5927,6 +5995,7 @@ class ReConfigDiag:
             __self__.ScaleVar.set(Constants.MY_DATACUBE.scalable)
         else: __self__.toggle("off")
         __self__.get_version()
+        __self__.check_datatype()
 
         place_center(root.master,__self__.master)
         icon = os.path.join(os.getcwd(),"images","icons","refresh.ico")
@@ -6038,6 +6107,7 @@ class ReConfigDiag:
             __self__.cont.config(state=DISABLED)
             __self__.Label5.config(state=DISABLED)
             __self__.Label6.config(state=DISABLED)
+        
 
     def kill(__self__):
         __self__.master.destroy()
@@ -6116,6 +6186,7 @@ class ConfigDiag:
             __self__.master.grab_release()
             __self__.master.destroy()
         except: pass
+        Constants.FTIR_DATA = 0
 
         #############################################################
         # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
@@ -6277,7 +6348,7 @@ class ConfigDiag:
             Constants.SAMPLES_FOLDER = os.path.join(sp.__PERSONAL__,"Example Data")
         
         ##########################################################
-            
+
         configdict = {"directory":__self__.DirectoryVar.get(),
                 "bgstrip":__self__.BgstripVar.get(),
                 "ratio":__self__.RatioVar.get(),
@@ -6285,6 +6356,9 @@ class ConfigDiag:
                 "enhance":__self__.EnhanceVar.get(),
                 "peakmethod":__self__.MethodVar.get(),
                 "bg_settings":root.snip_config}
+        if Constants.FTIR_DATA: 
+            configdict["ftir"] = True
+        else: pass
         
         if not os.path.exists(sp.output_path):
             try:
@@ -6328,6 +6402,9 @@ class ConfigDiag:
                 
             elif configdict["calibration"] == "from_source": 
                 Constants.CONFIG["calibration"] = "from_source"
+                calibparam = sp.getcalibration()
+            elif configdict["calibration"] == "ftir_source":
+                Constants.CONFIG["calibration"] = "ftir_source"
                 calibparam = sp.getcalibration()
             else: 
                 raise ValueError("Didn't understand caibration method {0} input".format(configdict["calibration"]))
@@ -6448,13 +6525,7 @@ class ConfigDiag:
                 state="readonly",
                 width=13+ConfigDiagRatioYes.winfo_width())
         
-        __self__.DirectoryVar.set(Constants.CONFIG.get('directory'))
-        __self__.BgstripVar.set(Constants.CONFIG.get('bgstrip'))
-        __self__.RatioVar.set(Constants.CONFIG.get('ratio'))
-        __self__.CalibVar.set(Constants.CONFIG.get('calibration'))
-        __self__.MethodVar.set(Constants.CONFIG.get('peakmethod'))
-        __self__.EnhanceVar.set(Constants.CONFIG.get('enhance'))
-
+        
         __self__.ConfigDiagBgstrip.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
         __self__.ConfigDiagSetBG.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
         __self__.ConfigDiagCalib.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
@@ -6480,6 +6551,20 @@ class ConfigDiag:
                 width=10,
                 command=__self__.wipe)
         CancelButton.grid(row=8,column=1,sticky=S)
+
+        if Constants.FTIR_DATA:
+            __self__.CalibVar.set("ftir_source")
+            __self__.BgstripVar.set("not_applicable")
+            __self__.ConfigDiagBgstrip.state(["disabled"])
+            __self__.ConfigDiagSetBG.config(state=DISABLED)
+            __self__.ConfigDiagCalib.config(values=["ftir_source"])
+        else:
+            __self__.CalibVar.set("from_source")
+            __self__.BgstripVar.set("None")
+        __self__.DirectoryVar.set(Constants.CONFIG.get('directory'))
+        __self__.RatioVar.set(Constants.CONFIG.get('ratio'))
+        __self__.MethodVar.set(Constants.CONFIG.get('peakmethod'))
+        __self__.EnhanceVar.set(Constants.CONFIG.get('enhance'))
         
         place_center(root.master,__self__.master)
         icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
@@ -7312,7 +7397,7 @@ if __name__.endswith("__main__"):
     time.sleep(t)
     from GUI import Mask
     from GUI import Theme
-    from GUI import AdvCalib, SimpleFitPanel
+    from GUI import AdvCalib, SimpleFitPanel, Navigator
     from GUI import Busy, BusyManager, create_tooltip
     from GUI.Mosaic import Mosaic_API
 

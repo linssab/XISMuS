@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          CONFIGURATION PARSER                                 #
-#                        version: 2.0.0 - Feb - 2021            #
+#                        version: 2.3.0 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -137,7 +137,7 @@ def getconfig():
             line=line.replace('\n','')
             line=line.replace('\t',' ')
             aux = line.split()
-            try: CalParam.append([int(aux[0]),float(aux[1])])
+            try: CalParam.append([float(aux[0]),float(aux[1])])
             except: CalParam = [[0,0]]
             line = configfile.readline()
         configfile.close()

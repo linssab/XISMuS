@@ -5,10 +5,18 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
+import logging
+logger = logging.getLogger("logfile")
+logger.info("In AdvFit: Importing Constants...")
 import Constants
+logger.info("In AdvFit: Importing Elements...")
 from Elements import *
-import xraylib as xlib
+try: 
+    import xraylib as xlib
+    logger.info("In AdvFit: Imported xraylib!")
+except: logger.info("In AdvFit: Failed to import xraylib!")
 import numpy as np
+logger.info("In AdvFit: Importing SciPy...")
 from scipy.optimize import least_squares
 from scipy.optimize import curve_fit
 import csv

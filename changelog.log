@@ -1,5 +1,9 @@
-New in Version v2.2.2
+New in Version v2.3.0
 
 - Improved memory managed
 - Auto-wizard data pre-treatment speed significantly improved
+- New Index Navigator panel available from within Image Analyzer
+- Support to *.CSV FT-IR maps datasets [experimental]
+- Clearing maps and resetting samples with an Image Analyzer open would cause
+misbehavior (fixed)
 - Large datasets (900k+ spectra) were causing the program to crash when using auto_wizard (fixed)

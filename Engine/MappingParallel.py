@@ -8,6 +8,8 @@
 #############
 # Utilities #
 #############
+import logging
+logger = logging.getLogger("logfile")
 import os, sys, logging, multiprocessing
 import numpy as np
 import gc
@@ -23,6 +25,7 @@ from matplotlib import pyplot as plt
 #################
 # Local imports #
 #################
+logger.info("In MappingParallel: Importing local modules...")
 import Constants
 import Elements
 from .SpecRead import __PERSONAL__, __BIN__

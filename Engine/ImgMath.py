@@ -30,6 +30,7 @@ except: logger.warning("Failed to load make_axes_locatable from mpl_toolkits.axe
 #################
 # Local imports #
 #################
+logger.info("In ImgMath: Importng local modules...")
 from . import SpecRead
 from . CBooster import *
 import Constants

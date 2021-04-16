@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: 2.0.0 - Feb - 2021            #
+#                        version: 2.3.0 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -13,6 +13,7 @@ import Constants
 from ReadConfig import unpack_cfg as CONFIGURE
 from ReadConfig import pop_error, __PERSONAL__, __BIN__ 
 # User space is picked from ReadConfig, then passed to global variables here
+import csv
 import sys
 import os
 import time
@@ -26,7 +27,6 @@ __BIN__ = __BIN__
 
 def get_samples_folder(inifile):
     """ Returns the last set samples folder input by the user in the GUI """
-
     ini = open(inifile,"r")
     folder = ini.readline()
     ini.close() 
@@ -37,7 +37,6 @@ Constants.SAMPLES_FOLDER = get_samples_folder(os.path.join(__BIN__,"folder.ini")
 def getfirstfile():
     """ This function is called to get the last updated value of
     Constants.FIRSTFILE_ABSPATH """
-    
     return Constants.FIRSTFILE_ABSPATH
 
 def setup(prefix, indexing, extension):
@@ -190,6 +189,23 @@ def getcalibration():
     if configuration is set to manual, returns the anchors input by
     user via GUI. """
    
+    if Constants.CONFIG['calibration'] == 'ftir_source':
+        if os.path.exists(getfirstfile()): pass
+        else: raise FileNotFoundError(f"File {ftir} not found!")
+        param = [[1,1],[2,2]]
+        with open(getfirstfile(),"r") as f:
+            reader = csv.reader(f)
+            i = 0
+            for row in reader:
+                if i == 0:
+                    param[0][0] = float(0)
+                    param[0][1] = float(row[0])
+                else:
+                    param[1][0] = float(i+1)
+                    param[1][1] = float(row[0])
+                i+=1
+        return param
+
     if Constants.CONFIG['calibration'] == 'from_source':
         param = []
         try: mca_file = open(getfirstfile(),'r')
@@ -239,8 +255,19 @@ def getcalibration():
     #    raise ValueError("Calibration mode {0} unknown! Check config.cfg")
     return param
 
+def getftirdata(ftir):
+    """ Extracts the data contained in CSV ftir files """
+    if os.path.exists(ftir): pass
+    else: raise FileNotFoundError(f"File {ftir} not found!")
+    data = []
+    with open(ftir,"r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            data.append(row[1])
+    return np.asarray(data,dtype=np.float32)
+
 def getdata(mca):
-    """ Extract the data contained in spectrum files 
+    """ Extracts the data contained in spectrum files 
 
     ------------------------------------------------ 
         
@@ -330,12 +357,14 @@ def calibrate(lead=0, tail=0, specsize=None, anchors=None):
     GAIN=coefficients[0]
     B=coefficients[1]
     R=coefficients[2]
-    try: n = len(getdata(getfirstfile()))-lead-tail
-    except:
-        try:
-            n = Constants.MY_DATACUBE.matrix.shape[2]
+    if specsize is None:
+        try: n = len(getdata(getfirstfile()))-lead-tail
         except:
-            n = specsize
+            try:
+                n = Constants.MY_DATACUBE.matrix.shape[2]
+            except:
+                raise ValueError("Cannot determine the number of channels!")
+    else: n=specsize
     curve = []
     for i in range(n):
         curve.append((GAIN*i)+B)

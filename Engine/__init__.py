@@ -1,5 +1,4 @@
 import logging
-from .SpecRead import __PERSONAL__, __BIN__
 logger = logging.getLogger("logfile")
 logger.info("Booting Engine...")
 
@@ -9,6 +8,7 @@ logger.info("Importing SpecMath...")
 from .SpecMath import *
 logger.info("Importing SpecRead...")
 from .SpecRead import *
+from .SpecRead import __PERSONAL__, __BIN__
 logger.info("Importing ImgMath...")
 from .ImgMath import *
 logger.info("Importing Mapping...")
@@ -20,7 +20,7 @@ from .BatchFitter import *
 logger.info("Importing CBooster...")
 try: from .CBooster import *
 except OSError as e: 
-    print(e)
+    logger.warning(e)
     sys.exit(1)
 logger.info("Engine modules ready!")
 

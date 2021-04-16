@@ -47,6 +47,8 @@ style.use('ggplot')
 
 ####################
 # internal imports #
+####################
+logger.info("In FitPanels: Importing local modules...")
 from Engine import SpecRead
 from Engine import SpecMath
 from .ProgressBar import BusyManager

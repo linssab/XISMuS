@@ -7,11 +7,22 @@
 
 import numpy as np
 from . import EnergyLib
+import logging
+logger = logging.getLogger("logfile")
 try:
     import xraylib as xlib
     xlib.SetErrorMessages(0)
+    logger.info("Xraylib sucessfully imported in Compounds")
 except:
-    print("FAILED TO LOAD XRAYLIB MODULE\nCompounds library will not work!")
+    logger.warning("FAILED TO LOAD XRAYLIB MODULE\nCompounds library will not work!")
+    class mock():
+        def __init__(__self__):
+            __self__.value = 0
+        def CS_Total(__self__,Z,energy):
+            return __self__.value
+
+    xlib = mock()
+        
 
 CompoundList = {
         'Air'           :{'O':2,'N':2,},
@@ -48,8 +59,6 @@ def ListDatabase():
     """ Prints all compounds on database """
 
     Database = dict(CompoundList,**WeightList)
-    #for key in Database:
-    #    print(key,Database[key])
     return Database
 
 

@@ -18,6 +18,7 @@ import pickle
 #################
 # Local imports #
 #################
+logger.info("In Mapping: Importing local modules...")
 import Elements
 import Constants
 from . import SpecMath

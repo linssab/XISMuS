@@ -47,6 +47,8 @@ style.use('ggplot')
 
 ####################
 # internal imports #
+####################
+logger.info("In AdvCalibration: Importing local modules...")
 from Engine import SpecRead
 from Engine import SpecMath
 from .ProgressBar import Busy
