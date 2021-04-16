@@ -15,6 +15,7 @@ import threading
 import os, time
 import sys
 import gc
+import copy
 import numpy as np
 import pickle
 import random
@@ -721,6 +722,10 @@ class datacube:
                 for line in Elements.SIEGBAHN:
                     try: del __self__.__dict__[element+f"_{line}"]
                     except KeyError: print(f"No {line} map for {element}")
+                keys = copy.copy(list(__self__.__dict__.keys()))
+                for key in keys:
+                    if "Slice" in key:
+                        del __self__.__dict__[key]
         if wipe == True:
             __self__.max_counts = {}
             __self__.hist = {}
