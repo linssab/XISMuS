@@ -1738,21 +1738,22 @@ class Annotator:
         __self__.area2_sum = 0
         __self__.spec_no = 0
         __self__.parent.sum_spectrum = np.ones([__self__.parent.DATACUBE.sum.shape[0]],
-                dtype="int32")
+                dtype="float32")
         unpacker1 = __self__.element1.split("_")
         unpacker2 = __self__.element2.split("_")
         
+        print("MPL X:",__self__.x0,__self__.x1)
+        print("MPL Y:",__self__.y0,__self__.y1)
         # in matplotlib canvas directions are swapped
         y_ = [__self__.x0,__self__.x1]
-        x_ = [-__self__.y0+__self__.parent.DATACUBE.dimension[0],
-                -__self__.y1+__self__.parent.DATACUBE.dimension[0]]
-        #print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
+        x_ = [__self__.y0,__self__.y1]
+        print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
         y_.sort()
         x_.sort()
 
-        #print("x",x_)
-        #print("y",y_)
-        #print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
+        print("x",x_)
+        print("y",y_)
+        print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
         
         ###############################################################################
         # unpacks raw image, notice no normalization is done to match LEVELS          # 
@@ -1767,7 +1768,8 @@ class Annotator:
         # IF NO MAPS ARE AVAILABLE, ONLY ITERATES TO SHOW THE ROI PLOT #
         ################################################################
         else:
-            __self__.parent.sum_spectrum = __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
+            __self__.parent.sum_spectrum = \
+                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
             __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
             """
             for x in range(y_[0],y_[1]):

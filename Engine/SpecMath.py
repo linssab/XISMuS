@@ -92,7 +92,7 @@ class datacube:
         elif any("h5" in x for x in __self__.datatypes):
             specsize = Constants.MY_DATACUBE.shape[2]
             __self__.path = ""
-        elif any("ftir" in x for x in __self__.datatypes):
+        elif any("ftir" in x for x in __self__.datatypes) and mode != "merge":
             specsize = getftirdata(getfirstfile()).size
             __self__.dimension = getdimension()
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]

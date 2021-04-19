@@ -364,6 +364,7 @@ class Mosaic_API:
         my_dpi = __self__.master.winfo_fpixels("1i")
         __self__.image = np.zeros([size[0],size[1]],dtype="float32")+59.0
         __self__.layer = {}
+        __self__.datatype = None
         __self__.ActiveChildrenHistogram ={}
         __self__.master.resizable(True,True)
         __self__.layer_count = 0
@@ -987,6 +988,8 @@ class Mosaic_API:
             __self__.reorder_layers()
             __self__.build_image()
             __self__.layer_count -= 1
+            if __self__.layer_count == 0: 
+                __self__.datatype = None
 
     def reorder_layers(__self__):
         global LAYERS_DICT
@@ -1112,8 +1115,10 @@ class Mosaic_API:
                 if candidate[key] != loaded[key]: 
                     divergence.append(key)
 
-        if __self__.zero_config.__contains__("directory"): __self__.zero_config.pop("directory")
-        if __self__.zero_config.__contains__("thickratio"): __self__.zero_config.pop("thickratio")
+        if __self__.zero_config.__contains__("directory"): 
+            __self__.zero_config.pop("directory")
+        if __self__.zero_config.__contains__("thickratio"): 
+            __self__.zero_config.pop("thickratio")
 
         if divergence != []: 
             i = 0
@@ -1198,10 +1203,17 @@ class Mosaic_API:
                     "Can't add same cube twice!")
             __self__.refocus()
             return
+        elif __self__.datatype is not None and __self__.datatype != cube.datatypes:
+            messagebox.showinfo("Incompatible types!",
+                    f"Datacube selected is of type {cube.datatypes}. Previously loaded cubes are of type {__self__.datatype}!")
+            __self__.refocus()
+            return
+
         elif __self__.layer_count == 0: 
             Constants.CONFIG = cube.config
             __self__.zero_config = cube.config
             can_import = True
+            __self__.datatype = cube.datatypes
         else: can_import = __self__.check_calibration(cube)
         if can_import == True and __self__.layer_count > 0: 
             can_import = __self__.check_configuration(cube)
@@ -1410,6 +1422,11 @@ class Mosaic_API:
             messagebox.showerror("Cube not found!",
                     "Cannot find cube {}! Aborting operation.".format(layer["name"]))
             return 0
+        elif __self__.datatype is not None and cube.datatypes != __self__.datatype:
+            messagebox.showerror("Incompatible cube types!",
+                    f"Cube being loaded is of type {cube.datatypes}. Previously loaded cubes are of type {__self__.datatype}")
+            return 0
+        else: __self__.datatype = cube.datatypes
 
         Constants.CONFIG = cube.config
         __self__.zero_config = cube.config        
@@ -1778,7 +1795,7 @@ class Mosaic_API:
             # LOADING BAR IS CREATED INSIDE CYTHON FUNCTION #
             #################################################
             
-            void_array = np.zeros([specsize],dtype="int32")
+            void_array = np.zeros([specsize],dtype="float32")
             cy_funcs.cy_build_merge_cube(LAYERS_DICT,
                     np.asarray(x_bounds,dtype="int32"),
                     np.asarray(y_bounds,dtype="int32"),
@@ -1806,7 +1823,7 @@ class Mosaic_API:
             check_configuration_integrity(__self__.zero_config)
             for key  in __self__.zero_config:
                 print(f"{key:10}\t{__self__.zero_config[key]}")
-            new_cube = Cube(["xrf"],__self__.zero_config,mode="merge",name=NAME)
+            new_cube = Cube(__self__.datatype,__self__.zero_config,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
             new_cube.dimension = (end_x-start_x), (end_y-start_y)
@@ -1817,7 +1834,7 @@ class Mosaic_API:
             
             new_cube.scale_matrix = __self__.cropped
             new_cube.scalable = True
-            new_cube.matrix = new_cube.matrix.astype("int32")
+            #new_cube.matrix = new_cube.matrix.astype("int32")
             new_cube.background = __self__.background
             del __self__.background
             gc.collect()

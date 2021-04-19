@@ -338,7 +338,7 @@ def cy_build_image(float[:,:] image, int[:,:] boundaries, dict all_layers):
 def cy_build_merge_cube(dict layers, 
         int[:] x_limit, 
         int[:] y_limit, 
-        int[:] spectrum,
+        float[:] spectrum,
         float[:,:,:] cube_matrix,
         int size,
         bar = None):
@@ -383,7 +383,7 @@ def cy_build_merge_cube(dict layers,
 def cy_pack_spectra(dict layers, 
         int i, 
         int j, 
-        int[:] specout, 
+        float[:] specout, 
         int shape):
 
     """ Similar to pixel reader functions, but instead or returning one value,
