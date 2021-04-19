@@ -849,7 +849,10 @@ class Mosaic_API:
 
         print(layer.rotation)
         LAYERS_DICT = convert_layers_to_dict(__self__)
-        __self__.build_image()
+        max_ = max(layer.img.shape)
+        x0, y0 = layer.start
+        x1, y1 = x0 + max_, y0 + max_
+        __self__.build_image(bound=True, limit=[[x0,x1],[y0,y1]])
 
     def on_press(__self__, event):
         __self__.canvas.mpl_disconnect(__self__.hover_highlight)
@@ -1453,6 +1456,7 @@ class Mosaic_API:
         
         # must rotate layer accordingly
         # rotates display image and mask
+        #NOTE: rotation builds image and displays on screen 
 
         __self__.layer[layer["name"]].rotation = float(truncate(
                 layer["rotate"]-int(layer["rotate"]),2))
