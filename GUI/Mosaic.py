@@ -5,7 +5,8 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-global LAYERS_DICT, VMAX
+global LAYERS_DICT
+global VMAX
 global OVERRIDE, LOADED
 OVERRIDE = False
 VMAX = 0
@@ -344,6 +345,7 @@ class Layer:
 
 
 class Mosaic_API:
+    global LAYERS_DICT
     def __init__(__self__, size, root, loadfile=""):
         pad = 16
         zbar = 35
@@ -1849,6 +1851,8 @@ class Mosaic_API:
         __self__.master.focus_set()
 
     def kill(__self__,e=""):
+        global LAYERS_DICT
+        LAYERS_DICT = None
         del globals()["LAYERS_DICT"]
         del __self__.layer
         gc.collect()
