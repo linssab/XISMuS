@@ -847,12 +847,14 @@ class Mosaic_API:
             if int(layer.rotation) >= 3: layer.rotation = -1 - fine
             elif int(layer.rotation) <= -3: layer.rotation = 1 + fine
 
-        print(layer.rotation)
         LAYERS_DICT = convert_layers_to_dict(__self__)
         max_ = max(layer.img.shape)
         x0, y0 = layer.start
         x1, y1 = x0 + max_, y0 + max_
-        __self__.build_image(bound=True, limit=[[x0,x1],[y0,y1]])
+        if not loading:
+            __self__.build_image(bound=True, limit=[[x0,x1],[y0,y1]])
+        else:
+            __self__.build_image()
 
     def on_press(__self__, event):
         __self__.canvas.mpl_disconnect(__self__.hover_highlight)
@@ -1464,7 +1466,7 @@ class Mosaic_API:
         if int(rotate_factor) == 2 or int(rotate_factor) == -2:
             __self__.rotate(1,active_layer=layer["name"], loading=True)
             __self__.rotate(1,active_layer=layer["name"], loading=True)
-        else: __self__.rotate(rotate_factor,active_layer=layer["name"])
+        else: __self__.rotate(rotate_factor,active_layer=layer["name"], loading=True)
 
         if mask.any():
             __self__.layer[layer["name"]].img = fast_scaling(
