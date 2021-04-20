@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 2.2.2 - Apr - 2021            #
+#                        version: 2.3.1 - Apr - 2021            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -60,6 +60,7 @@ def prepare_data(FitClass):
 
     threads = []
     cpus = cpu_count() #NOTE: includes logical cores
+    print("cpus",cpus)
     lock = threading.Lock()
 
     if cpus == 1:
@@ -72,6 +73,7 @@ def prepare_data(FitClass):
             leftovers = int(FitClass.counts.shape[0]%cpus)
             print("bite size: ",bite_size,"leftovers ",leftovers)
             cpus -= 1
+            if bite_size == FitClass.counts.shape[0]: break
         cpus += 1
         bite_size = bite_size
         leftovers = leftovers
@@ -96,9 +98,7 @@ def prepare_data(FitClass):
         try: 
             while progress < lim: 
                 bar.updatebar(progress)
-                print(f"Progress: {progress}/{lim}", end="\r")
         except: 
-            print("Bar is no more.")
             kill = 1
         return
 
@@ -1412,7 +1412,10 @@ class MultiFit():
             logger.warning("Sample is too small, running with one core only...")
             __self__.bite_size = __self__.counts.shape[0]
             __self__.leftovers = 0
-            return [(__self__.counts, __self__.continuum)], []
+            if Constants.MY_DATACUBE.config["bgstrip"] != "None":
+                return [(__self__.counts, __self__.continuum)], []
+            else:
+                return [(__self__.counts)],[]
         else:
             bite_size = 0
             while bite_size < 400:
@@ -1420,6 +1423,7 @@ class MultiFit():
                 leftovers = int(__self__.counts.shape[0]%__self__.cores)
                 print("bite size: ",bite_size,"leftovers ",leftovers)
                 __self__.cores -= 1
+                if bite_size == __self__.counts.shape[0]: break
             __self__.cores+=1
             __self__.bite_size = bite_size
             __self__.leftovers = leftovers
@@ -1630,6 +1634,8 @@ class MultiFit():
         __self__.bar.progress["max"] = len(bites)
 
         for block in bites:
+            print(block)
+            print(len(block))
 
             __self__.bar.update_text("Polling chunks...")
 
