@@ -287,6 +287,8 @@ class Layer:
 
         __self__.name = cube.name
         __self__.rotation = 0.0
+        __self__.Hflipped = False
+        __self__.Vflipped = False
         __self__.matrix = np.zeros([cube.dimension[0],cube.dimension[1],\
                 cube.energyaxis.shape[0]],dtype='float32',order='C')
         __self__.gross = int(cube.densitymap.sum()/cube.img_size)
@@ -525,13 +527,17 @@ class Mosaic_API:
         down = PhotoImage(data=ICO_DOWN)
         cw = PhotoImage(data=ICO_CW)
         ccw = PhotoImage(data=ICO_CCW)
+        hfp = PhotoImage(data=ICO_HFLIP)
+        vfp = PhotoImage(data=ICO_VFLIP)
         __self__.icon_up = up.subsample(1,1)
         __self__.icon_down = down.subsample(1,1)
         __self__.icon_cw = cw.subsample(1,1)
         __self__.icon_ccw = ccw.subsample(1,1)
+        __self__.icon_hflip = hfp.subsample(1,1)
+        __self__.icon_vflip = vfp.subsample(1,1)
         
         # container for buttons
-        __self__.container = Frame(__self__.RightPane,width=64,height=64)
+        __self__.container = Frame(__self__.RightPane,width=64,height=96)
 
         # container for options
         __self__.options = ttk.LabelFrame(__self__.RightPane,text="Options ",
@@ -540,7 +546,7 @@ class Mosaic_API:
 
         __self__.LayersPane = Frame(__self__.RightPane)
         __self__.layers_scroll = ttk.Scrollbar(__self__.LayersPane)
-        __self__.layers_list = Listbox(__self__.LayersPane, height=10,
+        __self__.layers_list = Listbox(__self__.LayersPane, height=13,
                 yscrollcommand=__self__.layers_scroll.set)
         __self__.layers_list.myId = "layers_list"
         __self__.layers_list.bind("<Button-1>",__self__.draw_patch)
@@ -571,6 +577,18 @@ class Mosaic_API:
                 width=32,
                 height=32,
                 command= lambda: __self__.rotate(-1))
+        __self__.fliplr = Button(
+                __self__.container,
+                image=__self__.icon_hflip,
+                width=32,
+                height=32,
+                command = lambda: __self__.flip(axis="horizontal"))
+        __self__.flipud = Button(
+                __self__.container,
+                image=__self__.icon_vflip,
+                width=32,
+                height=32,
+                command = lambda: __self__.flip(axis="vertical"))
 
         __self__.rotate_ccw.bind("<Enter>",__self__.draw_patch)
         __self__.rotate_cw.bind("<Enter>",__self__.draw_patch)
@@ -583,7 +601,6 @@ class Mosaic_API:
                 width=10,
                 height=1,
                 command=__self__.open_histogram)
-
         __self__.save = ttk.Button(__self__.RightPane, 
                 text="Save mosaic",
                 width=13,
@@ -642,7 +659,7 @@ class Mosaic_API:
         __self__.scale_check2.grid(row=1,column=0,sticky=W,padx=pad)
         __self__.scale_check3.grid(row=2,column=0,sticky=W,padx=pad,pady=(0,12))
 
-        __self__.LayersPane.grid(row=0, column=0, rowspan=5)
+        __self__.LayersPane.grid(row=0, column=0, rowspan=6)
         __self__.layers_list.grid(row=0, column=0, sticky=N+S)
         __self__.layers_scroll.grid(row=0, column=1, sticky=N+S)
         __self__.container.grid(row=0,column=1)
@@ -651,14 +668,16 @@ class Mosaic_API:
         __self__.layer_down.grid(row=0, column=1)
         __self__.rotate_ccw.grid(row=1, column=0)
         __self__.rotate_cw.grid(row=1, column=1)
-        __self__.histogram.grid(row=2,column=0,columnspan=2)
-        __self__.add_layer.grid(row=3, column=1, padx=pad)
-        __self__.del_layer.grid(row=4, column=1, padx=pad)
-        __self__.cube_name_label.grid(row=5, column=0, padx=pad, pady=pad/2, sticky=E)
-        __self__.cube_name.grid(row=5, column=1, sticky=W, padx=pad, pady=pad/2)
+        __self__.fliplr.grid(row=2,column=0)
+        __self__.flipud.grid(row=2,column=1)
+        __self__.histogram.grid(row=3,column=0,columnspan=2,pady=(5,0))
+        __self__.add_layer.grid(row=4, column=1, padx=pad)
+        __self__.del_layer.grid(row=5, column=1, padx=pad)
+
+        __self__.cube_name_label.grid(row=6, column=0, padx=pad, pady=pad/2, sticky=E)
+        __self__.cube_name.grid(row=6, column=1, sticky=W, padx=pad, pady=pad/2)
+        __self__.options.grid(row=7,column=0,columnspan=2,sticky=W+E,pady=(10,10))
         __self__.validate.grid(row=8, column=1, pady=(10,0))
-        __self__.options.grid(row=7,column=0,columnspan=2,
-                sticky=W+E)
         __self__.save.grid(row=8, column=0,pady=(10,0))
         __self__.load.grid(row=9, column=0,pady=(0,10))
         
@@ -719,7 +738,17 @@ class Mosaic_API:
 
     #################################################################################
 
-    def rotate_data(__self__, specific_layer=None):
+    def rotate_data(__self__):
+        def flip(layer,axis):
+            if axis == "horizontal":
+                print("I flipped the data horizontally")
+                layer.matrix = np.fliplr(layer.matrix)
+                layer.dense = np.fliplr(layer.dense)
+            elif axis == "vertical":
+                print("I flipped the data vertically")
+                layer.matrix = np.flipud(layer.matrix)
+                layer.dense = np.flipud(layer.dense)
+
         def clockwise(layer):
             layer.matrix = np.rot90(layer.matrix,3)
             print("I rotated the matrix",layer.matrix.shape)
@@ -732,51 +761,59 @@ class Mosaic_API:
             layer.dense = np.rot90(layer.dense)
             print("I rotated the densemap",layer.dense.shape)
 
-        if specific_layer is None:
-            for layer in __self__.layer:
+        for layer in __self__.layer:
 
-                layer = __self__.layer[layer]
-                rotate_factor = int(layer.rotation)
-                fine_factor = float(truncate(layer.rotation-(int(layer.rotation)),2))
-                print(rotate_factor)
-
-                if rotate_factor == 0:
-                    print("Zero")
-                elif rotate_factor == 2 or rotate_factor == -2:
-                    print("Upside-down")
-                    clockwise(layer)
-                    clockwise(layer)
-                elif rotate_factor == 1:
-                    print("Clockwise")
-                    clockwise(layer)
-                elif rotate_factor == -1:
-                    print("Counter-clockwise")
-                    counter_clockwise(layer)
-                else:
-                    pass
-        else: 
-
-            rotate_factor = int(specific_layer.rotation)
-            fine_factor = float(truncate(specific_layer.rotation-(int(specific_layer.rotation)),2))
+            layer = __self__.layer[layer]
+            rotate_factor = int(layer.rotation)
+            fine_factor = float(truncate(layer.rotation-(int(layer.rotation)),2))
+            hflip = layer.Hflipped
+            vflip = layer.Vflipped
 
             if rotate_factor == 0:
                 print("Zero")
-                return
             elif rotate_factor == 2 or rotate_factor == -2:
                 print("Upside-down")
-                clockwise(specific_layer)
-                clockwise(specific_layer)
-                return
+                clockwise(layer)
+                clockwise(layer)
             elif rotate_factor == 1:
                 print("Clockwise")
-                clockwise(specific_layer)
-                return
+                clockwise(layer)
             elif rotate_factor == -1:
                 print("Counter-clockwise")
-                counter_clockwise(specific_layer)
-                return
+                counter_clockwise(layer)
             else:
-                return
+                pass
+            
+            if hflip: flip(layer,"horizontal")
+            if vflip: flip(layer,"vertical")
+    
+    def flip(__self__, axis="", active_layer="", e="", loading=False):
+        global LAYERS_DICT
+
+        if active_layer == "":
+            active_layer = __self__.layers_list.curselection()
+            if active_layer == (): return
+            else:
+                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
+                active_layer = active_layer.split("_")[0]
+        layer = __self__.layer[active_layer]
+
+        if axis == "vertical":
+            layer.img = cv2.flip(layer.img,0)
+            layer.Vflipped = not(layer.Vflipped)
+        elif axis == "horizontal":
+            layer.img = cv2.flip(layer.img,1)
+            layer.Hflipped = not(layer.Hflipped)
+
+        LAYERS_DICT = convert_layers_to_dict(__self__)
+        x0, y0 = layer.start
+        x1, y1 = layer.end
+        if not loading:
+            __self__.build_image(bound=True, limit=[[x0,x1],[y0,y1]])
+        else:
+            __self__.build_image()
+        return
+
 
     def rotate(__self__, direction, active_layer="", e="", loading=False):
         global LAYERS_DICT
@@ -1279,14 +1316,14 @@ class Mosaic_API:
         savefile = open(savefile,"+w")
         savefile.write("## MOSAIC SAVEFILE ## shape:{}x{}\n".format(
             __self__.image.shape[0],__self__.image.shape[1]))
-        savefile.write("name\telement mirror\tlayer pos\tcoords\trotate factor\n")
+        savefile.write("name\telement mirror\tlayer pos\tcoords\trotate factor\tHflip\tVflip\n")
         for layer in __self__.layer:
             mask = __self__.layer[layer].mask
             mask = unrotate_mask(mask,__self__.layer[layer].rotation)
             print("Mask UNROTATED",mask.shape)
             print("Rotation:",__self__.layer[layer].rotation)
             npy_masks.append(mask)
-            string = "{}\t{}\t{}\t{};{}\t{}\t{}\n".format(
+            string = "{}\t{}\t{}\t{};{}\t{}\t{}\t{}\t{}\n".format(
                 __self__.layer[layer].name,
                 __self__.layer[layer].element,
                 __self__.layer[layer].layer,
@@ -1297,7 +1334,9 @@ class Mosaic_API:
                     truncate(
                     __self__.layer[layer].rotation - int(__self__.layer[layer].rotation),2
                             )
-                    )
+                    ),
+                __self__.layer[layer].Hflipped,
+                __self__.layer[layer].Vflipped,
                 )
             savefile.write(string)
         savefile.close()
@@ -1363,9 +1402,20 @@ class Mosaic_API:
                 layers[name]["coords"][0] = [int(i) for i in layers[name]["coords"][0]]
                 layers[name]["coords"][1] = [int(i) for i in layers[name]["coords"][1]]
                 layers[name]["rotate"] = int(string[4])
-                try: 
+                hflip, vflip = False, False
+                if len(string) >= 5:
                     layers[name]["rotate"] += float(string[5])
-                except: pass
+                if len(string) > 6:
+                    if string[6] == "True":
+                        hflip = True
+                    if string[7] == "True":
+                        vflip = True
+                    layers[name]["hflip"] = hflip 
+                    layers[name]["vflip"] = vflip
+                else: 
+                    layers[name]["hflip"] = hflip 
+                    layers[name]["vflip"] = vflip
+
             f.close()
             if os.path.exists(npz):
                 container = np.load(npz)
@@ -1456,17 +1506,23 @@ class Mosaic_API:
                 layer["coords"],
                 mask=mask) 
         
-        # must rotate layer accordingly
-        # rotates display image and mask
-        #NOTE: rotation builds image and displays on screen 
+        # must rotate layer accordingly                     #
+        # rotates display image and mask                    #
+        #NOTE: rotation builds image and displays on screen #
 
         __self__.layer[layer["name"]].rotation = float(truncate(
                 layer["rotate"]-int(layer["rotate"]),2))
         rotate_factor = layer["rotate"] 
         if int(rotate_factor) == 2 or int(rotate_factor) == -2:
-            __self__.rotate(1,active_layer=layer["name"], loading=True)
-            __self__.rotate(1,active_layer=layer["name"], loading=True)
-        else: __self__.rotate(rotate_factor,active_layer=layer["name"], loading=True)
+            __self__.rotate(1,active_layer=layer["name"],loading=True)
+            __self__.rotate(1,active_layer=layer["name"],loading=True)
+        else: __self__.rotate(rotate_factor,active_layer=layer["name"],loading=True)
+        hflip, vflip = layer["hflip"], layer["vflip"]
+        if hflip: __self__.flip(active_layer=layer["name"],axis="horizontal",loading=True) 
+        if vflip: __self__.flip(active_layer=layer["name"],axis="vertical",loading=True) 
+        else: pass
+
+        ############################################################
 
         if mask.any():
             __self__.layer[layer["name"]].img = fast_scaling(
@@ -1621,8 +1677,6 @@ class Mosaic_API:
                     gross = int(inst_gross)
             __self__.progress_bar.updatebar(3)
             time.sleep(0.5)
-
-            #__self__.progress_bar.destroybar()
 
             ########################################
             # Get start and end position of canvas #
@@ -1840,12 +1894,13 @@ class Mosaic_API:
             
             new_cube.scale_matrix = __self__.cropped
             new_cube.scalable = True
-            #new_cube.matrix = new_cube.matrix.astype("int32")
+            if any("mca" in x for x in __self__.datatype):
+                new_cube.matrix = new_cube.matrix.astype(np.int32)
             new_cube.background = __self__.background
             del __self__.background
             gc.collect()
 
-            __self__.progress_bar = Busy(11,0)
+            __self__.progress_bar.progress["maximum"] = 11
             __self__.progress_bar.updatebar(5)
             __self__.progress_bar.update_text("Digesting...")
             time.sleep(1)
