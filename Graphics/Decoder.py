@@ -35,7 +35,7 @@ def unpack_icons():
     global ICO_SAVE, ICO_SAVE_SPEC, ICO_LOG, ICO_LIN, ICO_ADVCALIB
     global ICO_MASK_NORMAL, ICO_MASK_TOGGLED 
     global ICO_LINREGRESS_NORMAL, ICO_LINREGRESS_TOGGLED, ICO_CLEAR 
-    global ICO_MOSAIC
+    global ICO_MOSAIC, ICO_HFLIP, ICO_VFLIP
 
     icons_file = open(os.path.join(os.getcwd(),"images","icons","icons.tz"),"rb")
     ICO_ACCEPT = icons_file.read(1548)
@@ -50,6 +50,7 @@ def unpack_icons():
     ICO_EXPORT_MERGE = icons_file.read(4664)
     ICO_FIT_DISABLED = icons_file.read(6252)
     ICO_FIT_NORMAL = icons_file.read(7176)
+    ICO_HFLIP = icons_file.read(4304)
     ICO_IMGANAL = icons_file.read(2416)
     ICO_LIN = icons_file.read(4020)
     ICO_LINREGRESS_NORMAL = icons_file.read(7732)
@@ -71,6 +72,7 @@ def unpack_icons():
     ICO_SAVE_SPEC = icons_file.read(8060)
     ICO_SETTINGS = icons_file.read(3624)
     ICO_UP = icons_file.read(4064)
+    ICO_VFLIP = icons_file.read(4272)
 
 unpack_images()
 unpack_icons()
