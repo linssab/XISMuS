@@ -60,10 +60,11 @@ def prepare_data(FitClass):
 
     threads = []
     cpus = cpu_count() #NOTE: includes logical cores
-    print("cpus",cpus)
     lock = threading.Lock()
 
     if cpus == 1:
+        bite_size = int(FitClass.counts.shape[0])
+        leftovers = 0
         print("Only one core")
         logger.warning("Sample is too small, running with one core only...")
     else:
