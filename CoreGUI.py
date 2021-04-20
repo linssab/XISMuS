@@ -1706,6 +1706,7 @@ class Annotator:
         except: pass
         try: __self__.y0 = int(event.ydata)
         except: pass
+        print("CLICK! x,y",__self__.x0,__self__.y0)
 
     def on_drag(__self__,event):
         if __self__.press and __self__.alive:
@@ -1745,40 +1746,24 @@ class Annotator:
         print("MPL X:",__self__.x0,__self__.x1)
         print("MPL Y:",__self__.y0,__self__.y1)
         # in matplotlib canvas directions are swapped
-        y_ = [__self__.x0,__self__.x1]
         x_ = [__self__.y0,__self__.y1]
+        y_ = [__self__.x0,__self__.x1]
         print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
-        y_.sort()
         x_.sort()
+        y_.sort()
 
         print("x",x_)
         print("y",y_)
         print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
         
-        ###############################################################################
-        # unpacks raw image, notice no normalization is done to match LEVELS          # 
-        # levels of gray. If NO MAPS are available at the cube, the sum image appears #
-        ###############################################################################
-
         if unpacker1 != [""] or unpacker2 != [""]:
             image1 = __self__.parent.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
             image2 = __self__.parent.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
-         
-        ################################################################
-        # IF NO MAPS ARE AVAILABLE, ONLY ITERATES TO SHOW THE ROI PLOT #
-        ################################################################
         else:
             __self__.parent.sum_spectrum = \
                     __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
             __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
-            """
-            for x in range(y_[0],y_[1]):
-                for y in range(x_[0],x_[1]):
-                    __self__.parent.sum_spectrum += __self__.parent.DATACUBE.matrix[x][y]
-                    __self__.spec_no += 1
-            """
             return
-        ################################################################
 
         #################################################################################
         #NOTE: if the image on display in the panel is a result of masking with         #
@@ -1786,6 +1771,7 @@ class Annotator:
         # is displayed. Then, coordinates must be changed to pick the corresponding spec#
         #################################################################################
         if __self__.parent.masked:
+            print("MSKD!")
             x = __self__.parent.crop_y
             y = __self__.parent.crop_x #NOTE: coordinates in matplotlib canvas are swapped
             image1 = image1[x[0]:x[1],y[0]:y[1]]
@@ -1805,14 +1791,6 @@ class Annotator:
         __self__.area1_sum = image1[x_[0]:x_[1],y_[0]:y_[1]].sum()
         __self__.area2_sum = image2[x_[0]:x_[1],y_[0]:y_[1]].sum()
         __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
-        """
-        for x in range(y_[0],y_[1]):
-           for y in range(x_[0],x_[1]):
-               __self__.area1_sum += image1[x][y]
-               __self__.area2_sum += image2[x][y]
-               __self__.parent.sum_spectrum += __self__.parent.DATACUBE.matrix[x][y]
-               __self__.spec_no += 1
-        """
         __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
         __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
         if __self__.area2_sum > 0:
@@ -2352,8 +2330,8 @@ class ImageAnalyzer:
         unpacker = unpacker.split("_")
         __self__.ElementalMap1 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap1 = __self__.ElementalMap1/__self__.ElementalMap1.max()*LEVELS
-        __self__.left_image.set_extent([0,__self__.ElementalMap1.shape[1],
-            0,__self__.ElementalMap1.shape[0]])
+        __self__.left_image.set_extent([-1,__self__.ElementalMap1.shape[1],
+            __self__.ElementalMap1.shape[0],-1])
         __self__.draw_image1(0)
         try: 
             __self__.annotator.wipe_annotator()
@@ -2372,8 +2350,8 @@ class ImageAnalyzer:
         unpacker = unpacker.split("_")
         __self__.ElementalMap2 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap2 = __self__.ElementalMap2/__self__.ElementalMap2.max()*LEVELS
-        __self__.right_image.set_extent([0,__self__.ElementalMap2.shape[1],
-            0,__self__.ElementalMap2.shape[0]])
+        __self__.right_image.set_extent([-1,__self__.ElementalMap2.shape[1],
+            __self__.ElementalMap2.shape[0],-1])
         __self__.draw_image2(0)
         try: 
             __self__.annotator.wipe_annotator()
@@ -2548,7 +2526,8 @@ class ImageAnalyzer:
         if __self__.annotate.config("relief")[-1] == "sunken" and \
                 __self__.annotator.x0 is not None:
             x = [__self__.annotator.x0, __self__.annotator.x1]
-            y = [Map1.shape[0]-__self__.annotator.y0-1, Map1.shape[0]-__self__.annotator.y1-1]
+            y = [__self__.annotator.y0, __self__.annotator.y1]
+            #y = [Map1.shape[0]-__self__.annotator.y0-1, Map1.shape[0]-__self__.annotator.y1-1]
             x.sort()
             y.sort()
             Map1 = Map1[y[0]:y[1],x[0]:x[1]]
@@ -3191,6 +3170,9 @@ class PlotWin:
            writer.dump()
 
     def fit_roi(__self__):
+        if not Constants.USEXLIB:
+            messagebox.showerror("Xraylib not found!","Cannot perform fit!")
+            return
         root.busy.busy()
         x,spec = __self__.DATA.get_data()
         if __self__.fit_plots != []:
