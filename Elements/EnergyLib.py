@@ -1,12 +1,14 @@
 #################################################################
 #                                                               #
 #          DATABASE FOR ELEMENTS                                #
-#                        version: 2.1.0 - Feb - 2021            #
+#                        version: 2.3.1 - Apr - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import numpy as np
 import random, os
+import logging
+logger = logging.getLogger("logfile")
 try:
     import Constants
 except: 
@@ -177,62 +179,152 @@ def SetPeakLines():
     PeakConfigDict = {"{0}".format(ElementList[element]):ConfigLines[element] for element in range(len(ElementList))}
     return PeakConfigDict
 
-def set_all_lines_dict():
+def set_all_lines_dict(xlib=0):
     global ALL_LINES
     lines = {}
-    elt = 0
-    while elt in range(len(ElementList)):
-        while ElementList[elt] != "Mt": 
-            try:
-                lines[elt] = {}
-                lines[elt]["KA1"] = xlib.LineEnergy(elt,xlib.KA1_LINE), xlib.RadRate(elt,xlib.KA1_LINE)
-                lines[elt]["KA2"] = xlib.LineEnergy(elt,xlib.KA2_LINE), xlib.RadRate(elt,xlib.KA2_LINE)
-                lines[elt]["KA3"] = xlib.LineEnergy(elt,xlib.KA3_LINE), xlib.RadRate(elt,xlib.KA3_LINE)
-                lines[elt]["KB1"] = xlib.LineEnergy(elt,xlib.KB1_LINE), xlib.RadRate(elt,xlib.KB1_LINE)
-                lines[elt]["KB2"] = xlib.LineEnergy(elt,xlib.KB2_LINE), xlib.RadRate(elt,xlib.KB2_LINE)
-                lines[elt]["KB3"] = xlib.LineEnergy(elt,xlib.KB3_LINE), xlib.RadRate(elt,xlib.KB3_LINE)
-                lines[elt]["KB4"] = xlib.LineEnergy(elt,xlib.KB4_LINE), xlib.RadRate(elt,xlib.KB4_LINE)
-                lines[elt]["KB5"] = xlib.LineEnergy(elt,xlib.KB5_LINE), xlib.RadRate(elt,xlib.KB5_LINE)
-                lines[elt]["LA1"] = xlib.LineEnergy(elt,xlib.LA1_LINE), xlib.RadRate(elt,xlib.LA1_LINE)
-                lines[elt]["LB1"] = xlib.LineEnergy(elt,xlib.LB1_LINE), xlib.RadRate(elt,xlib.LB1_LINE)
-                lines[elt]["LA2"] = xlib.LineEnergy(elt,xlib.LA2_LINE), xlib.RadRate(elt,xlib.LA2_LINE)
-                lines[elt]["LB1"] = xlib.LineEnergy(elt,xlib.LB1_LINE), xlib.RadRate(elt,xlib.LB1_LINE)
-                lines[elt]["LB2"] = xlib.LineEnergy(elt,xlib.LB2_LINE), xlib.RadRate(elt,xlib.LB2_LINE)
-                lines[elt]["LB3"] = xlib.LineEnergy(elt,xlib.LB3_LINE), xlib.RadRate(elt,xlib.LB3_LINE)
-                lines[elt]["LB4"] = xlib.LineEnergy(elt,xlib.LB4_LINE), xlib.RadRate(elt,xlib.LB4_LINE)
-                lines[elt]["LB5"] = xlib.LineEnergy(elt,xlib.LB5_LINE), xlib.RadRate(elt,xlib.LB5_LINE)
-                lines[elt]["LB6"] = xlib.LineEnergy(elt,xlib.LB6_LINE), xlib.RadRate(elt,xlib.LB6_LINE)
-                lines[elt]["LB7"] = xlib.LineEnergy(elt,xlib.LB7_LINE), xlib.RadRate(elt,xlib.LB7_LINE)
-                lines[elt]["LB9"] = xlib.LineEnergy(elt,xlib.LB9_LINE), xlib.RadRate(elt,xlib.LB9_LINE)
-                lines[elt]["LB10"] = xlib.LineEnergy(elt,xlib.LB10_LINE), xlib.RadRate(elt,xlib.LB10_LINE)
-                lines[elt]["LB15"] = xlib.LineEnergy(elt,xlib.LB15_LINE), xlib.RadRate(elt,xlib.LB15_LINE)
-                lines[elt]["LB17"] = xlib.LineEnergy(elt,xlib.LB17_LINE), xlib.RadRate(elt,xlib.LB17_LINE)
-                lines[elt]["LG1"] = xlib.LineEnergy(elt,xlib.LG1_LINE), xlib.RadRate(elt,xlib.LG1_LINE)
-                lines[elt]["LG2"] = xlib.LineEnergy(elt,xlib.LG2_LINE), xlib.RadRate(elt,xlib.LG2_LINE)
-                lines[elt]["LG3"] = xlib.LineEnergy(elt,xlib.LG3_LINE), xlib.RadRate(elt,xlib.LG3_LINE)
-                lines[elt]["LG4"] = xlib.LineEnergy(elt,xlib.LG4_LINE), xlib.RadRate(elt,xlib.LG4_LINE)
-                lines[elt]["LG5"] = xlib.LineEnergy(elt,xlib.LG5_LINE), xlib.RadRate(elt,xlib.LG5_LINE)
-                lines[elt]["LG6"] = xlib.LineEnergy(elt,xlib.LG6_LINE), xlib.RadRate(elt,xlib.LG6_LINE)
-                lines[elt]["LG8"] = xlib.LineEnergy(elt,xlib.LG8_LINE), xlib.RadRate(elt,xlib.LG8_LINE)
-                lines[elt]["LE"] = xlib.LineEnergy(elt,xlib.LE_LINE), xlib.RadRate(elt,xlib.LE_LINE)
-                lines[elt]["LL"] = xlib.LineEnergy(elt,xlib.LL_LINE), xlib.RadRate(elt,xlib.LL_LINE)
-                lines[elt]["LS"] = xlib.LineEnergy(elt,xlib.LS_LINE), xlib.RadRate(elt,xlib.LS_LINE)
-                lines[elt]["LT"] = xlib.LineEnergy(elt,xlib.LT_LINE), xlib.RadRate(elt,xlib.LT_LINE)
-                lines[elt]["LU"] = xlib.LineEnergy(elt,xlib.LU_LINE), xlib.RadRate(elt,xlib.LU_LINE)
-                lines[elt]["LV"] = xlib.LineEnergy(elt,xlib.LV_LINE), xlib.RadRate(elt,xlib.LV_LINE)
-                lines[elt]["MA1"] = xlib.LineEnergy(elt,xlib.MA1_LINE), xlib.RadRate(elt,xlib.MA1_LINE)
-                lines[elt]["MA2"] = xlib.LineEnergy(elt,xlib.MA2_LINE), xlib.RadRate(elt,xlib.MA2_LINE)
-                lines[elt]["MB"] = xlib.LineEnergy(elt,xlib.MB_LINE), xlib.RadRate(elt,xlib.MB_LINE)
-                lines[elt]["MG"] = xlib.LineEnergy(elt,xlib.MG_LINE), xlib.RadRate(elt,xlib.MG_LINE)
-                elt += 1
-            except:
-                pass
-        break
+    macros = ["KA1","KA2","KA3","KB1","KB2","KB3","KB4","KB5",
+            "LA1","LB1","LA2","LB1","LB2","LB3","LB4","LB5","LB6","LB7","LB9","LB10",
+            "LB15","LB17","LG1","LG2","LG3","LG4","LG5","LG6","LG8","LE","LL","LS",
+            "LT","LU","LV","MA1","MA2","MB","MG"]
+    if xlib == 0:
+        print("Xlib not found! Writing lines...")
+        logger.info("Xlib not found, writing elements information...")
+        for e in ElementList:
+            lines[e] = {}
+            for macro in macros:
+                lines[e][macro] = 0.0, 0.0
+        ALL_LINES = lines
+        return
+    else: 
+        logger.info("Writing elements information...")
+    for element in range(len(ElementList)):
+        elt = ElementList[element]
+        lines[elt] = {}
+        for line in macros:
+            if line == "KA1":
+                try: lines[elt]["KA1"] = xlib.LineEnergy(elt,xlib.KA1_LINE), xlib.RadRate(elt,xlib.KA1_LINE)
+                except: pass
+            elif line == "KA2":
+                try: lines[elt]["KA2"] = xlib.LineEnergy(elt,xlib.KA2_LINE), xlib.RadRate(elt,xlib.KA2_LINE)
+                except: pass
+            elif line == "KA3":
+                try: lines[elt]["KA3"] = xlib.LineEnergy(elt,xlib.KA3_LINE), xlib.RadRate(elt,xlib.KA3_LINE)
+                except: pass
+            elif line == "KB1":
+                try: lines[elt]["KB1"] = xlib.LineEnergy(elt,xlib.KB1_LINE), xlib.RadRate(elt,xlib.KB1_LINE)
+                except: pass
+            elif line == "KB2":
+                try: lines[elt]["KB2"] = xlib.LineEnergy(elt,xlib.KB2_LINE), xlib.RadRate(elt,xlib.KB2_LINE)
+                except: pass
+            elif line == "KB3":
+                try: lines[elt]["KB3"] = xlib.LineEnergy(elt,xlib.KB3_LINE), xlib.RadRate(elt,xlib.KB3_LINE)
+                except: pass
+            elif line == "KB4":
+                try: lines[elt]["KB4"] = xlib.LineEnergy(elt,xlib.KB4_LINE), xlib.RadRate(elt,xlib.KB4_LINE)
+                except: pass
+            elif line == "KB5":
+                try: lines[elt]["KB5"] = xlib.LineEnergy(elt,xlib.KB5_LINE), xlib.RadRate(elt,xlib.KB5_LINE)
+                except: pass
+            elif line == "LA1":
+                try: lines[elt]["LA1"] = xlib.LineEnergy(elt,xlib.LA1_LINE), xlib.RadRate(elt,xlib.LA1_LINE)
+                except: pass
+            elif line == "LB1":
+                try: lines[elt]["LB1"] = xlib.LineEnergy(elt,xlib.LB1_LINE), xlib.RadRate(elt,xlib.LB1_LINE)
+                except: pass
+            elif line == "LA2":
+                try: lines[elt]["LA2"] = xlib.LineEnergy(elt,xlib.LA2_LINE), xlib.RadRate(elt,xlib.LA2_LINE)
+                except: pass
+            elif line == "LB1":
+                try: lines[elt]["LB1"] = xlib.LineEnergy(elt,xlib.LB1_LINE), xlib.RadRate(elt,xlib.LB1_LINE)
+                except: pass
+            elif line == "LB2":
+                try: lines[elt]["LB2"] = xlib.LineEnergy(elt,xlib.LB2_LINE), xlib.RadRate(elt,xlib.LB2_LINE)
+                except: pass
+            elif line == "LB3":
+                try: lines[elt]["LB3"] = xlib.LineEnergy(elt,xlib.LB3_LINE), xlib.RadRate(elt,xlib.LB3_LINE)
+                except: pass
+            elif line == "LB4":
+                try: lines[elt]["LB4"] = xlib.LineEnergy(elt,xlib.LB4_LINE), xlib.RadRate(elt,xlib.LB4_LINE)
+                except: pass
+            elif line == "LB5":
+                try: lines[elt]["LB5"] = xlib.LineEnergy(elt,xlib.LB5_LINE), xlib.RadRate(elt,xlib.LB5_LINE)
+                except: pass
+            elif line == "LB6":
+                try: lines[elt]["LB6"] = xlib.LineEnergy(elt,xlib.LB6_LINE), xlib.RadRate(elt,xlib.LB6_LINE)
+                except: pass
+            elif line == "LB7":
+                try: lines[elt]["LB7"] = xlib.LineEnergy(elt,xlib.LB7_LINE), xlib.RadRate(elt,xlib.LB7_LINE)
+                except: pass
+            elif line == "LB9":
+                try: lines[elt]["LB9"] = xlib.LineEnergy(elt,xlib.LB9_LINE), xlib.RadRate(elt,xlib.LB9_LINE)
+                except: pass
+            elif line == "LB10":
+                try: lines[elt]["LB10"] = xlib.LineEnergy(elt,xlib.LB10_LINE), xlib.RadRate(elt,xlib.LB10_LINE)
+                except: pass
+            elif line == "LB15":
+                try: lines[elt]["LB15"] = xlib.LineEnergy(elt,xlib.LB15_LINE), xlib.RadRate(elt,xlib.LB15_LINE)
+                except: pass
+            elif line == "LB17":
+                try: lines[elt]["LB17"] = xlib.LineEnergy(elt,xlib.LB17_LINE), xlib.RadRate(elt,xlib.LB17_LINE)
+                except: pass
+            elif line == "LG1":
+                try: lines[elt]["LG1"] = xlib.LineEnergy(elt,xlib.LG1_LINE), xlib.RadRate(elt,xlib.LG1_LINE)
+                except: pass
+            elif line == "LG2":
+                try: lines[elt]["LG2"] = xlib.LineEnergy(elt,xlib.LG2_LINE), xlib.RadRate(elt,xlib.LG2_LINE)
+                except: pass
+            elif line == "LG3":
+                try: lines[elt]["LG3"] = xlib.LineEnergy(elt,xlib.LG3_LINE), xlib.RadRate(elt,xlib.LG3_LINE)
+                except: pass
+            elif line == "LG4":
+                try: lines[elt]["LG4"] = xlib.LineEnergy(elt,xlib.LG4_LINE), xlib.RadRate(elt,xlib.LG4_LINE)
+                except: pass
+            elif line == "LG5":
+                try: lines[elt]["LG5"] = xlib.LineEnergy(elt,xlib.LG5_LINE), xlib.RadRate(elt,xlib.LG5_LINE)
+                except: pass
+            elif line == "LG6":
+                try: lines[elt]["LG6"] = xlib.LineEnergy(elt,xlib.LG6_LINE), xlib.RadRate(elt,xlib.LG6_LINE)
+                except: pass
+            elif line == "LG8":
+                try: lines[elt]["LG8"] = xlib.LineEnergy(elt,xlib.LG8_LINE), xlib.RadRate(elt,xlib.LG8_LINE)
+                except: pass
+            elif line == "LE":
+                try: lines[elt]["LE"] = xlib.LineEnergy(elt,xlib.LE_LINE), xlib.RadRate(elt,xlib.LE_LINE)
+                except: pass
+            elif line == "LL":
+                try: lines[elt]["LL"] = xlib.LineEnergy(elt,xlib.LL_LINE), xlib.RadRate(elt,xlib.LL_LINE)
+                except: pass
+            elif line == "LS":
+                try: lines[elt]["LS"] = xlib.LineEnergy(elt,xlib.LS_LINE), xlib.RadRate(elt,xlib.LS_LINE)
+                except: pass
+            elif line == "LT":
+                try: lines[elt]["LT"] = xlib.LineEnergy(elt,xlib.LT_LINE), xlib.RadRate(elt,xlib.LT_LINE)
+                except: pass
+            elif line == "LU":
+                try: lines[elt]["LU"] = xlib.LineEnergy(elt,xlib.LU_LINE), xlib.RadRate(elt,xlib.LU_LINE)
+                except: pass
+            elif line == "LV":
+                try: lines[elt]["LV"] = xlib.LineEnergy(elt,xlib.LV_LINE), xlib.RadRate(elt,xlib.LV_LINE)
+                except: pass
+            elif line == "MA1":
+                try: lines[elt]["MA1"] = xlib.LineEnergy(elt,xlib.MA1_LINE), xlib.RadRate(elt,xlib.MA1_LINE)
+                except: pass
+            elif line == "MA2":
+                try: lines[elt]["MA2"] = xlib.LineEnergy(elt,xlib.MA2_LINE), xlib.RadRate(elt,xlib.MA2_LINE)
+                except: pass
+            elif line == "MB":
+                try: lines[elt]["MB"] = xlib.LineEnergy(elt,xlib.MB_LINE), xlib.RadRate(elt,xlib.MB_LINE)
+                except: pass
+            elif line == "MG":
+                try: lines[elt]["MG"] = xlib.LineEnergy(elt,xlib.MG_LINE), xlib.RadRate(elt,xlib.MG_LINE)
+                except: pass
     for key in lines.keys():
         ALL_LINES[key] = {}
         for line in lines[key]:
             if lines[key][line][0] > 1:
                 ALL_LINES[key][line] = lines[key][line]
+    logger.info("Done.")
+    return
 
 def set_energies_from_xlib():
     cutoff = 0.25
@@ -373,7 +465,10 @@ AtomWeight = {"{0}".format(index[0]):index[2] for index in ElementsInfo}
 Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in ElementsInfo}
 ElementColors = {}
 
-set_all_lines_dict()
+if Constants.USEXLIB:
+    set_all_lines_dict(xlib=1)
+else:
+    set_all_lines_dict()
 
 # Read the color code for the elements
 # if colours.txt does not exist, it generates random colours. 

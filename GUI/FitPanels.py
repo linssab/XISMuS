@@ -219,7 +219,8 @@ class SimpleFitPanel:
 
     def element_select(__self__, e=""):
         global SELECTED_ELEMENT
-        index = __self__.ElementsList.get(0,END).index(SELECTED_ELEMENT)
+        try: index = __self__.ElementsList.get(0,END).index(SELECTED_ELEMENT)
+        except: return
         __self__.LinesList.delete(0,END)
         for line in __self__.ElementsData[index].keys():
             __self__.LinesList.insert(END,line)
