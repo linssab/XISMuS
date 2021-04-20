@@ -189,16 +189,15 @@ def set_all_lines_dict(xlib=0):
     if xlib == 0:
         print("Xlib not found! Writing lines...")
         logger.info("Xlib not found, writing elements information...")
-        for e in ElementList:
-            lines[e] = {}
+        for elt in range(len(ElementList)):
+            lines[elt] = {}
             for macro in macros:
-                lines[e][macro] = 0.0, 0.0
+                lines[elt][macro] = 0.0, 0.0
         ALL_LINES = lines
         return
     else: 
         logger.info("Writing elements information...")
-    for element in range(len(ElementList)):
-        elt = ElementList[element]
+    for elt in range(len(ElementList)):
         lines[elt] = {}
         for line in macros:
             if line == "KA1":
