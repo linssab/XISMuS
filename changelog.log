@@ -4,3 +4,4 @@ New in Version v2.3.1
 - Different datacube types could be merged (fixed)
 - Set ROI spectra shown was being picked with reverse Y index when a map other than the sum was displayed (fixed)
 - Mosaic window impossible to close when opening second mosaic through the main panel (fixed)
+- Small datacubes (<400 spectra) and Single core auto_wizard were crashing with bgstrip option None (fixed)
