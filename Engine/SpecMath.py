@@ -85,7 +85,7 @@ class datacube:
         
         ########################################################
     
-        if any("mca" in x for x in __self__.datatypes):
+        if any("mca" in x for x in __self__.datatypes) and mode != "merge":
             specsize = getdata(getfirstfile())
         elif any("upgrade" in x for x in __self__.datatypes):
             specsize = Constants.MY_DATACUBE.matrix.shape[2]

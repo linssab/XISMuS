@@ -3172,6 +3172,7 @@ class PlotWin:
     def fit_roi(__self__):
         if not Constants.USEXLIB:
             messagebox.showerror("Xraylib not found!","Cannot perform fit!")
+            __self__.master.focus_set()
             return
         root.busy.busy()
         x,spec = __self__.DATA.get_data()
