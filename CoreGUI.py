@@ -1711,9 +1711,9 @@ class Annotator:
     def on_drag(__self__,event):
         if __self__.press and __self__.alive:
             __self__.move = True
-            try: __self__.x1 = int(event.xdata)
+            try: __self__.x1 = int(event.xdata)+1
             except: pass
-            try: __self__.y1 = int(event.ydata)
+            try: __self__.y1 = int(event.ydata)+1
             except: pass
             __self__.area1.set_width(__self__.x1 - __self__.x0)
             __self__.area2.set_width(__self__.x1 - __self__.x0)
@@ -1776,9 +1776,9 @@ class Annotator:
             y = __self__.parent.crop_x #NOTE: coordinates in matplotlib canvas are swapped
             image1 = image1[x[0]:x[1],y[0]:y[1]]
             image2 = image2[x[0]:x[1],y[0]:y[1]]
-            x_ = [-__self__.y0+image1.shape[0],
-                -__self__.y1+image1.shape[0]]
-            x_.sort()
+            #x_ = [-__self__.y0+image1.shape[0],
+            #    -__self__.y1+image1.shape[0]]
+            #x_.sort()
             cx = [x_[0]+x[0], x_[0]+x[0]+(x_[1]-x_[0])]
             cy = [y_[0]+y[0], y_[0]+y[0]+(y_[1]-y_[0])]
             __self__.parent.sum_spectrum = \
@@ -2330,8 +2330,8 @@ class ImageAnalyzer:
         unpacker = unpacker.split("_")
         __self__.ElementalMap1 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap1 = __self__.ElementalMap1/__self__.ElementalMap1.max()*LEVELS
-        __self__.left_image.set_extent([-1,__self__.ElementalMap1.shape[1],
-            __self__.ElementalMap1.shape[0],-1])
+        __self__.left_image.set_extent([0,__self__.ElementalMap1.shape[1],
+            __self__.ElementalMap1.shape[0],0])
         __self__.draw_image1(0)
         try: 
             __self__.annotator.wipe_annotator()
@@ -2350,8 +2350,8 @@ class ImageAnalyzer:
         unpacker = unpacker.split("_")
         __self__.ElementalMap2 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
         __self__.ElementalMap2 = __self__.ElementalMap2/__self__.ElementalMap2.max()*LEVELS
-        __self__.right_image.set_extent([-1,__self__.ElementalMap2.shape[1],
-            __self__.ElementalMap2.shape[0],-1])
+        __self__.right_image.set_extent([0,__self__.ElementalMap2.shape[1],
+            __self__.ElementalMap2.shape[0],0])
         __self__.draw_image2(0)
         try: 
             __self__.annotator.wipe_annotator()
@@ -2946,11 +2946,11 @@ class PlotWin:
         __self__.parent.left_image.set_data(__self__.parent.ElementalMap1)
         __self__.parent.left_image.set_clim(vmin=0, vmax=LEVELS)
         __self__.parent.left_image.set_cmap(Constants.COLORMAP)
-        __self__.parent.left_image.set_extent([0,shape[1],0,shape[0]])
+        __self__.parent.left_image.set_extent([0,shape[1],shape[0],0])
         __self__.parent.right_image.set_data(__self__.parent.ElementalMap2)
         __self__.parent.right_image.set_clim(vmin=0, vmax=LEVELS)
         __self__.parent.right_image.set_cmap(Constants.COLORMAP)
-        __self__.parent.right_image.set_extent([0,shape[1],0,shape[0]])
+        __self__.parent.right_image.set_extent([0,shape[1],shape[0],0])
         __self__.parent.refresh()
         __self__.canvas.draw_idle()
 

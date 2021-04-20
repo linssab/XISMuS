@@ -179,14 +179,14 @@ def SetPeakLines():
     PeakConfigDict = {"{0}".format(ElementList[element]):ConfigLines[element] for element in range(len(ElementList))}
     return PeakConfigDict
 
-def set_all_lines_dict(xlib=0):
+def set_all_lines_dict(usexlib=0):
     global ALL_LINES
     lines = {}
     macros = ["KA1","KA2","KA3","KB1","KB2","KB3","KB4","KB5",
             "LA1","LB1","LA2","LB1","LB2","LB3","LB4","LB5","LB6","LB7","LB9","LB10",
             "LB15","LB17","LG1","LG2","LG3","LG4","LG5","LG6","LG8","LE","LL","LS",
             "LT","LU","LV","MA1","MA2","MB","MG"]
-    if xlib == 0:
+    if usexlib == 0:
         print("Xlib not found! Writing lines...")
         logger.info("Xlib not found, writing elements information...")
         for elt in range(len(ElementList)):
@@ -465,7 +465,7 @@ Element_No = {"{0}".format(index[0]):ElementList.index(index[0]) for index in El
 ElementColors = {}
 
 if Constants.USEXLIB:
-    set_all_lines_dict(xlib=1)
+    set_all_lines_dict(usexlib=1)
 else:
     set_all_lines_dict()
 

@@ -800,9 +800,13 @@ class Mosaic_API:
 
         if axis == "vertical":
             layer.img = cv2.flip(layer.img,0)
+            layer.mask = cv2.flip(layer.mask,0)
+            layer.last_saved_mask = cv2.flip(layer.last_saved_mask,0)
             layer.Vflipped = not(layer.Vflipped)
         elif axis == "horizontal":
             layer.img = cv2.flip(layer.img,1)
+            layer.mask = cv2.flip(layer.mask,1)
+            layer.last_saved_mask = cv2.flip(layer.last_saved_mask,1)
             layer.Hflipped = not(layer.Hflipped)
 
         LAYERS_DICT = convert_layers_to_dict(__self__)
@@ -1296,9 +1300,14 @@ class Mosaic_API:
     
     def save_mosaic(__self__,savefile,npz):
 
-        def unrotate_mask(mask, rotation):
+        def unrotate_mask(mask, layer):
+            rotation = layer.rotation
+            vflip = layer.Vflipped
+            hflip = layer.Hflipped
             fine = float(truncate(rotation-int(rotation),2))
             rotation = int(rotation)
+            if vflip: mask = cv2.flip(mask,0)
+            if hflip: mask = cv2.flip(mask,1)
 
             if rotation == 1:
                 mask = cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -1312,6 +1321,7 @@ class Mosaic_API:
                 return mask
             else: return mask
 
+
         npy_masks = []
         savefile = open(savefile,"+w")
         savefile.write("## MOSAIC SAVEFILE ## shape:{}x{}\n".format(
@@ -1319,7 +1329,7 @@ class Mosaic_API:
         savefile.write("name\telement mirror\tlayer pos\tcoords\trotate factor\tHflip\tVflip\n")
         for layer in __self__.layer:
             mask = __self__.layer[layer].mask
-            mask = unrotate_mask(mask,__self__.layer[layer].rotation)
+            mask = unrotate_mask(mask,__self__.layer[layer])
             print("Mask UNROTATED",mask.shape)
             print("Rotation:",__self__.layer[layer].rotation)
             npy_masks.append(mask)
