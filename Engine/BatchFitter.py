@@ -1439,6 +1439,7 @@ class MultiFit():
             if Constants.MY_DATACUBE.config["bgstrip"] != "None":
                 spec = 0
                 for k in range(__self__.cores):
+                    counts, continuum = [],[]
                     chunk0 = k*bite_size
                     chunk1 = chunk0+bite_size
                     print("Block ",k)
@@ -1448,8 +1449,8 @@ class MultiFit():
                         spec +=1
                     data = (counts,continuum)
                     block.append(data)
-                    counts, continuum = [],[]
                 if leftovers >= 1:
+                    counts, continuum = [],[]
                     __self__.bar.update_text("Eating leftovers...")
                     __self__.bar.updatebar(0)
                     __self__.bar.progress["max"] = leftovers
@@ -1462,6 +1463,7 @@ class MultiFit():
             else:
                 spec = 0
                 for k in range(__self__.cores):
+                    counts = []
                     chunk0 = k*bite_size
                     chunk1 = chunk0+bite_size
                     print("Block ",k)
@@ -1470,8 +1472,8 @@ class MultiFit():
                         spec += 1
                     data = (counts)
                     block.append(data)
-                    counts = []
                 if leftovers >= 1:
+                    counts = []
                     __self__.bar.update_text("Eating leftovers...")
                     __self__.bar.updatebar(0)
                     __self__.bar.progress["max"] = leftovers
