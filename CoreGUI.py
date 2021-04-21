@@ -62,8 +62,9 @@ def update_version():
             latest = version
             logger.info(f"Latest version available: {latest}")
             return 0
-        except:
+        except Exception as exception:
             logger.info("Failed to connect!")
+            logger.info(f"Exception: {exception}")
             latest = "0.0.0"
             return 1
 
