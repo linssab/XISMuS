@@ -2,6 +2,8 @@ import logging
 logger = logging.getLogger("logfile")
 logger.info("Booting Engine...")
 
+logger.info("Importing CsvWriter...")
+from .CsvWriter import *
 logger.info("Importing Advcanced Fit...")
 from .AdvFit import *
 logger.info("Importing SpecMath...")

@@ -236,94 +236,6 @@ def wipe_list():
 def openURL(url):
     webbrowser.open(url)
 
-def maximize_window(window,e=""):
-    if window.alt == False: return
-    else:
-        if window.master.state()=="zoomed":
-            window.master.state("normal")
-        else: 
-            window.master.state("zoomed")
-
-def place_topright(window1,window2):
-    w_user, h_user = screen_size()
-    
-    # adapted from: https://stackoverflow.com/questions/3352918/
-    """ Places window2 next to window1 top-right end """ 
-    
-    window1.update_idletasks()
-    window2.update_idletasks()
-    
-    width = window1.winfo_width()
-    frm_width = window1.winfo_rootx() - window1.winfo_x()
-    win_width = width + (2 * frm_width)
-    width2 = window2.winfo_width()
-
-    height = window1.winfo_height()
-    titlebar_height = window1.winfo_rooty() - window1.winfo_y()
-    win_height = height + titlebar_height + frm_width
-    height2 = window2.winfo_height()
-    
-    x = window1.winfo_rootx() + width
-    y = window1.winfo_rooty() - titlebar_height
-
-    if x + width2 > w_user or y + height2 > h_user: 
-        place_center(window1,window2) 
-        return 1 
-    if Constants.LOW_RES == None:
-        window2.geometry("{}x{}+{}+{}".format(width2, height2, x, y))
-        window2.deiconify()
-    elif Constants.LOW_RES == "high":
-        width = window2.winfo_screenwidth()
-        height = window2.winfo_screenheight()
-        w_width = window2.winfo_width()
-        w_height = window2.winfo_height()
-        window2.geometry("{}x{}+{}+{}".format(w_width,w_height,\
-                int((width/2)-(w_width/2)),int((height/2)-(w_height/2))))
-        window2.deiconify()
-
-def place_center(window1,window2):
-    """ Places window2 on center of window1 """
-
-    window1.update_idletasks()
-    window2.update_idletasks()
-    
-    width = window1.winfo_width()
-    frm_width = window1.winfo_rootx() - window1.winfo_x()
-    win_width = width + (2 * frm_width)
-    width2 = window2.winfo_width()
-
-    height = window1.winfo_height()
-    titlebar_height = window1.winfo_rooty() - window1.winfo_y()
-    win_height = height + titlebar_height + frm_width
-    height2 = window2.winfo_height()
-
-    w_user, h_user = screen_size()   
-
-    x = window1.winfo_rootx() + (int(win_width/2)) - (int(width2/2))
-    y = window1.winfo_rooty() - titlebar_height + (int(height/2)) - (int(height2/2))
-    
-    if y < 0 or y + height2 > h_user: spawn_center(window2)
-    elif x > w_user or x + width2 > w_user or x < 0: spawn_center(window2)
-    else:
-        window2.geometry('{}x{}+{}+{}'.format(width2, height2, x, y))
-        window2.deiconify()
-        window2.focus_force()
-    return
-
-def spawn_center(window):
-    """ Spawns the window on center of screen. There are known issues
-    with multiple monitors, specially of different dpi """
-
-    width = window.winfo_screenwidth()
-    height = window.winfo_screenheight()
-    
-    w_width = window.winfo_width()
-    w_height = window.winfo_height()
-
-    window.geometry("{}x{}+{}+{}".format(w_width,w_height,\
-            int((width/2)-(w_width/2)),int((height/2)-(w_height/2))))
-    window.focus_force() 
-
 def convert_bytes(num):
     """ Obtained from https://stackoverflow.com/questions/210408 """
 
@@ -375,107 +287,7 @@ def verify_calibration_parameters(caller, anchors):
         ##############################
     return 0
 
-def call_compilecube():
-    global root
-    """ Tries to create output folder (name is Constants.CONFIG['directory']) 
-    and calls SpecMath to compile the data. Spectra to compile are looked under the directory
-    set by the user (default is C:/samples/) and inside a directory named 
-    Constants.CONFIG['directory'].
-    
-    If a certain file cannot be read, an error is raised. SpecMath returns the name 
-    of the file. """
 
-    try: 
-        os.mkdir(sp.output_path)
-    except IOError as exception:
-        logger.warning("Error {}.".format(exception.__class__.__name__))
-        logger.warning("Can't create output folder {}".format(sp.output_path))
-    
-    if os.path.exists(sp.cube_path): 
-        pass
-    else:
-        root.ButtonLoad.config(state=DISABLED)
-        root.MenuBar.entryconfig("Toolbox", state=DISABLED)
-
-        ###############################
-        # disables the samples window #
-        ###############################
-
-        root.SamplesWindow_TableLeft.config(state=DISABLED)
-        root.SamplesWindow_multi.config(state=DISABLED)
-        root.SamplesWindow_ok.config(state=DISABLED)
-
-        ###############################
-
-        root.StatusBox.delete(0,END)
-        root.StatusBox.insert(END, "\nStarting cube compilation.\n")
-        root.StatusBox.insert(END, "\nImage size: {} x {}.\n".format(
-            root.config_xy[0], root.config_xy[1]))
-        root.StatusBox.insert(END, "\nSpectra count: {}.\n".format(
-            root.mcacount[Constants.CONFIG["directory"]]))
-        logger.warning("Starting cube {} compilation!".format(Constants.CONFIG["directory"]))
-        
-        ##########################################################################
-        # IF LOADING AN H5 FILE, USER CAN COMPILE A DATACUBE OR USE THE H5 AS IS #
-        ##########################################################################
-        if root.mca_extension[Constants.CONFIG["directory"]] == ".h5":
-            m = messagebox.askquestion("Attention!",
-                    "You can proceed without compiling the H5 file into a datacube, however, it won't be saved to the database nor will be recognized by Mosaic. It is recommended that you COMPILE it into a datacube. To save disk space, you can compress the H5 file later. DO YOU WANT TO CREATE A DATACUBE FILE?")
-            if m == "yes":
-                specbatch = Cube(["h5"],Constants.CONFIG)
-                fail = specbatch.compile_cube()
-                root.ButtonLoad.config(state=NORMAL)
-                root.MenuBar.entryconfig("Toolbox", state=NORMAL)
-                root.temporaryh5 = "None"
-            elif m == "no":
-                root.busy.busy()
-                Constants.MY_DATACUBE = converth5() 
-                root.samples[Constants.CONFIG["directory"]] = "temp .h5"
-                sp.cube_path = ""
-                root.ButtonLoad.config(state=NORMAL)
-                root.MenuBar.entryconfig("Toolbox", state=NORMAL)
-                root.temporaryh5 = Constants.CONFIG["directory"]
-                root.busy.notbusy()
-
-        ##########################################################################
-        
-        else:
-
-            ############################################################
-            # Fills the file pool in case spectra were loaded manually #
-            ############################################################
-
-            Constants.FILE_POOL = root.samples[Constants.CONFIG["directory"]]
-
-            ############################################################
-
-            if Constants.FTIR_DATA: 
-                datatype="ftir"
-            else: datatype="mca"
-            specbatch = Cube([datatype],Constants.CONFIG)
-            fail = specbatch.compile_cube()
-            root.ButtonLoad.config(state=NORMAL)
-            root.MenuBar.entryconfig("Toolbox", state=NORMAL)
-
-            ####################################################
-            # changes the prefix if sample was loaded manually #
-            ####################################################
-
-            if isinstance(Constants.FILE_POOL,tuple):
-                root.samples[Constants.CONFIG["directory"]] = \
-                root.samples[Constants.CONFIG["directory"]][0].split("/")[-1].split(".")[0]
-            
-            ####################################################
-            
-            if fail[0] == True:
-                messagebox.showerror("Error!",
-                        "Could not read {} file! Aborting compilation".format(fail[1]))
-                shutil.rmtree(sp.output_path) 
-        root.SamplesWindow_TableLeft.config(state=NORMAL)
-        root.SamplesWindow_multi.config(state=NORMAL)
-        root.SamplesWindow_ok.config(state=NORMAL)
-        root.toggle_(toggle="on")
-        root.list_samples()
 
 def upgrade_cube(cube):
     """ pre 1.3 cubes will remain without 'version' attribute. Other cubes will maintain the
@@ -1349,267 +1161,6 @@ class DimensionDiag():
     def kill(__self__,e):
         __self__.exit_code = "cancel"
         __self__.master.destroy()
-
-
-class PeakClipper:
-    """Creates a dialog to set-up SNIPBG parameters"""
-    global root
-    
-    def __init__(__self__,parent,mode=None):
-        """ Parent is ConfigDiag class """
-        __self__.master = Toplevel(master = parent.master)
-        __self__.parent = parent
-        __self__.mode = mode
-        __self__.master.tagged = True
-        __self__.master.attributes("-alpha",0.0)
-        __self__.master.resizable(True,True)
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
-        __self__.master.bind("<Escape>",__self__.kill)
-
-        __self__.right_panel = Frame(__self__.master,height=480)
-        __self__.frame1 = Frame(__self__.master,height=480,width=320)
-        __self__.frame2 = LabelFrame(__self__.right_panel, 
-                height=320,width=120,
-                padx=15, pady=15,
-                text="SNIPBG Parameters:")
-        __self__.frame3 = LabelFrame(__self__.right_panel, 
-                padx=15, pady=15,
-                height=320,width=120,
-                text="Polynomial Parameters:")
-        __self__.frame4 = Frame(__self__.right_panel)
-
-        __self__.right_panel.grid(row=0,rowspan=2,column=1,padx=10,sticky="") 
-        __self__.frame1.grid(row=0,rowspan=3,column=0,sticky=N+E+W+S)
-        __self__.frame2.grid(row=1,column=1,padx=15,sticky="")
-        __self__.frame4.grid(row=3,column=1,columnspan=2,padx=15,pady=15,sticky="")
-        
-        __self__.master.grid_columnconfigure(0,weight=1)
-        __self__.master.grid_rowconfigure(0,weight=1)
-
-        __self__.savgol = IntVar() #Savgol window
-        __self__.order = IntVar() #Savgol order function order
-        __self__.window = IntVar() #Clip window
-        __self__.iter = IntVar() #No. of cycles
-        __self__.nglobal = IntVar() #Polynomial function degree for global spectrum
-        __self__.nsingle = IntVar() #Polynomial function degree for all other spectra
-        __self__.r_factor = IntVar() #Polyfit r factor
-
-        if mode == "SNIPBG":
-            __self__.savgol.set(5)
-            __self__.order.set(3)
-            __self__.window.set(5)
-            __self__.iter.set(24)
-        elif mode == "Polynomial":
-            __self__.nglobal.set(6)
-            __self__.r_factor.set(2)
-        
-        __self__.build_widgets()
-        if mode == "SNIPBG":
-            # Not yet implemented #
-            #__self__.frame3.config(state=DISABLED)
-            pass
-        elif mode == "Polynomial":
-            __self__.entry_savgol.config(state=DISABLED)
-            __self__.entry_order.config(state=DISABLED)
-            __self__.entry_window.config(state=DISABLED)
-            __self__.entry_iter.config(state=DISABLED)
-            __self__.button_save.config(state=DISABLED)
-            __self__.button_try.config(state=DISABLED)
-            __self__.randomize.config(state=DISABLED)
-
-    def build_widgets(__self__):
-       
-        # frame 1 (left)
-        __self__.upper = Canvas(__self__.frame1)
-        fig_bg_color = __self__.master.cget("background")
-        rgb = __self__.master.winfo_rgb(fig_bg_color)
-        color = (rgb[0]/65535, rgb[1]/65535, rgb[2]/65535)
-        __self__.upper.pack(side=TOP, expand=True, fill=BOTH, padx=(16,16),pady=(0,16))
-        __self__.figure = Figure(figsize=(5,4), dpi=75)
-        __self__.figure.patch.set_facecolor(color)
-        __self__.plot = __self__.figure.add_subplot(111)
-        __self__.plot.grid(which='both',axis='both')
-        __self__.plot.axis('On')
-        __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
-        __self__.canvas.draw()
-        __self__.mplCanvas = __self__.canvas.get_tk_widget()
-        __self__.mplCanvas.pack(expand=True,fill=BOTH,anchor=N+W)
-        __self__.canvas._tkcanvas.pack()
-
-        # right panel (top)
-        __self__.randomize = Button(
-                __self__.right_panel, 
-                text="Pick random spectrum",
-                command=__self__.random_sample, 
-                justify=CENTER)
-        __self__.randomize.grid(row=0,column=0,columnspan=2,pady=15)
-        
-        # frame 2 (top-right)
-        __self__.label_savgol = Label(__self__.frame2, text="Sav-gol window: ")
-        __self__.label_order = Label(__self__.frame2, text="Sav-gol order: ")
-        __self__.label_window = Label(__self__.frame2, text= "Clipping window: ")
-        __self__.label_iter = Label(__self__.frame2, text="Number of iterations: ")
-        __self__.entry_savgol = Entry(__self__.frame2,textvariable=__self__.savgol,width=15)
-        __self__.entry_order = Entry(__self__.frame2,textvariable=__self__.order,width=15)
-        __self__.entry_window = Entry(__self__.frame2,textvariable=__self__.window,width=15)
-        __self__.entry_iter = Entry(__self__.frame2,textvariable=__self__.iter,width=15)
-
-        # frame 3 (middle-right)
-        __self__.label_nglobal = Label(__self__.frame3, text="Global spectrum degree: ")
-        __self__.label_r_factor = Label(__self__.frame3, text= "R factor: ")
-        __self__.entry_nglobal = Entry(__self__.frame3,
-                textvariable=__self__.nglobal,width=15)
-        __self__.entry_r_factor = Entry(__self__.frame3,
-                textvariable=__self__.r_factor,width=15)
-
-        __self__.label_savgol.grid(row=1,column=0)
-        __self__.label_order.grid(row=2,column=0)
-        __self__.label_window.grid(row=3,column=0)
-        __self__.label_iter.grid(row=4,column=0)
-        __self__.entry_savgol.grid(row=1,column=1,sticky=E)
-        __self__.entry_order.grid(row=2,column=1,sticky=E)
-        __self__.entry_window.grid(row=3,column=1,sticky=E)
-        __self__.entry_iter.grid(row=4,column=1,sticky=E)
-        
-        __self__.label_nglobal.grid(row=1,column=0)
-        __self__.label_r_factor.grid(row=2,column=0)
-        __self__.entry_nglobal.grid(row=1,column=1,sticky=E)
-        __self__.entry_r_factor.grid(row=2,column=1,sticky=E)
-
-        # frame 4 (lower-right)
-        __self__.button_try = Button(__self__.frame4,text="Try",width=10,
-                justify=CENTER,command=__self__.refresh_plot)
-        __self__.button_save = Button(__self__.frame4, text="Save",width=10,
-                justify=CENTER,command=__self__.save)
-        __self__.button_cancel = Button(__self__.frame4, text="Cancel",width=10,
-                justify=CENTER,command=__self__.kill)
-
-        __self__.button_try.grid(row=0,column=0)
-        __self__.button_save.grid(row=0,column=1)
-        __self__.button_cancel.grid(row=1,column=0,columnspan=2)
-
-        __self__.master.update()
-        place_center(__self__.parent.master,__self__.master)
-        __self__.master.focus_set()
-        icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
-        __self__.master.iconbitmap(icon)
-        __self__.random_sample()
-        x = __self__.master.winfo_width()
-        y = __self__.master.winfo_height()
-        __self__.master.minsize(x,y)
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
-    
-    def stripbg(__self__):
-        if __self__.mode == "SNIPBG":
-            savgol = __self__.savgol.get()
-            order = __self__.order.get()
-            window = __self__.window.get()
-            cycles = __self__.iter.get()
-            background = peakstrip(__self__.spectrum,cycles,window,savgol,order)
-        elif __self__.mode == "Polynomial":
-            nglobal = __self__.nglobal.get()
-            r_factor = __self__.r_factor.get()
-            background = peakstrip(__self__.spectrum,cycles,window,savgol,order)
-        return background
-
-    def refresh_plot(__self__):
-        __self__.plot.clear()
-        folder = Constants.CONFIG.get('directory')
-
-        """ Gives the spectrum name for label according to need. Is user loaded a list
-        of files, name must be taken straight from the list. Else, the file builder
-        concatenates prefix, index and prefix to form the name """
-        
-        if isinstance(root.samples[folder],tuple): 
-            label = root.samples[folder][__self__.sample].split("/")[-1]
-        else:
-            label = root.samples[folder]+"{0}.{1}".format(
-                        __self__.sample,root.mca_extension[folder])
-
-        if Constants.PLOTSCALE == None:
-            __self__.plot.set_ylabel("Counts")
-            __self__.plot.set_xlabel("Channels")
-            __self__.plot.plot(__self__.spectrum,
-                    color="blue",
-                    label=label)
-            try: 
-                background = __self__.stripbg()
-                __self__.plot.plot(background, label="Background",color="yellow")
-            except: pass
-            __self__.plot.set_ylim(bottom=0)
-        else:
-            __self__.plot.set_ylabel("Counts")
-            __self__.plot.set_xlabel("Channels")
-            __self__.plot.semilogy(__self__.spectrum,
-                    color="blue",
-                    label=label)
-            try: 
-                background = __self__.stripbg()
-                __self__.plot.plot(background, label="Background",color="yellow")
-            except: pass
-            __self__.plot.set_ylim(bottom=10e-2)
-            __self__.plot.set_ylim(top=1.10*__self__.spectrum.max())
-
-        __self__.plot.legend(loc="upper right")
-        __self__.canvas.draw()
-
-    def random_sample(__self__):
-        folder = Constants.CONFIG.get("directory")
-        spec_no = root.mcacount[folder]
-
-        ################################################
-        # IF PARENT HAS A MATRIX, IT LOADED AN H5 FILE #
-        ################################################
-        if __self__.parent.matrix.shape[2] > 1:
-            __self__.sample = random.randint(1,spec_no-1)
-            __self__.spectrum = __self__.parent.matrix.reshape(-1,__self__.parent.matrix.shape[-1])[__self__.sample]
-        ################################################
-        
-        ####################################################################
-        # ELSE, IT IS READING MCA EITHER FROM USER LIST OR DETECTED FOLDER #
-        ####################################################################
-        else:
-            """ When loading a list of files - when the sample is manually loaded by the user,
-            not detected automatically - root.samples carries the list of all mca's path """
-            if folder == "Training Data 1" or folder == "Training Data 2":
-                __self__.sample = random.randint(1,spec_no-1)
-                mca = os.path.join(sp.__PERSONAL__,"Example Data",folder,
-                        root.samples[folder]+"{0}.{1}".format(__self__.sample,
-                            root.mca_extension[folder]))
-            elif isinstance(root.samples[folder],tuple):
-                __self__.sample = random.randint(1,len(root.samples[folder]))
-                mca = root.samples[folder][__self__.sample]
-            else:
-                __self__.sample = random.randint(1,spec_no-1)
-                mca = os.path.join(Constants.SAMPLE_PATH,
-                        root.samples[folder]+"{0}.{1}".format(__self__.sample,
-                            root.mca_extension[folder]))
-                
-            __self__.spectrum = sp.getdata(mca)
-        ####################################################################
-
-        if isinstance(__self__.spectrum,np.ndarray):
-            __self__.refresh_plot() 
-        else:
-            messagebox.showerror("EOF Error!","Could not read {} file!".\
-                    format(__self__.spectrum))
-
-    def save(__self__):
-        __self__.parent.snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
-        proceed = __self__.verify_values(__self__.parent.snip_config)
-        if proceed == True: __self__.kill()
-        else: messagebox.showerror("Value Error", "Parameters not valid. No negative or zero values are valid. Sav-gol window must be odd and greater than Sav-gol order.")
-
-    def kill(__self__, event=""):
-        __self__.master.grab_release()
-        root.ConfigDiag.master.grab_set()
-        __self__.master.destroy()
-    
-    def verify_values(__self__,snip):
-        if snip[0] <= 0 or snip[1] <= 0: return False
-        if int(snip[2]%2) == 0: return False
-        if snip[3] > snip[2]: return False
-        else: return True
 
 
 class Annotator:
@@ -3167,7 +2718,7 @@ class PlotWin:
                         filetypes=[("Comma separated values", "*.csv")],
                         title="Save as...")
         if f is not None:
-           writer = Engine.CsvWriter(__self__.results,f.name) 
+           writer = Engine.FitWriter(__self__.results,f.name) 
            writer.dump()
 
     def fit_roi(__self__):
@@ -3205,11 +2756,14 @@ class PlotWin:
             return
         for element in areas.keys():
             __self__.fit_plots.append(
-                    __self__.plot.semilogy(
+                    __self__.plot.plot(
                         __self__.parent.DATACUBE.energyaxis, curves[element], 
                     label=element, color=ElementColors[element],linestyle="--"))
 
         __self__.plot.set_ylim([1,spec.max()*1.20])
+        if Constants.PLOTSCALE == "-semilogy": mode = "log"
+        else: mode = "linear"
+        __self__.plot.set_yscale(mode)
         __self__.canvas.draw()
         __self__.results = areas
         __self__.options.entryconfig("Export fit data . . .", state=NORMAL)
@@ -4091,6 +3645,9 @@ class MainGUI:
         __self__.master.title("XISMuS {}".format(Constants.VERSION))
         __self__.master.attributes("-alpha",0.0)
 
+    def load_cube(__self__):
+        load_cube()
+
     def boot(__self__, database):
         if Constants.LOW_RES == "extreme": 
             quit = messagebox.showinfo("WARNING",
@@ -4547,6 +4104,108 @@ class MainGUI:
 
         __self__.list_samples()
         __self__.StatusBox.focus_set()
+
+    def call_compilecube(__self__):
+        """ Tries to create output folder (name is Constants.CONFIG['directory'])
+        and calls SpecMath to compile the data. Spectra to compile are looked under the directory
+        set by the user (default is C:/samples/) and inside a directory named
+        Constants.CONFIG['directory'].
+
+        If a certain file cannot be read, an error is raised. SpecMath returns the name
+        of the file. """
+
+        try:
+            os.mkdir(sp.output_path)
+        except IOError as exception:
+            logger.warning("Error {}.".format(exception.__class__.__name__))
+            logger.warning("Can't create output folder {}".format(sp.output_path))
+
+        if os.path.exists(sp.cube_path):
+            pass
+        else:
+            __self__.ButtonLoad.config(state=DISABLED)
+            __self__.MenuBar.entryconfig("Toolbox", state=DISABLED)
+
+            ###############################
+            # disables the samples window #
+            ###############################
+
+            __self__.SamplesWindow_TableLeft.config(state=DISABLED)
+            __self__.SamplesWindow_multi.config(state=DISABLED)
+            __self__.SamplesWindow_ok.config(state=DISABLED)
+
+            ###############################
+
+            __self__.StatusBox.delete(0,END)
+            __self__.StatusBox.insert(END, "\nStarting cube compilation.\n")
+            __self__.StatusBox.insert(END, "\nImage size: {} x {}.\n".format(
+                __self__.config_xy[0], root.config_xy[1]))
+            __self__.StatusBox.insert(END, "\nSpectra count: {}.\n".format(
+                __self__.mcacount[Constants.CONFIG["directory"]]))
+            logger.warning("Starting cube {} compilation!".format(Constants.CONFIG["directory"]))
+
+            ##########################################################################
+            # IF LOADING AN H5 FILE, USER CAN COMPILE A DATACUBE OR USE THE H5 AS IS #
+            ##########################################################################
+            if __self__.mca_extension[Constants.CONFIG["directory"]] == ".h5":
+                m = messagebox.askquestion("Attention!",
+                        "You can proceed without compiling the H5 file into a datacube, however, it won't be saved to the database nor will be recognized by Mosaic. It is recommended that you COMPILE it into a datacube. To save disk space, you can compress the H5 file later. DO YOU WANT TO CREATE A DATACUBE FILE?")
+                dtypes = Constants.MY_DATACUBE.datatypes
+                if m == "yes":
+                    specbatch = Cube(dtypes,Constants.CONFIG)
+                    fail = specbatch.compile_cube()
+                    __self__.ButtonLoad.config(state=NORMAL)
+                    __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
+                    __self__.temporaryh5 = "None"
+                elif m == "no":
+                    __self__.busy.busy()
+                    Constants.MY_DATACUBE = converth5(dtypes)
+                    __self__.samples[Constants.CONFIG["directory"]] = "temp .h5"
+                    sp.cube_path = ""
+                    __self__.ButtonLoad.config(state=NORMAL)
+                    __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
+                    __self__.temporaryh5 = Constants.CONFIG["directory"]
+                    __self__.busy.notbusy()
+
+            ##########################################################################
+
+            else:
+
+                ############################################################
+                # Fills the file pool in case spectra were loaded manually #
+                ############################################################
+
+                Constants.FILE_POOL = __self__.samples[Constants.CONFIG["directory"]]
+
+                ############################################################
+
+                if Constants.FTIR_DATA:
+                    datatype="ftir"
+                else: datatype="mca"
+                specbatch = Cube([datatype],Constants.CONFIG)
+                fail = specbatch.compile_cube()
+                __self__.ButtonLoad.config(state=NORMAL)
+                __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
+
+                ####################################################
+                # changes the prefix if sample was loaded manually #
+                ####################################################
+
+                if isinstance(Constants.FILE_POOL,tuple):
+                    __self__.samples[Constants.CONFIG["directory"]] = \
+                    __self__.samples[Constants.CONFIG["directory"]][0].split("/")[-1].split(".")[0]
+
+                ####################################################
+
+                if fail[0] == True:
+                    messagebox.showerror("Error!",
+                            "Could not read {} file! Aborting compilation".format(fail[1]))
+                    shutil.rmtree(sp.output_path)
+            __self__.SamplesWindow_TableLeft.config(state=NORMAL)
+            __self__.SamplesWindow_multi.config(state=NORMAL)
+            __self__.SamplesWindow_ok.config(state=NORMAL)
+            __self__.toggle_(toggle="on")
+            __self__.list_samples()
 
     def prompt_folder(__self__):
         """ Opens dialogue to change the samples folder """
@@ -5057,7 +4716,7 @@ class MainGUI:
         # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
         # GET RID OF IT                                             #
         #############################################################
-        try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
+        if Constants.MY_DATACUBE is not None:
             if any("temp" in x for x in Constants.MY_DATACUBE.datatypes) and \
                     value != Constants.MY_DATACUBE.name:
                 idx = __self__.SamplesWindow_TableLeft.get(0, END).index(
@@ -5078,7 +4737,6 @@ class MainGUI:
                     sp.__PERSONAL__,"output",Constants.MY_DATACUBE.name)
                 if os.path.exists(temp_path):
                     shutil.rmtree(temp_path)
-        except: pass
         #############################################################
 
         __self__.master.deiconify()
@@ -5371,111 +5029,11 @@ class MainGUI:
         __self__.converterGUI = Convert_File_Name(__self__) 
 
     def h5writer(__self__):
-        try:
-            value = Constants.MY_DATACUBE.name
-        except:
-            messagebox.showerror("No datacube!","Please load a datacube first.")
-            return
-
-        h5f = filedialog.asksaveasfile(mode='w',
-                        defaultextension=".h5",
-                        filetypes=[("Hierarchical Data Format", "*.h5")],
-                        title="Save as...")
-        if h5f is None: 
-            return
-        else:
-            h5 = h5py.File(h5f.name, "w")
-            data = Constants.MY_DATACUBE.matrix
-            h5.create_dataset("dataset_1", data=data)
-            h5.close()
+        spp.write(__self__)
 
     def h5loader(__self__):
-        def readh5(name):
-            with h5py.File(name, "r") as f:
-                group_keys = list(f.keys())
-                for key in group_keys:
-                    shape = np.array(f[key]).shape
-                    if len(shape) >= 3: #data matrix has 3 dimensions
-                        if shape[2] >= 256: #spectra have to have at least 256 channels
-                            a_group_key = key
-                        break
-                data = list(f[a_group_key])
-                matrix = np.asarray(data, dtype="int32", order="C")
-                del data
-                gc.collect()
-            return matrix
-
-        h5f = filedialog.askopenfilename(parent=__self__.master,
-                title="Select h5 file",
-                filetypes=(
-                    ("H5 Files", "*.h5"),
-                    ("All files", "*.*")))
-        if h5f == "": return
- 
-        root.h5path = h5f
-        sample_name = str(h5f).split("/")[-1].split(".")[0]
-
-        ##################################
-        # Verifies if h5 datacube exists #
-        ##################################
-        if os.path.exists(os.path.join(
-            sp.__PERSONAL__,"output",sample_name,sample_name+".cube")):
-            messagebox.showinfo("Cube exists","Datacube for {} already exist!".format(
-                sample_name))
-            return
-        else: 
-            ##############################################
-            # Verifies if h5 is loaded as a temporary h5 #
-            ##############################################
-            if sample_name == root.temporaryh5:
-                messagebox.showinfo("Info!","Sample {} is already loaded as a temporary h5 file. Select another sample and try again!".format(sample_name))
-                return
-            ##############################################
-        ##################################
-
-        path = str(h5f).split("/")
-        path.pop(-1)
-        conc_path = ""
-        for i in path:
-            conc_path += i+"\\"
-        conc_path = os.path.abspath(conc_path)
-        sp.conditional_setup(name=sample_name,path=conc_path)
-
-        ###############################
-        # EXTRACT INFORMATION FROM h5 #
-        ###############################
-        #NOTE: Attention to root.images_dict, that exists to hold any previously existing
-        # images in the h5 file to parse them to the SpecMath.datacube.__init__
-
-        root.images_dict = {}
-        Constants.MY_DATACUBE = readh5(h5f)
-        img_size = Constants.MY_DATACUBE.shape[0]*Constants.MY_DATACUBE.shape[1]
-        specsize = Constants.MY_DATACUBE.shape[2]
-        __self__.mcacount[sample_name] = img_size
-        __self__.samples[sample_name] = ".h5"
-        __self__.samples_path[sample_name] = conc_path
-        __self__.mca_indexing[sample_name] = ".h5"
-        __self__.mca_extension[sample_name] = ".h5"
-        __self__.temporaryh5 = sample_name
-        Constants.FIRSTFILE_ABSPATH = h5f
-        ###############################
-
-        #3 ask for a sample name and dimension (modified dimension diag)
-        try:
-            __self__.config_xy = (Constants.MY_DATACUBE.shape[0],Constants.MY_DATACUBE.shape[1])
-            __self__.ManualParam = []
-        except:
-            dimension = (Constants.MY_DATACUBE.shape[0],Constants.MY_DATACUBE.shape[1])
-            __self__.master.wait_window(dimension.master)
-            if dimension.exit_code == "cancel":
-                __self__.wipe()
-                return 0
-            __self__.ManualParam = []
-
-        # calls the configuration window
-        root.toggle_(toggle="off")
-        __self__.ConfigDiag = ConfigDiag(__self__.master,matrix=Constants.MY_DATACUBE)
-        __self__.ConfigDiag.build_widgets()
+        wipe_stats(__self__)
+        spp.load(__self__)
 
     def batch(__self__,**kwargs):
         #1 prompt for files
@@ -5530,7 +5088,7 @@ class MainGUI:
             __self__.ManualParam = []
                 
         # calls the configuration window
-        __self__.ConfigDiag = ConfigDiag(__self__.master,
+        __self__.ConfigDiag = ConfigDiag(__self__,
                 matrix=np.zeros([1,1,1],dtype="int32"))
         __self__.ConfigDiag.build_widgets()
         
@@ -5702,13 +5260,15 @@ class MainGUI:
                         ########################################
 
             else: 
-                files = [f for f in os.listdir(Constants.SAMPLE_PATH) \
-                            if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
-                __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
-                __self__.StatusBox.insert(END,"{0}\n".format(Constants.SAMPLE_PATH))
-                __self__.StatusBox.insert(END, 
+                try:
+                    files = [f for f in os.listdir(Constants.SAMPLE_PATH) \
+                                if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
+                    __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
+                    __self__.StatusBox.insert(END,"{0}\n".format(Constants.SAMPLE_PATH))
+                    __self__.StatusBox.insert(END, 
                         "\n{} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
-                __self__.no_sample = False
+                    __self__.no_sample = False
+                except: pass
 
         if os.path.exists(sp.cube_path):
 
@@ -5833,7 +5393,7 @@ class MainGUI:
         __self__.ManualParam = []
         try: __self__.ConfigDiag.master.destroy()
         except: pass
-        __self__.ConfigDiag = ConfigDiag(__self__.master,
+        __self__.ConfigDiag = ConfigDiag(__self__,
                 matrix=np.zeros([1,1,1],dtype="int32"))
         __self__.ConfigDiag.build_widgets()
         
@@ -6097,465 +5657,6 @@ class ReConfigDiag:
 
     def kill(__self__):
         __self__.master.destroy()
-
-
-class ConfigDiag:
-    def __init__(__self__, master, matrix=None):
-        __self__.master = Toplevel(master = master)
-        __self__.master.grab_set()
-        __self__.master.resizable(False,False)
-        __self__.master.title("Configuration")
-        __self__.master.bind("<Escape>",__self__.wipe)
-        __self__.master.bind("<Return>",__self__.check_method_and_save)
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe)
-        __self__.Frame = Frame(__self__.master,padx=15,pady=15)
-        __self__.Labels = Frame(__self__.master,padx=15,pady=15)
-        __self__.Frame.grid(row=0, column=1)
-        __self__.Labels.grid(row=0, column=0)
-        __self__.matrix = matrix
-        __self__.specsize = matrix.shape[2]
-
-    def check_method_and_save(__self__,e=""):
-        if __self__.CalibVar.get() == "simple":
-            __self__.manual_calib()
-        elif __self__.CalibVar.get() == "advanced":
-            AdvCalib(__self__, root)
-        else: __self__.save_config()
-
-    def save_param(__self__, advparams=None):
-        if __self__.CalibVar.get() == "simple":
-            EntryParam = []
-            entries = [
-                    [__self__.ch1.get(),__self__.en1.get()],
-                    [__self__.ch2.get(),__self__.en2.get()],
-                    [__self__.ch3.get(),__self__.en3.get()],
-                    [__self__.ch4.get(),__self__.en4.get()]]
-            for index in range(len(entries)):
-                if entries[index][0] != 0 or entries[index][1] != 0:
-                    EntryParam.append(entries[index])
-
-        elif __self__.CalibVar.get() == "advanced":
-            EntryParam = advparams
-
-        ##############################
-        # VERIFIES CALIBRATION INPUT #
-        ##############################
-        if EntryParam == []:
-            messagebox.showerror("Calibration Error",
-                    "No acceptable parameters passed!")
-            try: __self__.CalibDiag.focus_set()
-            except: pass
-            root.ManualParam = []
-            raise ValueError("No acceptable parameters passed!")
-        elif len(EntryParam) <= 1:
-            messagebox.showerror("Calibration Error",
-                    "Need at least two anchors!")
-            try: __self__.CalibDiag.focus_set()
-            except: pass
-            root.ManualParam = []
-            raise ValueError("Calibration need at least two anchors!")
-        for index in range(len(EntryParam)):
-            if EntryParam[index][0] > 0 and EntryParam[index][1] > 0:
-                root.ManualParam.append(EntryParam[index])
-            elif EntryParam[index][0] <= 0 or EntryParam[index][1] <= 0:
-                messagebox.showerror("Calibration Error",
-                        "Can't receive negative or zero values!")
-                root.ManualParam = []
-                raise ValueError("Manual calibration can't receive negative or zero values!")
-        ##############################
-
-        if __self__.CalibVar.get() == "simple": __self__.CalibDiag.grab_release()
-        __self__.save_config()
-    
-    def wipe(__self__,e=""):
-        try: 
-            __self__.master.grab_release()
-            __self__.master.destroy()
-        except: pass
-        Constants.FTIR_DATA = 0
-
-        #############################################################
-        # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
-        # GET RID OF IT                                             #
-        #############################################################
-        try: #because there could be no datacube loaded previously (MY_DATACUBE = None)
-            if Constants.CONFIG["directory"] == root.temporaryh5:
-
-                ##################################################
-                # Update status boxes without using write_stat() #
-                ##################################################
-                root.TableMiddle.config(state=NORMAL)
-                root.TableMiddle.delete(0,END)
-                root.StatusBox.delete(0,END)
-                root.StatusBox.insert(END,
-                        "Aborted configuration of {}{}".format(
-                            Constants.CONFIG["directory"],root.mca_extension[Constants.CONFIG["directory"]]))
-                root.StatusBox.insert(END, 
-                        "Spectra count: {}".format(
-                            root.mcacount[Constants.CONFIG["directory"]]))
-                root.TableMiddle.config(state=DISABLED)
-                root.TableMiddle.update_idletasks()
-                root.StatusBox.update_idletasks()
-                ##################################################
-
-                del root.samples[Constants.CONFIG["directory"]]
-                del root.samples_path[Constants.CONFIG["directory"]]
-                del root.mcacount[Constants.CONFIG["directory"]]
-                del root.mca_indexing[Constants.CONFIG["directory"]]
-                del root.mca_extension[Constants.CONFIG["directory"]]
-                root.temporaryh5 = "None"
-                gc.collect()
-                try:
-                    #__self__.SamplesWindow_TableRight.config(state=NORMAL)
-                    #__self__.SamplesWindow_TableRight.delete(temph5_idx)
-                    __self__.SamplesWindow_TableLeft.delete(temph5_idx)
-                    #__self__.SamplesWindow_TableRight.config(state=DISABLED)
-                    #__self__.SamplesWindow_TableRight.update_idletasks()
-                except: pass
-                temp_path = os.path.join(
-                    sp.__PERSONAL__,"output",Constants.CONFIG["directory"])
-                if os.path.exists(temp_path):
-                    shutil.rmtree(temp_path)
-                Constants.MY_DATACUBE = None
-                gc.collect()
-                load_cube()
-                root.draw_map()
-                root.toggle_(toggle="off")
-                root.SampleVar.set("Sample on memory: None")
-                try:
-                    if root.SamplesWindow.state() == "normal":
-                        root.SamplesWindow.deiconify()
-                        root.SamplesWindow_TableLeft.focus_set()
-                except: pass
-                return
-        except: pass
-
-        Constants.MY_DATACUBE = None
-        root.h5path = "None"
-        gc.collect()
-        if isinstance(root.samples[Constants.CONFIG["directory"]],tuple):
-            root.samples.pop(Constants.CONFIG["directory"])
-        load_cube()
-        root.write_stat()
-        root.draw_map()
-        root.toggle_(toggle="off")
-        root.SampleVar.set("Sample on memory: None")
-        try: 
-            if root.SamplesWindow.state() == "normal": 
-                root.SamplesWindow_TableLeft.focus_set()
-        except: pass
-
-    def manual_calib(__self__):
-        __self__.CalibDiag = Toplevel(master = __self__.master)
-        __self__.CalibDiag.title("Manual configuration")
-        __self__.CalibDiag.resizable(False,False)
-        __self__.CalibDiag.protocol("WM_DELETE_WINDOW",__self__.kill_manual_calib)
-        __self__.CalibDiag.grab_set()
-        icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
-        __self__.CalibDiag.iconbitmap(icon)
-        ParamFrame = Frame(__self__.CalibDiag)
-        ParamFrame.pack()
-        ButtonFrame = Frame(__self__.CalibDiag)
-        ButtonFrame.pack()
-        
-        __self__.ch1 = IntVar()
-        __self__.ch2 = IntVar()
-        __self__.ch3 = IntVar()
-        __self__.ch4 = IntVar()
-        
-        __self__.en1 = DoubleVar()
-        __self__.en2 = DoubleVar()
-        __self__.en3 = DoubleVar()
-        __self__.en4 = DoubleVar()
-        
-        try: 
-            # gets calibration parameters read while performing last 
-            # setup or conditional setup and fills entries
-
-            Constants.CONFIG['calibration'] = 'simple'
-            calibparam = sp.getcalibration()
-            __self__.ch1.set(calibparam[0][0])
-            __self__.en1.set(calibparam[0][1])
-            __self__.ch2.set(calibparam[1][0])
-            __self__.en2.set(calibparam[1][1])
-            __self__.ch3.set(calibparam[2][0])
-            __self__.en3.set(calibparam[2][1])
-            __self__.ch4.set(calibparam[3][0])
-            __self__.en4.set(calibparam[3][1])
-        except: 
-            pass
-        
-        __self__.ConfigDiag_header = Label(ParamFrame, text="Channel\tEnergy").grid(
-                row=0,columnspan=2,sticky=W+E)
-        Channel1 = Entry(ParamFrame,textvariable=__self__.ch1).grid(row=1,column=0)
-        Channel2 = Entry(ParamFrame,textvariable=__self__.ch2).grid(row=2,column=0)
-        Channel3 = Entry(ParamFrame,textvariable=__self__.ch3).grid(row=3,column=0)
-        Channel4 = Entry(ParamFrame,textvariable=__self__.ch4).grid(row=4,column=0)
-        EnergyBox1 = Entry(ParamFrame,textvariable=__self__.en1).grid(row=1,column=1)
-        EnergyBox2 = Entry(ParamFrame,textvariable=__self__.en2).grid(row=2,column=1)
-        EnergyBox3 = Entry(ParamFrame,textvariable=__self__.en3).grid(row=3,column=1)
-        EnergyBox4 = Entry(ParamFrame,textvariable=__self__.en4).grid(row=4,column=1)
-        
-        OkButton = ttk.Button(ButtonFrame,text="Save",command=__self__.save_param).grid(
-                row=5,columnspan=2,pady=(6,6))
-
-        __self__.CalibDiag.grab_set() 
-        place_center(__self__.master,__self__.CalibDiag)
-        
-    def call_PeakClipper(__self__):
-        if __self__.BgstripVar.get() == "None":
-            messagebox.showinfo("BG Config","No background estimation mode selected!")
-            return
-        elif __self__.BgstripVar.get() == "SNIPBG":
-            __self__.master.grab_release()
-            __self__.clipper = PeakClipper(__self__,mode="SNIPBG")
-            __self__.clipper.master.grab_set()
-        elif __self__.BgstripVar.get() == "Polynomial":
-            __self__.master.grab_release()
-            __self__.clipper = PeakClipper(__self__,mode="Polynomial")
-            __self__.clipper.master.grab_set()
-
-    def kill_manual_calib(__self__):
-        __self__.CalibDiag.grab_release()
-        __self__.master.focus_set()
-        __self__.CalibDiag.destroy()
-        del __self__
-
-    def save_config(__self__,e=""):
-
-        """ A workaround to always have Training Data in samples list and working, is
-        backing up the samples_folder variable, changing it temporarily to compile the 
-        Training Data datacube and then set it back so the other samples can be compiled
-        properly """
-
-        samples_folder_backup = copy.deepcopy(Constants.SAMPLES_FOLDER)
-        if __self__.DirectoryVar.get() == "Training Data 1" or\
-                __self__.DirectoryVar.get() == "Training Data 2":
-            Constants.SAMPLES_FOLDER = os.path.join(sp.__PERSONAL__,"Example Data")
-        
-        ##########################################################
-
-        configdict = {"directory":__self__.DirectoryVar.get(),
-                "bgstrip":__self__.BgstripVar.get(),
-                "ratio":__self__.RatioVar.get(),
-                "calibration":__self__.CalibVar.get(),
-                "enhance":__self__.EnhanceVar.get(),
-                "peakmethod":__self__.MethodVar.get(),
-                "bg_settings":root.snip_config}
-        if Constants.FTIR_DATA: 
-            configdict["ftir"] = True
-        else: pass
-        
-        if not os.path.exists(sp.output_path):
-            try:
-                os.mkdir(sp.output_path)
-            except IOError as exception:
-                logger.warning("Error {}.".format(exception.__class__.__name__))
-                logger.warning("Can't create output folder {}".format(sp.output_path))
-                if exception.__class__.__name__ == "FileExistsError": 
-                    exists = "Folder already exists!"
-                else: exists = None
-                messagebox.showerror("{}".format(exception.__class__.__name__),
-                        "Cannot create output folder {}\n{}".format(
-                            sp.output_path, exists))
-                root.write_stat()
-                root.draw_map()
-                return
-            if not os.path.exists(Constants.DIMENSION_FILE):
-                dm_file = open(os.path.join(sp.output_path,"colonneXrighe.txt"),"w")
-                dm_file.write("righe\t{}\n".format(root.config_xy[0]))
-                dm_file.write("colonne\t{}\n".format(root.config_xy[1]))
-                dm_file.write(5*"*"+" user input data "+5*"*")
-                dm_file.close()
-        
-        if os.path.exists(root.samples_path[Constants.DIRECTORY])\
-                or isinstance(root.samples[configdict["directory"]],tuple):
-            Constants.DIRECTORY = configdict["directory"]
-            Constants.SAMPLE_PATH = root.samples_path[configdict["directory"]]
-            if not isinstance(root.samples[configdict["directory"]],tuple):
-                Constants.FIRSTFILE_ABSPATH = os.path.join(Constants.SAMPLE_PATH,
-                    root.samples[configdict["directory"]]+\
-                    root.mca_indexing[configdict["directory"]]+\
-                    "."+root.mca_extension[configdict["directory"]])
-
-            # reads configuration integrity prior opening config.cfg for writing
-            if configdict["calibration"] == "simple" \
-                    or\
-                    configdict["calibration"] == "manual"\
-                    or\
-                    configdict["calibration"] == "advanced":
-                calibparam = root.ManualParam
-                
-            elif configdict["calibration"] == "from_source": 
-                Constants.CONFIG["calibration"] = "from_source"
-                calibparam = sp.getcalibration()
-            elif configdict["calibration"] == "ftir_source":
-                Constants.CONFIG["calibration"] = "ftir_source"
-                calibparam = sp.getcalibration()
-            else: 
-                raise ValueError("Didn't understand caibration method {0} input".format(configdict["calibration"]))
-                return
-
-            cfgpath = os.path.join(sp.__PERSONAL__,"bin","config.cfg")
-            cfgfile = open(cfgpath,"w+")
-            cfgfile.write("<<CONFIG_START>>\r")
-            for key in configdict:
-                cfgfile.write("{} = {}\r".format(key,configdict[key]))
-            cfgfile.write("<<CALIBRATION>>\r")
-            for pair in calibparam:
-                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
-            cfgfile.write("<<END>>\r")
-            cfgfile.close()
-            
-            sp.setup(root.samples[configdict["directory"]],
-                    root.mca_indexing[configdict["directory"]],
-                    root.mca_extension[configdict["directory"]])
-            __self__.master.grab_release()
-            __self__.master.destroy()
-            try: __self__.CalibDiag.destroy()
-            except: pass
-            try: root.ResetWindow.destroy()
-            except: pass
-             
-            call_compilecube()
-            load_cube()
-            root.write_stat()
-            root.draw_map()
-            root.toggle_(toggle='on')
-            if root.temporaryh5 != "None": root.ButtonReset.config(state=DISABLED)
-
-        else:
-            cfgpath = os.path.join(sp.__PERSONAL__,"bin","config.cfg")
-            cfgfile = open(cfgpath,'w+')
-            cfgfile.write("<<CONFIG_START>>\r")
-            for key in configdict:
-                cfgfile.write("{} = {}\r".format(key,configdict[key]))
-            cfgfile.write("<<CALIBRATION>>\r")
-            
-            if configdict['calibration'] == 'simple': 
-                calibparam = root.ManualParam
-            else: 
-                calibparam = [[0,0],[0,0],[0,0]]
-
-            for pair in calibparam:
-                cfgfile.write("{0}\t{1}\r".format(pair[0],pair[1]))
-            cfgfile.write("<<END>>\r")
-            cfgfile.close()
-            messagebox.showerror("Directory not found!",
-                    "Directory {} not found!\nConfig.cfg saved!".format(
-                        configdict['directory']))
-            sp.setup(root.samples[configdict["directory"]],
-                    root.mca_indexing[configdict["directory"]],
-                    root.mca_extension[configdict["directory"]])
-            __self__.master.grab_release()
-            __self__.master.destroy()
-            try: root.ResetWindow.destroy()
-            except: pass
-            try: __self__.CalibDiag.destroy()
-            except: pass
-            root.write_stat()
-            root.draw_map()
-        Constants.SAMPLES_FOLDER = samples_folder_backup
-   
-    def build_widgets(__self__):
-
-        Label2 = Label(__self__.Labels, text="Background strip mode:")
-        Label3 = Label(__self__.Labels, text="Configure BG strip:")
-        Label4 = Label(__self__.Labels, text="Calibration:")
-        Label7 = Label(__self__.Labels, text="Area method:")
-        Label8 = Label(__self__.Labels, text="Calculate ratios?")
-        
-        Label2.grid(row=1,column=0,sticky=W,pady=2)
-        Label3.grid(row=2,column=0,sticky=W,pady=2)
-        Label4.grid(row=3,column=0,sticky=W,pady=2)
-        Label7.grid(row=6,column=0,sticky=W,pady=2)
-        Label8.grid(row=7,column=0,sticky=W,pady=2)
-        
-        ConfigDiagRatioYes = Label(__self__.Frame, text="Yes/No")
-        ConfigDiagRatioYes.grid(row=7,column=1,sticky=E,pady=2)
-        ConfigDiagEnhanceYes = Label(__self__.Frame, text="Yes/No")
-        ConfigDiagEnhanceYes.grid(row=6,column=1,sticky=E,pady=2)
-        
-        __self__.BgstripVar = StringVar()
-        __self__.ConfigDiagBgstrip = ttk.Combobox(
-                __self__.Frame, 
-                textvariable=__self__.BgstripVar, 
-                values=("None","SNIPBG","Polynomial"),
-                state="readonly",
-                width=13+ConfigDiagRatioYes.winfo_width())
-        
-        __self__.DirectoryVar = StringVar()
-        
-        __self__.RatioVar = BooleanVar()
-        __self__.ConfigDiagRatio = ttk.Checkbutton(__self__.Frame, variable=__self__.RatioVar,
-                takefocus=False)
-        
-        __self__.ConfigDiagSetBG = ttk.Button(__self__.Frame, text="Set BG",
-               width=14+ConfigDiagRatioYes.winfo_width(),
-               command=__self__.call_PeakClipper)
-        
-        __self__.CalibVar = StringVar()
-        __self__.ConfigDiagCalib = ttk.Combobox(
-                __self__.Frame, 
-                textvariable=__self__.CalibVar, 
-                values=("from_source","simple","advanced"),
-                state="readonly",width=13+ConfigDiagRatioYes.winfo_width())
-
-        __self__.EnhanceVar = BooleanVar()
-        
-        __self__.MethodVar = StringVar()
-        __self__.ConfigDiagMethod = ttk.Combobox(
-                __self__.Frame, 
-                textvariable=__self__.MethodVar, 
-                values=("simple_roi","auto_roi","auto_wizard"),
-                state="readonly",
-                width=13+ConfigDiagRatioYes.winfo_width())
-        
-        
-        __self__.ConfigDiagBgstrip.grid(row=1,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagSetBG.grid(row=2,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagCalib.grid(row=3,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagMethod.grid(row=6,column=0,columnspan=2,sticky=E,pady=2)
-        __self__.ConfigDiagRatio.grid(row=7,column=0,sticky=E,pady=2)
-        
-        dimension_text = "Image size = {0} x {1} pixels".format(
-                root.config_xy[0],root.config_xy[1])
-        img_dimension_display = Label(__self__.master,text=dimension_text)
-        img_dimension_display.grid(row=1,column=0,sticky=W,padx=17,pady=2)
-
-        ButtonsFrame = Frame(__self__.master)
-        ButtonsFrame.grid(row=8,columnspan=2,pady=10,padx=10)
-        SaveButton = ttk.Button(
-                ButtonsFrame, 
-                text="Save", 
-                width=10,
-                command=__self__.check_method_and_save)
-        SaveButton.grid(row=8,column=0,sticky=S)
-        CancelButton = ttk.Button(
-                ButtonsFrame, 
-                text="Cancel", 
-                width=10,
-                command=__self__.wipe)
-        CancelButton.grid(row=8,column=1,sticky=S)
-
-        if Constants.FTIR_DATA:
-            __self__.CalibVar.set("ftir_source")
-            __self__.BgstripVar.set("not_applicable")
-            __self__.ConfigDiagBgstrip.state(["disabled"])
-            __self__.ConfigDiagSetBG.config(state=DISABLED)
-            __self__.ConfigDiagCalib.config(values=["ftir_source"])
-        else:
-            __self__.CalibVar.set("from_source")
-            __self__.BgstripVar.set("None")
-        __self__.DirectoryVar.set(Constants.CONFIG.get('directory'))
-        __self__.RatioVar.set(Constants.CONFIG.get('ratio'))
-        __self__.MethodVar.set(Constants.CONFIG.get('peakmethod'))
-        __self__.EnhanceVar.set(Constants.CONFIG.get('enhance'))
-        
-        place_center(root.master,__self__.master)
-        icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
-        __self__.master.iconbitmap(icon)
-        root.master.wait_window(__self__.master)
 
 
 class ImageOperationOutput:
@@ -7362,6 +6463,7 @@ if __name__.endswith("__main__"):
     splash.update("Booting Engine...")
     import Engine
     import Engine.SpecRead as sp
+    import Engine.SpecReadPlus as spp
     from Engine.ImgMath import LEVELS, correlate
     from Engine.ImgMath import write_image, stackimages
     from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
@@ -7379,6 +6481,8 @@ if __name__.endswith("__main__"):
     from GUI import AdvCalib, SimpleFitPanel, Navigator
     from GUI import Busy, BusyManager, create_tooltip
     from GUI.Mosaic import Mosaic_API
+    from GUI.ConfigurationParser import *
+    from GUI.Utils import *
 
     splash.update("Revving Engine...")
     time.sleep(t)

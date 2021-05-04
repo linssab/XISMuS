@@ -171,9 +171,11 @@ class SimpleFitPanel:
             except: pass
             __self__.parent.plot.fit_btn.config(state=DISABLED)
             #__self__.parent.plot.fit_btn.config(image=DISABLED_ICO)
-        __self__.busy.busy()
-        __self__.parent.DATACUBE.save_cube()
-        __self__.busy.notbusy()
+        if not any("temp" in x for x in Constants.MY_DATACUBE.datatypes):
+            __self__.busy.busy()
+            __self__.parent.DATACUBE.save_cube()
+            __self__.busy.notbusy()
+        else: pass
         __self__.kill()
 
     def set_selected_element(__self__, e=""):

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          SPEC READER                                          #
-#                        version: 2.3.0 - Apr - 2021            #
+#                        version: 2.3.2 - May - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -190,8 +190,11 @@ def getcalibration():
     user via GUI. """
    
     if Constants.CONFIG['calibration'] == 'ftir_source':
-        if os.path.exists(getfirstfile()): pass
-        else: raise FileNotFoundError(f"File {ftir} not found!")
+        if "h5" in Constants.MY_DATACUBE.datatypes \
+                and "ftir" in Constants.MY_DATACUBE.datatypes:
+                    return Constants.MY_DATACUBE.calibration
+        elif os.path.exists(getfirstfile()): pass
+        else: raise FileNotFoundError("File not found!")
         param = [[1,1],[2,2]]
         with open(getfirstfile(),"r") as f:
             reader = csv.reader(f)
@@ -211,7 +214,12 @@ def getcalibration():
         try: mca_file = open(getfirstfile(),'r')
         except:
             try: 
-                calib = Constants.MY_DATACUBE.calibration
+                param = Constants.MY_DATACUBE.calibration
+                if param is not None: return param
+                else: 
+                    pop_error("Calibration Error",
+                    "Could not fetch calibration from source! Retry with manual calibration")
+                    raise ValueError("Couldn't fetch calibration from source!")
             except:
                 pop_error("Calibration Error",
                     "Could not fetch calibration from source! Retry with manual calibration")
@@ -251,6 +259,7 @@ def getcalibration():
         else: pass
     else:
         param = Constants.CALIB
+        print("Unknown calibration mode")
     #else: 
     #    raise ValueError("Calibration mode {0} unknown! Check config.cfg")
     return param

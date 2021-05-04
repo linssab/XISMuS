@@ -90,7 +90,7 @@ class datacube:
         elif any("upgrade" in x for x in __self__.datatypes):
             specsize = Constants.MY_DATACUBE.matrix.shape[2]
         elif any("h5" in x for x in __self__.datatypes):
-            specsize = Constants.MY_DATACUBE.shape[2]
+            specsize = Constants.MY_DATACUBE.matrix.shape[2]
             __self__.path = ""
         elif any("ftir" in x for x in __self__.datatypes) and mode != "merge":
             specsize = getftirdata(getfirstfile()).size
@@ -126,7 +126,7 @@ class datacube:
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
 
         elif any("h5" in x for x in __self__.datatypes):
-            __self__.matrix = Constants.MY_DATACUBE
+            __self__.matrix = Constants.MY_DATACUBE.matrix
             __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
             __self__.config = configuration
@@ -272,7 +272,13 @@ class datacube:
             try: 
                 progressbar = __self__.progressbar
                 progressbar.progress["maximum"] = __self__.img_size
-            except: progressbar = progressbar
+                progressbar.updatebar(0)
+            except: 
+                try: 
+                    progressbar.progress["maximum"] = __self__.img_size
+                    progressbar.updatebar(0)
+                except AttributeError:
+                    progressbar = progressbar
         counter = 0
         
         ##########################
@@ -292,6 +298,7 @@ class datacube:
         if bgstrip == "SNIPBG":
             progressbar.update_text("Calculating SNIPBG")
             tot = progressbar.progress["maximum"]
+            progressbar.updatebar(0)
             
             #fast_snipbg(__self__)
             
@@ -759,8 +766,10 @@ def FN_set(F, N):
     Constants.FANO = F
     Constants.NOISE = N
 
-def converth5():
-    cube = datacube(["h5-temp"],Constants.CONFIG)
+def converth5(dtypes):
+    if "ftir" in dtypes: dtypes = ["h5-temp", "ftir"]
+    else: dtypes = ["h5-temp"]
+    cube = datacube(dtypes,Constants.CONFIG)
     progressbar = Busy(5,0)
 
     logger.debug("Calculating MPS...")
