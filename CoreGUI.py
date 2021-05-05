@@ -5032,7 +5032,6 @@ class MainGUI:
         spp.write(__self__)
 
     def h5loader(__self__):
-        wipe_stats(__self__)
         spp.load(__self__)
 
     def batch(__self__,**kwargs):

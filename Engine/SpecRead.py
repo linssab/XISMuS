@@ -217,14 +217,13 @@ def getcalibration():
                 param = Constants.MY_DATACUBE.calibration
                 if param is not None: return param
                 else: 
-                    pop_error("Calibration Error",
-                    "Could not fetch calibration from source! Retry with manual calibration")
                     raise ValueError("Couldn't fetch calibration from source!")
+                    return
             except:
                 pop_error("Calibration Error",
                     "Could not fetch calibration from source! Retry with manual calibration")
                 raise ValueError("Couldn't fetch calibration from source!")
-            return
+                return
 
         line = mca_file.readline()
         while line != "":
@@ -259,7 +258,6 @@ def getcalibration():
         else: pass
     else:
         param = Constants.CALIB
-        print("Unknown calibration mode")
     #else: 
     #    raise ValueError("Calibration mode {0} unknown! Check config.cfg")
     return param

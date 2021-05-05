@@ -87,6 +87,7 @@ def load(root):
                 ("H5 Files", "*.h5"),
                 ("All files", "*.*")))
     if h5f == "": return
+    else: wipe_stats(root)
 
     root.h5path = h5f
     sample_name = str(h5f).split("/")[-1].split(".")[0]

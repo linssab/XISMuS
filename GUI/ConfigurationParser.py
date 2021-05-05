@@ -364,9 +364,10 @@ class ConfigDiag:
     def __init__(__self__, root, matrix=None, calib=None):
         __self__.root = root
         __self__.calibparams = calib
-        Constants.MY_DATACUBE.calibration = calib #NOTE: only parsed when loading an h5 file
+        #NOTE: only parsed when loading an h5 file
         #NOTE: It does not matter if we change the global DATACUBE here
         #In any way we close the dialog, the global variable is reset
+        if Constants.MY_DATACUBE is not None: Constants.MY_DATACUBE.calibration = calib 
         __self__.master = Toplevel(master = __self__.root.master)
         __self__.master.grab_set()
         __self__.master.resizable(False,False)
