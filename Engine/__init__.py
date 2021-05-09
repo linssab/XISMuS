@@ -24,5 +24,6 @@ try: from .CBooster import *
 except OSError as e: 
     logger.warning(e)
     sys.exit(1)
+from . import FastFit
 logger.info("Engine modules ready!")
 

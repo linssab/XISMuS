@@ -1,3 +1,10 @@
+#################################################################
+#                                                               #
+#          Splash Screen                                        #
+#                        version: 2.3.0 - Apr 2021              #
+# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
+#################################################################
+
 try:
     from tkinter import *
 except:

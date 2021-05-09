@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Configuration Parser                                 #
-#                        version: 2.3.2 - May - 2021            #
+#                        version: 2.4.0 - May - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -708,7 +708,7 @@ class ConfigDiag:
         __self__.ConfigDiagMethod = ttk.Combobox(
                 __self__.Frame,
                 textvariable=__self__.MethodVar,
-                values=("simple_roi","auto_roi","auto_wizard"),
+                values=("simple_roi","auto_roi","auto_wizard","fit_approx"),
                 state="readonly",
                 width=13+ConfigDiagRatioYes.winfo_width())
 

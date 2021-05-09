@@ -198,7 +198,10 @@ def load(root, ftype="h5"):
 
     root.images_dict = {}
     if ftype == "h5": 
-        Constants.MY_DATACUBE = readh5(h5f)
+        try: Constants.MY_DATACUBE = readh5(h5f)
+        except Exception as e: 
+            messagebox.showerror("Uh-oh!",f"Something went wrong!\n{e}")
+            return
         img_size = Constants.MY_DATACUBE.matrix.shape[0]*Constants.MY_DATACUBE.matrix.shape[1]
         specsize = Constants.MY_DATACUBE.matrix.shape[2]
         root.mcacount[sample_name] = img_size
@@ -210,7 +213,10 @@ def load(root, ftype="h5"):
         Constants.FIRSTFILE_ABSPATH = h5f
     elif ftype == "edf": 
         Constants.TEMP_PATH = conc_path
-        Constants.MY_DATACUBE = readStack(file_batch)
+        try: Constants.MY_DATACUBE = readStack(file_batch)
+        except Exception as e: 
+            messagebox.showerror("Uh-oh!",f"Something went wrong!\n{e}")
+            return
         img_size = Constants.MY_DATACUBE.matrix.shape[0]*Constants.MY_DATACUBE.matrix.shape[1]
         specsize = Constants.MY_DATACUBE.matrix.shape[2]
         root.mcacount[sample_name] = img_size

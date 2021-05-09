@@ -4478,6 +4478,30 @@ class MainGUI:
                     return __self__.master.focus_force()
         elif mode == "auto_wizard":
             __self__.invoke_wizard()
+        elif mode == "fit_approx":
+            if Constants.SAVE_FIT_FIGURES:
+                message = "You have chosen to save the fit outputs. In this case, the approximation of a fit. The saving operation can increase the fitting time considerably. Are you sure you want to proceed?"
+            else:
+                message = "This operation can take a while depending on the dataset size and cannot be interrupted. Do you want to proceed?"
+
+            question = messagebox.askyesno("Attention!",message)
+            if question:
+                start_time = time.time()
+                __self__.busy.busy()
+                if FastFit.fit_and_run() == 0:
+                    timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
+                    timestamps.write(
+                    "\n{4} - {5} APPROX FIT\n{0} bgtrip={1} enhance={2}\n{3} seconds\n".format(
+                    Constants.MY_DATACUBE.fit_config["elements"].keys(),
+                    Constants.MY_DATACUBE.config["bgstrip"],
+                    Constants.MY_DATACUBE.config["enhance"],
+                    time.time()-start_time,
+                    time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+                    Constants.MY_DATACUBE.name))
+                    timestamps.close()
+                __self__.write_stat()
+                __self__.busy.notbusy()
+            else: return
         else: 
             if mode == "simple_roi":
                 messagebox.showinfo("Attention!",
@@ -5490,7 +5514,7 @@ class ReConfigDiag:
         __self__.ConfigDiagMethod = ttk.Combobox(
                 __self__.Frame, 
                 textvariable=__self__.MethodVar, 
-                values=("simple_roi","auto_roi","auto_wizard"),
+                values=("simple_roi","auto_roi","auto_wizard","fit_approx"),
                 state="readonly",
                 width=13)
         
@@ -6471,6 +6495,7 @@ if __name__.endswith("__main__"):
     import Engine
     import Engine.SpecRead as sp
     import Engine.SpecReadPlus as spp
+    from Engine import FastFit
     from Engine.ImgMath import LEVELS, correlate
     from Engine.ImgMath import write_image, stackimages
     from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress

@@ -21,7 +21,6 @@
 setup.py
 calculator.py
 config.cfg
-FastFit.py
 FitSingle.py
 test.py
 

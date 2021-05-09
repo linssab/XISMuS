@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          App Windows utilities                                #
-#                        version: 2.3.2 - May - 2021            #
+#                        version: 2.4.0 - May - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 import Constants
