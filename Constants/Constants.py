@@ -1,15 +1,15 @@
 #################################################################
 #                                                               #
 #          CONSTANTS                                            #
-#                        version: 2.3.2 - May - 2021            #
+#                        version: 2.4.0 - May - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import logging
 from psutil import cpu_count
 
-VERSION = "2.3.2"
-VERSION_MOS = "2.3.2"
+VERSION = "2.4.0"
+VERSION_MOS = "2.4.0"
 LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None
@@ -21,7 +21,7 @@ USEXLIB = False
 FIT_CYCLES = 1000
 PEAK_TOLERANCE = 9
 CONTINUUM_SUPPRESSION = 1.5
-SNIPBG_DEFAULTS = 24,11,11,3
+SNIPBG_DEFAULTS = 24,5,5,3
 CHECK_TOLERANCE = 10
 SETROI_TOLERANCE = [3,4,3]
 SAVE_FIT_FIGURES = True
@@ -46,6 +46,7 @@ WELCOME = False
 FILTER = 1
 CPUS = cpu_count(logical=False)
 FTIR_DATA = 0
+TEMP_PATH = ""
 
 def list_all():
     return {"version":VERSION,

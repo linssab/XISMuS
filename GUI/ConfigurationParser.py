@@ -305,9 +305,9 @@ class PeakClipper:
         folder = Constants.CONFIG.get("directory")
         spec_no = __self__.root.mcacount[folder]
 
-        ################################################
-        # IF PARENT HAS A MATRIX, IT LOADED AN H5 FILE #
-        ################################################
+        ################################################################
+        # IF PARENT HAS A MATRIX, IT LOADED AN H5 FILE OR AN EDF STACK #
+        ################################################################
         if __self__.parent.matrix.shape[2] > 1:
             __self__.sample = random.randint(1,spec_no-1)
             __self__.spectrum = __self__.parent.matrix.reshape(-1,__self__.parent.matrix.shape[-1])[__self__.sample]

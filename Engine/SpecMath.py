@@ -64,7 +64,7 @@ class datacube:
 
     ndim = 0
     
-    def __init__(__self__,dtypes,configuration,mode="",name=""):
+    def __init__(__self__,dtypes,configuration,mode="",name="",**kwargs):
         __self__.version = Constants.VERSION
         if mode == "merge": 
             __self__.name = name
@@ -92,6 +92,8 @@ class datacube:
         elif any("h5" in x for x in __self__.datatypes):
             specsize = Constants.MY_DATACUBE.matrix.shape[2]
             __self__.path = ""
+        elif any("edf" in x for x in __self__.datatypes):
+            specsize = Constants.MY_DATACUBE.matrix.shape[2]
         elif any("ftir" in x for x in __self__.datatypes) and mode != "merge":
             specsize = getftirdata(getfirstfile()).size
             __self__.dimension = getdimension()
@@ -125,7 +127,7 @@ class datacube:
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
 
-        elif any("h5" in x for x in __self__.datatypes):
+        elif "h5" in __self__.datatypes or "edf" in __self__.datatypes:
             __self__.matrix = Constants.MY_DATACUBE.matrix
             __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
@@ -137,6 +139,8 @@ class datacube:
         __self__.ROI = {}
         __self__.hist = {}
         __self__.max_counts = {}
+        if "path" in kwargs:
+            __self__.path = kwargs["path"]
 
     def MPS(__self__,mps):
         """ Read all data in datacube.matrix and returns a spectrum where each index
@@ -424,7 +428,7 @@ class datacube:
         This method saves all derived spectra, writes summation mca to disk and calculates
         the density map. """
 
-        if "h5" in __self__.datatypes:
+        if "h5" in __self__.datatypes or "edf" in __self__.datatypes:
             __self__.progressbar = Busy(__self__.img_size,0)
             pass
         

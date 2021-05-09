@@ -56,7 +56,6 @@ def setup(prefix, indexing, extension):
     Constants.DIMENSION_FILE = os.path.join(Constants.SAMPLE_PATH,"colonneXrighe.txt")
 
     Constants.NAME_STRUCT = [prefix,indexing,extension]
-    
     return np.nan
 
 def setup_from_datacube(datacube,sample_database=None):
@@ -85,7 +84,7 @@ def conditional_setup(name="None",path="auto"):
     
     global workpath, cube_path, output_path
     
-    Constants.CONFIG,Constants.CALIB = CONFIGURE()
+    Constants.CONFIG, Constants.CALIB = CONFIGURE()
     Constants.CONFIG['directory'] = name
     
     # build paths

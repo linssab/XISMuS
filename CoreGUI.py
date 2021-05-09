@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 2.3.1 - Apr - 2021            #
+#                        version: 2.4.0 - May - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 global root
@@ -1258,7 +1258,7 @@ class Annotator:
         except: pass
         try: __self__.y0 = int(event.ydata)
         except: pass
-        print("CLICK! x,y",__self__.x0,__self__.y0)
+        print("click x,y",__self__.x0,__self__.y0)
 
     def on_drag(__self__,event):
         if __self__.press and __self__.alive:
@@ -1295,18 +1295,18 @@ class Annotator:
         unpacker1 = __self__.element1.split("_")
         unpacker2 = __self__.element2.split("_")
         
-        print("MPL X:",__self__.x0,__self__.x1)
-        print("MPL Y:",__self__.y0,__self__.y1)
+        #print("MPL X:",__self__.x0,__self__.x1)
+        #print("MPL Y:",__self__.y0,__self__.y1)
         # in matplotlib canvas directions are swapped
         x_ = [__self__.y0,__self__.y1]
         y_ = [__self__.x0,__self__.x1]
-        print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
+        #print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
         x_.sort()
         y_.sort()
 
-        print("x",x_)
-        print("y",y_)
-        print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
+        #print("x",x_)
+        #print("y",y_)
+        #print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
         
         if unpacker1 != [""] or unpacker2 != [""]:
             image1 = __self__.parent.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
@@ -1323,7 +1323,6 @@ class Annotator:
         # is displayed. Then, coordinates must be changed to pick the corresponding spec#
         #################################################################################
         if __self__.parent.masked:
-            print("MSKD!")
             x = __self__.parent.crop_y
             y = __self__.parent.crop_x #NOTE: coordinates in matplotlib canvas are swapped
             image1 = image1[x[0]:x[1],y[0]:y[1]]
@@ -3296,6 +3295,7 @@ class Settings:
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill_window)
         __self__.master.bind("<Escape>",__self__.kill_window)
+        __self__.master.attributes("-alpha",0.0)
 
         __self__.CoreCount = Constants.CPUS
         sys_mem = dict(virtual_memory()._asdict())
@@ -3311,9 +3311,7 @@ class Settings:
 
         icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
         __self__.master.iconbitmap(icon)  
-
         place_center(parent.master,__self__.master)
-
         __self__.master.grab_set()
 
     def build_widgets(__self__):
@@ -3534,6 +3532,7 @@ class Settings:
                 takefocus=False,
                 command=__self__.kill_window)
         CancelButton.grid(row=4,column=1)
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     def toggle_save_plot(__self__,e=""):
         yn = __self__.PlotSaveBoolVar.get()
@@ -3812,7 +3811,9 @@ class MainGUI:
         __self__.Toolbox.add_command(label="Load file selection . . .",
                 command=__self__.batch)
         __self__.Toolbox.add_command(label="Load h5 file . . .",
-                command=__self__.h5loader)
+                command= lambda: __self__.h5loader(ftype="h5"))
+        __self__.Toolbox.add_command(label="Load EDF stack . . .",
+                command= lambda: __self__.h5loader(ftype="edf"))
         __self__.Toolbox.add_command(label="Load ftir data [experimental] . . .",
                 command= lambda:__self__.batch(ftir=1))
         __self__.Toolbox.add_command(label="Convert spectra name . . .",
@@ -4097,8 +4098,6 @@ class MainGUI:
         elif 18 <= hour < 23: text=["Good evening!","Load some data to get started."]
         else: text=["Isn't it too late to be looking at data?"]
         text.append("\n")
-        text.append("ATTENTION!! Datacubes from older versions will not work on future versions!")
-        text.append("Save them with v2.0.0 in order to use them from now on.")
         for i in text:
             __self__.StatusBox.insert(END, f"{i}")
 
@@ -4168,6 +4167,13 @@ class MainGUI:
                     __self__.busy.notbusy()
 
             ##########################################################################
+
+            elif __self__.mca_extension[Constants.CONFIG["directory"]] == ".edf":
+                dtypes = Constants.MY_DATACUBE.datatypes
+                specbatch = Cube(dtypes,Constants.CONFIG,path=Constants.TEMP_PATH)
+                fail = specbatch.compile_cube()
+                __self__.ButtonLoad.config(state=NORMAL)
+                __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
 
             else:
 
@@ -5031,8 +5037,9 @@ class MainGUI:
     def h5writer(__self__):
         spp.write(__self__)
 
-    def h5loader(__self__):
-        spp.load(__self__)
+    def h5loader(__self__, ftype=None):
+        if ftype is None: return
+        else: spp.load(__self__, ftype=ftype)
 
     def batch(__self__,**kwargs):
         #1 prompt for files
@@ -5049,8 +5056,8 @@ class MainGUI:
             file_batch = filedialog.askopenfilenames(parent=__self__.master, 
                     title="Select spectra",                        
                     filetypes=(
-                        ("MCA Files", "*.mca"),
-                        ("Text Files", "*.txt"),
+                        ("MCA files", "*.mca"),
+                        ("Text files", "*.txt"),
                         ("All files", "*.*")))
             if file_batch == "": return
         
@@ -5334,6 +5341,7 @@ class MainGUI:
             __self__.wipe()
             if __self__.mca_extension[sample] == "---": __self__.samples.pop(sample,None)
             elif __self__.mca_extension[sample] == ".h5": __self__.samples.pop(sample,None)
+            elif __self__.mca_extension[sample] == ".edf": __self__.samples.pop(sample,None)
             __self__.list_samples()
             __self__.draw_map()
             __self__.ResetWindow.destroy()

@@ -1,4 +1,7 @@
-New in Version v2.3.2
+New in Version v2.4.0
 
+- Added support to EDF file batches
 - Fixed broken *.h5 loader and related issues
+- Corrected default SNIPBG parameters
 - ImageAnalyzer fitting was forcing semilog plot scale (fixed)
+- Unexpected auto_wizard crash when finding elements (fixed)

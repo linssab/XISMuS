@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          BATCH FITTER                                         #
-#                        version: 2.3.1 - Apr - 2021            #
+#                        version: 2.4.0 - May - 2021            #
 # @authors: Boris Bremmers & Sergio Lins                        #
 #################################################################
 
@@ -853,7 +853,8 @@ def findpeak(
     # Set correction in case of subsequent True elements in K-alpha present #
     #########################################################################
 
-    KA_correction = KB_double[KA_present]!=np.roll(KA_double[KA_present],1)
+    try: KA_correction = KB_double[KA_present]!=np.roll(KA_double[KA_present],1)
+    except: KA_correction = KB_double
 
     #########################################################################
     
