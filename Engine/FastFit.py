@@ -205,7 +205,9 @@ def save_plot(results,parameters,spec,energyaxis,bg=None):
     plt.semilogy(energyaxis,bg, label="Continuum",
             color="green", linewidth=0.85)
     plt.ylim([1,spec.max()*1.10])
-    plt.xlim([1,26])
+    plt.xlim([1,energyaxis.max()])
+    plt.ylabel("Counts")
+    plt.xlabel("Energy (eV)")
     plt.legend(loc="upper right")
     plt.savefig(os.path.join(PATH,f"spectrum_{it}.png"),dpi=300)
 
@@ -312,13 +314,13 @@ def do_stuff(CUBE,pool,**kwargs):
             t = threading.Thread(target=iterate_batch,
                     args=(parameters,
                         specrange[chunk0:chunk1],
-                        CUBE.energyaxis, frame, chunk0,
+                        e_axis, frame, chunk0,
                         lock,), kwargs={"bar":bar})
         else:
             t = threading.Thread(target=iterate_batch,
                     args=(parameters,
                         specrange[chunk0:chunk1],
-                        CUBE.energyaxis, frame, chunk0,
+                        e_axis, frame, chunk0,
                         lock,), kwargs={"bar":bar,"bgrange":bgrange[chunk0:chunk1]})
         threads.append(t)
         for i in range(bite_size):
@@ -328,13 +330,13 @@ def do_stuff(CUBE,pool,**kwargs):
             t = threading.Thread(target=iterate_batch,
                     args=(parameters,
                         specrange[spec_count:],
-                        CUBE.energyaxis, frame, spec_count,
+                        e_axis, frame, spec_count,
                         lock,), kwargs={"bar":bar})
         else:
             t = threading.Thread(target=iterate_batch,
                     args=(parameters,
                         specrange[spec_count:],
-                        CUBE.energyaxis, frame, spec_count,
+                        e_axis, frame, spec_count,
                         lock,), kwargs={"bar":bar,"bgrange":bgrange[spec_count:]})
         threads.append(t)
 
