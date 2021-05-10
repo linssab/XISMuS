@@ -4296,9 +4296,14 @@ class MainGUI:
             __self__.magnifier.config(state=DISABLED)
         if Constants.MY_DATACUBE is not None:
             if any("ftir" in x for x in Constants.MY_DATACUBE.datatypes):
+                __self__.master.unbind("<Alt-e>")
                 __self__.FindElementButton.state(["disabled"])
                 __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
+            elif any("temp" in x for x in Constants.MY_DATACUBE.datatypes): 
+                __self__.master.unbind("<Alt-r>")
             else:
+                __self__.master.bind("<Alt-r>",__self__.reset_sample)
+                __self__.master.bind("<Alt-a>",__self__.open_analyzer)
                 __self__.FindElementButton.state(["!disabled"])
                 __self__.Toolbox.entryconfig("Map elements",state=NORMAL)
         __self__.master.update_idletasks()
@@ -4471,7 +4476,8 @@ class MainGUI:
 
     def find_elements(__self__,e=""):
         mode = Constants.MY_DATACUBE.config["peakmethod"]
-        if Constants.MY_DATACUBE.config["peakmethod"] == "auto_wizard" and\
+        prohibited_methods = ["auto_wizard","fit_approx"]
+        if Constants.MY_DATACUBE.config["peakmethod"] in prohibited_methods and\
                 any("temp" in x for x in Constants.MY_DATACUBE.datatypes):
                     messagebox.showerror("Error",
                     "Temporarily loaded *.h5 files cannot be fitted! To use this method, reload the corresponding file and try again.")
@@ -5084,6 +5090,7 @@ class MainGUI:
                         ("Text files", "*.txt"),
                         ("All files", "*.*")))
             if file_batch == "": return
+        wipe_stats(__self__)
         
         #1.1 get the name of parent directory
         try: sample_name = str(file_batch[0]).split("/")[-2]

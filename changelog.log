@@ -5,3 +5,4 @@ New in Version v2.4.0
 - Corrected default SNIPBG parameters
 - ImageAnalyzer fitting was forcing semilog plot scale (fixed)
 - Unexpected auto_wizard crash when finding elements (fixed)
+- Mosaic freezing when calculating merge dataset MPS (fixed)

@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 2.3.1 - Apr - 2021            #
+#                        version: 2.4.0 - May - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -1904,7 +1904,7 @@ class Mosaic_API:
             
             new_cube.scale_matrix = __self__.cropped
             new_cube.scalable = True
-            if any("mca" in x for x in __self__.datatype):
+            if any("mca" in x or "xrf" in x for x in __self__.datatype):
                 new_cube.matrix = new_cube.matrix.astype(np.int32)
             new_cube.background = __self__.background
             del __self__.background

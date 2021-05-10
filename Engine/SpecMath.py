@@ -127,7 +127,7 @@ class datacube:
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
 
-        elif "h5" in __self__.datatypes or "edf" in __self__.datatypes:
+        elif any("h5" in x for x in __self__.datatypes) or "edf" in __self__.datatypes:
             __self__.matrix = Constants.MY_DATACUBE.matrix
             __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
@@ -414,7 +414,6 @@ class datacube:
         if bar != None:
             bar.progress["maximum"] = 11    #strip_background shares 
                                             #the bar and changes the maximum value
-
             bar.update_text("Fitting F & N...")
             bar.updatebar(10)
         __self__.fit_fano_and_noise(bar=bar)

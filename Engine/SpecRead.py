@@ -187,26 +187,31 @@ def getcalibration():
     """ Extracts the calibration anchors from source 
     if configuration is set to manual, returns the anchors input by
     user via GUI. """
+    print(Constants.MY_DATACUBE)
    
     if Constants.CONFIG['calibration'] == 'ftir_source':
-        if "h5" in Constants.MY_DATACUBE.datatypes \
+        try:
+            if "h5" in Constants.MY_DATACUBE.datatypes \
                 and "ftir" in Constants.MY_DATACUBE.datatypes:
                     return Constants.MY_DATACUBE.calibration
-        elif os.path.exists(getfirstfile()): pass
-        else: raise FileNotFoundError("File not found!")
-        param = [[1,1],[2,2]]
-        with open(getfirstfile(),"r") as f:
-            reader = csv.reader(f)
-            i = 0
-            for row in reader:
-                if i == 0:
-                    param[0][0] = float(0)
-                    param[0][1] = float(row[0])
-                else:
-                    param[1][0] = float(i+1)
-                    param[1][1] = float(row[0])
-                i+=1
-        return param
+        except AttributeError: 
+            if os.path.exists(getfirstfile()): pass
+            else: 
+                raise FileNotFoundError("File not found!")
+                return
+            param = [[1,1],[2,2]]
+            with open(getfirstfile(),"r") as f:
+                reader = csv.reader(f)
+                i = 0
+                for row in reader:
+                    if i == 0:
+                        param[0][0] = float(0)
+                        param[0][1] = float(row[0])
+                    else:
+                        param[1][0] = float(i+1)
+                        param[1][1] = float(row[0])
+                    i+=1
+            return param
 
     if Constants.CONFIG['calibration'] == 'from_source':
         param = []

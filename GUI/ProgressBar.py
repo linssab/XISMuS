@@ -117,7 +117,10 @@ class Busy:
         __self__.outerframe.grid(row=0,column=0)
         __self__.master.body.grid(row=1,column=0,padx=(6,6),pady=(6,6))
 
-        if grab: __self__.master.grab_set()
+        if grab: 
+            __self__.master.focus_set()
+            __self__.master.focus_force()
+            __self__.master.grab_set()
         __self__.set_size()
 
     def set_size(__self__):
