@@ -117,7 +117,6 @@ class datacube:
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros(specsize,dtype="int32")
             gc.collect()
-
         elif mode != "merge" and "mca" in __self__.datatypes:
             __self__.dimension = getdimension()
             __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
@@ -126,7 +125,6 @@ class datacube:
             __self__.config = configuration
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
-
         elif any("h5" in x for x in __self__.datatypes) or "edf" in __self__.datatypes:
             __self__.matrix = Constants.MY_DATACUBE.matrix
             __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
@@ -135,7 +133,6 @@ class datacube:
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros(specsize,dtype="int32")
             gc.collect()
-
         __self__.ROI = {}
         __self__.hist = {}
         __self__.max_counts = {}
@@ -162,7 +159,6 @@ class datacube:
                 __self__.sum += __self__.matrix[x,y]
 
     def fit_fano_and_noise(__self__, bar=None):
-        print("Fitting Fano and Noise")
         __self__.FN = FN_fit_gaus(__self__.sum,
                 __self__.sum_bg,
                 __self__.energyaxis,
@@ -250,13 +246,11 @@ class datacube:
             progressbar=None):
 
         def spawn_wheel(progressbar):
-            print("started wheel")
             __self__.t00_stop = False
             if progressbar is not None:
                 progressbar.progress["maximum"] = 3
                 i = 0
                 while not __self__.t00_stop:
-                    print(i)
                     progressbar.updatebar(i)
                     if i <4: i += 1
                     else: i = 0
@@ -341,7 +335,6 @@ class datacube:
                             attempt))
                 r_fact+=1
                 progressbar.updatebar(0)
-                print("r_fact",r_fact)
 
             __self__.sum_bg = y_cont[0]
             __self__.background = y_cont[1:]
@@ -622,7 +615,6 @@ class datacube:
             else: break
         
         print("lead",lead_zeros,"tail",tail_zeros)
-
         __self__.energyaxis, __self__.gain, __self__.zero = calibrate(
                 lead=lead_zeros,tail=__self__.matrix.shape[2]-tail_zeros)
         __self__.config["gain"] = __self__.gain
@@ -1073,8 +1065,6 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
     #########################
     # perform deconvolution #
     #########################
-    print(Constants.PEAK_TOLERANCE)
-    print(Constants.CONTINUUM_SUPPRESSION)
 
     w = Constants.PEAK_TOLERANCE
     v = int(w/2)+1
@@ -1425,7 +1415,6 @@ def setROI(lookup,xarray,yarray,localconfig):
         ##########################################
 
         difference = abs((shift[0])-xarray[idx])*1000
-        #print(int((w_tolerance)*localconfig["gain"]*1000))
         logger.debug("DIFFERENCE: {}, Tolerable: {}. Peak is at: {}".format(
             int(difference),
             int((w_tolerance)*localconfig["gain"]*1000),

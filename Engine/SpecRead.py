@@ -187,7 +187,6 @@ def getcalibration():
     """ Extracts the calibration anchors from source 
     if configuration is set to manual, returns the anchors input by
     user via GUI. """
-    print(Constants.MY_DATACUBE)
    
     if Constants.CONFIG['calibration'] == 'ftir_source':
         try:

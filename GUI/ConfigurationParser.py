@@ -163,7 +163,6 @@ class PeakClipper:
             __self__.randomize.config(state=DISABLED)
 
     def build_widgets(__self__):
-       
         # frame 1 (left)
         __self__.upper = Canvas(__self__.frame1)
         fig_bg_color = __self__.master.cget("background")
@@ -175,6 +174,10 @@ class PeakClipper:
         __self__.plot = __self__.figure.add_subplot(111)
         __self__.plot.grid(which='both',axis='both')
         __self__.plot.axis('On')
+        __self__.plot.spines["top"].set_color("black")
+        __self__.plot.spines["bottom"].set_color("black")
+        __self__.plot.spines["left"].set_color("black")
+        __self__.plot.spines["right"].set_color("black")
         __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
         __self__.canvas.draw()
         __self__.mplCanvas = __self__.canvas.get_tk_widget()
@@ -343,9 +346,11 @@ class PeakClipper:
                     format(__self__.spectrum))
 
     def save(__self__):
-        __self__.parent.snip_config = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
-        proceed = __self__.verify_values(__self__.parent.snip_config)
-        if proceed == True: __self__.kill()
+        values = __self__.iter.get(),__self__.window.get(),__self__.savgol.get(),__self__.order.get()
+        proceed = __self__.verify_values(values)
+        if proceed == True: 
+            Constants.SNIPBG_TEMP = values
+            __self__.kill()
         else: messagebox.showerror("Value Error", "Parameters not valid. No negative or zero values are valid. Sav-gol window must be odd and greater than Sav-gol order.")
 
     def kill(__self__, event=""):
@@ -362,6 +367,7 @@ class PeakClipper:
 
 class ConfigDiag:
     def __init__(__self__, root, matrix=None, calib=None):
+        Constants.SNIPBG_TEMP = []
         __self__.root = root
         __self__.calibparams = calib
         #NOTE: only parsed when loading an h5 file
@@ -539,7 +545,7 @@ class ConfigDiag:
                 "calibration":__self__.CalibVar.get(),
                 "enhance":__self__.EnhanceVar.get(),
                 "peakmethod":__self__.MethodVar.get(),
-                "bg_settings":__self__.root.snip_config}
+                "bg_settings":Constants.SNIPBG_TEMP}
         if Constants.FTIR_DATA:
             configdict["ftir"] = True
         else: pass

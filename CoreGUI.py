@@ -88,7 +88,7 @@ def update_version():
                         else: return 0
                 except OSError:
                     messagebox.showerror("Failed to get patch!",
-                            "Something went wrong trying to download the patch file!")
+                            "Something went wrong trying to download the patch file!\nBe sure you are running XISMuS with administrator rights.")
                     return 0
         else: 
             if os.path.exists(destination):
@@ -107,7 +107,7 @@ def update_version():
         try: 
             subprocess.Popen([r"update.exe"] + args, stdout=subprocess.PIPE)
         except:
-            messagebox.showerror("Update error!","Failed to launch update.exe!")
+            messagebox.showerror("Update error!","Failed to launch update.exe! Try updating manually.")
             return
         root.root_quit(force=1)
 
@@ -287,7 +287,23 @@ def verify_calibration_parameters(caller, anchors):
         ##############################
     return 0
 
-
+def remove_continuum_data():
+    global root
+    value = root.SamplesWindow_TableLeft.get(ACTIVE)
+    if value != Constants.MY_DATACUBE.name:
+        root.sample_select(force=value)
+    if Constants.MY_DATACUBE.matrix.shape != Constants.MY_DATACUBE.background.shape:
+        messagebox.showerror("Error","No data to erase! Bgstrip mode already set to None.")
+    else: 
+        question = messagebox.askyesno("Attention!","Attention, this operation is irreversible. Are you sure you want to proceed?")
+        if question:
+            Constants.MY_DATACUBE.background = np.zeros([Constants.MY_DATACUBE.matrix.shape[-1]],dtype=np.float32)
+            Constants.MY_DATACUBE.sum_bg = np.zeros([Constants.MY_DATACUBE.matrix.shape[-1]],dtype=np.float32)
+            Constants.MY_DATACUBE.config["bgstrip"] = "None"
+            Constants.MY_DATACUBE.config["bg_settings"] = []
+            Constants.MY_DATACUBE.save_cube()
+            root.write_stat()
+    return
 
 def upgrade_cube(cube):
     """ pre 1.3 cubes will remain without 'version' attribute. Other cubes will maintain the
@@ -375,10 +391,8 @@ def load_cube():
                 upgrade_cube(Constants.MY_DATACUBE)
         elif not hasattr(Constants.MY_DATACUBE,"update_info"): 
             upgrade_cube(Constants.MY_DATACUBE)
-
         logger.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
-        
         root.busy.notbusy()
     elif os.path.exists(os.path.join(sp.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
@@ -2191,7 +2205,6 @@ class PlotWin:
     
     def wipe_plot(__self__):
         """clears and destroy plot"""
-
         try: 
             __self__.plot.clear()
             __self__.figure.clf()
@@ -2734,9 +2747,10 @@ class PlotWin:
         if __self__.parent.DATACUBE.fit_config["bg"]:
             try: 
                 cycles, window, savgol, order = \
-                    __self__.parent.DATACUBE.config["bg_settings"]
+                        __self__.parent.DATACUBE.fit_config["bg_settings"]
             except: 
-                cycles, window, savgol, order = Constants.SNIPBG_DEFAULTS
+                cycles, window, savgol, order = \
+                        Constants.SNIPBG_DEFAULTS
             continuum = peakstrip(spec,cycles,window,savgol,order)
             __self__.parent.DATACUBE.fit_fano_and_noise()
 
@@ -2777,7 +2791,6 @@ class PlotWin:
 
         __self__.fit_plots = []
         __self__.parent.Panel = None
-
         __self__.plot.grid(which='both',axis='both')
         __self__.plot.grid(color="gray", ls="--", lw=1)
         __self__.plot.axis('On')
@@ -3254,7 +3267,6 @@ class Samples:
                         __self__.mca_extension[folder] = mca_extension
                         __self__.mca_indexing[folder] = "1"
             logger.info("Done.")
-
         except: logger.info("Could not locate Training Data.")
 
         try:
@@ -3274,7 +3286,6 @@ class Samples:
                         __self__.mcacount[folder] = 0
                         __self__.mca_extension[folder] = "---"
                         logger.info("Datacube {} located. Ignoring mca files".format(folder))
-        
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
                 logger.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
@@ -3282,7 +3293,6 @@ class Samples:
                 logger.info("Cannot load samples. Error {}.".format(
                     exception.__class__.__name__))
             else: pass
-
         try: __self__.kill()
         except: pass
        
@@ -3663,7 +3673,6 @@ class MainGUI:
         f.close()
         
         Theme.apply_theme(__self__)
-        __self__.snip_config = []
         __self__.find_elements_diag = None
         __self__.ImageAnalyzers = [] 
         #everytime ImgAnalyzer API is opened, instance is appended
@@ -4001,6 +4010,10 @@ class MainGUI:
         __self__.SamplesWindow.popup.add_command(
                 label="Open output folder",
                 command=__self__.open_output_folder)
+        __self__.SamplesWindow.popup.add_separator()
+        __self__.SamplesWindow.popup.add_command(
+                label="Delete continuum data",
+                command=remove_continuum_data)
         __self__.SamplesWindow.popup.add_command(
                 label="Remove from database",
                 command=__self__.remove_sample)
@@ -4737,16 +4750,18 @@ class MainGUI:
         if __self__.SamplesWindow_TableRight.yview() != __self__.SamplesWindow_TableLeft.yview():
             __self__.SamplesWindow_TableRight.yview_scroll(1,"units") 
 
-    def sample_select(__self__,event=""):
+    def sample_select(__self__,event="",force=""):
         """ Loads the sample selected from the sample list menu. If the cube is 
         compiled, loads it to memory. If not, the configuration dialog is called """
                 
         # name of selected sample
-        try: 
-            value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
-        except:
-            value = event
-        if value == "": return
+        if force != "": value = force
+        else:
+            try: 
+                value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
+            except:
+                value = event
+            if value == "": return
         
         #############################################################
         # WHEN SELECTING ANOTHER ITEM AND A TEMPORARY H5 IS LOADED, #
@@ -5308,9 +5323,9 @@ class MainGUI:
                 except: pass
 
         if os.path.exists(sp.cube_path):
-
             cube_stats = os.stat(sp.cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
+            print(sp.cube_path,cube_size)
             __self__.StatusBox.insert(END,
                     "Datacube is compiled. Cube size: {0}".format(cube_size))
             __self__.StatusBox.insert(END,"Verifying packed elements...")
@@ -5327,21 +5342,19 @@ class MainGUI:
             #######################################################################
             write_to_subpanel()
             #######################################################################
-        
         elif __self__.no_sample == True:
             __self__.StatusBox.insert(END, "No sample configured!") 
             for key in Constants.CONFIG:
                 __self__.TableLeft.insert(END,key)
-
         elif __self__.no_sample == False and root.temporaryh5 == "None": 
             __self__.StatusBox.insert(END, "Datacube not compiled.") 
             __self__.StatusBox.insert(END, "Please compile the cube first.")
             for key in Constants.CONFIG:
                 __self__.TableLeft.insert(END,key)
         else: pass
-
         __self__.TableLeft.config(state=DISABLED)
         __self__.TableMiddle.config(state=DISABLED)
+        return
        
     def reset_sample(__self__,e=""):
         def repack(__self__, sample):
@@ -5596,9 +5609,7 @@ class ReConfigDiag:
 
         if __self__.calibration_params is not None:
             failed = verify_calibration_parameters(__self__, __self__.calibration_params)
-            print("failed calibration?",failed)
             if not failed:
-                print("Recalibrating")
                 Constants.MY_DATACUBE.recalibrate(__self__.calibration_params)
                 save_cube = 1
             else: return
@@ -5676,7 +5687,6 @@ class ReConfigDiag:
         if "mca" in Constants.MY_DATACUBE.datatypes or save_cube:
             if not "h5-temp" in Constants.MY_DATACUBE.datatypes:
                 Constants.MY_DATACUBE.save_cube()
-                print("Writing cube to disk")
         root.write_stat()
         __self__.kill()
 
@@ -6053,7 +6063,6 @@ class PeriodicTable:
             else:
                 FANO, NOISE = Constants.MY_DATACUBE.FN
             FN_set(FANO, NOISE)
-            print("These are FANO and NOISE: {} {}".format(FANO,NOISE))
 
             root.MenuBar.entryconfig("Toolbox", state=DISABLED)
             root.ButtonLoad.config(state=DISABLED)
@@ -6127,7 +6136,6 @@ class PeriodicTable:
                 partialtimer = time.time()
                 iterator = 0
                 for element in Constants.FIND_ELEMENT_LIST:
-                    print(f"Grabbing element {element}")
                     iterator += 1
                     __self__.progress.update_text(
                             "Grabbing element {}...".format(element))

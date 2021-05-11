@@ -25,6 +25,8 @@ import sys,os,copy
 import csv
 import pickle
 import matplotlib.pyplot as plt
+try: from tkinter import messagebox
+except: from Tkinter import messagebox
 
 SIGMA = lambda noise, fano, peaks: np.sqrt(((noise/2.3548200450309493)**2)+3.85*fano*peaks)
 
@@ -97,7 +99,7 @@ def work_images(CUBE, frame, element_pool, element_params, lines, shape, **kwarg
                         list(element_pool["elements"].keys()), 
                         element_params, lines)
             except IndexError: 
-                print(len(frame),pos)
+                print(pos,len(frame))
             for element in results.keys():
                 ellines = results[element]["Lines"]
                 plots[element] += results[element]["Areas"]
@@ -222,6 +224,7 @@ def do_stuff(CUBE,pool,**kwargs):
         bar.update_text("Calculating...")
         bar.progress["maximum"] = 4
     else: bar = ""
+    restore_original_bg = 0
     shape = CUBE.matrix.shape[:-1]
     specrange = CUBE.matrix.reshape(-1, CUBE.matrix.shape[-1])
     bgrange = CUBE.background.reshape(-1, CUBE.background.shape[-1])
@@ -229,18 +232,20 @@ def do_stuff(CUBE,pool,**kwargs):
     gain = CUBE.gain*1000
     e_axis = CUBE.energyaxis*1000
     
-    wipe_bg = 0
     if CUBE.fit_config["bg"]: 
-        if CUBE.sum_bg.sum(0) == 0:
-            try:
-                cycles, window, savgol, order = CUBE.config["bg_settings"]
-            except:
-                cycles, window, savgol, order = Constants.SNIPBG_DEFAULTS
-                continuum = peakstrip(CUBE.sum,cycles,window,savgol,order)
-            wipe_bg = 1
-        else: continuum = CUBE.sum_bg
-        if not hasattr(CUBE,"FN"): CUBE.fit_fano_and_noise()
+        try:
+            cycles, window, savgol, order = CUBE.fit_config["bg_settings"]
+        except:
+            cycles, window, savgol, order = Constants.SNIPBG_DEFAULTS
+        continuum = peakstrip(CUBE.sum,cycles,window,savgol,order)
         CUBE.sum_bg = continuum
+        if not hasattr(CUBE,"FN"): CUBE.fit_fano_and_noise()
+        bar.updatebar(1)
+    else:
+        print("Not using BG")
+        restore_original_bg = 1
+        original_bg = CUBE.sum_bg[:]
+        CUBE.sum_bg = np.zeros([CUBE.sum.shape[0]],dtype=np.float32)
         bar.updatebar(1)
 
     fano, noise = CUBE.FN
@@ -347,11 +352,11 @@ def do_stuff(CUBE,pool,**kwargs):
     bar.master.focus_force()
     for t in threads:
         t.join()
-    
-    #if wipe_bg: CUBE.sum_bg=np.zeros(CUBE.sum.shape[0])
     #np.save(os.path.join(os.path.dirname(__file__),f"{CUBE.name}_frame.npy"),frame)
     kill = 1
-    return frame
+    if restore_original_bg: 
+        return frame, original_bg
+    return frame, CUBE.sum_bg
 
 def iterate_batch(parameters,
         specrange,xaxis,
@@ -422,15 +427,12 @@ def fit_and_run():
     bar = Busy(0,CUBE.img_size)
     bar.master.focus_set()
     bar.master.focus_force()
-    frame = do_stuff(CUBE, element_pool,bar=bar)
+    try: frame, restored_bg = do_stuff(CUBE, element_pool,bar=bar)
+    except Exception as e: 
+        messagebox.showerror("Uh-oh!",f"Something went wrong.\n{e}")
+        bar.destroybar()
+        return
     CUBE.prepack_elements(list(element_pool["elements"].keys()))
-    cmaps = ["gray","Spectral","jet","hot"]
-    if len(sys.argv) >= 3:
-        color = sys.argv[2]
-        if color in cmaps:
-            Constants.COLORMAP = color
-        else: print(f"Color {color} not recognized!\nContinuing with default.")
-    else: pass
     bar.update_text("Working...")
     params, lines = work_elements(
             CUBE.energyaxis*1000,
@@ -447,8 +449,10 @@ def fit_and_run():
         for line in lines[el]:
             CUBE.pack_element(images[el][line], el, line)
             CUBE.ROI[el] = plots[el]
-    bar.destroybar()
+    bar.update_text("Writing to disk...")
+    CUBE.sum_bg = restored_bg
     CUBE.save_cube()
+    bar.destroybar()
     return 0
 
 if __name__.endswith("__main__"):
