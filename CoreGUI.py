@@ -91,8 +91,6 @@ def update_version():
                             "Something went wrong trying to download the patch file!\nBe sure you are running XISMuS with administrator rights.")
                     return 0
         else: 
-            if os.path.exists(destination):
-                os.remove(destination) 
             return 0
     logger.info("Attempting to connect to sourceforge servers...")
     t0 = threading.Thread(target=request_version)
