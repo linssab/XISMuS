@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          DECODER                                              #
-#                        version: 2.3.0 - Apr 2021              #
+#                        version: 2.4.0 - May 2021              #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -24,7 +24,7 @@ def b64_to_array(uri):
 def unpack_images():
     global IMG_NODATA, IMG_SPLASH
     image_file = open(os.path.join(os.path.dirname(__file__),"graphics.tz"),"rb")
-    IMG_SPLASH = image_file.read(751304)
+    IMG_SPLASH = image_file.read(751460)
 
 def unpack_icons():
     global ICO_ACCEPT, ICO_CCW, ICO_CW, ICO_DOWN

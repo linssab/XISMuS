@@ -1,3 +1,12 @@
+New in Version v2.4.0
+- Added support to EDF file batches
+- Fixed broken *.h5 loader and related issues
+- Corrected default SNIPBG parameters
+- ImageAnalyzer fitting was forcing semilog plot scale (fixed)
+- Unexpected auto_wizard crash when finding elements (fixed)
+- User snipbg parameters are override by defaults (fixed)
+- Mosaic freezing when calculating merge dataset MPS (fixed)
+
 New in Version v2.3.1
 - Added "flip" option to Mosaic panel
 - Different datacube types could be merged (fixed)
