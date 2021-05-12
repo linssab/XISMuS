@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          CONFIGURATION PARSER                                 #
-#                        version: 2.3.0 - Apr - 2021            #
+#                        version: 2.4.0 - May - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -199,6 +199,19 @@ def unpack_cfg():
     return CONFIG, CALIB
 
 def set_settings(inifile):
+    ColorMapMode = Constants.COLORMAP
+    CoreMode = Constants.MULTICORE
+    PlotMode = Constants.PLOTMODE
+    RAMMode = Constants.RAM_LIMIT
+    WlcmMode = Constants.WELCOME
+    PeakTolerance = Constants.SETROI_TOLERANCE
+    Cycles = Constants.FIT_CYCLES
+    Sensitivity = Constants.PEAK_TOLERANCE
+    ContSuppr = Constants.CONTINUUM_SUPPRESSION
+    WizTol = Constants.CHECK_TOLERANCE
+    SaveInterval = Constants.SAVE_INTERVAL
+    SavePlot = Constants.SAVE_FIT_FIGURES
+
     ini = open(inifile,"r")
     for line in ini:
         line = line.replace("\n","")
