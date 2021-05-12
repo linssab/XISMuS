@@ -5,8 +5,8 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
-import Engine.SpecRead as sp 
-import Engine.SpecMath as sm
+from Engine import SpecRead as sp 
+from Engine import SpecMath as sm
 from GUI.Utils import *
 from .AdvCalibration import AdvCalib
 import Constants
