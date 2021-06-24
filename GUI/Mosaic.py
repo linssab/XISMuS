@@ -1150,6 +1150,7 @@ class Mosaic_API:
     def check_calibration(__self__, cube):
         proceed = True
         candidate = cube.calibration
+        candidate = [list(x) for x in candidate]
         cube_nchan = cube.matrix.shape[2]
         if Constants.NCHAN != cube_nchan:
             messagebox.showerror("Incompatible spectra!",
@@ -1157,6 +1158,11 @@ class Mosaic_API:
             return False
         for layer in __self__.layer:
             loaded = __self__.layer[layer].calibration
+            loaded = [list(x) for x in loaded]
+            print(loaded)
+            print(candidate)
+            print(type(loaded))
+            print(type(candidate))
             if loaded != candidate:
                 proceed = messagebox.askquestion("Warning!","The cube you are trying to add has a different calibration from the layers already imported. This may cause serious problems when trying to map elements and can yield to results inconsistencies! Are you sure you want to proceed?")
                 if proceed == "yes": return True
