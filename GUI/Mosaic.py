@@ -1159,10 +1159,6 @@ class Mosaic_API:
         for layer in __self__.layer:
             loaded = __self__.layer[layer].calibration
             loaded = [list(x) for x in loaded]
-            print(loaded)
-            print(candidate)
-            print(type(loaded))
-            print(type(candidate))
             if loaded != candidate:
                 proceed = messagebox.askquestion("Warning!","The cube you are trying to add has a different calibration from the layers already imported. This may cause serious problems when trying to map elements and can yield to results inconsistencies! Are you sure you want to proceed?")
                 if proceed == "yes": return True
