@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Linear interpolation fit approximation               #
-#                        version: 2.4.0 - May - 2021            #
+#                        version: 2.4.1 - Jun - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -212,6 +212,7 @@ def save_plot(results,parameters,spec,energyaxis,bg=None):
     plt.xlabel("Energy (eV)")
     plt.legend(loc="upper right")
     plt.savefig(os.path.join(PATH,f"spectrum_{it}.png"),dpi=300)
+    return
 
 def do_stuff(CUBE,pool,**kwargs):
     global MAX_UNIT
@@ -320,13 +321,13 @@ def do_stuff(CUBE,pool,**kwargs):
                     args=(parameters,
                         specrange[chunk0:chunk1],
                         e_axis, frame, chunk0,
-                        lock,), kwargs={"bar":bar})
+                        lock,), kwargs={"bar":bar,"thread":k})
         else:
             t = threading.Thread(target=iterate_batch,
                     args=(parameters,
                         specrange[chunk0:chunk1],
                         e_axis, frame, chunk0,
-                        lock,), kwargs={"bar":bar,"bgrange":bgrange[chunk0:chunk1]})
+                        lock,), kwargs={"bar":bar,"bgrange":bgrange[chunk0:chunk1],"thread":k})
         threads.append(t)
         for i in range(bite_size):
             spec_count += 1
@@ -336,13 +337,13 @@ def do_stuff(CUBE,pool,**kwargs):
                     args=(parameters,
                         specrange[spec_count:],
                         e_axis, frame, spec_count,
-                        lock,), kwargs={"bar":bar})
+                        lock,), kwargs={"bar":bar,"thread":cpus})
         else:
             t = threading.Thread(target=iterate_batch,
                     args=(parameters,
                         specrange[spec_count:],
                         e_axis, frame, spec_count,
-                        lock,), kwargs={"bar":bar,"bgrange":bgrange[spec_count:]})
+                        lock,), kwargs={"bar":bar,"bgrange":bgrange[spec_count:],"thread":cpus})
         threads.append(t)
 
     for t in threads:
@@ -382,9 +383,10 @@ def iterate_batch(parameters,
                 results, parameters = work_results(output, list(pool["elements"].keys()),
                                                     elements_parameters, lines)
                 with lock: 
-                    if bar: bar.update_text(f"Saving fit plot {it}")
-                    save_plot(results,parameters,i,xaxis)
-                    if bar: bar.update_text("Calculating...")
+                    if bar: 
+                        bar.update_text(f"Saving fit plot {it}")
+                        save_plot(results,parameters,i,xaxis)
+                        bar.update_text("Calculating...")
             with lock:
                 it += 1
                 frame[it00] = output
@@ -406,9 +408,10 @@ def iterate_batch(parameters,
                 results, parameters = work_results(output, list(pool["elements"].keys()),
                                                     elements_parameters, lines)
                 with lock:
-                    if bar: bar.update_text(f"Saving fit plot {it}")
-                    save_plot(results,parameters,i,xaxis)
-                    if bar: bar.update_text("Calculating...")
+                    if bar: 
+                        bar.update_text(f"Saving fit plot {it}")
+                        save_plot(results,parameters,i,xaxis)
+                        bar.update_text("Calculating...")
             with lock:
                 it += 1
                 frame[it00] = output
