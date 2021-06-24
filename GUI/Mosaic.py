@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 2.4.0 - May - 2021            #
+#                        version: 2.4.1 - Jun - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -168,6 +168,19 @@ def convert_layers_to_dict(MosaicAPI_class):
                 new_dict[MosaicAPI_class.layer[layer].name]["img"] * \
                 new_dict[MosaicAPI_class.layer[layer].name]["img_max"] / VMAX
     return new_dict
+
+def check_datatypes(root,cube):
+    """ returns 1 if incompatible """
+    if root.datatype is None: return 0 #no datacube previously loaded
+    elif "ftir" in root.datatype and cube.datatypes != root.datatype:
+        messagebox.showerror("Incompatible cube types!",
+                f"Cube being loaded is of type {cube.datatypes}. Previously loaded cubes are of type {root.datatype}")
+        return 1
+    elif "ftir" in cube.datatypes and cube.datatypes != root.datatype:
+        messagebox.showerror("Incompatible cube types!",
+                f"Cube being loaded is of type {cube.datatypes}. Previously loaded cubes are of type {root.datatype}")
+        return 1
+    else: return 0
 
 def normalize(scale_matrix):
     global LAYERS_DICT
@@ -1137,6 +1150,11 @@ class Mosaic_API:
     def check_calibration(__self__, cube):
         proceed = True
         candidate = cube.calibration
+        cube_nchan = cube.matrix.shape[2]
+        if Constants.NCHAN != cube_nchan:
+            messagebox.showerror("Incompatible spectra!",
+                    f"The number of channels in cube {cube.name} is {cube.matrix.shape[2]}, while previously loaded cube(s) have {Constants.NCHAN} channels!")
+            return False
         for layer in __self__.layer:
             loaded = __self__.layer[layer].calibration
             if loaded != candidate:
@@ -1243,24 +1261,23 @@ class Mosaic_API:
 
         selected_cube = __self__.maps_list.get(ACTIVE)
         cube = load_cube(selected_cube)
-
+        print(cube.datatypes)
         if __self__.layer.__contains__(selected_cube):
             messagebox.showinfo("Cube already imported!",
                     "Can't add same cube twice!")
             __self__.refocus()
             return
-        elif __self__.datatype is not None and __self__.datatype != cube.datatypes:
-            messagebox.showinfo("Incompatible types!",
-                    f"Datacube selected is of type {cube.datatypes}. Previously loaded cubes are of type {__self__.datatype}!")
+        elif check_datatypes(__self__, cube):
             __self__.refocus()
             return
-
         elif __self__.layer_count == 0: 
             Constants.CONFIG = cube.config
+            Constants.NCHAN = cube.matrix.shape[2]
             __self__.zero_config = cube.config
             can_import = True
             __self__.datatype = cube.datatypes
         else: can_import = __self__.check_calibration(cube)
+
         if can_import == True and __self__.layer_count > 0: 
             can_import = __self__.check_configuration(cube)
         if can_import == True:
@@ -1487,11 +1504,17 @@ class Mosaic_API:
             messagebox.showerror("Cube not found!",
                     "Cannot find cube {}! Aborting operation.".format(layer["name"]))
             return 0
-        elif __self__.datatype is not None and cube.datatypes != __self__.datatype:
-            messagebox.showerror("Incompatible cube types!",
-                    f"Cube being loaded is of type {cube.datatypes}. Previously loaded cubes are of type {__self__.datatype}")
+        elif check_datatypes(__self__,cube): 
             return 0
         else: __self__.datatype = cube.datatypes
+
+        #NOTE: check specsize for incompatibilities
+        if __self__.layer_count == 0:
+            Constants.NCHAN = cube.matrix.shape[2]
+        elif cube.matrix.shape[2] != Constants.NCHAN:
+            messagebox.showerror("Incompatible spectra!",
+                    f"The number of channels in cube {cube.name} is {cube.matrix.shape[2]}, while previously loaded cube(s) have {Constants.NCHAN} channels!")
+            return 0
 
         Constants.CONFIG = cube.config
         __self__.zero_config = cube.config        
@@ -1893,6 +1916,8 @@ class Mosaic_API:
             check_configuration_integrity(__self__.zero_config)
             for key  in __self__.zero_config:
                 print(f"{key:10}\t{__self__.zero_config[key]}")
+
+            Constants.NCHAN = __self__.merge_matrix.shape[2]
             new_cube = Cube(__self__.datatype,__self__.zero_config,mode="merge",name=NAME)
             new_cube.energyaxis = __self__.layer[layers[0]].energyaxis
             new_cube.gain = abs(new_cube.energyaxis[-1]-new_cube.energyaxis[-2])
@@ -1904,7 +1929,7 @@ class Mosaic_API:
             
             new_cube.scale_matrix = __self__.cropped
             new_cube.scalable = True
-            if any("mca" in x or "xrf" in x for x in __self__.datatype):
+            if any("mca" in x or "xrf" in x or "h5" in x for x in __self__.datatype):
                 new_cube.matrix = new_cube.matrix.astype(np.int32)
             new_cube.background = __self__.background
             del __self__.background
@@ -1952,6 +1977,7 @@ class Mosaic_API:
         del __self__
 
     def tis_cool_i_leave_now(__self__):
+        Constants.MSHAPE = (0,0,0)
         __self__.master.grab_release()
         messagebox.showinfo("Merge complete!",
                 "Datacubes were successfully merged. Mosaic will now be closed.")

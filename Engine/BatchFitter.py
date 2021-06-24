@@ -821,7 +821,8 @@ def findpeak(
     # regarding different elements                                      #
     #####################################################################
 
-    double_match = np.flatnonzero(E_mesh[:,:2,:].any(0).all(0)) 
+    double_match = np.flatnonzero(E_mesh[:,[0,1],:].any(0).all(0)) 
+    print("double matches",double_match.shape)
 
     #####################################################################
     
@@ -854,7 +855,7 @@ def findpeak(
     #########################################################################
 
     try: KA_correction = KB_double[KA_present]!=np.roll(KA_double[KA_present],1)
-    except: KA_correction = KB_double
+    except: KA_correction = KB_double[KA_present]
 
     #########################################################################
     
@@ -888,6 +889,11 @@ def findpeak(
         ##########################################################
 
         KA_present[KA_present]=KA_correction #Update K-alpha present
+        print("KA correction shape",KA_correction.shape)
+
+    if KA_present.size > double_match.size: #This means there are more KB lines corresponding to KA than recorded double matches
+        print("large KA present")
+        KA_present = np.ones(double_match.shape).astype(bool)
 
     #############################################################################
     

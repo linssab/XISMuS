@@ -8,8 +8,8 @@
 import logging
 from psutil import cpu_count
 
-VERSION = "2.4.0"
-VERSION_MOS = "2.4.0"
+VERSION = "2.4.1"
+VERSION_MOS = "2.4.1"
 LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None
@@ -47,6 +47,8 @@ FILTER = 1
 CPUS = cpu_count(logical=False)
 FTIR_DATA = 0
 TEMP_PATH = ""
+NCHAN = 0
+MSHAPE = (0,0,0)
 
 def list_all():
     return {"version":VERSION,

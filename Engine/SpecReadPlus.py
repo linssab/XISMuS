@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Exotic files reader                                  #
-#                        version: 2.4.0 - May - 2021            #
+#                        version: 2.4.1 - Jun - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -110,7 +110,7 @@ def readStack(batch):
     rows = len(batch)
 
     name = str(batch[0]).split("/")[-1].split(".")[0]
-    cube = Mock(["h5"],name=name)
+    cube = Mock(["edf"],name=name)
 
     float_size = np.float32(0.0).itemsize
     size = float_size * specsize * cols * rows

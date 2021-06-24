@@ -87,12 +87,12 @@ class datacube:
     
         if any("mca" in x for x in __self__.datatypes) and mode != "merge":
             specsize = getdata(getfirstfile())
-        elif any("upgrade" in x for x in __self__.datatypes):
+        elif any("upgrade" in x for x in __self__.datatypes) and mode != "merge":
             specsize = Constants.MY_DATACUBE.matrix.shape[2]
-        elif any("h5" in x for x in __self__.datatypes):
+        elif any("h5" in x for x in __self__.datatypes) and mode != "merge":
             specsize = Constants.MY_DATACUBE.matrix.shape[2]
             __self__.path = ""
-        elif any("edf" in x for x in __self__.datatypes):
+        elif any("edf" in x for x in __self__.datatypes) and mode != "merge":
             specsize = Constants.MY_DATACUBE.matrix.shape[2]
         elif any("ftir" in x for x in __self__.datatypes) and mode != "merge":
             specsize = getftirdata(getfirstfile()).size
@@ -103,7 +103,7 @@ class datacube:
             __self__.config = configuration
             __self__.calibration = getcalibration()
         else:
-            specsize = 0
+            specsize = Constants.NCHAN
 
         ########################################################
 
@@ -126,11 +126,14 @@ class datacube:
             __self__.calibration = getcalibration()
             __self__.mps = np.zeros([specsize.shape[0]],dtype="int32")
         elif any("h5" in x for x in __self__.datatypes) or "edf" in __self__.datatypes:
-            __self__.matrix = Constants.MY_DATACUBE.matrix
-            __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
-            __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
-            __self__.config = configuration
-            __self__.calibration = getcalibration()
+            if mode == "merge": 
+                __self__.matrix = None
+            else: 
+                __self__.matrix = Constants.MY_DATACUBE.matrix
+                __self__.dimension = (__self__.matrix.shape[0],__self__.matrix.shape[1],True)
+                __self__.img_size = __self__.dimension[0]*__self__.dimension[1]
+                __self__.config = configuration
+                __self__.calibration = getcalibration()
             __self__.mps = np.zeros(specsize,dtype="int32")
             gc.collect()
         __self__.ROI = {}
@@ -148,7 +151,12 @@ class datacube:
         shape = np.asarray(__self__.matrix.shape)
         if any("ftir" in x for x in __self__.datatypes):
             return
-        cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
+        try: 
+            cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
+        except: 
+            logger.warning("Matrix set to float32!")
+            __self__.matrix = __self__.matrix.astype(np.int32)
+            cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
 
     def stacksum(__self__):
         """ Reall all data in datacube.matrix and return the summation derived spectrum """

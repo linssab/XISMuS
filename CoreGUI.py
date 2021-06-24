@@ -501,7 +501,7 @@ def _init_numpy_mkl():
     if env not in os.environ:
         os.environ[env] = '1'
     try:
-        _core = os.path.dirname(__file__)
+        _core = os.path.dirname("__file__")
         for _dll in ('mkl_rt', 'libiomp5md', 'mkl_core', 'mkl_intel_thread', 
                      'libmmd', 'libifcoremd', 'libimalloc'):
             try: 
@@ -5455,7 +5455,7 @@ class ReConfigDiag:
         __self__.master.resizable(False,False)
         __self__.master.title("Cube Configuration")
         __self__.master.bind("<Escape>",__self__.kill)
-        __self__.master.bind("<Return>",__self__.kill)
+        __self__.master.bind("<Return>",__self__.save)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.calibration_params = None
         __self__.Frame = Frame(__self__.master, padx=15, pady=15)
@@ -5600,7 +5600,7 @@ class ReConfigDiag:
     def call_advcalib(__self__):
         AdvCalib(__self__,root,hascube=1) 
 
-    def save(__self__):
+    def save(__self__, e=""):
         save_cube = 0   #NOTE: will save if not merged or h5 anyways!!
                         #This is just to avoid saving unnecessarily large merged cubes
                         #Recalibrated cubes will always be saved
@@ -5699,9 +5699,8 @@ class ReConfigDiag:
             __self__.cont.config(state=DISABLED)
             __self__.Label5.config(state=DISABLED)
             __self__.Label6.config(state=DISABLED)
-        
 
-    def kill(__self__):
+    def kill(__self__, e=""):
         __self__.master.destroy()
 
 

@@ -126,6 +126,8 @@ def mask(a_datacube,a_compound,mask_threshold):
         ######################################################################
 
         id_element_matrix = a_datacube.unpack_element(id_element,"a")
+        if id_element_matrix.max() == 0:
+            raise ValueError(f"Blank image for {id_element}!")
     except:
         try: 
             id_element_ratio = os.path.join(SpecRead.output_path,"{1}_ratio_{0}.txt".format(
@@ -134,7 +136,7 @@ def mask(a_datacube,a_compound,mask_threshold):
         except: raise FileNotFoundError("{0} ratio file not found!".format(id_element))
     
     id_element_matrix = id_element_matrix/id_element_matrix.max()*LEVELS
-    id_element_matrix = threshold(id_element_matrix,mask_threshold)
+    id_element_matrix = fast_threshold(id_element_matrix, 0, mask_threshold)
 
     return id_element_matrix
 
@@ -186,7 +188,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     ANGLE = 90
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
-            if depth_matrix[i][j] > 0 and mask[i][j] > 0.001:
+            if depth_matrix[i][j] > 0 and mask[i][j] > 0:
                 d = (math.sin(math.radians(ANGLE))/(-mu1+mu2))*(math.log((depth_matrix[i][j]/thickratio)))
             else: d = 0
             
@@ -202,6 +204,8 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
                 average[0].append(d)
                 average[1] = average[1]+1  #counts how many values are
     
+    if average[1] == 0: average[1] += 1
+    if average[0] == []: average[0] = np.zeros([100])
     median = sum(average[0])/(average[1])*10000  #calculates the average (mean) value
     deviation = np.std(average[0])*10000         #calculates the standard deviation
 
@@ -249,6 +253,7 @@ def set_axes_equal(ax,z_lim):
     ax.set_xlabel("mm")
     ax.set_ylabel("mm")
     ax.set_zlabel("Thickness (μm)")
+    ax.set_facecolor("white")
 
     x_range = abs(x_limits[1] - x_limits[0])
     x_middle = np.mean(x_limits)
@@ -296,8 +301,7 @@ def plot3D(depth_matrix,z_lim=None):
             cmap='BuGn',linewidth=0,antialiased=True)
     set_axes_equal(ax,z_lim)
     fig.savefig(os.getcwd()+'\\myimage.svg', format='svg', dpi=1200)
-    plt.show()
-    return 0
+    return fig, ax
 
 def colorize(elementmap,color=None):
     """ Adds a third dimension to a 2D-array image. Pixels becomes a 4 element list

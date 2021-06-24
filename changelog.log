@@ -1,9 +1,8 @@
-New in Version v2.4.0
+New in Version v2.4.1
 
-- Added support to EDF file batches
-- Fixed broken *.h5 loader and related issues
-- Corrected default SNIPBG parameters
-- ImageAnalyzer fitting was forcing semilog plot scale (fixed)
-- Unexpected auto_wizard crash when finding elements (fixed)
-- User snipbg parameters are override by defaults (fixed)
-- Mosaic freezing when calculating merge dataset MPS (fixed)
+- Merging of h5, edf and mca datasets is now possible in Mosaic
+- Mosaic allowed the merging of datasets with different specsizes (fixed)
+- Mosaic freezes when merging h5 or edf datasets (fixed)
+- EDF stacks were being labelled as h5 datasets (fixed)
+- auto_wizard freezing when looking for elements in very complex samples with
+several KA and KB overlapping (fixed)
