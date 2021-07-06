@@ -73,6 +73,14 @@ def convert_bytes(num):
             return "%3.1f %s" % (num, x)
         num /= 1024.0
 
+def get_active_layer(root):
+    """ Used to find the selected layer (if any) for flip or rotation """
+    active_layer = root.layers_list.curselection()
+    if active_layer == (): return False
+    else:
+        active_layer = root.layers_list.get(active_layer).split(",")[0]
+    return active_layer
+
 def load_cube(cube=""):
     sys_mem = dict(virtual_memory()._asdict())
     available_memory = sys_mem["available"]
@@ -804,11 +812,8 @@ class Mosaic_API:
         global LAYERS_DICT
 
         if active_layer == "":
-            active_layer = __self__.layers_list.curselection()
-            if active_layer == (): return
-            else:
-                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
-                active_layer = active_layer.split("_")[0]
+            active_layer = get_active_layer(__self__)
+            if active_layer == False: return
         layer = __self__.layer[active_layer]
 
         if axis == "vertical":
@@ -851,12 +856,8 @@ class Mosaic_API:
             return cv2.warpAffine(img, mat, (n_width, n_height))
 
         if active_layer == "":
-            active_layer = __self__.layers_list.curselection()
-            if active_layer == (): return
-            else: 
-                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
-                active_layer = active_layer.split("_")[0]
-
+            active_layer = get_active_layer(__self__) 
+            if active_layer == False: return
         layer = __self__.layer[active_layer]
 
         fine = float(truncate(layer.rotation-(int(layer.rotation)),2))
@@ -2077,8 +2078,12 @@ class HistogramWindow:
 
         __self__.Save.grid(row=4,column=0,sticky=W+E)
         __self__.Cancel.grid(row=5,column=0,sticky=W+E)
-        __self__.fill_plot_with_histogram()
-        __self__.add_anchors()
+        try:
+            __self__.fill_plot_with_histogram()
+            __self__.add_anchors()
+        except: 
+            messagebox.showerror("Failed to create histogram!",
+                    f"The Mosaic has failed to create a histogram for {layer_object.name}")
 
     def refresh_anchors(__self__):
         """ Called when updating the input values in Entry boxes """
