@@ -7,7 +7,9 @@
 
 global LAYERS_DICT
 global VMAX
-global OVERRIDE, LOADED
+global OVERRIDE
+global VIEW
+VIEW = None
 OVERRIDE = False
 VMAX = 0
 LAYERS_DICT = {}
@@ -61,7 +63,7 @@ from Engine.ImgMath import LEVELS, hist_match
 from Engine.SpecMath import datacube as Cube
 from Engine.CBooster import *
 from Graphics import *
-from .ProgressBar import Busy, create_tooltip 
+from .ProgressBar import Busy, BusyManager, create_tooltip 
 #################
 VERSION = Constants.VERSION_MOS
 
@@ -80,6 +82,59 @@ def get_active_layer(root):
     else:
         active_layer = root.layers_list.get(active_layer).split(",")[0]
     return active_layer
+
+
+class ViewController():
+    def __init__(__self__, root):
+        __self__.parent = root
+    
+    def check_map_incompatibility(__self__, layer_name):
+        global VIEW
+        if VIEW is None:
+            __self__.parent.layer[layer_name].set_image()
+            return
+        elif VIEW in list(__self__.parent.layer[layer_name].maps_buffer.keys()): 
+            __self__.parent.layer[layer_name].set_image()
+            return 0
+        else: 
+            VIEW = None
+            for layer in __self__.parent.layer.keys():
+                __self__.parent.layer[layer].set_image()
+            return 1
+
+    def set_view(__self__):
+        global VIEW
+        global LAYERS_DICT
+        __self__.parent.BusyManager.busy()
+        view = __self__.parent.elements_list.curselection()
+        if view == (): 
+            __self__.parent.BusyManager.notbusy()
+            return
+        else:
+            view = __self__.parent.elements_list.get(view)
+            if view == "DEFAULT": view = None
+            VIEW = view
+        for layer in __self__.parent.layer.keys():
+            __self__.parent.layer[layer].set_image()
+        LAYERS_DICT = convert_layers_to_dict(__self__.parent)
+        __self__.parent.BusyManager.notbusy()
+        return
+
+    def purge_maps(__self__):
+        for layer in __self__.parent.layer:
+            del __self__.parent.layer[layer].maps_buffer
+        gc.collect()
+
+    def refresh_available_views(__self__):
+        __self__.parent.elements_list.delete(0,END)
+        shared=[]
+        for layer in __self__.parent.layer:
+            shared.append(__self__.parent.layer[layer].maps)            
+        if shared != []: common = set.intersection(*map(set, shared))
+        common = sorted(list(common))
+        for item in common:
+            __self__.parent.elements_list.insert(END,item)
+        __self__.parent.elements_list.insert(0,"DEFAULT")
 
 def load_cube(cube=""):
     sys_mem = dict(virtual_memory()._asdict())
@@ -314,6 +369,7 @@ class Layer:
                 cube.energyaxis.shape[0]],dtype='float32',order='C')
         __self__.gross = int(cube.densitymap.sum()/cube.img_size)
         __self__.dense = cube.densitymap
+        __self__.maps = cube.check_packed_elements()
         if mask.any():
             __self__.mask = mask
             __self__.last_saved_mask = mask
@@ -327,6 +383,12 @@ class Layer:
         __self__.energyaxis = cube.energyaxis
         __self__.config = cube.config
 
+        __self__.maps_buffer = {}
+        for name in cube.check_packed_elements():
+            __self__.maps_buffer[name] = cube.unpack_element(name.split("_")[0],name.split("_")[1])
+        __self__.element = None
+
+        """
         if element == "": 
             __self__.element = None
             #__self__.img = (cube.densitymap-cube.densitymap.min())*LEVELS/((cube.densitymap.max()-cube.densitymap.min()))
@@ -347,24 +409,61 @@ class Layer:
 
             __self__.img = image*LEVELS/__self__.img_max
             __self__.img = __self__.img.astype("float32")
-
-        """ Get rid of 0 values in grayscale image. This is done to
-        facilitate detecting if a pixel belongs or not to a Layer """
-
-        __self__.img = np.where(__self__.img == 0, 1, __self__.img)
+        """
         
         """ Define anchors """
-        
         if coords == None:
             __self__.start = [0,0]
-            __self__.end = [__self__.img.shape[0],__self__.img.shape[1]]
+            __self__.end = [cube.dimension[0],cube.dimension[1]]
         else:
             __self__.start = coords[0]
             __self__.end = coords[1]
 
         """ Gives a layer number """
-
         __self__.layer = layer
+
+    def set_image(__self__, loading=0):
+        global VIEW
+        global VMAX
+        if VIEW is None:
+            __self__.element = None
+            cubemax = __self__.dense.max()
+            __self__.img = __self__.dense*LEVELS/cubemax
+            __self__.img_max = cubemax
+            if __self__.img_max > VMAX: VMAX = __self__.img_max
+            __self__.img = __self__.img.astype("float32")
+        else:
+            __self__.element = VIEW
+            image = __self__.maps_buffer[VIEW]
+            __self__.img_max = image.max() #to calculate the display factor
+            if __self__.img_max > VMAX: VMAX = __self__.img_max
+            __self__.img = image*LEVELS/__self__.img_max
+            __self__.img = __self__.img.astype("float32")
+
+        """ Get rid of 0 values in grayscale image. This is done to
+        facilitate detecting if a pixel belongs or not to a Layer """
+        __self__.img = np.where(__self__.img == 0, 1, __self__.img)
+        if not loading: __self__.apply_rotation()
+
+    def apply_rotation(__self__):
+        rotation = __self__.rotation
+        vflip = __self__.Vflipped
+        hflip = __self__.Hflipped
+        fine = float(truncate(rotation-int(rotation),2))
+        rotation = int(rotation)
+        if vflip: __self__.img = cv2.flip(__self__.img,0)
+        if hflip: __self__.img = cv2.flip(__self__.img,1)
+        if rotation == -1:
+            __self__.img = cv2.rotate(__self__.img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        elif rotation == 1:
+            __self__.img = cv2.rotate(__self__.img, cv2.ROTATE_90_CLOCKWISE)
+        elif rotation == 2 or rotation == -2:
+            __self__.img = cv2.rotate(__self__.img, cv2.ROTATE_90_CLOCKWISE)
+            __self__.img = cv2.rotate(__self__.img, cv2.ROTATE_90_CLOCKWISE)
+        else: pass
+        __self__.mask = np.ones(__self__.img.shape, dtype=np.float32)
+        __self__.last_saved_mask = np.ones(__self__.img.shape, dtype=np.float32)
+        return
 
 
 class Mosaic_API:
@@ -426,6 +525,8 @@ class Mosaic_API:
         __self__.master.rowconfigure(0, weight=1)
         __self__.master.rowconfigure(1, weight=1)
         __self__.build_widgets()
+        __self__.Viewer = ViewController(__self__)
+        __self__.BusyManager = BusyManager(__self__.master)
         if loadfile:
             __self__.prompt_loadfile(f=loadfile)
         __self__.root.master.wait_window(__self__.master)
@@ -442,11 +543,8 @@ class Mosaic_API:
                 x0, y0 = layer.start
                 x1, y1 = layer.end
             else: #if callback is the button
-                active_layer = __self__.layers_list.curselection()
-                if active_layer == (): return
-                else:
-                    active_layer = __self__.layers_list.get(active_layer).split(",")[0]
-                    active_layer = active_layer.split("_")[0]
+                active_layer = get_active_layer(__self__)
+                if active_layer == False: return
                 layer = __self__.layer[active_layer]
 
                 max_ = max(layer.img.shape)
@@ -564,6 +662,9 @@ class Mosaic_API:
         __self__.options = ttk.LabelFrame(__self__.RightPane,text="Options ",
                 width=1024-768-2*pad,
                 height=128)
+        __self__.view_options = ttk.LabelFrame(__self__.RightPane,text="Element view ",
+                width=1024-768-2*pad,
+                height=128)
 
         __self__.LayersPane = Frame(__self__.RightPane)
         __self__.layers_scroll = ttk.Scrollbar(__self__.LayersPane)
@@ -572,6 +673,10 @@ class Mosaic_API:
         __self__.layers_list.myId = "layers_list"
         __self__.layers_list.bind("<Button-1>",__self__.draw_patch)
         __self__.layers_list.bind("<Leave>",__self__.remove_patch)
+        __self__.elements_box = Frame(__self__.view_options)
+        __self__.elements_scroll = ttk.Scrollbar(__self__.elements_box)
+        __self__.elements_list = Listbox(__self__.elements_box, height=5,
+                width=35, yscrollcommand=__self__.elements_scroll.set)
 
         # buttons
         __self__.layer_up = Button(
@@ -645,6 +750,12 @@ class Mosaic_API:
                 width=10,
                 height=1,
                 command=__self__.remove_layer)
+        __self__.elements_btn = Button(
+                __self__.view_options,
+                text="Apply view",
+                width=10,
+                height=1,
+                command=__self__.change_layer_view)
         __self__.cube_name = ttk.Entry(
                 __self__.RightPane,
                 textvar = __self__.NameVar,
@@ -680,11 +791,13 @@ class Mosaic_API:
         __self__.scale_check2.grid(row=1,column=0,sticky=W,padx=pad)
         __self__.scale_check3.grid(row=2,column=0,sticky=W,padx=pad,pady=(0,12))
 
+        __self__.container.grid(row=0,column=1)
         __self__.LayersPane.grid(row=0, column=0, rowspan=6)
+
         __self__.layers_list.grid(row=0, column=0, sticky=N+S)
         __self__.layers_scroll.grid(row=0, column=1, sticky=N+S)
-        __self__.container.grid(row=0,column=1)
         
+        # INSIDE CONTAINER #
         __self__.layer_up.grid(row=0, column=0)
         __self__.layer_down.grid(row=0, column=1)
         __self__.rotate_ccw.grid(row=1, column=0)
@@ -694,18 +807,34 @@ class Mosaic_API:
         __self__.histogram.grid(row=3,column=0,columnspan=2,pady=(5,0))
         __self__.add_layer.grid(row=4, column=1, padx=pad)
         __self__.del_layer.grid(row=5, column=1, padx=pad)
+        ####################
 
-        __self__.cube_name_label.grid(row=6, column=0, padx=pad, pady=pad/2, sticky=E)
-        __self__.cube_name.grid(row=6, column=1, sticky=W, padx=pad, pady=pad/2)
+        __self__.cube_name_label.grid(row=6,column=0,padx=pad,pady=pad/2,sticky=E)
+        __self__.cube_name.grid(row=6, column=1,sticky=W,padx=pad,pady=pad/2)
         __self__.options.grid(row=7,column=0,columnspan=2,sticky=W+E,pady=(10,10))
-        __self__.validate.grid(row=8, column=1, pady=(10,0))
-        __self__.save.grid(row=8, column=0,pady=(10,0))
-        __self__.load.grid(row=9, column=0,pady=(0,10))
+        __self__.view_options.grid(row=8,columnspan=2,sticky=W+E,pady=(10,10))
+        __self__.elements_box.grid(row=0,sticky=N+W+S+E,padx=pad,pady=10)
+        __self__.elements_list.grid(row=0,column=0,sticky=N+S+E)
+        __self__.elements_scroll.grid(row=0,column=1,sticky=N+S+W)
+        __self__.elements_btn.grid(row=1,pady=(10,10),padx=pad)
+        __self__.validate.grid(row=9, column=1, pady=(10,0))
+        __self__.save.grid(row=9, column=0,pady=(10,0))
+        __self__.load.grid(row=10, column=0,pady=(0,10))
         
         Grid.columnconfigure(__self__.LayersPane, 0, weight=1)
+        Grid.columnconfigure(__self__.view_options, 0, weight=1)
+        Grid.columnconfigure(__self__.elements_box, 0, weight=1)
         __self__.layers_scroll.config(command=__self__.layers_list.yview)
+        __self__.elements_scroll.config(command=__self__.elements_list.yview)
         __self__.master.after(200,__self__.master.attributes,"-alpha",1.0)
         __self__.canvas.draw()
+
+    def change_layer_view(__self__,e=""):
+        __self__.Viewer.set_view()
+        __self__.BusyManager.busy()
+        __self__.build_image()
+        __self__.BusyManager.notbusy()
+        return
 
     def open_histogram(__self__,active_layer="",e=""):
         global LAYERS_DICT
@@ -716,8 +845,9 @@ class Mosaic_API:
                     "Please select a layer to modify its histogram.")
                 return
             else:
-                active_layer = __self__.layers_list.get(active_layer).split(",")[0]
-                active_layer = active_layer.split("_")[0]
+                active_layer = get_active_layer(__self__)
+                if active_layer == False: return
+                layer = __self__.layer[active_layer]
         layer = __self__.layer[active_layer]
         if not layer.name in __self__.ActiveChildrenHistogram:
             __self__.ActiveChildrenHistogram[layer.name] = HistogramWindow(__self__,layer)
@@ -836,8 +966,8 @@ class Mosaic_API:
             __self__.build_image()
         return
 
-
     def rotate(__self__, direction, active_layer="", e="", loading=False):
+        __self__.BusyManager.busy()
         global LAYERS_DICT
 
         def fine_rotate(img, angle):
@@ -857,7 +987,9 @@ class Mosaic_API:
 
         if active_layer == "":
             active_layer = get_active_layer(__self__) 
-            if active_layer == False: return
+            if active_layer == False: 
+                __self__.BusyManager.notbusy()
+                return
         layer = __self__.layer[active_layer]
 
         fine = float(truncate(layer.rotation-(int(layer.rotation)),2))
@@ -874,6 +1006,7 @@ class Mosaic_API:
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
                 if end[i] > __self__.image.shape[i] and not loading:
+                    __self__.BusyManager.notbusy()
                     return
             layer.img, layer.end = img, end
             layer.mask = mask
@@ -894,6 +1027,7 @@ class Mosaic_API:
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
                 if end[i] > __self__.image.shape[i] and not loading:
+                    __self__.BusyManager.notbusy()
                     return
             layer.img, layer.end = img, end
             layer.mask = mask
@@ -910,6 +1044,7 @@ class Mosaic_API:
             __self__.build_image(bound=True, limit=[[x0,x1],[y0,y1]])
         else:
             __self__.build_image()
+        __self__.BusyManager.notbusy()
 
     def on_press(__self__, event):
         __self__.canvas.mpl_disconnect(__self__.hover_highlight)
@@ -1037,6 +1172,7 @@ class Mosaic_API:
         __self__.maps_window.grab_set()
 
     def remove_layer(__self__,e=""):
+        global VIEW
         active_layer = __self__.layers_list.curselection()
         if active_layer == (): return
         else: 
@@ -1050,6 +1186,8 @@ class Mosaic_API:
             __self__.layer_count -= 1
             if __self__.layer_count == 0: 
                 __self__.datatype = None
+                VIEW = None
+        __self__.Viewer.refresh_available_views()
 
     def reorder_layers(__self__):
         global LAYERS_DICT
@@ -1236,6 +1374,7 @@ class Mosaic_API:
         else: return True
 
     def layerize(__self__, cube, element=""): 
+        __self__.BusyManager.busy()
         global LAYERS_DICT
         if __self__.layer_count == 0:
                 layer_no = 0
@@ -1243,14 +1382,22 @@ class Mosaic_API:
         else:
             layer_no = __self__.layer_count
             __self__.layer_count += 1
+
         __self__.layer_numbering[__self__.layer_count] = cube.name
         __self__.layer[cube.name] = Layer(cube, layer_no, element)
+
         if element != "":
             __self__.layers_list.insert(END,"{},{},{}".format(cube.name, element, layer_no))
         else:
             __self__.layers_list.insert(END,"{},{}".format(cube.name, layer_no))
+
+        if __self__.layer_count != 1: #sum happens above
+            __self__.Viewer.check_map_incompatibility(cube.name)
+        else: __self__.layer[cube.name].set_image()
+        __self__.Viewer.refresh_available_views()
         LAYERS_DICT = convert_layers_to_dict(__self__)
         __self__.build_image()
+        __self__.BusyManager.notbusy()
         __self__.maps_window.destroy()
         __self__.refocus()
         
@@ -1284,23 +1431,23 @@ class Mosaic_API:
         if can_import == True and __self__.layer_count > 0: 
             can_import = __self__.check_configuration(cube)
         if can_import == True:
-            packed_elements = cube.check_packed_elements()
+            __self__.layerize(cube)
 
-            if packed_elements != []:
-                dialog = messagebox.askquestion("Attention!","There are some element maps packed in this cube. Would you like to import an elemental map instead?")
-                if dialog == "yes":
-                    __self__.maps_list.delete(0,END)
-                    for element in packed_elements: 
-                        __self__.maps_list.insert(END,"{}".format(element))
-                    __self__.ok_btn.config(text="Import Map")
-                    __self__.ok_btn.config(command=lambda: grep_map(cube))
-                else:
-                    __self__.layerize(cube)
-
-            elif packed_elements == []:
-                __self__.layerize(cube)
-
-            else: return
+            #NOTE: the section belowe was used when loading an elemental map was allowed
+            #packed_elements = cube.check_packed_elements()
+            #if packed_elements != []:
+            #    dialog = messagebox.askquestion("Attention!","There are some element maps packed in this cube. Would you like to import an elemental map instead?")
+            #    if dialog == "yes":
+            #        __self__.maps_list.delete(0,END)
+            #        for element in packed_elements: 
+            #            __self__.maps_list.insert(END,"{}".format(element))
+            #        __self__.ok_btn.config(text="Import Map")
+            #        __self__.ok_btn.config(command=lambda: grep_map(cube))
+            #    else:
+            #        __self__.layerize(cube)
+            #elif packed_elements == []:
+            #    __self__.layerize(cube)
+            #else: return
 
     ############################################
     ############### SAVE SECTION ###############
@@ -1319,7 +1466,6 @@ class Mosaic_API:
             __self__.save_mosaic(f,npz)
     
     def save_mosaic(__self__,savefile,npz):
-
         def unrotate_mask(mask, layer):
             rotation = layer.rotation
             vflip = layer.Vflipped
@@ -1383,7 +1529,7 @@ class Mosaic_API:
     ############################################
 
     def prompt_loadfile(__self__,e="",f=None):
-        global VMAX, LOADED
+        global VMAX
         if f == None:
             f = filedialog.askopenfilename(title="Open mosaic",
                     filetypes=[("Mosaic files","*.mosaic")])
@@ -1396,7 +1542,6 @@ class Mosaic_API:
             VMAX = 0
             npz = f.split(".mosaic")[0]+".npz"
             __self__.import_layers(loadfile=os.path.abspath(f),npz=npz)
-        LOADED = True
 
     def read_loadfile(__self__,loadfile,npz):
         layers = {}
@@ -1541,6 +1686,7 @@ class Mosaic_API:
                 element,
                 layer["coords"],
                 mask=mask) 
+        __self__.layer[layer["name"]].set_image(loading=1)
         
         # must rotate layer accordingly                     #
         # rotates display image and mask                    #
@@ -1571,6 +1717,7 @@ class Mosaic_API:
                 layer_no,"{},{},{}".format(cube.name,element,layer_no))
         else: __self__.layers_list.insert(layer_no,"{},{}".format(cube.name,layer_no))
         gc.collect()
+        __self__.Viewer.refresh_available_views()
         return 1
     
     ############################################
