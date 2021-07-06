@@ -53,6 +53,17 @@ dll.apply_smooth.argtypes = [
         ]
 dll.apply_smooth.restype = ctypes.c_void_p
 
+dll.apply_brightness.argtypes = [
+        ndpointer(ctypes.c_float),
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_float,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ]
+dll.apply_brightness.restype = ctypes.c_void_p
+
 dll.batch_snipbg.argtypes = [
         Float32PointerPointer,
         ctypes.c_int,
@@ -62,6 +73,14 @@ dll.batch_snipbg.argtypes = [
         ctypes.POINTER(PARAM)
         ]
 dll.batch_snipbg.restype = ctypes.c_void_p
+
+def fast_linear_fix(image, scale_factor, line, direction=0, mode=0):
+    rows, cols = image.shape
+    img = image.copy()
+    img = img.flatten()
+    dll.apply_brightness(img, rows, cols, scale_factor, direction, mode, line)
+    img.shape = (img.size//cols, cols)
+    return img
 
 def fast_scaling(datacube, image, scalemode=0, mask=np.zeros(0)):
     """ image is passed to C as a pointer, to maintain the original data, 
@@ -207,7 +226,7 @@ if __name__.endswith("__main__"):
             [1,1,1,1,2,2,1,1,1,1]
             ]
     
-    #a = np.asarray(a,dtype="float32")
+    a = np.asarray(a,dtype="float32")
     #b = np.ones([10,10],dtype="float32")+2
     #c = fast_scaling(a,b,scalemode=1,mask=a)
     #c = fast_threshold(a,1,2)
@@ -215,15 +234,13 @@ if __name__.endswith("__main__"):
 
     class test:
         def __init__(__self__):
-            #__self__.matrix = np.zeros([10,10,1024])
             __self__.matrix = np.arange(4000.).reshape(20,20,10)
             __self__.config = {}
             __self__.config["bg_settings"] = []
+    #a = test()
+    #fast_snipbg(a)
 
-    a = test()
-    fast_snipbg(a)
-
-    
+    out = fast_linear_fix(a, 1.2, 3, direction=1, mode=1)
 
     #fig = plt.figure()
     #gs = plt.GridSpec(1,2)

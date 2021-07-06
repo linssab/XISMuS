@@ -30,6 +30,39 @@ float average(int arr[], int dim){
 	return avg;
 }
 
+void apply_brightness(float *image,
+		int rows,
+		int cols,
+		float value,
+		int direction,
+		int mode,
+		int bound){
+
+	/* 
+	 * value = scaling factor
+	 * direction 0 = upwards or left
+	 * direction 1 = downwards or right
+	 * mode 0 = vertical scan
+	 * mode 1 = horizontal scan
+	 * bound = row or column delimiting the filter
+	 */ 
+
+	int size = rows * cols;
+	for(int i=0; i < rows; i++){
+		for(int j=0; j < cols; j++){
+			if(mode == 0){
+				if(direction == 0 && i <= bound){image[ pos(i, j, cols) ] *= value;}
+				else{if(direction == 1 && i >= bound){image[ pos(i, j, cols) ] *= value;}}
+			}else{
+				if(mode == 1){
+					if(direction == 0 && j <= bound){image[ pos(i, j, cols) ] *= value;}
+					else{if(direction == 1 && j >= bound){image[ pos(i, j, cols) ] *= value;}}
+				}
+			}
+		}
+	}
+}
+
 void apply_scaling(float *scale_matrix,
 		float *image,
 		int mode,
