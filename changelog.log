@@ -1,9 +1,7 @@
-New in Version v2.4.1
+New in Version v2.5.0
 
-- Merging of h5, edf and mca datasets is now possible in Mosaic
-- H5 and mca datasets calibration incompatibility in Mosaic (fixed)
-- Mosaic allowed the merging of datasets with different specsizes (fixed)
-- Mosaic freezes when merging h5 or edf datasets (fixed)
-- EDF stacks were being labelled as h5 datasets (fixed)
-- auto_wizard freezing when looking for elements in very complex samples with
-several KA and KB overlapping (fixed)
+- Introduced "element viewer" to Mosaic
+- It is not longer possible to load independent elemental maps in Mosaic
+(replaced by element viewer)
+- Bug fixes in Mosaic
+- Datacubes with underscore in their name were breaking Mosaic (fixed)

@@ -102,6 +102,20 @@ class ViewController():
                 __self__.parent.layer[layer].set_image()
             return 1
 
+    def check_blanks(__self__):
+        global VIEW
+        ZERO = False
+        for layer in __self__.parent.layer.keys():
+            if __self__.parent.layer[layer].img_min == 0:
+                print(layer, "has blanks")
+                ZERO = True
+                break
+        if ZERO:
+            messagebox.showinfo("Attention!",
+                f"The element view chosen ({VIEW}) contains zero values! Merging a datacube with this view will result in flat-zero spectra for the blank pixels!")
+            return 1
+        else: return 0
+
     def set_view(__self__):
         global VIEW
         global LAYERS_DICT
@@ -117,6 +131,7 @@ class ViewController():
         for layer in __self__.parent.layer.keys():
             __self__.parent.layer[layer].set_image()
         LAYERS_DICT = convert_layers_to_dict(__self__.parent)
+        __self__.check_blanks()
         __self__.parent.BusyManager.notbusy()
         return
 
@@ -215,6 +230,7 @@ def convert_layers_to_dict(MosaicAPI_class):
                 "end":MosaicAPI_class.layer[layer].end,
                 "img":MosaicAPI_class.layer[layer].img,
                 "img_max":MosaicAPI_class.layer[layer].img_max,
+                "img_min":MosaicAPI_class.layer[layer].img_min,
                 "dense":MosaicAPI_class.layer[layer].dense,
                 "max":MosaicAPI_class.layer[layer].dense.max(),
                 "min":MosaicAPI_class.layer[layer].dense.min(),
@@ -430,12 +446,14 @@ class Layer:
             cubemax = __self__.dense.max()
             __self__.img = __self__.dense*LEVELS/cubemax
             __self__.img_max = cubemax
+            __self__.img_min = __self__.dense.min()
             if __self__.img_max > VMAX: VMAX = __self__.img_max
             __self__.img = __self__.img.astype("float32")
         else:
             __self__.element = VIEW
             image = __self__.maps_buffer[VIEW]
             __self__.img_max = image.max() #to calculate the display factor
+            __self__.img_min = image.min() #to calculate the display factor
             if __self__.img_max > VMAX: VMAX = __self__.img_max
             __self__.img = image*LEVELS/__self__.img_max
             __self__.img = __self__.img.astype("float32")
@@ -444,7 +462,7 @@ class Layer:
         facilitate detecting if a pixel belongs or not to a Layer """
         __self__.img = np.where(__self__.img == 0, 1, __self__.img)
         if not loading: __self__.apply_rotation()
-
+            
     def apply_rotation(__self__):
         rotation = __self__.rotation
         vflip = __self__.Vflipped
@@ -1365,8 +1383,8 @@ class Mosaic_API:
                         merge_config = merge_config + str(key) + ": " + str(
                             __self__.zero_config[key])
                 i+=1
-
-            proceed = messagebox.askquestion("Diverging configuration!","The cube you are trying to add has a different configuration from the layers already imported {}!\nDo you want to add it anyways? (Resulting merged cube configuration will be: {})".format(divergence, merge_config))
+            proceed = messagebox.askquestion("Diverging configuration!",
+                    "The cube you are trying to add has a different configuration from the layers already imported!\nDo you want to add it anyways? (Resulting merged cube configuration will be: {merge_config})")
             if proceed == "yes": 
                 Constants.CONFIG = __self__.zero_config
                 return True
@@ -1822,6 +1840,7 @@ class Mosaic_API:
             proceed = messagebox.askquestion("Cube merge!","You are about to merge datacubes. This procedure may take a while depending on the size of the final image. Are you sure you want to proceed?")
         if proceed == "yes":
             global LAYERS_DICT
+            __self__.Viewer.purge_maps()
 
             __self__.progress_bar = Busy(3,0)
             __self__.progress_bar.update_text("Reading layers...")
@@ -2115,7 +2134,9 @@ class Mosaic_API:
 
     def kill(__self__,e=""):
         global LAYERS_DICT
+        global VIEW
         LAYERS_DICT = None
+        VIEW = None
         del globals()["LAYERS_DICT"]
         del __self__.layer
         gc.collect()
@@ -2124,11 +2145,11 @@ class Mosaic_API:
             except: pass
         __self__.master.grab_release()
         __self__.master.destroy()
+        __self__.root.master.focus_set()
         del __self__
 
     def tis_cool_i_leave_now(__self__):
         Constants.MSHAPE = (0,0,0)
-        __self__.master.grab_release()
         messagebox.showinfo("Merge complete!",
                 "Datacubes were successfully merged. Mosaic will now be closed.")
         __self__.root.refresh_samples()

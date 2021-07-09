@@ -43,10 +43,10 @@ def cy_apply_scaling(float[:,:] scale_matrix,
  
     for i in range(shape[0]):
         for j in range(shape[1]):
-            if scale_mode == 1 and scale_matrix[i][j] != 0:
-                image[i][j] = image[i][j]*scale_matrix[i][j]
-            elif scale_mode == -1 and scale_matrix[i][j] != 0:
-                image[i][j] = image[i][j]/scale_matrix[i][j]
+            if scale_mode == 1 and scale_matrix[i,j] != 0:
+                image[i,j] = image[i,j]*scale_matrix[i,j]
+            elif scale_mode == -1 and scale_matrix[i,j] != 0:
+                image[i,j] = image[i,j]/scale_matrix[i,j]
     return
 
 ###################################################################
@@ -228,15 +228,15 @@ def cy_read_densemap_pixels(dict layers, int i, int j, int mode):
         if x <= i < x_ and y <= j < y_ \
                 and layers[layer]["layer"] > front_layer:
             if mode == 1: 
-                pixel = layers[layer]["dense"][conv_x][conv_y]
+                pixel = layers[layer]["dense"][conv_x,conv_y]
 
             elif mode == 2: 
 
                 # To avoid ZeroDivision when creating the mask, each img pixel has
                 # its value increased by one. Therefore, "empty" pixels are equal to 1
 
-                if layers[layer]["img"][conv_x][conv_y] > 1:
-                    pixel = layers[layer]["mask"][conv_x][conv_y]
+                if layers[layer]["img"][conv_x,conv_y] > 1:
+                    pixel = layers[layer]["mask"][conv_x,conv_y]
                 else: pixel = 0
                 
                 #####################################################################
@@ -411,7 +411,7 @@ def cy_pack_spectra(dict layers,
         if x <= i < x_ and y <= j < y_ \
             and layers[layer]["layer"] > front_layer:
                 v = layers[layer]["img"][conv_x,conv_y]
-                if v != 0:
+                if v > 0:
                     for c in range(shape):
                         specout[c] = layers[layer]["matrix"][conv_x,conv_y,c]
                         front_layer = layers[layer]["layer"]

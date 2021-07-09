@@ -23,6 +23,8 @@ calculator.py
 config.cfg
 FitSingle.py
 test.py
+Core.py
+cy_funcs.c
 
 /__pycache__
 /ipynb_checkpoints

@@ -136,6 +136,7 @@ def mask(a_datacube,a_compound,mask_threshold):
         except: raise FileNotFoundError("{0} ratio file not found!".format(id_element))
     
     id_element_matrix = id_element_matrix/id_element_matrix.max()*LEVELS
+    id_element_matrix = id_element_matrix.astype(np.float32)
     id_element_matrix = fast_threshold(id_element_matrix, 0, mask_threshold)
 
     return id_element_matrix
