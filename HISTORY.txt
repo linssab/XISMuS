@@ -1,3 +1,16 @@
+New in Version v2.4.2
+- Introduced "element viewer" to Mosaic
+- It is not longer possible to load independent elemental maps in Mosaic
+(replaced by element viewer)
+- Bug fixes in Mosaic
+- Datacubes with underscore in their name were breaking Mosaic (fixed)
+
+New in Version v2.4.1
+- Merging of h5, edf and mca datasets is now possible in Mosaic
+- Mosaic allowed the merging of datasets with different specsizes (fixed)
+- Mosaic freezes when merging h5 or edf datasets (fixed)
+- EDF stacks were being labelled as h5 datasets (fixed)
+
 New in Version v2.4.0
 - Added support to EDF file batches
 - Fixed broken *.h5 loader and related issues

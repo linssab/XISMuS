@@ -1,15 +1,15 @@
 #################################################################
 #                                                               #
 #          CONSTANTS                                            #
-#                        version: 2.5.0 - Jul - 2021            #
+#                        version: 2.4.2 - Jul - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
 import logging
 from psutil import cpu_count
 
-VERSION = "2.5.0"
-VERSION_MOS = "2.5.0"
+VERSION = "2.4.2"
+VERSION_MOS = "2.4.2"
 LOGLEVEL = logging.INFO
 MY_DATACUBE = None
 FIND_ELEMENT_LIST = None

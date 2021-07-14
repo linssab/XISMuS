@@ -2,7 +2,7 @@
 // C functions to build the dynamic libraries for python
 // @author: Sergio Lins
 // @email: sergio.lins@roma3.infn.it
-// Version: 2.0.0 Feb - 2021
+// Version: 2.4.2 Jul - 2021
 
 #include <stdio.h>
 #include <stdlib.h>
