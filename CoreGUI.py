@@ -5705,9 +5705,10 @@ class ReConfigDiag:
 
 
 class ImageOperationOutput:
-    def __init__(__self__, image, el1, el2, operation, cube_datatypes, cube):
+    def __init__(__self__, image, el1, el2, operation, cube_datatypes, cube, parent):
         __self__.image = image
-        __self__.master = Toplevel(master=root.master)
+        __self__.parent = parent
+        __self__.master = Toplevel()
         __self__.cube = cube
         __self__.master.attributes("-alpha",0.0)
         __self__.alt = False
@@ -5763,6 +5764,8 @@ class ImageOperationOutput:
         __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
         __self__.canvas._tkcanvas.pack()
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
+        if __self__.parent.masked:
+            __self__.replace.config(state=DISABLED)
         icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
 
         if any("temp" in x for x in cube_datatypes):
@@ -5789,9 +5792,12 @@ class ImageOperationOutput:
         p = messagebox.askquestion("Warning!","You are about to replace {} map in your datacube with the output image. This operation is irreversible. Do you want to proceed?".format(element))
         if p =="yes":
             __self__.cube.replace_map(image,element)
-            __self__.master.focus_set()
+            __self__.parent.update_sample1()
+            __self__.parent.update_sample2()
+            __self__.wipe_plot()
             return
         else: 
+            __self__.parent.master.focus_set()
             __self__.master.focus_set()
             return
 
@@ -5811,6 +5817,7 @@ class ImageOperationOutput:
             return
 
     def wipe_plot(__self__):
+        __self__.parent.master.focus_set()
         __self__.master.destroy()
         del __self__
 
@@ -5888,7 +5895,8 @@ class ImageOperationWarning:
             output = fast_scaling(__self__.parent.DATACUBE, output, -1)
         ImageOperationOutput(output,__self__.parent.Map1Var.get(),
                 __self__.parent.Map2Var.get(),operation, 
-                __self__.parent.DATACUBE.datatypes, __self__.parent.DATACUBE)
+                __self__.parent.DATACUBE.datatypes, __self__.parent.DATACUBE,
+                __self__.parent)
         __self__.master.grab_release()
         __self__.master.destroy()
 
