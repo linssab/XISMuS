@@ -75,17 +75,20 @@ def update_version():
     "There is a new version of XISMuS available. Would you like to update the software?")
             if question == True:
                 logger.info("Connecting to servers...")
+                if os.path.exists(destination):
+                    logger.info("Patch file already exists!")
+                    try: os.remove(destination)
+                    except OSError: 
+                        messagebox.showerror("Failed to get patch!",
+                            "Something went wrong trying to download the patch file!\nBe sure you are running XISMuS with administrator rights.")
+                        return 0
                 try:
-                    if os.path.exists(destination):
-                        logger.info("Patch file already exists!") 
+                    p = download_file(destination,
+                            "https://xismus.sourceforge.io/latest.exe") 
+                    if p:
+                        logger.info("Downloaded patch!")
                         return 1
-                    else:
-                        p = download_file(destination,
-                                "https://xismus.sourceforge.io/latest.exe") 
-                        if p:
-                            logger.info("Downloaded patch!")
-                            return 1
-                        else: return 0
+                    else: return 0
                 except OSError:
                     messagebox.showerror("Failed to get patch!",
                             "Something went wrong trying to download the patch file!\nBe sure you are running XISMuS with administrator rights.")

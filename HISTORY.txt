@@ -3,6 +3,7 @@ New in Version v2.4.2
 - It is not longer possible to load independent elemental maps in Mosaic
 (replaced by element viewer)
 - Bug fixes in Mosaic
+- Bug fixes in Image Analyzer
 - Datacubes with underscore in their name were breaking Mosaic (fixed)
 
 New in Version v2.4.1
