@@ -3762,6 +3762,7 @@ class MainGUI:
                 bg=Theme.BG["Listbox"],
                 fg=Theme.FG["Listbox"],
                 highlightthickness=0)
+        __self__.StatusBox.bind("<Double-Button-1>", __self__.load_map_from_click)
 
         __self__.ConfigFrame = ttk.LabelFrame(
                 __self__.DataFrame,
@@ -4240,6 +4241,21 @@ class MainGUI:
         else:
             pass
         return 0
+
+    def load_map_from_click(__self__, e=""):
+        """ reads the item double clicked and check if it is a map in a cube.
+        Displays the image for the user """
+        click = __self__.StatusBox.get(ACTIVE)
+        listed = Constants.MY_DATACUBE.check_packed_elements()
+        for el in listed:
+            if el in click:
+                name = el.split("_")
+                image = Constants.MY_DATACUBE.unpack_element(name[0],name[1])
+                fullname = Constants.MY_DATACUBE.name + " " + el
+                __self__.ClickedMapDisplay = ImageWindow(__self__,fullname)
+                __self__.ClickedMapDisplay.draw_image(image)
+                break
+        return
                
     def root_quit(__self__,force=0):
         if force:
@@ -5705,6 +5721,62 @@ class ReConfigDiag:
 
     def kill(__self__, e=""):
         __self__.master.destroy()
+
+
+class ImageWindow:
+    def __init__(__self__, parent, title):
+        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
+        __self__.parent = parent
+        __self__.master = Toplevel()
+        __self__.master.iconbitmap(icon)
+        __self__.master.attributes("-alpha",0.0)
+        __self__.alt = False
+        __self__.master.bind("<Alt_L>",__self__.AltOn)
+        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
+        __self__.master.bind("<Return>",__self__.maximize)
+        __self__.master.title(title)
+        __self__.master.minsize(width=600,height=480)
+        __self__.master.configure(bg='white')
+        __self__.master.resizable(True,True)
+        __self__.upper = Canvas(__self__.master)
+        __self__.upper.config(bg='white')
+        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)#, padx=(16,16),pady=(16,16))
+        text="Press Alt+Enter for full screen. To save the image, please use the Image Analyzer."
+        __self__.lower = Frame(__self__.master,height=35)
+        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
+        Label(__self__.lower, text=text).pack(padx=15, anchor=E, fill=BOTH, expand=1)
+
+        # Save and replace buttons #
+        __self__.figure = Figure(figsize=(5,4), dpi=75)
+        __self__.plot = __self__.figure.add_subplot(111)
+        __self__.plot.grid(which="both",axis="both")
+        __self__.plot.axis("Off")
+        __self__.plot.set_title(title)
+        __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
+        __self__.canvas.draw()
+        __self__.mplCanvas = __self__.canvas.get_tk_widget()
+        __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
+        __self__.canvas._tkcanvas.pack()
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+
+    def AltOn(__self__,e=""):
+        __self__.alt = True
+
+    def AltOff(__self__,e=""):
+        __self__.alt = False
+
+    def maximize(__self__,e=""):
+        maximize_window(__self__)
+
+    def draw_image(__self__,image=None):
+        __self__.plot.imshow(image, vmin=0, cmap=Constants.COLORMAP)
+        place_center(__self__.parent.master, __self__.master)
+
+    def wipe_plot(__self__):
+        __self__.parent.master.focus_set()
+        __self__.master.destroy()
+        del __self__
 
 
 class ImageOperationOutput:
