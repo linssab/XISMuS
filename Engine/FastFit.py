@@ -203,11 +203,12 @@ def save_plot(results,parameters,spec,energyaxis,bg=None):
         plt.plot(energyaxis, plots[element], color=ElementColors[element],
                 linewidth=0.90,linestyle="--",label=element)
     plt.semilogy(energyaxis,spec, label="Spectrum",
-            color="black",linewidth=0.90)
+            color="black",linewidth=0.50)
     plt.semilogy(energyaxis,bg, label="Continuum",
-            color="green", linewidth=0.85)
+            color="green", linewidth=0.90)
     plt.ylim([1,spec.max()*1.10])
     plt.xlim([1,energyaxis.max()])
+    #plt.xlim([5000,15000])
     plt.ylabel("Counts")
     plt.xlabel("Energy (eV)")
     plt.legend(loc="upper right")
@@ -410,7 +411,7 @@ def iterate_batch(parameters,
                 with lock:
                     if bar: 
                         bar.update_text(f"Saving fit plot {it}")
-                        save_plot(results,parameters,i,xaxis)
+                        save_plot(results,parameters,i,xaxis,bg=j)
                         bar.update_text("Calculating...")
             with lock:
                 it += 1
@@ -428,8 +429,6 @@ def fit_and_run():
         messagebox.showinfo("Fit not configured!","You must first set the fit parameters. Go to \"Image Analyzer\" -> \"Set ROI\" -> \"Options\" -> \"Configure Fit\".")
         return
     bar = Busy(0,CUBE.img_size)
-    bar.master.focus_set()
-    bar.master.focus_force()
     try: frame, restored_bg = do_stuff(CUBE, element_pool,bar=bar)
     except Exception as e: 
         messagebox.showerror("Uh-oh!",f"Something went wrong.\n{e}")
