@@ -1,0 +1,18 @@
+	__   _______ ________  ___      _____ 
+	\ \ / /_   _/  ___|  \/  |     /  ___|
+	 \ V /  | | \ `--.| .  . |_   _\ `--. 
+ 	 /   \  | |  `--. \ |\/| | | | |`--. \
+	/ /^\ \_| |_/\__/ / |  | | |_| /\__/ /
+	\/   \/\___/\____/\_|  |_/\__,_\____/ 
+                                      
+   VERSION V2.4.2 | Copyright Sergio A.B. Lins 2021
+
+___________________________________________________________
+|  Please download the v2.0.0 Installer for your system	  |
+|  architecture following the links below and THEN	  |
+|  download the latest UPDATE/PATCH!			  |
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+x64: https://sourceforge.net/projects/xismus/files/XISMuSx64_2.0.0_Setup.exe/download
+x86: https://sourceforge.net/projects/xismus/files/XISMuSx86_2.0.0_Setup.exe/download
+v2.4.2-Update: https://sourceforge.net/projects/xismus/files/XISMuS-v2.4.2-Update.exe/download                        
