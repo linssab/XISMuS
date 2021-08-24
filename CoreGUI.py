@@ -5025,6 +5025,7 @@ class MainGUI:
                     "Sample may be uncompiled. Output directory for sample {} not found.".format(value))
 
     def export_density_map(__self__,event=""):
+        """
         try:
             actv = root.SamplesWindow_TableLeft.get(ACTIVE)
             curr = Constants.MY_DATACUBE.name
@@ -5034,35 +5035,36 @@ class MainGUI:
                 __self__.sample_select(event)
         finally: 
             try: 
-                if  e.cget("text") == "Save density map as . . .":
+                if  event.cget("text") == "Save density map as . . .":
                     pass
                 else:
                     __self__.sample_select(event)
             except: 
-                if Constants.MY_DATACUBE == None:
-                    messagebox.showerror("No datacube!","Please load a datacube first.")
-                    return
-            if os.path.exists(sp.cube_path) or hasattr(Constants.MY_DATACUBE,"densitymap"): 
-                f = filedialog.asksaveasfile(mode='w', 
-                        defaultextension=".png",
-                        filetypes=[("Portable Network Graphic", "*.png")],
-                        title="Save as...")
-            else: 
-                return
-            if f is None: 
-                return
-            image = Constants.MY_DATACUBE.densitymap
-            factor = Constants.TARGET_RES/max(image.shape)
-            newX, newY = int(factor*image.shape[0]),int(factor*image.shape[1])
-            if Constants.MY_DATACUBE.config["enhance"]:
-                image = cv2.resize(image*255/image.max(),
-                        (newY,newX),interpolation=cv2.INTER_CUBIC)
-                plt.imsave(f.name, image, cmap=Constants.COLORMAP)
-            else:
-                image = cv2.resize(image*255/image.max(),
-                        (newY,newX),interpolation=cv2.INTER_NEAREST)
-                plt.imsave(f.name, image, cmap=Constants.COLORMAP)
-            return 0
+        """
+        if Constants.MY_DATACUBE == None:
+            messagebox.showerror("No datacube!","Please load a datacube first.")
+            return
+        if os.path.exists(sp.cube_path) or hasattr(Constants.MY_DATACUBE,"densitymap"): 
+            f = filedialog.asksaveasfile(mode='w', 
+                    defaultextension=".png",
+                    filetypes=[("Portable Network Graphic", "*.png")],
+                    title="Save as...")
+        else: 
+            return
+        if f is None: 
+            return
+        image = Constants.MY_DATACUBE.densitymap
+        factor = Constants.TARGET_RES/max(image.shape)
+        newX, newY = int(factor*image.shape[0]),int(factor*image.shape[1])
+        if Constants.MY_DATACUBE.config["enhance"]:
+            image = cv2.resize(image*255/image.max(),
+                    (newY,newX),interpolation=cv2.INTER_CUBIC)
+            plt.imsave(f.name, image, cmap=Constants.COLORMAP)
+        else:
+            image = cv2.resize(image*255/image.max(),
+                    (newY,newX),interpolation=cv2.INTER_NEAREST)
+            plt.imsave(f.name, image, cmap=Constants.COLORMAP)
+        return 0
 
     def wipe(__self__,e=""):
         try: 
@@ -5409,6 +5411,8 @@ class MainGUI:
             return
 
         if os.path.exists(sp.cube_path):
+            print("path",sp.cube_path)
+            print("name",Constants.MY_DATACUBE.name)
 
             # creates dialogue to warn cube exists and promp to repack data
             __self__.ResetWindow = Toplevel(master=__self__.master)
@@ -5429,7 +5433,7 @@ class MainGUI:
                     __self__.ResetWindow, 
                     text="Yes", 
                     command=lambda: repack(
-                        __self__,Constants.MY_DATACUBE.config["directory"]),
+                        __self__,Constants.MY_DATACUBE.name),
                     width=10).pack(side=TOP,pady=5)
             NoButton = ttk.Button(
                     __self__.ResetWindow, 
@@ -5444,7 +5448,7 @@ class MainGUI:
 
         else:
             messagebox.showerror("Can't find sample!",
-                    "Sample {} could not be located!".format(Constants.DIRECTORY))
+                    "Sample {} could not be located!".format(Constants.MY_DATACUBE.name))
 
     def call_configure(__self__):
         """ invokes the configuration dialog """

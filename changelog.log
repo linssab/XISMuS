@@ -2,3 +2,6 @@ New in Version v2.4.3
 
 - Double-clicking a chemical element in the status panel now shows the elemental map.
 - Fit-approximation plots were not including continuum (fixed)
+- Merging datacubes was not setting SpecRead cube path back to previous state (fixed)
+- Exporting densemap with another cube highlighted in sample list would cause
+the highlighted cube to be loaded (fixed)

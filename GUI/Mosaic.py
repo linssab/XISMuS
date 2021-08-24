@@ -2153,6 +2153,7 @@ class Mosaic_API:
         messagebox.showinfo("Merge complete!",
                 "Datacubes were successfully merged. Mosaic will now be closed.")
         __self__.root.refresh_samples()
+        sp.setup_from_datacube(Constants.MY_DATACUBE,__self__.root.samples)
         __self__.kill()
 
 
