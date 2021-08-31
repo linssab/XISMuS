@@ -145,6 +145,7 @@ class SimpleFitPanel:
         y = __self__.master.winfo_height()
         __self__.master.minsize(x,y)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+        __self__.master.grab_set()
         return
 
     def toggle(__self__, e=""):
@@ -244,6 +245,7 @@ class SimpleFitPanel:
             __self__.LinesList.insert(END,line)
     
     def kill(__self__):
+        __self__.master.grab_release()
         __self__.parent.Panel = None
         __self__.master.destroy()
         del __self__
