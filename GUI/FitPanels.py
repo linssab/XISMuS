@@ -174,6 +174,7 @@ class SimpleFitPanel:
             configuration["elements"][element] = []
             for line in __self__.Pool.get_children(element):
                 line = line.split(element)[-1]
+                if element == "K": line = "K"+line #workaround for element K
                 configuration["elements"][element].append(line)
         if bool(configuration["elements"]):
             configuration["bg"] = __self__.BG.get()
