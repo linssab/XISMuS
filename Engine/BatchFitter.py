@@ -231,7 +231,7 @@ def save_plot(
     Z_dict["Unmatched"] = un_
     #######################################################
 
-    fig,ax=plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
+    fig, ax = plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
     ax[0].set_title('Element deconvolution',fontsize=16)
     plt.setp(ax, xlim=(x.min(),x.max())) #Set xlim on both axes
 

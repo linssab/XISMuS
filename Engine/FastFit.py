@@ -24,7 +24,9 @@ from matplotlib.figure import figaspect
 import sys,os,copy
 import csv
 import pickle
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use("TkAgg")
 try: from tkinter import messagebox
 except: from Tkinter import messagebox
 
@@ -185,7 +187,7 @@ def save_plot(results,parameters,spec,energyaxis,bg=None):
     global GNFS
     gain, noise, fano, sigma = GNFS
     if bg is None: bg = np.zeros([spec.shape[0]],dtype=np.float32)
-    plt.clf()
+    #plt.clf()
     plots = {}
     for element in results.keys():
         indexes = parameters[element]["indexes"]
@@ -199,20 +201,23 @@ def save_plot(results,parameters,spec,energyaxis,bg=None):
                 sigma[indexes],
                 results[element]["Areas"])+bg
 
+    figure = Figure(figsize=(4,3), dpi=300)
+    plot = figure.add_subplot(111)
     for element in results.keys():
-        plt.plot(energyaxis, plots[element], color=ElementColors[element],
+        plot.plot(energyaxis, plots[element], color=ElementColors[element],
                 linewidth=0.90,linestyle="--",label=element)
-    plt.semilogy(energyaxis,spec, label="Spectrum",
+    plot.semilogy(energyaxis,spec, label="Spectrum",
             color="black",linewidth=0.50)
-    plt.semilogy(energyaxis,bg, label="Continuum",
+    plot.semilogy(energyaxis,bg, label="Continuum",
             color="green", linewidth=0.90)
-    plt.ylim([1,spec.max()*1.10])
-    plt.xlim([1,energyaxis.max()])
+    plot.set_ylim([1,spec.max()*1.10])
+    plot.set_xlim([1,energyaxis.max()])
     #plt.xlim([5000,15000])
-    plt.ylabel("Counts")
-    plt.xlabel("Energy (eV)")
-    plt.legend(loc="upper right")
-    plt.savefig(os.path.join(PATH,f"spectrum_{it}.png"),dpi=300)
+    plot.set_ylabel("Counts")
+    plot.set_xlabel("Energy (eV)")
+    plot.legend(loc="upper right")
+    figure.savefig(os.path.join(PATH,f"spectrum_{it}.png"),dpi=300)
+    plot.clear()
     return
 
 def do_stuff(CUBE,pool,**kwargs):
