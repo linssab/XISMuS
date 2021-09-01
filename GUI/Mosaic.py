@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Mosaic API Module                                    #
-#                        version: 2.4.2 - Jul - 2021            #
+#                        version: 2.4.3 - Sep - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 
@@ -2153,7 +2153,10 @@ class Mosaic_API:
         messagebox.showinfo("Merge complete!",
                 "Datacubes were successfully merged. Mosaic will now be closed.")
         __self__.root.refresh_samples()
-        sp.setup_from_datacube(Constants.MY_DATACUBE,__self__.root.samples)
+        try: sp.setup_from_datacube(Constants.MY_DATACUBE,__self__.root.samples)
+        except: sp.conditional_setup() 
+            # Happens when opening mosaic without ever loading a datacube before
+            # in the current session
         __self__.kill()
 
 
