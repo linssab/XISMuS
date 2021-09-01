@@ -22,6 +22,7 @@ setup.py
 calculator.py
 config.cfg
 FitSingle.py
+TestScript.py
 test.py
 Core.py
 cy_funcs.c
