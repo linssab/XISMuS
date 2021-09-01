@@ -4,18 +4,27 @@ def un_phase(
         datacube,
         start,
         stop,
-        direction,
-        no_pixels):
+        n,
+        el=None, line=None):
 
     print("start: ", start)
     print("stop: ", stop)
-    for row in range(start, 2, stop):
-        z = datacube.matrix.shape[-1]
-        if direction: 
-            datacube.matrix[row] = np.concatenate((np.zeros([no_pixels,z]), 
-                datacube.matrix[row][0:-no_pixels]), axis=0)
-        else:
-            datacube.matrix[row] = np.concatenate((datacube.matrix[row][no_pixels:-1], 
-                np.zeros([no_pixels,z])), axis=0)
+    for i in range(start, stop+1, 2):
+        datacube.matrix[i,:,:] = np.roll(datacube.matrix[i,:,:], n, 0)
+    print(datacube.matrix.shape)
+    if n>0: datacube.matrix = datacube.matrix[ :, n: ,: ]
+    else: datacube.matrix = datacube.matrix[ :, :n, : ]
+    print(datacube.matrix.shape)
+    datacube.dimension = datacube.matrix.shape[0], datacube.matrix.shape[1]
+    datacube.specsize = datacube.matrix.shape[-1]
+    datacube.img_size = datacube.dimension[0] * datacube.dimension[1]
     datacube.create_densemap()
-    return datacube.densitymap
+    save = input("SAVE (Y/N)? ")
+    if save == "Y": datacube.save_cube()
+    else: pass
+    if el is not None:
+        try: return datacube.unpack_element(el,line)
+        except: 
+            return datacube.densitymap
+    else:
+        return datacube.densitymap

@@ -70,13 +70,23 @@ an image where the element is displayed in proportion to the most abundant eleme
         # CHECKS INPUT #
         ################
         name = ""
+        START = 0
+        PIXEL = 0
         for arg in range(len(sys.argv)):
             if "-n" in sys.argv[arg] or "-name" in sys.argv[arg]:
                 try: name = sys.argv[arg+1]
                 except IndexError:
                     print("No name input after keyword!")
                     sys.exit(1)
+            if "-p" in sys.argv[arg]:
+                try: START = int(sys.argv[arg+1])
+                except: 
+                    try: PIXEL = int(sys.argv[arg+1])
+                    except: raise Exception("No valid input for start and/or phase")
+                try: PIXEL = int(sys.argv[arg+2])
+                except: raise Exception("No valid input for start and/or phase")
         if name == "": raise Exception("No datacube input!")
+        if PIXEL == 0: raise Exception("Pixels to phase cannot be zero!")
         ################
 
         SpecRead.conditional_setup(name=name)
@@ -94,12 +104,22 @@ an image where the element is displayed in proportion to the most abundant eleme
             sys.exit(1)
         
         original = datacube.densitymap
-        out = ED.un_phase(datacube,1,datacube.dimension[1],1,5)
-        fig, ax = plt.subplots(2,2)
-        ax[0,0].imshow(original)
-        ax[0,1].imshow(out)
-        ax[0,0].set_title("Original")
-        ax[0,1].set_title("Modified")
+        #For our instrument: one pass from 0 with shift of 2
+        #Then another from 1 with shift of 1 
+        out = ED.un_phase(datacube,START,datacube.dimension[0]-1,PIXEL)
+        
+        fig = plt.figure()
+        ax1 = plt.subplot(121)
+        ax2 = plt.subplot(122)
+
+        ax1.imshow(original)
+        ax2.imshow(out)
+
+        ax1.set_title("Original")
+        ax2.set_title("Modified")
+
+        ax1.get_shared_x_axes().join(ax1, ax2)
+        ax1.get_shared_y_axes().join(ax1, ax2)
         plt.show()
 
         sys.exit(0)
