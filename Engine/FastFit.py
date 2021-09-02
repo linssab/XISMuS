@@ -187,7 +187,6 @@ def save_plot(results,parameters,spec,energyaxis,bg=None):
     global GNFS
     gain, noise, fano, sigma = GNFS
     if bg is None: bg = np.zeros([spec.shape[0]],dtype=np.float32)
-    #plt.clf()
     plots = {}
     for element in results.keys():
         indexes = parameters[element]["indexes"]
@@ -212,7 +211,7 @@ def save_plot(results,parameters,spec,energyaxis,bg=None):
             color="green", linewidth=0.90)
     plot.set_ylim([1,spec.max()*1.10])
     plot.set_xlim([1,energyaxis.max()])
-    #plt.xlim([5000,15000])
+    #plot.xlim([5000,15000])
     plot.set_ylabel("Counts")
     plot.set_xlabel("Energy (eV)")
     plot.legend(loc="upper right")

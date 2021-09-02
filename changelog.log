@@ -2,6 +2,7 @@ New in Version v2.4.3
 
 - Double-clicking a chemical element in the status panel now shows the elemental map.
 - Fixed plots saving issue with matplotlib backend
+- Saving fit plots was causing the application to hang after the first run (fixed)
 - Fit-approximation plots were not including continuum (fixed)
 - Setting K (potassium) in the fit-approximation pool would cause issues (fixed)
 - Merging datacubes was not setting SpecRead cube path back to previous state (fixed)

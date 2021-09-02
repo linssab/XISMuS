@@ -36,7 +36,11 @@ from GUI.ProgressBar import Busy
 ####################
 # External modules #
 ####################
+from matplotlib.figure import Figure
+from matplotlib.figure import figaspect
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use("TkAgg")
 try:
     import xraylib as xlib
     xlib.SetErrorMessages(0)
@@ -207,7 +211,8 @@ def save_plot(
         Z_dict,             #Dictionary with elements
         E_peak,             #Peaks energies
         y_peak,             #Peaks positions
-        figures_path, it    #Save path and iterator number
+        figures_path, it,    #Save path and iterator number
+        SCALE
         ):
 
     ############################
@@ -231,21 +236,27 @@ def save_plot(
     Z_dict["Unmatched"] = un_
     #######################################################
 
-    fig, ax = plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
-    ax[0].set_title('Element deconvolution',fontsize=16)
-    plt.setp(ax, xlim=(x.min(),x.max())) #Set xlim on both axes
+    figure = Figure(figsize=(16,9))
+    #fig, ax = plt.subplots(2,gridspec_kw={'height_ratios': [3,1]})
+    plot0 = figure.add_subplot(4,1,(1,3))
+    plot1 = figure.add_subplot(4,1,4)
+    plot0.set_yscale(SCALE)
+    plot0.set_title('Element deconvolution',fontsize=10)
+    #figure.setp(ax, xlim=(x.min(),x.max())) #Set xlim on both axes
 
-    ax[0].text(
+    plot0.text(
             0,
             np.max(Y_DATA),
             "$\chi^2$: %.3f"%rchisq_gaus,
             fontsize=10,
-            bbox={'facecolor':'None', 'edgecolor':'None', 'pad':10})
+            bbox={'facecolor':'None', 'edgecolor':'None', 'pad':8})
 
-    ax[0].plot(x,Y_CONT,linewidth=1,zorder=1,label='Continuum',color="green")
-    ax[0].plot(x,Y_DATA,linewidth=1,zorder=1, label='Counts',color="blue")
-    ax[0].plot(x,y_gaus,label='Fit')
-    ax[0].set_ylim([-1,Y_DATA.max()])
+    plot0.plot(x,Y_CONT,linewidth=1,zorder=1,label='Continuum',color="green")
+    plot0.plot(x,Y_DATA,linewidth=1,zorder=1, label='Counts',color="blue")
+    plot0.plot(x,y_gaus,label='Fit')
+    if SCALE == "linear": plot0.set_ylim([-1,Y_DATA.max()])
+    else: plot0.set_ylim([1, Y_DATA.max()])
+    plot0.set_xlim(x.min(), x.max())
     element = [*Z_dict][:-1] #To be plotted elements
 
     #######################################################################
@@ -263,14 +274,14 @@ def save_plot(
         ###############################################################
 
         for j in Z_dict[i]:
-            ax[0].axvline(
+            plot0.axvline(
                     x=E_peak[j],
                     color='m',
                     linewidth=1,
                     zorder=2,
                     label='Found peaks')
-            ax[0].plot(x, y_gaus_single[j], color='k', linewidth=1, zorder=3)
-            ax[0].fill_between(
+            plot0.plot(x, y_gaus_single[j], color='k', linewidth=1, zorder=3)
+            plot0.fill_between(
                     x,
                     Y_CONT,
                     y_gaus_single[j],
@@ -284,7 +295,7 @@ def save_plot(
             #################################################################
 
             if i in dupl_key[:int(len(dupl_key)/2)] and j in dupl_value:
-                ax[0].text(
+                plot0.text(
                         E_peak[j]+25,
                         y_peak[j]*1.35,
                         Elements.ElementList[i],
@@ -297,7 +308,7 @@ def save_plot(
             ##############################################
 
             else:
-                ax[0].text(
+                plot0.text(
                         E_peak[j]+25,
                         y_peak[j]*1.15,
                         Elements.ElementList[i],
@@ -310,7 +321,7 @@ def save_plot(
     #######################################################################
 
     for i in [*Z_dict['Unmatched']]:
-        ax[0].axvline(
+        plot0.axvline(
                 x=E_peak[i],
                 color='m',
                 linestyle='dashed',
@@ -318,22 +329,23 @@ def save_plot(
                 zorder=2,
                 label='Unmatched peaks')
 
-    ax[1].set_ylim([-2,2])
-    ax[1].set_yticks([-2,-1,0,1,2])
-    ax[1].plot(x, residuals_gaus, linewidth=1)
-    ax[1].axhline(y=0, color='k')
-    ax[1].set_xlabel('Energy (eV)')
-    ax[0].set_ylabel('Counts')
-    ax[1].set_ylabel('Residuals / $\sigma$')
-    handles,labels = ax[0].get_legend_handles_labels()
+    plot1.set_ylim([-2,2])
+    plot1.set_yticks([-2,-1,0,1,2])
+    plot1.plot(x, residuals_gaus, linewidth=1)
+    plot1.axhline(y=0, color='k')
+    plot1.set_xlabel('Energy (eV)')
+    plot0.set_ylabel('Counts')
+    plot1.set_ylabel('Residuals / $\sigma$')
+    handles,labels = plot0.get_legend_handles_labels()
     by_label = dict(zip(labels,handles))
-    ax[0].legend(by_label.values(), by_label.keys(),prop={'size': 7})
+    plot0.legend(by_label.values(), by_label.keys(),prop={'size': 7},loc="upper right")
 
-    plt.savefig(
+    figure.savefig(
             os.path.join(figures_path,"Fit_{}.png".format(it+1)),
-            dpi=600,
+            dpi=300,
             format="png")
-    plt.close()
+    plot0.clear()
+    plot1.clear()
 
 def gausfit(
         x,                  #Energy axis
@@ -351,7 +363,8 @@ def gausfit(
         configurations,     #Datacube configuration
         bar=None,
         work_done=None,
-        results=None):
+        results=None,
+        scalemode=None):
 
     from scipy.optimize import curve_fit
     import gc
@@ -541,7 +554,8 @@ def gausfit(
                     Z_dict,
                     E_peak,
                     y_peak[it],
-                    figures_path, it
+                    figures_path, it,
+                    scalemode
                     )
             
             del y_gaus_single
@@ -1065,6 +1079,10 @@ def find_and_fit(
     Constants.FIT_CYCLES = global_parameters[0]
     Constants.SAVE_INTERVAL = global_parameters[1]
     Constants.SAVE_FIT_FIGURES = global_parameters[2]
+    Constants.PLOTSCALE = global_parameters[3]
+    print(Constants.PLOTSCALE)
+    if Constants.PLOTSCALE == "-semilogy": scalemode = "log"
+    else: scalemode = "linear"
     counts, continuum = np.asarray(data[0]), np.asarray(data[1])
 
     print("Chunk {} data size: ".format(chunk),convert_bytes(counts.nbytes))
@@ -1102,7 +1120,8 @@ def find_and_fit(
             configurations,
             bar=None,
             work_done=work_done,
-            results=results)
+            results=results,
+            scalemode=scalemode)
     return 0
 
 def add_elements(peaks,matches,element_list):
@@ -1678,7 +1697,7 @@ class MultiFit():
                         __self__.raw_sum_and_bg,
                         peaks,
                         matches,
-                        (cycles,plot_save_interval,save_plots)))
+                        (cycles,plot_save_interval,save_plots,Constants.PLOTSCALE)))
 
             __self__.workers.append(p)
             del counts, continuum
@@ -1714,7 +1733,7 @@ class MultiFit():
                         __self__.raw_sum_and_bg,
                         peaks,
                         matches,
-                        (cycles,plot_save_interval,save_plots)))
+                        (cycles,plot_save_interval,save_plots,Constants.PLOTSCALE)))
 
             __self__.workers.append(p)
 
