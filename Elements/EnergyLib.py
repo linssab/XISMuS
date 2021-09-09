@@ -472,7 +472,7 @@ else:
 # Read the color code for the elements
 # if colours.txt does not exist, it generates random colours. 
 try: 
-    f = open(os.path.join(os.getcwd(),"images","colours.txt"),"r")
+    f = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colours.txt"),"r")
     for element in ElementList:
         line = f.readline()
         line = line.replace("\r","")
