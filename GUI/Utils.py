@@ -5,6 +5,7 @@
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 import Constants
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 # tcl/Tk imports
 try:
     from tkinter import *
@@ -112,3 +113,12 @@ def place_center(window1,window2):
         window2.deiconify()
         window2.focus_force()
     return
+
+# only display the buttons we need
+class NavigationToolbar(NavigationToolbar2Tk):
+    toolitems = (
+    ('Home', 'Reset original view', 'home', 'home'),
+    ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
+    ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
+    ('Save', 'Save the figure', 'filesave', 'save_figure')
+  )

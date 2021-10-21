@@ -1,3 +1,4 @@
-New in Version v2.4.4
+New in Version v2.5.0
 
-- Elements colours moved to Elements module
+- Elements replaced by compwizard module
+- Introducing CubeViewer

@@ -16,4 +16,6 @@ logger.info("Importing ProgressBar...")
 from .ProgressBar import *
 logger.info("Importing Theme...")
 from .Theme import *
+logger.info("Importing CubeViewer...")
+from .CubeViewer import *
 logger.info("GUI ready!")

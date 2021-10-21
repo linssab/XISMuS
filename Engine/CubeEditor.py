@@ -7,6 +7,8 @@ def un_phase(
         n,
         el=None, line=None):
 
+    # n = number of pixels to move [-inf,+inf]
+
     print("start: ", start)
     print("stop: ", stop)
     for i in range(start, stop+1, 2):

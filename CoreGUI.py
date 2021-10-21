@@ -3799,9 +3799,11 @@ class MainGUI:
 
         __self__.MenuBar = Menu(__self__.master,tearoff=0)
         __self__.Toolbox = Menu(__self__.MenuBar,tearoff=0)
+        __self__.Extra = Menu(__self__.MenuBar,tearoff=0)
         __self__.derived_spectra = Menu(__self__.Toolbox,tearoff=0)
 
         __self__.MenuBar.add_cascade(label="Toolbox", menu=__self__.Toolbox)
+        __self__.MenuBar.add_cascade(label="Extra", menu=__self__.Extra)
         __self__.MenuBar.add_command(label="Help", 
                 command=call_help)
         __self__.MenuBar.add_command(label="About", 
@@ -3847,6 +3849,7 @@ class MainGUI:
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
         __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
+        __self__.Extra.add_command(label="Cube Viewer . . .", command=__self__.cube_viewer)
         __self__.master.config(menu=__self__.MenuBar)
         
         #####
@@ -4118,6 +4121,14 @@ class MainGUI:
 
         __self__.list_samples()
         __self__.StatusBox.focus_set()
+
+    def cube_viewer(__self__):
+        if Constants.MY_DATACUBE is None: 
+            messagebox.showinfo("No cube!","No datacube is loaded in memory!") 
+            return
+        __self__.CubeViewer = ImageWindow(__self__, "Cube Viewer")
+        __self__.CubeViewer.draw_image(Constants.MY_DATACUBE.densitymap)
+        __self__.CubeViewer.create_connection()
 
     def call_compilecube(__self__):
         """ Tries to create output folder (name is Constants.CONFIG['directory'])
@@ -5727,62 +5738,6 @@ class ReConfigDiag:
         __self__.master.destroy()
 
 
-class ImageWindow:
-    def __init__(__self__, parent, title):
-        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
-        __self__.parent = parent
-        __self__.master = Toplevel()
-        __self__.master.iconbitmap(icon)
-        __self__.master.attributes("-alpha",0.0)
-        __self__.alt = False
-        __self__.master.bind("<Alt_L>",__self__.AltOn)
-        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
-        __self__.master.bind("<Return>",__self__.maximize)
-        __self__.master.title(title)
-        __self__.master.minsize(width=600,height=480)
-        __self__.master.configure(bg='white')
-        __self__.master.resizable(True,True)
-        __self__.upper = Canvas(__self__.master)
-        __self__.upper.config(bg='white')
-        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)#, padx=(16,16),pady=(16,16))
-        text="Press Alt+Enter for full screen. To save the image, please use the Image Analyzer."
-        __self__.lower = Frame(__self__.master,height=35)
-        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
-        Label(__self__.lower, text=text).pack(padx=15, anchor=E, fill=BOTH, expand=1)
-
-        # Save and replace buttons #
-        __self__.figure = Figure(figsize=(5,4), dpi=75)
-        __self__.plot = __self__.figure.add_subplot(111)
-        __self__.plot.grid(which="both",axis="both")
-        __self__.plot.axis("Off")
-        __self__.plot.set_title(title)
-        __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
-        __self__.canvas.draw()
-        __self__.mplCanvas = __self__.canvas.get_tk_widget()
-        __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
-        __self__.canvas._tkcanvas.pack()
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
-
-    def AltOn(__self__,e=""):
-        __self__.alt = True
-
-    def AltOff(__self__,e=""):
-        __self__.alt = False
-
-    def maximize(__self__,e=""):
-        maximize_window(__self__)
-
-    def draw_image(__self__,image=None):
-        __self__.plot.imshow(image, vmin=0, cmap=Constants.COLORMAP)
-        place_center(__self__.parent.master, __self__.master)
-
-    def wipe_plot(__self__):
-        __self__.parent.master.focus_set()
-        __self__.master.destroy()
-        del __self__
-
-
 class ImageOperationOutput:
     def __init__(__self__, image, el1, el2, operation, cube_datatypes, cube, parent):
         __self__.image = image
@@ -6563,22 +6518,13 @@ if __name__.endswith("__main__"):
     import matplotlib
     import matplotlib.pyplot as plt
     matplotlib.use("TkAgg")
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
     from matplotlib.figure import Figure
     from matplotlib.patches import Rectangle
     import matplotlib.patches as mpatches
     from matplotlib import style
     style.use('ggplot')
-    
-    # only display the buttons we need
-    class NavigationToolbar(NavigationToolbar2Tk):
-        toolitems = (
-        ('Home', 'Reset original view', 'home', 'home'),
-        ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
-        ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
-        ('Save', 'Save the figure', 'filesave', 'save_figure')
-      )
-   
+
     splash.update("Verifying screen resolution...")
     time.sleep(t)
     check_screen_resolution(optimum_resolution)
@@ -6611,6 +6557,7 @@ if __name__.endswith("__main__"):
     from GUI import Theme
     from GUI import AdvCalib, SimpleFitPanel, Navigator
     from GUI import Busy, BusyManager, create_tooltip
+    from GUI import ImageWindow
     from GUI.Mosaic import Mosaic_API
     from GUI.ConfigurationParser import *
     from GUI.Utils import *
