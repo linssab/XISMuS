@@ -4132,12 +4132,11 @@ class MainGUI:
 
     def call_compilecube(__self__):
         """ Tries to create output folder (name is Constants.CONFIG['directory'])
-        and calls SpecMath to compile the data. Spectra to compile are looked under the directory
-        set by the user (default is C:/samples/) and inside a directory named
-        Constants.CONFIG['directory'].
-
-        If a certain file cannot be read, an error is raised. SpecMath returns the name
-        of the file. """
+        and calls SpecMath to compile the data.
+        
+        If a queued file cannot be read, an error is raised. SpecMath returns the name
+        of the file. 
+        The funciton is called from the ConfigurationParser.py module """
 
         try:
             os.mkdir(sp.output_path)
@@ -4233,6 +4232,16 @@ class MainGUI:
                     messagebox.showerror("Error!",
                             "Could not read {} file! Aborting compilation".format(fail[1]))
                     shutil.rmtree(sp.output_path)
+                    specbatch.progressbar.destroybar()
+                    Constants.MY_DATACUBE = None
+                    sp.conditional_setup()
+                    __self__.SamplesWindow_TableLeft.config(state=NORMAL)
+                    __self__.SamplesWindow_multi.config(state=NORMAL)
+                    __self__.SamplesWindow_ok.config(state=NORMAL)
+                    __self__.list_samples()
+                    __self__.toggle_(toggle="off")
+                    return
+
             __self__.SamplesWindow_TableLeft.config(state=NORMAL)
             __self__.SamplesWindow_multi.config(state=NORMAL)
             __self__.SamplesWindow_ok.config(state=NORMAL)
@@ -4320,6 +4329,7 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Map elements",state=NORMAL)
             __self__.re_configure.config(state=NORMAL)
             __self__.magnifier.config(state=NORMAL)
+            print("on")
         if toggle == 'off':
             __self__.master.unbind("<Alt-r>")
             __self__.master.unbind("<Alt-a>")
@@ -4335,6 +4345,7 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.re_configure.config(state=DISABLED)
             __self__.magnifier.config(state=DISABLED)
+            print("off")
         if Constants.MY_DATACUBE is not None:
             if any("ftir" in x for x in Constants.MY_DATACUBE.datatypes):
                 __self__.master.unbind("<Alt-e>")

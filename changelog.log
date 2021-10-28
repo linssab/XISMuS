@@ -1,4 +1,5 @@
 New in Version v2.5.0
 
 - Elements replaced by compwizard module
+- Fixed spectra reading pool error handling
 - Introducing CubeViewer

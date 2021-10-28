@@ -427,6 +427,7 @@ class datacube:
         proper xy matrix indexes and calculating the background contribution as well. 
         This method saves all derived spectra, writes summation mca to disk and calculates
         the density map. """
+        __self__.chunks_done = []
 
         if "h5" in __self__.datatypes or "edf" in __self__.datatypes:
             __self__.progressbar = Busy(__self__.img_size,0)
@@ -439,7 +440,11 @@ class datacube:
             ######################
             
             global iterator
+            global nonstop
+            global failspec
             iterator = 0
+            nonstop = True
+            failspec = None
 
             logger.debug("Started mca compilation")
             timer = time.time()
@@ -480,14 +485,16 @@ class datacube:
                                     end,
                                     pool_chunk,
                                     __self__.dimension,
-                                    __self__.matrix,))
+                                    __self__.matrix,
+                                    __self__.chunks_done,))
                     else:
                         t = threading.Thread(target=read_pool,
                                 args=(start,
                                     end,
                                     pool_chunk,
                                     __self__.dimension,
-                                    __self__.matrix,))
+                                    __self__.matrix,
+                                    __self__.chunks_done,))
                     running_chunks.append(t)
                     logger.info("Polling chunk {}. Leftovers: {}".format(chunk,leftovers))
 
@@ -502,24 +509,38 @@ class datacube:
                                     end,
                                     pool_chunk,
                                     __self__.dimension,
-                                    __self__.matrix,))
+                                    __self__.matrix,
+                                    __self__.chunks_done,))
                     else:
                         t = threading.Thread(target=read_pool,
                                 args=(start,
                                     end,
                                     pool_chunk,
                                     __self__.dimension,
-                                    __self__.matrix,))
+                                    __self__.matrix,
+                                    __self__.chunks_done,))
                     running_chunks.append(t)
                     logger.info("Polling Leftovers")
 
                 for thread in running_chunks:
                     thread.start()
 
-                __self__.periodic_check()
+                __self__.periodic_check(running_chunks)
 
                 for thread in running_chunks:
                     thread.join()
+
+                print("Chunks done",__self__.chunks_done)
+                if leftovers > 0: 
+                    if len(__self__.chunks_done) == chunks+1: pass
+                    else: 
+                        print("hotel")
+                        return 1, failspec
+                else:
+                    if len(__self__.chunks_done) == chunks: pass
+                    else: 
+                        print("hotel")
+                        return 1, failspec 
 
             else:
                 try:
@@ -595,18 +616,23 @@ class datacube:
         logger.debug("Finished packing.")
         return 0,None
     
-    def periodic_check(__self__):
-        __self__.check()
+    def periodic_check(__self__,threads):
+        __self__.check(threads)
 
-    def check(__self__):
+    def check(__self__,threads):
         global iterator
+        global nonstop
         __self__.progressbar.update_text("Packing spectra...")
         tot = __self__.progressbar.progress["maximum"]
-        while iterator < __self__.img_size:
+        while iterator < __self__.img_size and nonstop:
             prog = iterator/tot*100
             __self__.progressbar.update_text(f"Packing spectra... {prog:.2f}%")
             __self__.progressbar.updatebar(iterator)
-        return 0
+        if not nonstop: #means something went wrong in the pipeline
+            print("Threads killed?")
+            for t in threads:
+                print(t.is_alive())
+        return
 
     def cut_zeros(__self__):
         """ Sliced the data cutting off the necessary lead and tail zeros.
@@ -828,7 +854,7 @@ def build_pool(size):
                 str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
         Constants.FILE_POOL.append(spec)
 
-def read_ftir_pool(start,end,pool,dimension,m):
+def read_ftir_pool(start,end,pool,dimension,m,chunk):
     """ INPUT:
         - start: int; starting row
         - end: int; lower boundary row
@@ -837,16 +863,27 @@ def read_ftir_pool(start,end,pool,dimension,m):
         - m: np.array (int); spectra matrix """
 
     global iterator
+    global nonstop
+    global failspec
     scan = (start,0)
     x, y = scan[0], scan[1]
-    for spec in pool:
-        logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
-        with lock: m[x][y] = getftirdata(spec)
-        scan = refresh_position(scan[0],scan[1],dimension)
-        x,y = scan[0],scan[1]
-        with lock: iterator += 1
+    try:
+        for spec in pool:
+            if not nonstop: return
+            logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+            with lock: m[x][y] = getftirdata(spec)
+            scan = refresh_position(scan[0],scan[1],dimension)
+            x,y = scan[0],scan[1]
+            with lock: iterator += 1
+    except FileNotFoundError as e:
+        nonstop = False
+        failspec = spec
+        return
+    chunk.append(1)
+    print(chunk)
+    return
 
-def read_pool(start,end,pool,dimension,m):
+def read_pool(start,end,pool,dimension,m,chunk):
     """ INPUT:
         - start: int; starting row
         - end: int; lower boundary row
@@ -855,14 +892,25 @@ def read_pool(start,end,pool,dimension,m):
         - m: np.array (int); spectra matrix """
         
     global iterator
+    global nonstop
+    global failspec
     scan = (start,0)
     x, y = scan[0], scan[1]
-    for spec in pool:
-        logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
-        with lock: m[x][y] = getdata(spec)
-        scan = refresh_position(scan[0],scan[1],dimension)
-        x,y = scan[0],scan[1]
-        with lock: iterator += 1
+    try:
+        for spec in pool:
+            if not nonstop: return
+            logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+            with lock: m[x][y] = getdata(spec)
+            scan = refresh_position(scan[0],scan[1],dimension)
+            x,y = scan[0],scan[1]
+            with lock: iterator += 1
+    except FileNotFoundError as e:
+        nonstop = False
+        failspec = spec
+        return
+    chunk.append(1)
+    print(chunk)
+    return
 
 def get_chunks(size):
     max_chunks = Constants.CPUS*2

@@ -627,7 +627,6 @@ class ConfigDiag:
             __self__.root.load_cube()
             __self__.root.write_stat()
             __self__.root.draw_map()
-            __self__.root.toggle_(toggle='on')
             if __self__.root.temporaryh5 != "None": 
                 __self__.root.ButtonReset.config(state=DISABLED)
 
