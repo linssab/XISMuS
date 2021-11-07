@@ -360,7 +360,7 @@ def load_cube():
                     Constants.MY_DATACUBE.background.size * b_size
         else: temp_mem = 0
         if cube_size > ( available_memory + temp_mem ):
-            print("Cube",cube_size, "\nAvailable:",available_memory, "\nTemp:",temp_mem)
+            #print("Cube",cube_size, "\nAvailable:",available_memory, "\nTemp:",temp_mem)
             logger.warning(f"Cannot load cube {sp.cube_path}! Not enough RAM!")
             messagebox.showerror("Memory error!",f"No RAM available! Cube size: {convert_bytes(cube_size)}, Memory available: {convert_bytes(available_memory)}.")
             root.busy.notbusy()
@@ -4329,7 +4329,6 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Map elements",state=NORMAL)
             __self__.re_configure.config(state=NORMAL)
             __self__.magnifier.config(state=NORMAL)
-            print("on")
         if toggle == 'off':
             __self__.master.unbind("<Alt-r>")
             __self__.master.unbind("<Alt-a>")
@@ -4345,7 +4344,6 @@ class MainGUI:
             __self__.Toolbox.entryconfig("Map elements",state=DISABLED)
             __self__.re_configure.config(state=DISABLED)
             __self__.magnifier.config(state=DISABLED)
-            print("off")
         if Constants.MY_DATACUBE is not None:
             if any("ftir" in x for x in Constants.MY_DATACUBE.datatypes):
                 __self__.master.unbind("<Alt-e>")
@@ -5366,7 +5364,6 @@ class MainGUI:
         if os.path.exists(sp.cube_path):
             cube_stats = os.stat(sp.cube_path)
             cube_size = convert_bytes(cube_stats.st_size)
-            print(sp.cube_path,cube_size)
             __self__.StatusBox.insert(END,
                     "Datacube is compiled. Cube size: {0}".format(cube_size))
             __self__.StatusBox.insert(END,"Verifying packed elements...")
@@ -5433,9 +5430,6 @@ class MainGUI:
             return
 
         if os.path.exists(sp.cube_path):
-            print("path",sp.cube_path)
-            print("name",Constants.MY_DATACUBE.name)
-
             # creates dialogue to warn cube exists and promp to repack data
             __self__.ResetWindow = Toplevel(master=__self__.master)
             __self__.ResetWindow.title("Attention!")

@@ -1,5 +1,6 @@
 New in Version v2.5.0
 
 - Elements replaced by compwizard module
+- Addressed issue where old version cubes could not be loaded into Mosaic
 - Fixed spectra reading pool error handling
 - Introducing CubeViewer

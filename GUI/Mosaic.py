@@ -910,25 +910,19 @@ class Mosaic_API:
     def rotate_data(__self__):
         def flip(layer,axis):
             if axis == "horizontal":
-                print("I flipped the data horizontally")
                 layer.matrix = np.fliplr(layer.matrix)
                 layer.dense = np.fliplr(layer.dense)
             elif axis == "vertical":
-                print("I flipped the data vertically")
                 layer.matrix = np.flipud(layer.matrix)
                 layer.dense = np.flipud(layer.dense)
 
         def clockwise(layer):
             layer.matrix = np.rot90(layer.matrix,3)
-            print("I rotated the matrix",layer.matrix.shape)
             layer.dense = np.rot90(layer.dense,3)
-            print("I rotated the densemap",layer.dense.shape)
 
         def counter_clockwise(layer):
             layer.matrix = np.rot90(layer.matrix)
-            print("I rotated the matrix",layer.matrix.shape)
             layer.dense = np.rot90(layer.dense)
-            print("I rotated the densemap",layer.dense.shape)
 
         for layer in __self__.layer:
 
@@ -941,14 +935,11 @@ class Mosaic_API:
             if rotate_factor == 0:
                 print("Zero")
             elif rotate_factor == 2 or rotate_factor == -2:
-                print("Upside-down")
                 clockwise(layer)
                 clockwise(layer)
             elif rotate_factor == 1:
-                print("Clockwise")
                 clockwise(layer)
             elif rotate_factor == -1:
-                print("Counter-clockwise")
                 counter_clockwise(layer)
             else:
                 pass
@@ -1017,10 +1008,8 @@ class Mosaic_API:
             mask = layer.mask[:]
             mask2 = layer.last_saved_mask[:]
             img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-            print("I rotated the image",img.shape)
             mask = cv2.rotate(mask, cv2.ROTATE_90_CLOCKWISE)
             mask2 = cv2.rotate(mask2, cv2.ROTATE_90_CLOCKWISE)
-            print("I rotated the mask",mask.shape)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
                 if end[i] > __self__.image.shape[i] and not loading:
@@ -1038,10 +1027,8 @@ class Mosaic_API:
             mask = layer.mask[:]
             mask2 = layer.last_saved_mask[:]
             img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            print("I rotated the image",img.shape)
             mask = cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE)
             mask2 = cv2.rotate(mask2, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            print("I rotated the mask",mask.shape)
             end = [layer.start[0]+img.shape[0],layer.start[1]+img.shape[1]]
             for i in range(len(end)):
                 if end[i] > __self__.image.shape[i] and not loading:
@@ -1428,8 +1415,12 @@ class Mosaic_API:
             __self__.layerize(cube, element=element)
 
         selected_cube = __self__.maps_list.get(ACTIVE)
-        cube = load_cube(selected_cube)
-        print(cube.datatypes)
+        try: cube = load_cube(selected_cube)
+        except: 
+            messagebox.showerror("Import error",
+                    f"Cube {selected_cube} could not be loaded!")
+            __self__.refocus()
+            return
         if __self__.layer.__contains__(selected_cube):
             messagebox.showinfo("Cube already imported!",
                     "Can't add same cube twice!")
@@ -1555,7 +1546,6 @@ class Mosaic_API:
             else:
                 VMAX = 0
                 npz = f.split(".mosaic")[0]+".npz"
-                __self__.import_layers(loadfile=os.path.abspath(f),npz=npz)
         else: 
             VMAX = 0
             npz = f.split(".mosaic")[0]+".npz"
@@ -1664,7 +1654,11 @@ class Mosaic_API:
        
         # loads cube to extract the matrix and all metadata
 
-        cube = load_cube(layer["name"])
+        try: cube = load_cube(layer["name"])
+        except:
+            messagebox.showerror("Failed to load!",
+                    "Datacube {} could not be loaded! Aborting operation".format(layer["name"]))
+            return 0
         
         if cube == None: 
             messagebox.showerror("Cube not found!",
