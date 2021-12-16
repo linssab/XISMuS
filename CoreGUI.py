@@ -4210,7 +4210,7 @@ class MainGUI:
                 name = el.split("_")
                 image = Constants.MY_DATACUBE.unpack_element(name[0],name[1])
                 fullname = Constants.MY_DATACUBE.name + " " + el
-                __self__.ClickedMapDisplay = ImageWindow(__self__,fullname)
+                __self__.ClickedMapDisplay = ImageWindow(__self__, fullname, "")
                 __self__.ClickedMapDisplay.draw_image(image)
                 break
         return

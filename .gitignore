@@ -26,6 +26,7 @@ TestScript.py
 test.py
 Core.py
 cy_funcs.c
+cubeviewer.txt
 
 /__pycache__
 /ipynb_checkpoints

@@ -120,6 +120,7 @@ class ImageWindow:
         __self__.master.destroy()
         del __self__
 
+
 class Clicker:
     def __init__(__self__, parent):
         __self__.canvas = parent.canvas
