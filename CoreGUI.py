@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Graphical Interface and Core file                    #
-#                        version: 2.4.3 - Sep - 2021            #
+#                        version: 2.5.0 - Dec - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 global root
@@ -160,70 +160,6 @@ def open_log():
                 "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(os.path.join(__PERSONAL__,"logfile.log")))
         sys.exit(1)
     return 0
-
-def load_user_database():
-    """ Read database file and load all entries to global variable """    
-
-    path = os.path.join(sp.__BIN__,"database.dat")
-    db = open(path,"r")
-    lines = db.readlines() 
-    for i in range(1,len(lines),7):
-        if lines[i].replace("\n","").startswith("SAMPLE"):
-            try:
-                name = lines[i].replace("\n","").split("\t")[-1]
-                Constants.USER_DATABASE[name] = {}
-                Constants.USER_DATABASE[name]["path"] = \
-                        lines[i+1].replace("\n","").split("\t")[-1]
-                Constants.USER_DATABASE[name]["prefix"] = \
-                        lines[i+2].replace("\n","").split("\t")[-1]
-                Constants.USER_DATABASE[name]["mcacount"] = \
-                        int(lines[i+3].replace("\n","").split("\t")[-1])
-                Constants.USER_DATABASE[name]["extension"] = \
-                        lines[i+4].replace("\n","").split("\t")[-1]
-                Constants.USER_DATABASE[name]["indexing"] = \
-                        lines[i+5].replace("\n","").split("\t")[-1]
-            except IndexError as exception:
-                logging.error("Database.dat integrity may be compromised. Could not load.")
-    db.close()
-
-def write_to_user_database(name,sample_path,prefix,count,extension,indexing):
-    logger.info(f"Adding {name} to database.")
-    path = os.path.join(sp.__BIN__,"database.dat")
-    db = open(path,"a+")
-    db.write("\nSAMPLE\t{}\n".format(name))
-    Constants.USER_DATABASE[name] = {}
-    db.write("path\t{}\n".format(sample_path))
-    Constants.USER_DATABASE[name]["path"] = sample_path
-    db.write("prefix\t{}\n".format(prefix))
-    Constants.USER_DATABASE[name]["prefix"] = prefix
-    db.write("mcacount\t{}\n".format(count))
-    Constants.USER_DATABASE[name]["mcacount"] = count
-    db.write("extension\t{}\n".format(extension))
-    Constants.USER_DATABASE[name]["extension"] = extension
-    db.write("indexing\t{}\n".format(indexing))
-    Constants.USER_DATABASE[name]["indexing"] = indexing
-    db.close()
-
-def remove_entry_from_database(smpl_name):
-    path = os.path.join(sp.__BIN__,"database.dat")
-    db = open(path,"r")
-    lines = db.readlines()
-    new_lines = copy.deepcopy(lines)
-    db.close()
-    for i in range(len(lines)):
-        line = lines[i]
-        if line.replace("\n","").startswith("SAMPLE") and smpl_name == line.replace("\n","").split("\t")[-1]:
-            del new_lines[i:i+7]
-            continue
-    db = open(path,"w+")
-    if len(new_lines) < 2:
-        db.close()
-        return
-    else:
-        for line in new_lines:
-            db.write(line)
-        db.close()
-    return
 
 def wipe_list():
     global root
@@ -2976,12 +2912,15 @@ class Samples:
         __self__.popup.update_idletasks()
         __self__.popup.grab_set()
 
-    def load_folder_from_database(__self__,folder):
+    def load_folder_from_database(__self__, folder):
+        """ Inserts the database information in the Samples class """
+        
         __self__.samples_database[folder] = Constants.USER_DATABASE[folder]["prefix"]
         __self__.samples_path[folder] = Constants.USER_DATABASE[folder]["path"]
         __self__.mcacount[folder] = Constants.USER_DATABASE[folder]["mcacount"]
         __self__.mca_extension[folder] = Constants.USER_DATABASE[folder]["extension"]
         __self__.mca_indexing[folder] = Constants.USER_DATABASE[folder]["indexing"]
+        return
 
     def pre_load_from_database(__self__):
         not_found_samples = []
@@ -2996,9 +2935,7 @@ class Samples:
                 logger.info(
                         "{} path ({}) does not exist. Removed from database...".format(
                             folder,Constants.USER_DATABASE[folder]["path"]))
-                remove_entry_from_database(folder)
-        for folder in not_found_samples:
-            Constants.USER_DATABASE.pop(folder)
+        Database.remove_entry_from_database(not_found_samples)
 
     def update_label(__self__, splash=None, text=None):
         if splash:
@@ -3013,7 +2950,7 @@ class Samples:
         __self__.skip_list = []
         logger.info("Loading sample list...")
         logger.info("Reading database...")
-        load_user_database()
+        Database.load_user_database()
         __self__.pre_load_from_database()
         logger.info("Done with reading database...")
         indexing = None
@@ -3100,14 +3037,14 @@ class Samples:
                             __self__.mcacount[folder] = len(files)
                             __self__.mca_extension[folder] = mca_extension
                             __self__.mca_indexing[folder] = indexing
-                            write_to_user_database(
+                            Database.write_to_user_database(
                                     folder,
                                     p,
                                     mca_prefix,
                                     len(files),
                                     mca_extension,
                                     indexing)
-                            logger.info(f"Wrote {folder} to database")
+                            logger.info(f"Added {folder} to database")
             logger.info("Done.")
 
         except IOError as exception:
@@ -3193,14 +3130,14 @@ class Samples:
                         __self__.mcacount[folder] = len(files)
                         __self__.mca_extension[folder] = mca_extension
                         __self__.mca_indexing[folder] = indexing
-                        write_to_user_database(
+                        Database.write_to_user_database(
                                 folder,
                                 p,
                                 mca_prefix,
                                 len(files),
                                 mca_extension,
                                 indexing)
-                        logger.info(f"Wrote {folder} to database")
+                        logger.info(f"Added {folder} to database")
             logger.info("Done.")
         
         except IOError as exception:
@@ -3849,7 +3786,7 @@ class MainGUI:
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
         __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
-        __self__.Extra.add_command(label="Cube Viewer . . .", command=__self__.cube_viewer)
+        #__self__.Extra.add_command(label="Cube Viewer . . .", command=__self__.cube_viewer)
         __self__.master.config(menu=__self__.MenuBar)
         
         #####
@@ -4126,7 +4063,8 @@ class MainGUI:
         if Constants.MY_DATACUBE is None: 
             messagebox.showinfo("No cube!","No datacube is loaded in memory!") 
             return
-        __self__.CubeViewer = ImageWindow(__self__, "Cube Viewer")
+        path = sp.__PERSONAL__
+        __self__.CubeViewer = ImageWindow(__self__, "Cube Viewer", path)
         __self__.CubeViewer.draw_image(Constants.MY_DATACUBE.densitymap)
         __self__.CubeViewer.create_connection()
 
@@ -4578,19 +4516,16 @@ class MainGUI:
             sample = __self__.SamplesWindow_TableLeft.get(ACTIVE)
         except:
             sample = event
-        if sample == "" or "Training Data" in sample: return
+        if sample == "" or "Training Data" in sample: 
+            messagebox.showinfo("Uh-oh!","It is not possible to remove the Training Data!")
+            return
 
         d = messagebox.askquestion("Attention!",
         "Are you sure you want to remove sample {} from the list? It will not delete the sample data or the compiled datacube.".format(sample))
         
         if d=="yes":
             try:
-                del Constants.USER_DATABASE[sample]["prefix"]
-                del Constants.USER_DATABASE[sample]["path"]
-                del Constants.USER_DATABASE[sample]["mcacount"]
-                del Constants.USER_DATABASE[sample]["indexing"]
-                del Constants.USER_DATABASE[sample]["extension"]
-                del Constants.USER_DATABASE[sample]
+                Database.remove_entry_from_database([sample])
                 __self__.list_samples()
             except KeyError:
                 messagebox.showinfo("Compiled cube","This sample is not in the database. The Datacube was added from \"XISMuS\\output\" folder. If you don't want to see this sample, remove it from the output folder manually.")
@@ -4601,14 +4536,15 @@ class MainGUI:
             del __self__.mca_indexing[sample]
             del __self__.mca_extension[sample]
 
+            #closes any plot referent to the sample
             try: __self__.summation.master.destroy()
             except: pass
             try: __self__.MPS.master.destroy()
             except: pass
             try: __self__.combined.master.destroy()
             except: pass
+            __self__.check_open_analyzers(sample) 
 
-            remove_entry_from_database(sample)
             sp.conditional_setup()
             load_cube()
             __self__.write_stat()
@@ -4902,16 +4838,25 @@ class MainGUI:
         if p == "yes":
             __self__.master.config(cursor="watch")
             Constants.MY_DATACUBE.wipe_maps()
-            __self__.check_open_analyzers() 
+            __self__.check_open_analyzers(Constants.MY_DATACUBE.name)
             __self__.write_stat()
             __self__.master.config(cursor="arrow")
         else: return 0
 
-    def check_open_analyzers(__self__):
+    def check_open_analyzers(__self__, *args):
+        """ closes all Image Analyzers open for names passed as argument 
+        INPUT: strings;
+        OUTPUT: 2D-list;
+        """
+        alive = []
+        killed = []
         for ImgAnal in __self__.ImageAnalyzers:
-            if Constants.MY_DATACUBE.name == ImgAnal.DATACUBE.name:
+            alive.append(ImgAnal.DATACUBE.name)
+            if ImgAnal.DATACUBE.name in args:
+                alive.remove(ImgAnal.DATACUBE.name)
+                killed.append(ImgAnal.DATACUBE.name)
                 ImgAnal.kill()
-                break
+        return alive, killed
 
     def pop_welcome(__self__):
         __self__.master.attributes("-alpha",1.0)
@@ -5395,6 +5340,7 @@ class MainGUI:
         return
        
     def reset_sample(__self__,e=""):
+
         def repack(__self__, sample):
             logger.warning("Cube {} and its output contents were erased!".format(sample))
             shutil.rmtree(sp.output_path)
@@ -5415,7 +5361,7 @@ class MainGUI:
             try: __self__.combined.master.destroy()
             except: pass
 
-            __self__.check_open_analyzers() 
+            __self__.check_open_analyzers(sample) 
             load_cube()
             __self__.write_stat()
             __self__.toggle_(toggle='off')
@@ -6546,6 +6492,7 @@ if __name__.endswith("__main__"):
     import Engine.SpecRead as sp
     import Engine.SpecReadPlus as spp
     from Engine import FastFit
+    from Engine import Database
     from Engine.ImgMath import LEVELS, correlate
     from Engine.ImgMath import write_image, stackimages
     from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
