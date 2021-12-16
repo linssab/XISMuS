@@ -1,7 +1,7 @@
 #################################################################
 #                                                               #
 #          Cube viewer utility                                  #
-#                        version: 2.4.3 - Oct - 2021            #
+#                        version: 2.5.0 - Nov - 2021            #
 # @author: Sergio Lins               sergio.lins@roma3.infn.it  #
 #################################################################
 import Constants
@@ -27,6 +27,7 @@ import os, gc
 import logging
 import random
 import numpy as np
+import copy
 logger = logging.getLogger("logfile")
 from .Utils import *
 #############
@@ -47,9 +48,10 @@ style.use('ggplot')
 
 
 class ImageWindow:
-    def __init__(__self__, parent, title):
+    def __init__(__self__, parent, title, path):
         icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
         __self__.parent = parent
+        __self__.Writer = Writer(path)
         __self__.master = Toplevel()
         __self__.master.iconbitmap(icon)
         __self__.master.attributes("-alpha",0.0)
@@ -64,7 +66,7 @@ class ImageWindow:
         __self__.upper = Canvas(__self__.master)
         __self__.upper.config(bg='white')
         __self__.upper.pack(side=TOP, expand=True, fill=BOTH)#, padx=(16,16),pady=(16,16))
-        text="Press Alt+Enter for full screen. To save the image, please use the Image Analyzer."
+        text=f"Datacube loaded: {Constants.MY_DATACUBE.name}"
         __self__.lower = Frame(__self__.master,height=35)
         __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
         Label(__self__.lower, text=text).pack(padx=15, anchor=E, fill=BOTH, expand=1)
@@ -93,7 +95,7 @@ class ImageWindow:
         maximize_window(__self__)
 
     def draw_image(__self__,image=None):
-        __self__.image = image
+        __self__.image = copy.deepcopy(image)
         __self__.display = __self__.plot.imshow(image, vmin=0, cmap=Constants.COLORMAP)
         place_center(__self__.parent.master, __self__.master)
 
@@ -124,8 +126,10 @@ class Clicker:
         __self__.parent = parent
 
     def getclick(__self__,e=""):
-        __self__.x, __self__.y = round(e.xdata), round(e.ydata)
-        print("X, Y = ",__self__.x,__self__.y)
+        if e.xdata is not None and e.ydata is not None:
+            __self__.x, __self__.y = round(e.xdata), round(e.ydata)
+            print("X, Y = ",__self__.x,__self__.y)
+        else: return
         __self__.pop()
 
     def connect(__self__):
@@ -133,13 +137,23 @@ class Clicker:
                 "button_press_event",
                 __self__.getclick)
 
-    def disconnect(__self__):
-        __self__.mplcanvas.mpl_disconnect(__self__.connection)
+    def disconnect(__self__,connections=None):
+        __self__.canvas.mpl_disconnect(__self__.connection)
+
+    def on_scroll(__self__,e=""):
+        if e.delta > 0:
+            __self__.en.set(__self__.en.get()+1)
+        else:
+            __self__.en.set(__self__.en.get()-1)
+        __self__.win.update_idletasks()
+        return
 
     def pop(__self__):
         __self__.win = Toplevel(master = __self__.parent.master)
         __self__.win.bind("<Escape>",__self__.kill_popup)
         __self__.win.bind("<FocusOut>",__self__.kill_popup)
+        __self__.win.bind("<MouseWheel>",__self__.on_scroll)
+        __self__.parent.master.bind("<MouseWheel>",__self__.on_scroll)
         __self__.win.withdraw()
         __self__.win.resizable(False,False)
         __self__.win.overrideredirect(True)
@@ -178,13 +192,16 @@ class Clicker:
     def kill_popup(__self__,e=""):
         try:
             if __self__.win.focus_get().cget("text") == "Ok":
-                print("Ok!")
                 __self__.dummy()
                 return
             else:
+                __self__.parent.master.unbind("<MouseWheel>")
+                __self__.win.unbind("<MouseWheel>")
                 __self__.win.destroy()
                 del __self__.win
         except:
+            __self__.parent.master.unbind("<MouseWheel>")
+            __self__.win.unbind("<MouseWheel>")
             __self__.win.destroy()
             del __self__.win
 
@@ -192,18 +209,24 @@ class Clicker:
         value = __self__.en.get()
         row = int(__self__.y)
         __self__.parent.image[row,:] = np.roll(__self__.parent.image[row,:], value, 0)
+        __self__.parent.Writer.put(row, value)
         __self__.parent.refresh()
+        __self__.parent.master.unbind("<MouseWheel>")
+        __self__.win.unbind("<MouseWheel>")
         __self__.win.destroy()
         del __self__.win
-        print("Moo")
 
 
 class Writer:
     def __init__(__self__,path):
-        __self__.file = open(path,"w")
+        __self__.path = os.path.join(path,"cubeviewer.txt")
+        f = open(__self__.path,"w+")
+        f.truncate(0)
+        f.write("LINE --- PIXELS")
+        f.close()
     
-    def write(__self__,row,value):
-        __self__.file.write(f"{row}\t{value}\n")
+    def put(__self__,row,value):
+        f = open(__self__.path,"a")
+        f.write("\n{0}\t{1}".format(row,value))
+        f.close()
 
-    def close(__self__):
-        __self__.file.close()
