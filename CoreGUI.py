@@ -3786,7 +3786,7 @@ class MainGUI:
         __self__.Toolbox.add_separator()
         __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
         __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
-        #__self__.Extra.add_command(label="Cube Viewer . . .", command=__self__.cube_viewer)
+        __self__.Extra.add_command(label="Cube Viewer . . .", command=__self__.cube_viewer)
         __self__.master.config(menu=__self__.MenuBar)
         
         #####
@@ -4066,7 +4066,7 @@ class MainGUI:
         path = sp.__PERSONAL__
         __self__.CubeViewer = ImageWindow(__self__, "Cube Viewer", path)
         __self__.CubeViewer.draw_image(Constants.MY_DATACUBE.densitymap)
-        __self__.CubeViewer.create_connection()
+        __self__.CubeViewer.create_connection(Constants.MY_DATACUBE)
 
     def call_compilecube(__self__):
         """ Tries to create output folder (name is Constants.CONFIG['directory'])
@@ -5037,6 +5037,7 @@ class MainGUI:
             __self__.ConfigDiag.master.destroy()
         except: pass
         Constants.MY_DATACUBE = None
+        sp.conditional_setup()
         load_cube()
         __self__.write_stat()
         __self__.draw_map()
@@ -5044,7 +5045,6 @@ class MainGUI:
         __self__.SampleVar.set("Sample on memory: None")
         try: 
             if __self__.SamplesWindow.state() == "normal": 
-                __self__.SamplesWindow.deiconify()
                 __self__.SamplesWindow_TableLeft.focus_set()
         except: pass
         
