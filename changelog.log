@@ -4,3 +4,4 @@ New in Version v2.5.0
 - Addressed issue where old version cubes could not be loaded into Mosaic
 - Fixed spectra reading pool error handling
 - Improved database reading/writing and fixed other db issues
+- Database now uses *.json files
