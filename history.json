@@ -16,11 +16,37 @@
 {
 	"version": "v2.4.2",
 	"changelog": [
-		"- Introduced "element viewer" to Mosaic",
+		"- Introduced 'element viewer' to Mosaic",
 		"- It is not longer possible to load independent elemental maps in Mosaic (replaced by element viewer)",
 		"- Bug fixes in Mosaic",
 		"- Bug fixes in Image Analyzer",
-		"- Datacubes with underscore in their name were breaking Mosaic (fixed)",
+		"- Datacubes with underscore in their name were breaking Mosaic (fixed)"
 	]
 
-}]
+},
+
+{
+	"version": "v2.4.0",
+	"changelog": [
+		"- Added support to EDF file batches",
+		"- Fixed broken *.h5 loader and related issues",
+		"- Corrected default SNIPBG parameters",
+		"- ImageAnalyzer fitting was forcing semilog plot scale (fixed)",
+		"- Unexpected auto_wizard crash when finding elements (fixed)",
+		"- User snipbg parameters are override by defaults (fixed)",
+		"- Mosaic freezing when calculating merge dataset MPS (fixed)"
+	]
+
+},
+
+{
+	"version": "v2.3.1",
+	"changelog": [
+		"- Added 'flip' option to Mosaic panel",
+		"- Different datacube types could be merged (fixed)",
+		"- Set ROI spectra shown was being picked with reverse Y index when a map other than the sum was displayed (fixed)",
+		"- Mosaic window impossible to close when opening second mosaic through the main panel (fixed)",
+		"- Small datacubes (<400 spectra) and Single core auto_wizard were crashing with bgstrip option None (fixed)"
+	]
+}
+]
