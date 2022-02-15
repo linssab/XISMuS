@@ -48,5 +48,149 @@
 		"- Mosaic window impossible to close when opening second mosaic through the main panel (fixed)",
 		"- Small datacubes (<400 spectra) and Single core auto_wizard were crashing with bgstrip option None (fixed)"
 	]
-}
-]
+},
+
+{
+	"version": "v2.3.0",
+	"changelog": [
+		"- Improved memory managed",
+		"- Auto-wizard data pre-treatment speed significantly improved",
+		"- New Index Navigator panel available from within Image Analyzer",
+		"- Support to *.CSV FT-IR maps datasets [experimental]",
+		"- Clearing maps and resetting samples with an Image Analyzer open would cause misbehavior (fixed)",
+		"- Large datasets (900k+ spectra) were causing the program to crash when using auto_wizard (fixed)"
+	]
+},
+
+{
+	"version": "v2.2.1",
+	"changelog": [
+		"- Chunks splitting with auto_wizard improved",
+		"- Automatic update tool added",
+		"- Added missing scrollbars to Mosaic GUI",
+		"- n-dead pixels appears when using n-cores with auto_wizard (fixed)"
+	]
+},
+
+{
+	"version": "v2.2.0",
+	"changelog": [
+		"- ROI spectrum fitting added to Image Analyzer",
+		"- Performance improvements for auto_wizard",
+		"- Sample re-calibration is now possible via the Re-Configuration Panel",
+		"- Plot windows look better now",
+		"- Pre-v1.3 datacubes unable to use auto_wizard (fixed)",
+		"- AdvCalib sometimes would pick an out-of-bounds mca (fixed)",
+		"- Attempting to save a datacube while another one was loaded could cause the cube to save in the wrong path (fixed)",
+		"- Replacing images in cube when a different cube was loaded replaces the image in the last loaded cube instead (fixed)",
+		"- Setting ROI in a masked image would cause ROI to pick wrong spectra (fixed)"
+	]
+},
+
+{
+	"version": "v2.1.0",
+	"changelog": [
+		"- Masking option added to correlation plots",
+		"- Overall performance improvements",
+		"- Correlations are made for 0-255 images instead of raw (fixed)",
+		"- Correlations accounts smooth filter (fixed)",
+		"- Sorting ignores case (fixed)"
+	]
+},
+
+{
+	"version": "v2.0.0",
+	"changelog": [
+		"- Datacubes from older versions will be deprectaed in the next version!!",
+		"- GUI overhaul",
+		"- Mosaic canvas improvement and bug fixes",
+		"- Advanced calibration option now available when packing new data",
+		"- Fixed the display of all images, now with the corrected contrast",
+		"- Significant performance improvements to image filtering",
+		"- Datacubes can now be exported as H5 files",
+		"- Samples database is incorporated in the main panel",
+		"- Main panel now supports resizing and fullscreen mode"
+	]
+},
+
+{
+	"version": "v1.3.2",
+	"changelog": [
+		"- Performance improvements in auto_wizard",
+		"- Mosaic now displays datacubes with their proper brightnesses",
+		"- Included option to load *.mosaic files from Toolbox menu",
+		"- Several bug fixes and improvements to Mosaic engine",
+		"- Fixed image correlation (smooth filtering is now considered)",
+		"- Maps are now normalized when exporting as 'merged'"
+	]
+},
+
+{
+	"version": "v1.3.1",
+	"changelog": [
+		"- Added support to "*.h5" files",
+		"- Image Analyzer now loads the densemap if no elemental maps are available",
+		"- Bug fixes"
+	]
+},
+
+{
+	"version": "v1.3.0",
+	"changelog": [
+		"- Performance improvements",
+		"- Fixed Fano and Noise calculation when compiling a datacube",
+		"- Fixed issue when replacing element maps through sum/subtraction",
+		"- Scaling method available for indiviual images (Only for new version datacubes)",
+		"- Scaling matrix is now applied directly on images",
+		"- Stability improvements",
+		"- Included a new scaling method",
+		"- New manual histogram manipulation tool",
+		"- Mosaics are now saved in two files. Older versions are compatible"
+	]
+},
+
+{
+	"version": "v1.2.1",
+	"changelog": [
+		"- Performance improvements",
+		"- Fixed Fano and Noise calculation when compiling a datacube"
+	]
+},
+
+{
+	"version": "v1.2.0",
+	"changelog": [
+		"- Bug fixes",
+		"- Stability improvements",
+		"- Added Add/Subtract images to main panel",
+		"- Added ROI spectrum export to ROI plots"
+	]
+},
+
+{
+	"version": "v1.1.1",
+	"changelog": [
+		"- Bug fixes",
+		"- Fixed issue with auto wizard when fitting fails",
+		"- Fixed issue with simple and auto roi tolerance factors"
+	]
+},
+
+{
+	"version": "v1.1.0",
+	"changelog": [
+		"- Fixed Spectrum name converter when inputting dimension",
+		"- Performance improvements in datacube packing",
+		"- Performance improvements in multiprocessing",
+		"- Changed right-click export mode now supports different color maps",
+		"- Improved plot style",
+		"- Significant improvements in element finding and Fano/Noise fitting",
+		"- Fixed map merge functionality",
+		"- Added 'Wipe Maps' option under ListSamples dropdown menu",
+		"- Implemented iterative database loading system",
+		"- Implemented Fitting engine as 'auto_wizard' peakmethod",
+		"- Added magnification icon to sample image on main panel",
+		"- Fixed minor bugs to simple- and auto-roi FWHM criteria",
+		"- Added peakmethod setup options to Settings menu"
+	]
+}]
