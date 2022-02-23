@@ -1,15 +1,43 @@
-#################################################################
-#                                                               #
-#          ELEMENT MAP GENERATOR                                #
-#                        version: 2.0.0 - Feb - 2021            #
-# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#################################################################
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 
 #############
 # Utilities #
 #############
 import logging
-logger = logging.getLogger("logfile")
 import sys, os
 import numpy as np
 import pickle
@@ -18,7 +46,8 @@ import pickle
 #################
 # Local imports #
 #################
-logger.info("In Mapping: Importing local modules...")
+import Constants
+Constants.LOGGER.info("In Mapping: Importing local modules...")
 import Elements
 import Constants
 from . import SpecMath
@@ -43,6 +72,9 @@ def select_lines(element,ratio):
     for the alpha and beta energy macros """
 
     element_idx = Elements.ElementList.index(element)
+    print(element_idx)
+    print(len(Elements.Energies))
+    print(len(Elements.kbEnergies))
     kaenergy = Elements.Energies[element_idx]*1000
     kbenergy = Elements.kbEnergies[element_idx]*1000
     
@@ -100,11 +132,11 @@ def grab_simple_roi_image(cube,lines,custom_energy=False):
         if cube.config["ratio"] == True:
             kb_idx = SpecMath.setROI(lines[1],cube.energyaxis,cube.mps,cube.config)
             if kb_idx[3] == False and ka_idx[3] == False:
-                logger.info(
+                Constants.LOGGER.info(
                         "No alpha {} nor beta {} lines found. Skipping...".format(
                             lines[0],lines[1]))
             elif kb_idx[3] == False: 
-                logger.warning(
+                Constants.LOGGER.warning(
                         "No beta line {} detected. Continuing with alpha only.".format(
                             lines[1]))
         else:
@@ -170,9 +202,9 @@ def getpeakmap(element_list,datacube):
     KaElementsEnergy = Elements.Energies
     KbElementsEnergy = Elements.kbEnergies
     
-    logger.info("Started energy axis calibration")
+    Constants.LOGGER.info("Started energy axis calibration")
     energyaxis = datacube.energyaxis
-    logger.info("Finished energy axis calibration")
+    Constants.LOGGER.info("Finished energy axis calibration")
     current_peak_factor = 0
     max_peak_factor = 0
     ymax_spec = None
@@ -181,7 +213,7 @@ def getpeakmap(element_list,datacube):
 
 
     if element_list[0] in Elements.ElementList:
-        logger.info("Started acquisition of {0} map(s)".format(element_list))
+        Constants.LOGGER.info("Started acquisition of {0} map(s)".format(element_list))
         
         currentspectra = Constants.FIRSTFILE_ABSPATH
         debug = False 
@@ -215,7 +247,7 @@ def getpeakmap(element_list,datacube):
             kaindex[Element] = Elements.ElementList.index(element_list[Element])
             kaenergy[Element] = KaElementsEnergy[kaindex[Element]]*1000
         
-            logger.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
+            Constants.LOGGER.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                 .format(kaenergy[Element],element_list[Element]))
         
             if ratio == True:
@@ -232,10 +264,10 @@ def getpeakmap(element_list,datacube):
                 kbindex[Element] = Elements.ElementList.index(element_list[Element])
                 kbenergy[Element] = Elements.kbEnergies[kbindex[Element]]*1000
                 r_file.close() 
-                logger.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
+                Constants.LOGGER.warning("Energy {0:.0f} eV for element {1} being used as lookup!"\
                         .format(kbenergy[Element],element_list[Element]))
            
-        logger.info("Starting iteration over spectra...\n")
+        Constants.LOGGER.info("Starting iteration over spectra...\n")
         
         # starts the loading bar
         progressbar = ReadProgress(datacube.img_size,0) 
@@ -273,9 +305,9 @@ def getpeakmap(element_list,datacube):
             #  ITERATE OVER LIST OF ELEMENTS  #
             ###################################
             
-            logger.debug("----- current x = {0} / current y = {1} -----".format(
+            Constants.LOGGER.debug("----- current x = {0} / current y = {1} -----".format(
                 currentx,currenty))
-            if debug == True: logger.info("Specfile being processed is: {0}\n".format(spec))
+            if debug == True: Constants.LOGGER.info("Specfile being processed is: {0}\n".format(spec))
  
             for Element in range(len(element_list)):
             
@@ -339,7 +371,7 @@ def getpeakmap(element_list,datacube):
                         r_file = open(ratiofiles[Element],'a')
                         if debug == True: 
                             r_file.write("%d\t%d\t%d\t%d\t%s\n" % (row, column, ka, kb, spec))
-                            logger.info(
+                            Constants.LOGGER.info(
                                     "File {0} has net peaks of {1} and {2} for element {3}\n"\
                                     .format(spec,ka,kb,element_list[Element]))
                         else:
@@ -349,7 +381,7 @@ def getpeakmap(element_list,datacube):
                             r_file.write(
                                     "%d\t%d\t%d\t%d\t%f\n" % (row, column, ka, kb, (ka_kb)))
                     except:
-                        logger.warning("ka and kb not calculated for some unknown reason.\
+                        Constants.LOGGER.warning("ka and kb not calculated for some unknown reason.\
                     Check Config.cfg for the correct spelling of peakmethod option!\
                     ka={0},kb={1}".format(ka,kb))
 
@@ -371,11 +403,11 @@ def getpeakmap(element_list,datacube):
         #  OVER THE BATCH OF SPECTRA   #
         ################################
         
-        logger.info("Finished iteration process for element(s) {0}".format(element_list))
+        Constants.LOGGER.info("Finished iteration process for element(s) {0}".format(element_list))
         
         
         timestamp = time.time() - partialtimer
-        logger.info("Execution took %s seconds" % (timestamp))
+        Constants.LOGGER.info("Execution took %s seconds" % (timestamp))
         
         timestamps = open(os.path.join(SpecRead.__BIN__,"timestamps.txt"),"a")
         timestamps.write("\n{5}\n{0} bgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n".format(Element,
@@ -386,10 +418,10 @@ def getpeakmap(element_list,datacube):
             time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
             element_list))
        
-        logger.info("Finished map acquisition!")
+        Constants.LOGGER.info("Finished map acquisition!")
     
     else:
-        logger.warning("{0} not an element!".format(element_list))
+        Constants.LOGGER.warning("{0} not an element!".format(element_list))
         raise ValueError("{0} not an element!".format(element_list))
     
     if peakmethod == 'auto_roi': 
@@ -408,7 +440,7 @@ def getdensitymap(datacube):
     #####################################
 
     timer = time.time()
-    logger.info("Started acquisition of density map")
+    Constants.LOGGER.info("Started acquisition of density map")
     
     density_map = np.zeros([datacube.dimension[0],datacube.dimension[1]],dtype="float32")
     for x in range(datacube.dimension[0]):
@@ -418,8 +450,8 @@ def getdensitymap(datacube):
                 background = datacube.background[x][y] 
             else: background = np.zeros(spec.shape)
             density_map[x][y] = abs(spec.sum()-background.sum())
-    logger.info("Finished fetching density map!")
-    logger.info("Execution took %s seconds" % (time.time() - timer))
+    Constants.LOGGER.info("Finished fetching density map!")
+    Constants.LOGGER.info("Execution took %s seconds" % (time.time() - timer))
     return density_map
 
 if __name__=="__main__":

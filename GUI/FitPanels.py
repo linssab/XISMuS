@@ -1,44 +1,59 @@
-#################################################################
-#                                                               #
-#          Fit Panels                                           #
-#                        version: 2.4.0 - May - 2021            #
-# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#################################################################
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 import Constants
 # tcl/Tk imports
-try:
-    from tkinter import *
-    from tkinter import ttk
-    from tkinter import messagebox
-    from tkinter import filedialog
-    from tkinter import font as tkFont
-except:
-    from Tkinter import *
-    from Tkinter import ttk
-    from Tkinter import messagebox
-    from Tkinter import filedialog
-    import tkFont
+from tkinter import *
+from tkinter import ttk
+from tkinter import messagebox
 
 #############
 # utilities #
 #############
 import os, gc
-import logging
 import random
 import numpy as np
-logger = logging.getLogger("logfile")
 #############
 
 ######################
 # matplotlib imports #
 ######################
 import matplotlib
-import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-from matplotlib.patches import Rectangle
-import matplotlib.patches as mpatches
 from matplotlib import style
 style.use('ggplot')
 ######################
@@ -46,12 +61,11 @@ style.use('ggplot')
 ####################
 # internal imports #
 ####################
-logger.info("In FitPanels: Importing local modules...")
-from Engine import SpecRead
+Constants.LOGGER.info("In FitPanels: Importing local modules...")
 from Engine import SpecMath
 from .ProgressBar import BusyManager
 from Graphics import *
-from .Utils import *
+from Utilities import *
 from Elements import *
 ####################
 global SELECTED_ELEMENT

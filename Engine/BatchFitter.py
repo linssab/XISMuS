@@ -1,16 +1,44 @@
-#################################################################
-#                                                               #
-#          BATCH FITTER                                         #
-#                        version: 2.4.0 - May - 2021            #
-# @authors: Boris Bremmers & Sergio Lins                        #
-#################################################################
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 
 #############
 # Utilities #
 #############
 import logging
 import gc
-logger = logging.getLogger("logfile")
 import sys, os, multiprocessing, copy, pickle
 from multiprocessing import freeze_support
 lock = multiprocessing.Lock()
@@ -24,8 +52,8 @@ import threading
 #################
 # Local imports #
 #################
-logger.info("In BatchFitter: Importing local modules...")
 import Constants
+Constants.LOGGER.info("In BatchFitter: Importing local modules...")
 import Elements
 from . import SpecRead
 from . import SpecMath 
@@ -45,7 +73,7 @@ try:
     import xraylib as xlib
     xlib.SetErrorMessages(0)
 except: 
-    logger.warning("xraylib module not found!")
+    Constants.LOGGER.warning("xraylib module not found!")
     print("FAILED TO LOAD XRAYLIB MODULE\nCannot run module BatchFitter.py")
 ####################
 
@@ -70,7 +98,7 @@ def prepare_data(FitClass):
         bite_size = int(FitClass.counts.shape[0])
         leftovers = 0
         print("Only one core")
-        logger.warning("Sample is too small, running with one core only...")
+        Constants.LOGGER.warning("Sample is too small, running with one core only...")
     else:
         bite_size = 0
         while bite_size < 400:
@@ -746,13 +774,19 @@ def findpeak(
     # Unpacking xlib from four different macros in tuple until Bi #
     ###############################################################
 
-    E_lib = np.asarray(
-            [(
-                xlib.LineEnergy(i, xlib.KA1_LINE)*1000,
-                xlib.LineEnergy(i, xlib.KB_LINE)*1000,
-                xlib.LineEnergy(i, xlib.LA1_LINE)*1000,
-                xlib.LineEnergy(i, xlib.LB_LINE)*1000) for i in range(5,84)
-                ]) 
+    E_lib = []
+    for i in range(5,84):
+        try: a = xlib.LineEnergy(i, xlib.KA1_LINE)*1000
+        except ValueError: a = 0 
+        try: b = xlib.LineEnergy(i, xlib.KB_LINE)*1000
+        except ValueError: b = 0 
+        try: c = xlib.LineEnergy(i, xlib.LA1_LINE)*1000
+        except ValueError: c = 0 
+        try: d = xlib.LineEnergy(i, xlib.LB_LINE)*1000
+        except ValueError: d = 0
+        E_lib.append( (a,b,c,d) )
+
+    E_lib = np.asarray( E_lib, dtype=np.float32 ) 
 
     ###############################################################
     
@@ -1281,7 +1315,7 @@ def build_images(
         Constants.MY_DATACUBE.matrix.shape[1],
         alfa_beta,len(element_list)],dtype="float32")
 
-    logger.info("\n"+"-"*5+"Starting image builder"+"-"*5)
+    Constants.LOGGER.info("\n"+"-"*5+"Starting image builder"+"-"*5)
     x,y,iteration,frmcount = 0,0,0,0
     start_x, start_y = 0,0
     bar.updatebar(0)
@@ -1436,7 +1470,7 @@ class MultiFit():
         counts, continuum, block = [],[],[]
         if __self__.cores == 1:
             print("Only one core")
-            logger.warning("Sample is too small, running with one core only...")
+            Constants.LOGGER.warning("Sample is too small, running with one core only...")
             __self__.bite_size = __self__.counts.shape[0]
             __self__.leftovers = 0
             if Constants.MY_DATACUBE.config["bgstrip"] != "None":
@@ -1564,8 +1598,8 @@ class MultiFit():
                 idx_a = np.where(__self__.energies==find_nearest(__self__.energies,element_a))
                 idx_b = np.where(__self__.energies==find_nearest(__self__.energies,element_b))
                 el = [[el, idx_a[0][0], idx_b[0][0]]]
-                logger.info("{} alpha, Theoretical: {}, Matched: {}".format(el,element_a,__self__.energies[idx_a]))
-                logger.info("{} beta, Theoretical: {}, Matched: {}".format(el,element_b,__self__.energies[idx_b]))
+                Constants.LOGGER.info("{} alpha, Theoretical: {}, Matched: {}".format(el,element_a,__self__.energies[idx_a]))
+                Constants.LOGGER.info("{} beta, Theoretical: {}, Matched: {}".format(el,element_b,__self__.energies[idx_b]))
                 #############################################
 
                 #####################################################################
@@ -1580,8 +1614,8 @@ class MultiFit():
                         element_b,
                         __self__.energies/1000,__self__.SUM,{"gain":__self__.slope/1000})
 
-                logger.debug("setROI output: {}".format(elka_peak))
-                logger.debug("setROI output: {}".format(elkb_peak))
+                Constants.LOGGER.debug("setROI output: {}".format(elka_peak))
+                Constants.LOGGER.debug("setROI output: {}".format(elkb_peak))
 
                 el = [[el,int((elka_peak[0]+elka_peak[1])/2),
                         int((elkb_peak[0]+elkb_peak[1])/2)]]
@@ -1589,10 +1623,10 @@ class MultiFit():
                 #####################################################################
 
                 try: peaks, matches = add_elements(peaks,matches,el)
-                except: logger.warning("Could not add element {} to chunk".format(el))
+                except: Constants.LOGGER.warning("Could not add element {} to chunk".format(el))
 
         Constants.MATCHES = peaks, matches
-        logger.info("Elements being fitted: {}".format(matches))
+        Constants.LOGGER.info("Elements being fitted: {}".format(matches))
         return peaks, matches
 
     def check_progress(__self__):

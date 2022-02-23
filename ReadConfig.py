@@ -270,8 +270,6 @@ def set_settings(inifile):
     if PlotMode == "Logarithmic": Constants.PLOTSCALE = "-semilogy"
     else: Constants.PLOTSCALE = None
 
-    output = Constants.list_all()
-
     return
 
 if __name__ == "__main__":

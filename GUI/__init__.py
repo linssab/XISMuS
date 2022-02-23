@@ -2,8 +2,6 @@ import logging
 logger = logging.getLogger("logfile")
 logger.info("Booting GUI...")
 
-logger.info("Importing Utilities...")
-from .Utils import *
 logger.info("Importing ConfigurationParser...")
 from .ConfigurationParser import *
 logger.info("Importing AdvCalibration...")

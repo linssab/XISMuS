@@ -1,22 +1,51 @@
-#################################################################
-#                                                               #
-#          Advanced fit                                         #
-#                        version: 2.4.0 - May - 2021            #
-# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#################################################################
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 
 import logging
-logger = logging.getLogger("logfile")
-logger.info("In AdvFit: Importing Constants...")
 import Constants
-logger.info("In AdvFit: Importing Elements...")
+Constants.LOGGER.info("In AdvFit: Importing Constants...")
+import Constants
+Constants.LOGGER.info("In AdvFit: Importing Elements...")
 from Elements import *
 try: 
     import xraylib as xlib
-    logger.info("In AdvFit: Imported xraylib!")
-except: logger.info("In AdvFit: Failed to import xraylib!")
+    Constants.LOGGER.info("In AdvFit: Imported xraylib!")
+except: Constants.LOGGER.info("In AdvFit: Failed to import xraylib!")
 import numpy as np
-logger.info("In AdvFit: Importing SciPy...")
+Constants.LOGGER.info("In AdvFit: Importing SciPy...")
 from scipy.optimize import least_squares
 from scipy.optimize import curve_fit
 
@@ -57,6 +86,7 @@ def work_elements(e_axis, pool, gain, global_spec, split=0):
     for i in range(len(element_pool)):
         element[element_pool[i]] = {}
         line_names = pool["elements"][element_pool[i]]
+
         pool_lines = {key:ALL_LINES[xlib.SymbolToAtomicNumber(element_pool[i])][key] for key in line_names}
         # NOTE: pool_lines[line] has [0] energy in KeV and [1] radiative rate
 

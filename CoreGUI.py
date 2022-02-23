@@ -1,10 +1,38 @@
-#################################################################
-#                                                               #
-#          Graphical Interface and Core file                    #
-#                        version: 2.5.0 - Dec - 2021            #
-# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#################################################################
-global root
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 
 def update_version():
     import io
@@ -35,7 +63,7 @@ def update_version():
                 Percent = int((Size / Length)*100)
                 try: bar.updatebar(Percent)
                 except: 
-                    logger.info("Patch download cancelled.")
+                    Constants.LOGGER.info("Patch download cancelled.")
                     del r
                     del BufferAll
                     return 0
@@ -55,16 +83,16 @@ def update_version():
     def request_version():
         global latest
         try:
-            logger.info("Requesting latest version...")
+            Constants.LOGGER.info("Requesting latest version...")
             package = request.Request("https://xismus.sourceforge.io/__version__.txt")
             package.add_header("Cache-Control","max-age=0")
             version = request.urlopen(package).read().decode("utf-8").replace("v","")
             latest = version
-            logger.info(f"Latest version available: {latest}")
+            Constants.LOGGER.info(f"Latest version available: {latest}")
             return 0
         except Exception as exception:
-            logger.info("Failed to connect!")
-            logger.info(f"Exception: {exception}")
+            Constants.LOGGER.info("Failed to connect!")
+            Constants.LOGGER.info(f"Exception: {exception}")
             latest = "0.0.0"
             return 1
 
@@ -74,9 +102,9 @@ def update_version():
             question = messagebox.askyesno("New version available!",
     "There is a new version of XISMuS available. Would you like to update the software?")
             if question == True:
-                logger.info("Connecting to servers...")
+                Constants.LOGGER.info("Connecting to servers...")
                 if os.path.exists(destination):
-                    logger.info("Patch file already exists!")
+                    Constants.LOGGER.info("Patch file already exists!")
                     try: os.remove(destination)
                     except OSError: 
                         messagebox.showerror("Failed to get patch!",
@@ -86,7 +114,7 @@ def update_version():
                     p = download_file(destination,
                             "https://xismus.sourceforge.io/latest.exe") 
                     if p:
-                        logger.info("Downloaded patch!")
+                        Constants.LOGGER.info("Downloaded patch!")
                         return 1
                     else: return 0
                 except OSError:
@@ -95,7 +123,7 @@ def update_version():
                     return 0
         else: 
             return 0
-    logger.info("Attempting to connect to sourceforge servers...")
+    Constants.LOGGER.info("Attempting to connect to sourceforge servers...")
     t0 = threading.Thread(target=request_version)
     t0.daemon = True
     t0.start()
@@ -110,26 +138,25 @@ def update_version():
         except:
             messagebox.showerror("Update error!","Failed to launch update.exe! Try updating manually.")
             return
-        root.root_quit(force=1)
+        Constants.ROOT.Constants.ROOT_quit(force=1)
 
 def start_up():
-    global root
     """ Initializes sp global variables and paths """
 
-    splash.update("Configuring environment...")
+    splash.update( "Configuring environment..." )
     sp.conditional_setup()
-    logger.info("Setting up...")
+    Constants.LOGGER.info( "Setting up..." )
     try: load_cube()
     except: pass
-    logger.info("Done.")
+    Constants.LOGGER.info( "Done." )
     Constants.FIND_ELEMENT_LIST = []
 
     database = Samples()
-    database.list_all(splash)
+    database.list_all( splash )
     splash.kill()
-    root = MainGUI()
-    root.boot(database)
-    root.busy = BusyManager(root.master)
+    Constants.ROOT = MainGUI()
+    Constants.ROOT.boot( database )
+    Constants.ROOT.busy = BusyManager( Constants.ROOT.master )
     update_version()
 
 def open_log():
@@ -142,16 +169,16 @@ def open_log():
 
     # tries to create logfile on user folder
     try:
-        logger = logging.getLogger("logfile")
-        logger.setLevel(Constants.LOGLEVEL)
+        Constants.LOGGER = logging.getLogger("logfile")
+        Constants.LOGGER.setLevel(Constants.LOGLEVEL)
         lHandler = logging.FileHandler(os.path.join(__PERSONAL__,
             "logfile.log"))
         formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
         lHandler.setFormatter(formatter)
-        logger.addHandler(lHandler)
-        logger.info('*'* 10 + ' LOG START! ' + '*'* 10)
+        Constants.LOGGER.addHandler(lHandler)
+        Constants.LOGGER.info('*'* 10 + ' LOG START! ' + '*'* 10)
         log_start = "{}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-        logger.info(log_start)
+        Constants.LOGGER.info(log_start)
     except IOError as exception:
         p = Tk()
         p.iconify()
@@ -162,32 +189,15 @@ def open_log():
     return 0
 
 def wipe_list():
-    global root
     """ Self-explanatory. Clears the global variable and
     destroys the Periodic Table Tk.Toplevel window """
     Constants.FIND_ELEMENT_LIST = []
     refresh_plots() 
-    try: root.find_elements_diag.master.destroy()
+    try: Constants.ROOT.find_elements_diag.master.destroy()
     except AttributeError: pass #for auto_wizard method
 
 def openURL(url):
     webbrowser.open(url)
-
-def convert_bytes(num):
-    """ Obtained from https://stackoverflow.com/questions/210408 """
-
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
-        if num < 1024.0:
-            return "%3.1f %s" % (num, x)
-        num /= 1024.0
-        
-def restore_bytes(num,unit):
-    """ Reverse operation of convert_bytes function """
-
-    units = ['KB', 'MB', 'GB', 'TB']
-    for x in units:
-        if unit == x:
-            return num * (1024**(units.index(x)+1))
 
 def call_help():
     """ Spawns help dialogue """
@@ -202,14 +212,14 @@ def verify_calibration_parameters(caller, anchors):
     if anchors == []:
         messagebox.showerror("Calibration Error",
                 "No acceptable calibration parameters passed!")
-        try: __self__.caller.master.focus_set()
+        try: caller.master.focus_set()
         except: pass
         raise ValueError("No acceptable calibration parameters passed!")
         return 1
     elif len(anchors) <= 1:
         messagebox.showerror("Calibration Error",
                 "Need at least two anchors!")
-        try: __self__.caller.master.focus_set()
+        try: caller.master.focus_set()
         except: pass
         raise ValueError("Calibration need at least two anchors!")
         return 1
@@ -225,10 +235,9 @@ def verify_calibration_parameters(caller, anchors):
     return 0
 
 def remove_continuum_data():
-    global root
-    value = root.SamplesWindow_TableLeft.get(ACTIVE)
+    value = Constants.ROOT.SamplesWindow_TableLeft.get(ACTIVE)
     if value != Constants.MY_DATACUBE.name:
-        root.sample_select(force=value)
+        Constants.ROOT.sample_select(force=value)
     if Constants.MY_DATACUBE.matrix.shape != Constants.MY_DATACUBE.background.shape:
         messagebox.showerror("Error","No data to erase! Bgstrip mode already set to None.")
     else: 
@@ -239,15 +248,14 @@ def remove_continuum_data():
             Constants.MY_DATACUBE.config["bgstrip"] = "None"
             Constants.MY_DATACUBE.config["bg_settings"] = []
             Constants.MY_DATACUBE.save_cube()
-            root.write_stat()
+            Constants.ROOT.write_stat()
     return
 
 def upgrade_cube(cube):
     """ pre 1.3 cubes will remain without 'version' attribute. Other cubes will maintain the
     value, plus a string to identify they were updated """
 
-    global root
-    logger.warning("Obsolete cube loaded! Updating ...")
+    Constants.LOGGER.warning("Obsolete cube loaded! Updating ...")
     messagebox.showinfo("Update!","Obsolete cube loaded. We will update it to the newest version...")
     attributes = cube.__dict__.keys()
 
@@ -255,14 +263,14 @@ def upgrade_cube(cube):
     bar.update_text("Updating cube...")
     i=0
 
-    sp.setup_from_datacube(cube,root.samples)
+    sp.setup_from_datacube(cube,Constants.ROOT.samples)
     specbatch = Cube(["h5","upgrade"],Constants.MY_DATACUBE.config)
     specbatch.__dict__.pop("version")   #remove automatically assigned version
     for atr in attributes:
         bar.updatebar(i)
         if atr != "version":
             specbatch.__dict__[atr] = cube.__dict__[atr]
-            logger.info(f"Assigned {atr} to new cube...")
+            Constants.LOGGER.info(f"Assigned {atr} to new cube...")
             i+=1
         elif atr == "version":
             original_version = cube.version.split(" ")[0]
@@ -279,7 +287,6 @@ def upgrade_cube(cube):
     bar.destroybar()
 
 def load_cube():
-    global root
     """ Loads cube to memory (unpickle). Cube name is passed according to
     latest sp parameters. See setup conditions inside Engine.SpecRead module.
     Returns the datacube object """
@@ -297,16 +304,16 @@ def load_cube():
         else: temp_mem = 0
         if cube_size > ( available_memory + temp_mem ):
             #print("Cube",cube_size, "\nAvailable:",available_memory, "\nTemp:",temp_mem)
-            logger.warning(f"Cannot load cube {sp.cube_path}! Not enough RAM!")
+            Constants.LOGGER.warning(f"Cannot load cube {sp.cube_path}! Not enough RAM!")
             messagebox.showerror("Memory error!",f"No RAM available! Cube size: {convert_bytes(cube_size)}, Memory available: {convert_bytes(available_memory)}.")
-            root.busy.notbusy()
+            Constants.ROOT.busy.notbusy()
             return 1
         else: return 0
 
-    logger.debug("Trying to load cube file.")
-    logger.debug(sp.cube_path)
+    Constants.LOGGER.debug("Trying to load cube file.")
+    Constants.LOGGER.debug(sp.cube_path)
     if os.path.exists(sp.cube_path):
-        root.busy.busy()
+        Constants.ROOT.busy.busy()
         cube_file = open(sp.cube_path,'rb')
         if check_memory():
             raise MemoryError(f"Could not load datacube {sp.cube_path}")
@@ -328,9 +335,9 @@ def load_cube():
                 upgrade_cube(Constants.MY_DATACUBE)
         elif not hasattr(Constants.MY_DATACUBE,"update_info"): 
             upgrade_cube(Constants.MY_DATACUBE)
-        logger.debug("Loaded cube {} to memory.".format(cube_file))
+        Constants.LOGGER.debug("Loaded cube {} to memory.".format(cube_file))
         Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32") 
-        root.busy.notbusy()
+        Constants.ROOT.busy.notbusy()
     elif os.path.exists(os.path.join(sp.output_path,
         "{}.lz".format(Constants.DIRECTORY))):
         lz_file = open(sp.cube_path,'rb')
@@ -339,13 +346,12 @@ def load_cube():
         Constants.MY_DATACUBE = data
         lz_file.close()
     else:
-        logger.debug("No cube found.")
-        root.toggle_(toggle='Off') 
+        Constants.LOGGER.debug("No cube found.")
+        Constants.ROOT.toggle_(toggle='Off') 
         pass
     return Constants.MY_DATACUBE
 
 def refresh_plots(exclusive=""):
-    global root
     """refresh one plot window exclusively or all open windows"""
 
     if len(Constants.FIND_ELEMENT_LIST) > 0: 
@@ -356,24 +362,24 @@ def refresh_plots(exclusive=""):
     ##############################################################
     if exclusive == "mps":
         try:
-            root.MPS.draw_spec(
+            Constants.ROOT.MPS.draw_spec(
                 mode=['mps'],display_mode=Constants.PLOTSCALE,lines=lines)
-            root.MPS.update_idletasks()
+            Constants.ROOT.MPS.update_idletasks()
         except: pass
     elif exclusive == "summation":
         try: 
-            root.summation.draw_spec(
+            Constants.ROOT.summation.draw_spec(
                 mode=['summation'],display_mode=Constants.PLOTSCALE,lines=lines)
-            root.summation.update_idletasks()
+            Constants.ROOT.summation.update_idletasks()
         except: pass
     elif exclusive == "combined":
         try: 
-            root.combined.draw_spec(
+            Constants.ROOT.combined.draw_spec(
                 mode=['summation','mps'],display_mode=Constants.PLOTSCALE,lines=lines)
-            root.combined.update_idletasks()
+            Constants.ROOT.combined.update_idletasks()
         except: pass
     elif exclusive == "roi_sum":
-        for API in root.ImageAnalyzers: 
+        for API in Constants.ROOT.ImageAnalyzers: 
             try:
                 API.plot.draw_selective_sum(API.DATACUBE,
                         API.sum_spectrum,
@@ -386,21 +392,21 @@ def refresh_plots(exclusive=""):
 
     else:
         try:
-            root.MPS.draw_spec(
+            Constants.ROOT.MPS.draw_spec(
                 mode=['mps'],display_mode=Constants.PLOTSCALE,lines=lines)
-            root.MPS.update_idletasks()
+            Constants.ROOT.MPS.update_idletasks()
         except: pass
         try: 
-            root.summation.draw_spec(
+            Constants.ROOT.summation.draw_spec(
                 mode=['summation'],display_mode=Constants.PLOTSCALE,lines=lines)
-            root.summation.update_idletasks()
+            Constants.ROOT.summation.update_idletasks()
         except: pass
         try: 
-            root.combined.draw_spec(
+            Constants.ROOT.combined.draw_spec(
                 mode=['summation','mps'],display_mode=Constants.PLOTSCALE,lines=lines)
-            root.combined.update_idletasks()
+            Constants.ROOT.combined.update_idletasks()
         except: pass
-        for API in root.ImageAnalyzers:
+        for API in Constants.ROOT.ImageAnalyzers:
             try:
                 if hasattr(API,"plot"):
                     API.plot.draw_selective_sum(API.DATACUBE,
@@ -455,8 +461,8 @@ def _init_numpy_mkl():
 
 class About:
     """ Spawns author information """
-    def __init__(__self__,root):
-        __self__.master = Toplevel(master=root.master)
+    def __init__(__self__):
+        __self__.master = Toplevel(master=Constants.ROOT.master)
         __self__.master.title("About")
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
@@ -471,7 +477,7 @@ class About:
         __self__.Link = Label(__self__.winFrame, text="Contact via ResearchGate", fg="blue", cursor="hand2")
         __self__.Link.bind("<Button-1>", __self__.go_to_RS)
         __self__.Link.pack(side=LEFT)
-        place_center(root.master,__self__.master)
+        place_center(Constants.ROOT.master,__self__.master)
 
     def kill(__self__,e=""):
         __self__.master.destroy()
@@ -530,7 +536,7 @@ class CanvasSizeDialog:
     def kill(__self__,e=""):
         __self__.win.grab_release()
         __self__.win.destroy()
-        root.master.focus_set()
+        Constants.ROOT.master.focus_set()
         del __self__
 
     def spawn_mosaic(__self__,e=""):
@@ -545,7 +551,7 @@ class CanvasSizeDialog:
             messagebox.showerror("Ivalid dimension!",
                     "Can't create {}x{} canvas!".format(__self__.x.get(),__self__.y.get()))
             return
-        Mosaic_API(size, root)
+        Mosaic_API(size, Constants.ROOT)
 
 
 class Convert_File_Name:
@@ -708,7 +714,7 @@ class Convert_File_Name:
     def kill(__self__,e=""):
         __self__.files = []
         __self__.master.grab_release()
-        root.master.focus_set()
+        Constants.ROOT.master.focus_set()
         __self__.master.destroy()
 
 
@@ -900,120 +906,6 @@ class Welcome:
         __self__.master.destroy()
 
 
-class ExportDiag():
-    """ Creates a dialog to export ImageAnalyzer API images.
-    Target is the desired output image size. If enhance configuration is True,
-    image is interpolated """
-
-    def __init__(__self__, parent):
-        __self__.master = Toplevel(master = parent.master)
-        __self__.master.grab_set()
-        __self__.master.title("Export dialog")
-        __self__.parent = parent
-        __self__.master.withdraw()
-        __self__.master.resizable(False,False)
-        __self__.master.bind("<Escape>",__self__.kill)
-
-        __self__.build_widgets()
-
-    def build_widgets(__self__):
-        __self__.Frame = Frame(__self__.master, height=64, width=288)
-        __self__.Frame.grid(pady=32)
-        
-        icon1 = PhotoImage(data=ICO_EXPORT1)
-        icon2 = PhotoImage(data=ICO_EXPORT2)
-        icon3 = PhotoImage(data=ICO_EXPORT_MERGE)
-        
-        __self__.icon1 = icon1.subsample(1,1)
-        __self__.icon2 = icon2.subsample(1,1)
-        __self__.icon3 = icon3.subsample(1,1)
-
-        size_x, size_y = 64,64
-
-        __self__.Button1 = ttk.Button(
-                __self__.Frame, 
-                image=__self__.icon1, 
-                style="main.TButton",
-                command=lambda:__self__.export(tag=1), 
-                width=size_x)
-        __self__.Button2 = ttk.Button(
-                __self__.Frame, 
-                image=__self__.icon2, 
-                style="main.TButton",
-                command=lambda:__self__.export(tag=2), 
-                width=size_x)
-        __self__.Button3 = ttk.Button(
-                __self__.Frame, 
-                image=__self__.icon3, 
-                style="main.TButton",
-                command=__self__.merge, 
-                width=size_x)
-
-        __self__.Button1.grid(row=0,column=0,padx=32)
-        __self__.Button2.grid(row=0,column=1,padx=32)
-        __self__.Button3.grid(row=0,column=2,padx=32)
-        
-        __self__.master.update()
-
-        place_center(__self__.parent.master,__self__.master)
-        __self__.master.deiconify()
-        __self__.master.focus_set()
-        icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
-        __self__.master.iconbitmap(icon)
-
-    def export(__self__,tag=0):
-        enhance = __self__.parent.DATACUBE.config["enhance"]
-        try:
-            if tag == 1: 
-                f = filedialog.asksaveasfile(mode='w', 
-                        defaultextension=".png",
-                        filetypes=[("Portable Network Graphic", "*.png")],
-                        title="Save image 1 as...")
-                if f is None: 
-                    return
-                write_image(
-                        __self__.parent.newimage1,
-                        Constants.TARGET_RES,
-                        f.name,
-                        enhance=enhance)
-            elif tag == 2: 
-                f = filedialog.asksaveasfile(mode='w', 
-                        defaultextension=".png",
-                        filetypes=[("Portable Network Graphic", "*.png")],
-                        title="Save image 2 as...")
-                if f is None: 
-                    return
-                write_image(
-                        __self__.parent.newimage2,
-                        Constants.TARGET_RES,
-                        f.name,
-                        enhance=enhance)
-            else: pass
-        except PermissionError as exception: 
-            messagebox.showerror("Error!",exception.__class__.__name__)
-            return
-        __self__.parent.master.focus_set()
-        __self__.kill()
-
-    def merge(__self__):
-        enhance = __self__.parent.DATACUBE.config["enhance"]
-        stack = stackimages(__self__.parent.newimage1,__self__.parent.newimage2)
-        f = filedialog.asksaveasfile(mode='w', 
-                defaultextension=".png",
-                filetypes=[("Portable Network Graphic", "*.png")],
-                title="Save merge as...")
-        if f is None: 
-            return
-        write_image(stack,Constants.TARGET_RES,f.name,enhance=enhance,merge=True)
-        __self__.kill()
-
-    def kill(__self__,e=""):
-        __self__.parent.master.focus_set()
-        __self__.parent.master.focus_force()
-        __self__.master.grab_release()
-        __self__.master.destroy()
-
-
 class DimensionDiag():
     """ Creates a pop-up dialog to prompt the datacube dimension
     if no colonneXrighe.txt file is found for the data selected.
@@ -1070,14 +962,14 @@ class DimensionDiag():
             return
         if x.isdigit(): 
             x=int(x)
-            if x > __self__.parent.mcacount[__self__.folder]: x = root.mcacount[__self__.folder]
+            if x > __self__.parent.mcacount[__self__.folder]: x = Constants.ROOT.mcacount[__self__.folder]
             elif x == 0: x = 1
         else: 
             messagebox.showerror("Error!","{} not a number!".format(x))
             return
         if y.isdigit(): 
             y=int(y)
-            if y > __self__.parent.mcacount[__self__.folder]: y = root.mcacount[__self__.folder]
+            if y > __self__.parent.mcacount[__self__.folder]: y = Constants.ROOT.mcacount[__self__.folder]
             elif y == 0: y = 1
         else:
             messagebox.showerror("Error!","{} not a number!".format(y))
@@ -1112,1762 +1004,6 @@ class DimensionDiag():
     def kill(__self__,e):
         __self__.exit_code = "cancel"
         __self__.master.destroy()
-
-
-class Annotator:
-    """ Creates an annotator to select areas on matplotlib canvases
-    Annotator is invoked from Image Analyzer and is destroyed when Set ROI
-    button is toggled off """
-
-    def __init__(__self__,parent):
-
-        # parent is the Image Analyzer object. The PlotWin object is the plot attribute:
-        # parent.plot
-
-        __self__.parent = parent
-        __self__.alive = True #This exists because killing this object seems impossible
-        __self__.element1 = parent.Map1Var.get()
-        __self__.element2 = parent.Map2Var.get()
-        __self__.roibox1 = parent.roibox1
-        __self__.roibox2 = parent.roibox2
-        __self__.ratebox = parent.ratebox
-        __self__.area1 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
-        __self__.area2 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
-        __self__.x0 = None
-        __self__.y0 = None
-        __self__.x1 = None
-        __self__.y1 = None
-        __self__.parent.plot1.add_patch(__self__.area1)
-        __self__.parent.plot2.add_patch(__self__.area2)
-        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.on_press)
-        __self__.parent.canvas1.mpl_connect("motion_notify_event",__self__.on_drag)
-        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.on_release)
-        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.on_press)
-        __self__.parent.canvas2.mpl_connect("motion_notify_event",__self__.on_drag)
-        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.on_release)
-        __self__.press, __self__.move = False, False
-
-    def refresh_annotator(__self__):
-        __self__.element1 = parent.Map1Var.get()
-        __self__.element2 = parent.Map2Var.get()
-        __self__.area1.remove()
-        __self__.area2.remove()
-        __self__.canvas1.draw()
-        __self__.canvas2.draw()
-        __self__.parent.plot1.add_patch(__self__.area1)
-        __self__.parent.plot2.add_patch(__self__.area2)
-
-    def wipe_annotator(__self__):
-        __self__.parent.plot.fit_plots = []
-        __self__.area1.remove()
-        __self__.area2.remove()
-        __self__.parent.canvas1.draw()
-        __self__.parent.canvas2.draw()
-        __self__.roibox1["text"] = "Roi 1: None"
-        __self__.roibox2["text"] = "Roi 2: None"
-        __self__.ratebox["text"] = "Ratio: None"
-        try: __self__.parent.plot.wipe_plot()
-        except: pass
-        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.do_nothing)
-        __self__.parent.canvas1.mpl_connect("button_notify_event",__self__.do_nothing)
-        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.do_nothing)
-        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.do_nothing)
-        __self__.parent.canvas2.mpl_connect("button_notify_event",__self__.do_nothing)
-        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.do_nothing)
-        __self__.parent.master.after(50,delattr(__self__.parent,"annotator"))
-        __self__.alive = False #prevents on_drag from working
-        del __self__
-
-    def do_nothing(__self__,e=""):
-        """ doing bunches of nothing """
-        return
-
-    def refresh_roi_plot(__self__):
-        if __self__.parent.plot.fit_plots != []:
-            for plot in __self__.parent.plot.fit_plots: 
-                try: plot.pop(0).remove()
-                except: pass
-        __self__.parent.plot.fit_plots = []
-        if len(Constants.FIND_ELEMENT_LIST) > 0: 
-            lines = True
-        else: 
-            lines = False
-        
-        __self__.parent.plot.DATA.set_ydata(__self__.parent.sum_spectrum)
-        __self__.parent.plot.plot.legend().get_texts()[0].set_text(
-                "{} Spectra".format(__self__.spec_no))
-        __self__.parent.plot.plot.set_ylim(
-                bottom=1,
-                top=1.20*__self__.parent.sum_spectrum.max())
-        try:
-            __self__.parent.plot.canvas.draw()
-        except: pass
-
-    def on_press(__self__,event):
-        __self__.press = True
-        try: __self__.x0 = int(event.xdata)
-        except: pass
-        try: __self__.y0 = int(event.ydata)
-        except: pass
-        print("click x,y",__self__.x0,__self__.y0)
-
-    def on_drag(__self__,event):
-        if __self__.press and __self__.alive:
-            __self__.move = True
-            try: __self__.x1 = int(event.xdata)+1
-            except: pass
-            try: __self__.y1 = int(event.ydata)+1
-            except: pass
-            __self__.area1.set_width(__self__.x1 - __self__.x0)
-            __self__.area2.set_width(__self__.x1 - __self__.x0)
-            __self__.area1.set_height(__self__.y1 - __self__.y0)
-            __self__.area2.set_height(__self__.y1 - __self__.y0)
-            __self__.area1.set_xy((__self__.x0,__self__.y0))
-            __self__.area2.set_xy((__self__.x0,__self__.y0))
-            __self__.parent.canvas1.draw()
-            __self__.parent.canvas2.draw()
-            __self__.calculate_area()
-
-            try: __self__.refresh_roi_plot()
-            except: pass
-
-    def on_release(__self__,event):
-        __self__.press = False
-        if __self__.press and not __self__.move:
-            __self__.press = False
-            __self__.move = False
-
-    def calculate_area(__self__):
-        __self__.area1_sum = 0
-        __self__.area2_sum = 0
-        __self__.spec_no = 0
-        __self__.parent.sum_spectrum = np.ones([__self__.parent.DATACUBE.sum.shape[0]],
-                dtype="float32")
-        unpacker1 = __self__.element1.split("_")
-        unpacker2 = __self__.element2.split("_")
-        
-        #print("MPL X:",__self__.x0,__self__.x1)
-        #print("MPL Y:",__self__.y0,__self__.y1)
-        # in matplotlib canvas directions are swapped
-        x_ = [__self__.y0,__self__.y1]
-        y_ = [__self__.x0,__self__.x1]
-        #print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
-        x_.sort()
-        y_.sort()
-
-        #print("x",x_)
-        #print("y",y_)
-        #print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
-        
-        if unpacker1 != [""] or unpacker2 != [""]:
-            image1 = __self__.parent.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
-            image2 = __self__.parent.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
-        else:
-            __self__.parent.sum_spectrum = \
-                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
-            __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
-            return
-
-        #################################################################################
-        #NOTE: if the image on display in the panel is a result of masking with         #
-        # the correlation plot window, we need to crop the unpacked image to match what #
-        # is displayed. Then, coordinates must be changed to pick the corresponding spec#
-        #################################################################################
-        if __self__.parent.masked:
-            x = __self__.parent.crop_y
-            y = __self__.parent.crop_x #NOTE: coordinates in matplotlib canvas are swapped
-            image1 = image1[x[0]:x[1],y[0]:y[1]]
-            image2 = image2[x[0]:x[1],y[0]:y[1]]
-            #x_ = [-__self__.y0+image1.shape[0],
-            #    -__self__.y1+image1.shape[0]]
-            #x_.sort()
-            cx = [x_[0]+x[0], x_[0]+x[0]+(x_[1]-x_[0])]
-            cy = [y_[0]+y[0], y_[0]+y[0]+(y_[1]-y_[0])]
-            __self__.parent.sum_spectrum = \
-                    __self__.parent.DATACUBE.matrix[cx[0]:cx[1],cy[0]:cy[1]].sum(0).sum(0)
-        else:
-            __self__.parent.sum_spectrum = \
-                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
-        #################################################################################
-        
-        __self__.area1_sum = image1[x_[0]:x_[1],y_[0]:y_[1]].sum()
-        __self__.area2_sum = image2[x_[0]:x_[1],y_[0]:y_[1]].sum()
-        __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
-        __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
-        __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
-        if __self__.area2_sum > 0:
-            __self__.ratebox["text"] = "Ratio: {:.2f}".format(
-                    __self__.area1_sum/__self__.area2_sum)
-
-
-class ImageAnalyzer:
-    global root
-    def __init__(__self__,parent,datacube):
-        __self__.DATACUBE = datacube
-        __self__.masked = 0
-        __self__.packed_elements = __self__.DATACUBE.check_packed_elements()
-        __self__.sum_spectrum = __self__.DATACUBE.sum
-        __self__.master = Toplevel(master=parent.master)
-        __self__.master.attributes("-alpha",0.0)
-        __self__.master.tagged = False
-        __self__.master.title("Image Analyzer")
-        __self__.MenuBar = Menu(__self__.master, tearoff=0)
-        __self__.Menu = Menu(__self__.MenuBar, tearoff=0)
-        __self__.MenuBar.add_cascade(label="More", menu=__self__.Menu)
-        __self__.Menu.add_command(
-                label="Navigate by index . . .",
-                command=__self__.call_index_navigator)
-        __self__.alt = False
-
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
-        __self__.master.bind("<Alt_L>",__self__.AltOn)
-        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
-        __self__.master.bind("<Return>",__self__.maximize)
-
-        __self__.sampler = Frame(__self__.master)
-        __self__.SampleFrame = Frame(__self__.master)
-        __self__.LeftCanvas = Canvas(__self__.SampleFrame)
-        __self__.RightCanvas = Canvas(__self__.SampleFrame)
-        __self__.sliders = ttk.LabelFrame(__self__.master,text="Control Panel")
-        __self__.buttons = ttk.Frame(__self__.sliders)
-        __self__.buttons1 = ttk.Frame(__self__.sliders)
-        __self__.buttons2 = ttk.Frame(__self__.sliders)
-        __self__.roibox = ttk.Frame(__self__.buttons, width=80)
-        __self__.ColoursPanel = Frame(__self__.master, relief=SUNKEN, height=36)
-
-        __self__.sampler.grid(row=0,column=0,columnspan=2,sticky=W+E)
-        __self__.SampleFrame.grid(row=1,column=0,columnspan=2,sticky=W+E+N+S)
-        __self__.LeftCanvas.grid(row=0,column=0,sticky=N+S+E+W)
-        __self__.RightCanvas.grid(row=0,column=1,sticky=N+S+E+W)
-        __self__.ColoursPanel.grid(row=2,column=0,sticky=N+E,pady=(16,3), padx=(3,3))
-        __self__.sliders.grid(row=2,column=0,columnspan=2,sticky=N+W+S+E,padx=(16,16),pady=(6,6))
-        __self__.buttons.grid(row=0,column=0,padx=(15,30),pady=(6,3),sticky=E)
-        __self__.buttons1.grid(row=0,column=1,padx=(5,5),pady=(6,3),sticky=E+W)
-        __self__.buttons2.grid(row=0,column=2,padx=(30,15),pady=(6,3),sticky=W)
-
-        __self__.RightCanvas.grid_propagate(1)
-        __self__.LeftCanvas.grid_propagate(1)
-        __self__.SampleFrame.grid_propagate(1)
-        __self__.master.grid_propagate(1)
-        __self__.sliders.grid_propagate(1)
-        
-        __self__.SampleFrame.grid_columnconfigure(0,weight=1)
-        __self__.SampleFrame.grid_columnconfigure(1,weight=1)
-        __self__.SampleFrame.grid_rowconfigure(0,weight=1)
-
-        Grid.rowconfigure(__self__.SampleFrame, 0, weight=1)
-        Grid.columnconfigure(__self__.SampleFrame, 0, weight=1)
-        Grid.columnconfigure(__self__.SampleFrame, 1, weight=1)
-        Grid.columnconfigure(__self__.sliders, 0, weight=1)
-        Grid.columnconfigure(__self__.sliders, 2, weight=1)
-        Grid.columnconfigure(__self__.sampler, 0, weight=1)
-        Grid.columnconfigure(__self__.sampler, 1, weight=1)
-        Grid.columnconfigure(__self__.sampler, 2, weight=1)
-        Grid.columnconfigure(__self__.sampler, 3, weight=1)
-
-        __self__.master.grid_columnconfigure(0,weight=1)
-        __self__.master.grid_columnconfigure(1,weight=1)
-        __self__.master.grid_rowconfigure(1,weight=1)
-        __self__.master.config(menu=__self__.MenuBar)
-
-        __self__.build_widgets()
-
-    def call_index_navigator(__self__):
-        if hasattr(__self__,"IndexNavigator"):
-            pass
-        else:
-            __self__.IndexNavigator = Navigator(__self__)
-        __self__.IndexNavigator.master.focus_set()
-
-    def get_version(__self__):
-        """ version attribute was implemented in XISMuS 1.3.0, 
-        any cube prior to this version has no version attribute """
-        
-        def get_old_version():
-            if hasattr(__self__.DATACUBE,"update_info"):
-                return __self__.DATACUBE.update_info
-            elif hasattr(__self__.DATACUBE,"version"): return __self__.DATACUBE.version
-            else: return "pre v1.3"
-
-        if hasattr(__self__.DATACUBE,"version"):
-            __self__.cube_version = "Cube version: "+get_old_version()
-            if hasattr(__self__.DATACUBE,"scalable"):
-                __self__.scale.config(state=NORMAL)
-            else:
-                __self__.scale.config(state=DISABLED)
-        else:
-            __self__.cube_version = "Cube version: "+get_old_version()
-            __self__.scale.config(state=DISABLED)
-
-    def build_widgets(__self__):
-        __self__.Map1Var = StringVar()
-        __self__.Map1Counts = StringVar()
-        __self__.Map1Counts.set("Select an element")
-        __self__.Map2Var = StringVar()
-        __self__.Map2Counts = StringVar()
-        __self__.Map2Counts.set("Select an element")
-        __self__.apply_scale_mask = BooleanVar()
-        
-        try:
-            __self__.ElementalMap1 = np.zeros([__self__.DATACUBE.dimension[0],
-                    __self__.DATACUBE.dimension[1]])
-            __self__.ElementalMap2 = np.zeros([__self__.DATACUBE.dimension[0],
-                    __self__.DATACUBE.dimension[1]])
-        except:
-            __self__.ElementalMap1 = np.zeros([1,1])
-            __self__.ElementalMap2 = np.zeros([1,1])
-        
-        # popup commands
-        __self__.popup = Menu(__self__.master, tearoff=0)
-        __self__.popup.add_command(
-                label="Export as...",
-                command=__self__.export_clicked)
-
-        # map 1
-        __self__.Map1Label = Label(
-                __self__.sampler, 
-                textvariable=__self__.Map1Counts,
-                width=30)
-        __self__.Map1Combo = ttk.Combobox(
-                __self__.sampler, 
-                textvariable=__self__.Map1Var,
-                values=__self__.packed_elements,
-                width=10,
-                state="readonly")
-        
-        # map 2
-        __self__.Map2Label = Label(
-                __self__.sampler, 
-                textvariable=__self__.Map2Counts,
-                width=30)
-        __self__.Map2Combo = ttk.Combobox(
-                __self__.sampler, 
-                textvariable=__self__.Map2Var,
-                values=__self__.packed_elements,
-                width=10,
-                state="readonly")
-
-        # matplotlib canvases
-        __self__.figure1 = Figure(figsize=(5,4), dpi=75)
-        __self__.plot1 = __self__.figure1.add_subplot(111)
-        __self__.plot1.axis('Off')
-        __self__.canvas1 = FigureCanvasTkAgg(__self__.figure1,__self__.LeftCanvas)
-        canvas1 = __self__.canvas1.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
-        __self__.canvas1.mpl_connect("button_press_event",
-                lambda event: __self__.pop(event,1))
-        
-        __self__.figure2 = Figure(figsize=(5,4), dpi=75)
-        __self__.plot2 = __self__.figure2.add_subplot(111)
-        __self__.plot2.axis('Off')
-        __self__.canvas2 = FigureCanvasTkAgg(__self__.figure2,__self__.RightCanvas)
-        canvas2 = __self__.canvas2.get_tk_widget().pack(fill=BOTH,anchor=N+W,expand=True)
-        __self__.canvas2.mpl_connect("button_press_event",
-                lambda event: __self__.pop(event,2))
-
-        # image controls Threshold, LowPass and Smooth
-        __self__.T1check = BooleanVar()
-        __self__.LP1check = BooleanVar()
-        __self__.S1check = BooleanVar()
-        __self__.BVar = BooleanVar()
-        __self__.GVar = BooleanVar()
-        __self__.WVar = BooleanVar()
-        __self__.BVar.set(True)
-        __self__.T2check = BooleanVar()
-        __self__.LP2check = BooleanVar()
-        __self__.S2check = BooleanVar()
-        __self__.T2check.set(False)
-        __self__.LP2check.set(False)
-        __self__.S2check.set(False)
-        __self__.T1check.set(False)
-        __self__.LP1check.set(False)
-        __self__.S1check.set(False)
-
-        Label(__self__.ColoursPanel,text="Background colour: ").grid(row=0,column=0)
-        __self__.Black = ttk.Checkbutton(__self__.ColoursPanel, 
-                text="Black",
-                takefocus=False, variable=__self__.BVar,
-                command=lambda: __self__.set_bg("black"))
-        __self__.Grey = ttk.Checkbutton(__self__.ColoursPanel, 
-                text="Grey",
-                takefocus=False, variable=__self__.GVar,
-                command=lambda: __self__.set_bg("#3b3b38"))
-        __self__.White = ttk.Checkbutton(__self__.ColoursPanel, 
-                text="White",
-                takefocus=False, variable=__self__.WVar,
-                command=lambda: __self__.set_bg())
-
-        __self__.T1 =ttk.Checkbutton(
-                __self__.buttons1,
-                takefocus=False,
-                text="Threshold (high)",
-                variable=__self__.T1check,
-                command=__self__.switchLP1T1)
-        __self__.LP1 =ttk.Checkbutton(__self__.buttons1,
-                takefocus=False,
-                text="Threshold (low)",
-                variable=__self__.LP1check,
-                command=__self__.switchT1LP1)
-        __self__.S1 =ttk.Checkbutton(
-                __self__.buttons1,
-                takefocus=False,
-                text="Smooth",
-                variable=__self__.S1check,
-                command=lambda:__self__.draw_image1(0))
-        
-        # sliders for image 1
-        __self__.T1Slider = ttk.Scale(
-                __self__.buttons1, 
-                orient='horizontal', 
-                from_=0, 
-                to=LEVELS,
-                command=__self__.draw_image1)
-        __self__.LP1Slider = ttk.Scale(
-                __self__.buttons1, 
-                orient='horizontal', 
-                from_=0, 
-                to=LEVELS,
-                command=__self__.draw_image1)
-        __self__.S1Slider = ttk.Scale(
-                __self__.buttons1, 
-                orient='horizontal', 
-                from_=0, 
-                to=2,
-                command=__self__.draw_image1)
-
-        # image controls Threshold, LowPass and Smooth
-        __self__.T2 =ttk.Checkbutton(
-                __self__.buttons1, 
-                takefocus=False,
-                text="Threshold (high)",
-                variable=__self__.T2check,
-                command=__self__.switchLP2T2)
-        __self__.LP2 =ttk.Checkbutton(
-                __self__.buttons1, 
-                takefocus=False,
-                text="Threshold (low)",
-                variable=__self__.LP2check,
-                command=__self__.switchT2LP2)
-        __self__.S2 =ttk.Checkbutton(
-                __self__.buttons1, 
-                takefocus=False,
-                text="Smooth",
-                variable=__self__.S2check,
-                command=lambda:__self__.draw_image2(0))
-               
-        # sliders for image 2
-        __self__.T2Slider = ttk.Scale(
-                __self__.buttons1, 
-                orient='horizontal', 
-                from_=0, 
-                to=LEVELS,
-                command=__self__.draw_image2)
-        __self__.LP2Slider = ttk.Scale(
-                __self__.buttons1, 
-                orient='horizontal', 
-                from_=0, 
-                to=LEVELS,
-                command=__self__.draw_image2)
-        __self__.S2Slider = ttk.Scale(
-                __self__.buttons1, 
-                orient='horizontal', 
-                from_=0, 
-                to=2,
-                command=__self__.draw_image2)
-    
-        # buttons
-        __self__.roibox1 = Label(__self__.buttons1,text="Roi 1: None",relief=GROOVE) 
-        __self__.roibox2 = Label(__self__.buttons1,text="Roi 2: None",relief=GROOVE)
-        __self__.ratebox = Label(__self__.buttons,text="Ratio: None") 
-        
-        __self__.annotate = Button(
-                __self__.buttons,
-                text="Set ROI",
-                cursor="hand2",
-                command=__self__.toggle_annotator,
-                relief="raised",
-                width=14)
-        create_tooltip(__self__.annotate,"When toggled, use the mouse to draw a square in any of the maps above.")
-        __self__.correlate = ttk.Button(
-                __self__.buttons,
-                text="Correlate",
-                command=__self__.get_correlation,
-                width=round(__self__.annotate.winfo_width()/2))
-        __self__.export = ttk.Button(
-                __self__.buttons,
-                text="Export",
-                command=__self__.export_maps,
-                width=round(__self__.annotate.winfo_width()/2))
-        __self__.subtract_btn = ttk.Button(
-                __self__.buttons2,
-                text="Add Images",
-                command=__self__.add_images,
-                width=round(__self__.annotate.winfo_width()/2))
-        __self__.add_btn = ttk.Button(
-                __self__.buttons2,
-                text="Subtract Images",
-                command=__self__.subtract_images,
-                width=round(__self__.annotate.winfo_width()/2))
-        __self__.scale =ttk.Checkbutton(
-                __self__.buttons2, 
-                takefocus=False,
-                text="Apply scaling mask",
-                variable=__self__.apply_scale_mask,
-                command=__self__.refresh)
-        __self__.get_version()
-        __self__.CubeVersionLabel = Label(__self__.master,
-                text=__self__.cube_version,
-                bd=1,
-                relief=SUNKEN,
-                anchor=W)
-
-        __self__.Map1Label.grid(row=0, column=0, sticky=E)
-        __self__.Map1Combo.grid(row=0,column=1, sticky=W,padx=(16,16),pady=(8,4))
-        __self__.Map2Label.grid(row=0, column=3, sticky=W)
-        __self__.Map2Combo.grid(row=0,column=2, sticky=E,padx=(16,16),pady=(8,4))
-        __self__.plot1.grid(b=None)
-        __self__.plot2.grid(b=None)
-
-        pady = 6
-        __self__.T1Slider.grid(row=1,column=1,pady=pady)
-        __self__.LP1Slider.grid(row=2,column=1,pady=pady)
-        __self__.S1Slider.grid(row=3,column=1,pady=pady)
-        __self__.T2Slider.grid(row=1,column=3,pady=pady)
-        __self__.LP2Slider.grid(row=2,column=3,pady=pady)
-        __self__.S2Slider.grid(row=3,column=3,pady=pady)
-        __self__.T1.grid(row=1,column=0,padx=(0,6),sticky=W,pady=pady)
-        __self__.LP1.grid(row=2,column=0,padx=(0,6),sticky=W,pady=pady)
-        __self__.S1.grid(row=3,column=0,padx=(0,6),sticky=W,pady=pady)
-        __self__.T2.grid(row=1,column=2,padx=(24,6),sticky=W,pady=pady)
-        __self__.LP2.grid(row=2,column=2,padx=(24,6),sticky=W,pady=pady)
-        __self__.S2.grid(row=3,column=2,padx=(24,6),sticky=W,pady=pady)
-
-        __self__.White.grid(row=0, column=1, padx=6)
-        __self__.Grey.grid(row=0, column=2, padx=6)
-        __self__.Black.grid(row=0, column=3, padx=6)
-
-        __self__.roibox1.grid(row=0,column=0,columnspan=2,sticky=W+E,pady=(12,6))
-        __self__.roibox2.grid(row=0,column=2,columnspan=2,sticky=W+E,pady=(12,6))
-        __self__.ratebox.grid(row=2,column=0,columnspan=2,sticky=W+E)
-        __self__.export.grid(row=0,column=1,sticky=W+E)
-        __self__.correlate.grid(row=0,column=0,sticky=W+E)
-        __self__.annotate.grid(row=1,column=0,columnspan=2,sticky=W+E,pady=(3,3))
-
-        __self__.subtract_btn.grid(row=0,column=0,sticky=W+E)
-        __self__.add_btn.grid(row=1,column=0,sticky=W+E)
-        __self__.scale.grid(row=2,column=0, sticky=W)
-
-        __self__.CubeVersionLabel.grid(row=3,columnspan=2,sticky=W+E)#pack(side=BOTTOM, expand=False, fill=X, anchor=W)
-
-        __self__.Map1Combo.bind("<<ComboboxSelected>>", __self__.update_sample1)
-        __self__.Map2Combo.bind("<<ComboboxSelected>>", __self__.update_sample2)
-        
-        icon = os.path.join(os.getcwd(),"images","icons","img_anal.ico")
-        __self__.master.iconbitmap(icon)  
-
-        # Disable sliders
-        __self__.T1Slider.state(["disabled"])
-        __self__.T2Slider.state(["disabled"])
-        __self__.LP1Slider.state(["disabled"])
-        __self__.LP2Slider.state(["disabled"])
-        
-        # presents a first image, if no element maps exist, displays the sum map. 
-        __self__.nomaps = False
-        try: 
-            try: __self__.Map1Combo.current(0)
-            except: 
-                __self__.nomaps = True
-                pass
-            try: __self__.Map2Combo.current(1)
-            except: 
-                try: __self__.Map2Combo.current(0)
-                except: pass
-            if __self__.ElementalMap1.max() == 0:
-                __self__.ElementalMap1 = Constants.MY_DATACUBE.densitymap.astype("float32")*LEVELS/Constants.MY_DATACUBE.densitymap.max()
-                __self__.left_image = __self__.plot1.imshow(__self__.ElementalMap1)
-                __self__.draw_image1(0)
-            else: __self__.left_image = __self__.plot1.imshow(np.zeros([20,20]))
-            if __self__.ElementalMap2.max() == 0:
-                __self__.ElementalMap2 = Constants.MY_DATACUBE.densitymap.astype("float32")*LEVELS/Constants.MY_DATACUBE.densitymap.max()
-                __self__.right_image = __self__.plot2.imshow(__self__.ElementalMap2)
-                __self__.draw_image2(0)
-            else: __self__.right_image = __self__.plot2.imshow(np.zeros([20,20]))
-            __self__.plot1.grid(False)
-            __self__.plot2.grid(False)
-            __self__.update_sample1(None)
-            __self__.update_sample2(None)
-        except: 
-            pass
-        x = __self__.master.winfo_width()
-        y = __self__.master.winfo_height()
-
-        __self__.toggle_() 
-
-        __self__.master.minsize(x,y)
-        __self__.set_bg("#3b3b38")
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
-
-    def toggle_(__self__):
-        if __self__.nomaps == True:
-            __self__.add_btn.config(state=DISABLED)
-            __self__.subtract_btn.config(state=DISABLED)
-            __self__.correlate.config(state=DISABLED)
-            __self__.export.config(state=DISABLED)
-            __self__.scale.config(state=DISABLED)
-        else:
-            __self__.add_btn.config(state=NORMAL)
-            __self__.subtract_btn.config(state=NORMAL)
-            __self__.annotate.config(state=NORMAL)
-            __self__.correlate.config(state=NORMAL)
-            __self__.export.config(state=NORMAL)
-
-    def set_bg(__self__,colour="white"):
-        if colour == "white":
-            __self__.WVar.set(True)
-            __self__.GVar.set(False)
-            __self__.BVar.set(False)
-        elif colour == "#3b3b38":
-            __self__.WVar.set(False)
-            __self__.GVar.set(True)
-            __self__.BVar.set(False)
-        elif colour == "black":
-            __self__.WVar.set(False)
-            __self__.GVar.set(False)
-            __self__.BVar.set(True)
-
-        __self__.LeftCanvas.config(bg=colour)
-        __self__.RightCanvas.config(bg=colour)
-        __self__.figure1.set_facecolor(colour)
-        __self__.figure2.set_facecolor(colour)
-        __self__.canvas1.draw()
-        __self__.canvas2.draw()
-
-    def kill(__self__):
-        global root
-        for widget in __self__.master.winfo_children():
-            widget.destroy()
-        __self__.master.destroy()   
-        try: __self__.plot.wipe_plot()
-        except: pass
-        root.ImageAnalyzers.remove(__self__)
-        gc.collect()
-        del __self__
-
-    def refresh(__self__,e=""):
-        __self__.draw_image1(0)
-        __self__.draw_image2(0)
-
-    def subtract_images(__self__,e=""):
-        __self__.OperationDiag = ImageOperationWarning(
-                __self__,
-                mode="subtract",
-                scaled=__self__.apply_scale_mask.get())
-        place_center(__self__.master,__self__.OperationDiag.master)
-
-    def add_images(__self__,e=""):
-        __self__.OperationDiag = ImageOperationWarning(
-                __self__,
-                mode="add",
-                scaled=__self__.apply_scale_mask.get())
-        place_center(__self__.master,__self__.OperationDiag.master)
-    
-    def AltOn(__self__,e=""):
-        __self__.alt = True
-    
-    def AltOff(__self__,e=""):
-        __self__.alt = False
-
-    def maximize(__self__,e=""):
-        maximize_window(__self__)
-
-    def pop(__self__,event,img_idx):
-        if event.button == 3:
-            __self__.triggered_figure = img_idx
-            root.master.update_idletasks()
-            x = root.master.winfo_pointerx()
-            y = root.master.winfo_pointery()
-            abs_coord_x = root.master.winfo_pointerx() - root.master.winfo_vrootx()
-            abs_coord_y = root.master.winfo_pointery() - root.master.winfo_vrooty()
-            try: __self__.popup.tk_popup(int(abs_coord_x), int(abs_coord_y), entry="")
-            finally: __self__.popup.grab_release()
-        else: return
-
-    def resize(__self__, event):
-        wi = __self__.LeftCanvas.winfo_width()
-        hi = __self__.LeftCanvas.winfo_height()
-        wi_t = __self__.RightCanvas.winfo_width()
-        hi_t = __self__.RightCanvas.winfo_height()
-
-    def toggle_annotator(__self__):
-        """ passes the current datacube, so if the user changes it, 
-        for the current ImgAnal api open when
-        using the annotation function, the cube is still the 
-        one loaded when ImgAnal was opened
-        the api is passed as argument so the annotator knows where to draw """
-
-        if __self__.annotate.config("relief")[-1] == "raised":
-            __self__.annotate.config(relief="sunken")
-            __self__.annotate.config(bg="yellow")
-            __self__.annotator = Annotator(__self__) 
-            __self__.plot = PlotWin(__self__)
-            if Constants.LOW_RES == None:
-                place_topright(__self__.master, __self__.plot.master)
-            elif Constants.LOW_RES == "moderate":
-                spawn_center(__self__.plot.master)
-            elif Constants.LOW_RES == "high":
-                place_center(__self__.master, __self__.plot.master)
-            __self__.plot.draw_selective_sum(__self__.DATACUBE,
-                    __self__.DATACUBE.sum,
-                    Constants.PLOTSCALE,lines=True)
-        else:
-            __self__.annotate.config(relief="raised")
-            __self__.annotate.config(bg=__self__.master.cget("background"))
-            __self__.annotator.wipe_annotator()
-            __self__.plot.wipe_plot()
- 
-    def update_sample1(__self__,event=""):
-        label1 = "Maximum net counts: {}".format(
-                int(__self__.DATACUBE.max_counts[__self__.Map1Var.get()]))
-        __self__.Map1Counts.set(label1)
-        unpacker = __self__.Map1Var.get()
-        unpacker = unpacker.split("_")
-        __self__.ElementalMap1 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
-        __self__.ElementalMap1 = __self__.ElementalMap1/__self__.ElementalMap1.max()*LEVELS
-        __self__.left_image.set_extent([0,__self__.ElementalMap1.shape[1],
-            __self__.ElementalMap1.shape[0],0])
-        __self__.draw_image1(0)
-        try: 
-            __self__.annotator.wipe_annotator()
-            del __self__.plot
-        except: pass
-        if __self__.masked: 
-            __self__.masked = 0
-            __self__.correlate.state(["!disabled"])
-            __self__.update_sample2()
-     
-    def update_sample2(__self__,event=""):
-        label2 = "Maximum net counts: {}".format(
-                int(__self__.DATACUBE.max_counts[__self__.Map2Var.get()]))
-        __self__.Map2Counts.set(label2)
-        unpacker = __self__.Map2Var.get()
-        unpacker = unpacker.split("_")
-        __self__.ElementalMap2 = __self__.DATACUBE.unpack_element(unpacker[0],unpacker[1])
-        __self__.ElementalMap2 = __self__.ElementalMap2/__self__.ElementalMap2.max()*LEVELS
-        __self__.right_image.set_extent([0,__self__.ElementalMap2.shape[1],
-            __self__.ElementalMap2.shape[0],0])
-        __self__.draw_image2(0)
-        try: 
-            __self__.annotator.wipe_annotator()
-            del __self__.plot
-        except: pass
-        if __self__.masked:
-            __self__.masked = 0
-            __self__.correlate.state(["!disabled"])
-            __self__.update_sample1()
-
-    def prepare_to_correlate(__self__):
-        scalemode = __self__.apply_scale_mask.get()
-
-        unpacker1 = __self__.Map1Var.get()
-        unpacker2 = __self__.Map2Var.get()
-        unpacker1 = unpacker1.split("_")
-        unpacker2 = unpacker2.split("_")
-        Map1 = __self__.DATACUBE.unpack_element(unpacker1[0],unpacker1[1])
-        Map2 = __self__.DATACUBE.unpack_element(unpacker2[0],unpacker2[1])
-
-        CACHEMAP1 = copy.deepcopy(Map1)
-        image1 = fast_scaling(__self__.DATACUBE, CACHEMAP1, scalemode)
-        CACHEMAP2 = copy.deepcopy(Map2)
-        image2 = fast_scaling(__self__.DATACUBE, CACHEMAP2, scalemode)
-
-        th1 = __self__.T1Slider.get()*image1.max()/LEVELS
-        tl1 = __self__.LP1Slider.get()*image1.max()/LEVELS
-
-        th2 = __self__.T2Slider.get()*image2.max()/LEVELS
-        tl2 = __self__.LP2Slider.get()*image2.max()/LEVELS
-
-        if __self__.T1check.get() == True:
-            image1 = fast_threshold(image1,0,th1)
-        elif __self__.LP1check.get() == True:
-            image1 = fast_threshold(image1,1,tl1)
-        if __self__.T2check.get() == True:
-            image2 = fast_threshold(image2,0,th2)
-        elif __self__.LP2check.get() == True:
-            image2 = fast_threshold(image2,1,tl2)
-        return image1, image2
-    
-    def switchT1LP1(__self__):
-        if __self__.LP1check.get() == True: __self__.LP1Slider.state(["!disabled"])
-        else: __self__.LP1Slider.state(["disabled"])
-        if __self__.T1check.get() == True: 
-            __self__.T1check.set(False)
-            __self__.T1Slider.state(["disabled"])
-        __self__.draw_image1(0)
-
-    def switchLP1T1(__self__):
-        if __self__.T1check.get() == True: __self__.T1Slider.state(["!disabled"])
-        else: __self__.T1Slider.state(["disabled"])
-        if __self__.LP1check.get() == True: 
-            __self__.LP1check.set(False)
-            __self__.LP1Slider.state(["disabled"])
-        __self__.draw_image1(0)
-
-    def switchT2LP2(__self__):
-        if __self__.LP2check.get() == True: __self__.LP2Slider.state(["!disabled"])
-        else: __self__.LP2Slider.state(["disabled"])
-        if __self__.T2check.get() == True: 
-            __self__.T2check.set(False)
-            __self__.T2Slider.state(["disabled"])
-        __self__.draw_image2(0)
-    
-    def switchLP2T2(__self__):
-        if __self__.T2check.get() == True: __self__.T2Slider.state(["!disabled"])
-        else: __self__.T2Slider.state(["disabled"])
-        if __self__.LP2check.get() == True: 
-            __self__.LP2check.set(False)
-            __self__.LP2Slider.state(["disabled"])
-        __self__.draw_image2(0)
-
-    def transform1(__self__,image):
-        if __self__.T1check.get() == True:
-            if __self__.S1check.get() == True: 
-                image = fast_combo(image,0,__self__.T1Slider.get(),__self__.S1Slider.get())
-            else:
-                image = fast_threshold(image,0,__self__.T1Slider.get())
-        elif __self__.LP1check.get() == True:
-            if __self__.S1check.get() == True: 
-                image = fast_combo(image,1,__self__.LP1Slider.get(),__self__.S1Slider.get())
-            else:
-                image = fast_threshold(image,1,__self__.LP1Slider.get())
-        else:
-            if __self__.S1check.get() == True:
-                image = fast_smooth(image,__self__.S1Slider.get())
-        try:
-            __self__.annotate.config(relief="raised")
-            __self__.annotate.config(bg=__self__.master.cget("background"))
-            __self__.annotator.wipe_annotator()
-            del __self__.plot
-        except: pass
-            
-        return image
- 
-    def transform2(__self__,image):
-        if __self__.T2check.get() == True:
-            if __self__.S2check.get() == True: 
-                image = fast_combo(image,0,__self__.T2Slider.get(),__self__.S2Slider.get())
-            else:
-                image = fast_threshold(image,0,__self__.T2Slider.get())
-        elif __self__.LP2check.get() == True:
-            if __self__.S2check.get() == True: 
-                image = fast_combo(image,1,__self__.LP2Slider.get(),__self__.S2Slider.get())
-            else:
-                image = fast_threshold(image,1,__self__.LP2Slider.get())
-        else:
-            if __self__.S2check.get() == True:
-                image = fast_smooth(image,__self__.S2Slider.get())
-        try:
-            __self__.annotate.config(relief="raised")
-            __self__.annotate.config(bg=__self__.master.cget("background"))
-            __self__.annotator.wipe_annotator()
-            del __self__.plot
-        except: pass
-         
-        return image   
-    
-    # the Sliders are the widgets that calls draw_image functions
-    # they always pass their respective values as argument when using command
-    # argument i is there just to make it work. The value passed doesn't change a thing
-
-    def draw_image1(__self__,i):
-        scalemode = __self__.apply_scale_mask.get()
-        if scalemode: scalemode = 1
-        else: scalemode = 0
-        __self__.CACHEMAP1 = copy.deepcopy(__self__.ElementalMap1)
-        __self__.newimage1 = fast_scaling(__self__.DATACUBE, __self__.CACHEMAP1, scalemode) 
-        __self__.newimage1 = __self__.transform1(__self__.newimage1)
-        __self__.left_image.set_data(__self__.newimage1)
-        __self__.left_image.set_clim(vmin=0, vmax=__self__.newimage1.max())
-        __self__.left_image.set_cmap(Constants.COLORMAP)
-        __self__.canvas1.draw()
-        del __self__.CACHEMAP1
-    
-    def draw_image2(__self__,i):
-        scalemode = __self__.apply_scale_mask.get()
-        if scalemode: scalemode = 1
-        else: scalemode = 0
-        __self__.CACHEMAP2 = copy.deepcopy(__self__.ElementalMap2)
-        __self__.newimage2 = fast_scaling(__self__.DATACUBE,__self__.CACHEMAP2, scalemode) 
-        __self__.newimage2 = __self__.transform2(__self__.newimage2)
-        __self__.right_image.set_data(__self__.newimage2)
-        __self__.right_image.set_clim(vmin=0, vmax=__self__.newimage2.max())
-        __self__.right_image.set_cmap(Constants.COLORMAP)
-        __self__.canvas2.draw()
-        del __self__.CACHEMAP2
-
-    def get_correlation(__self__):
-        labels = __self__.Map1Var.get(),__self__.Map2Var.get()
-        
-        """ Transformed and displayed maps are converted to 0-LEVELS scale (usually 255)
-        to correlate raw values i.e. the net area contained in each pixel,
-        maps must be unpacked from cube again """
-        """ This could be avoided by NOT deleting the CACHEMAP variables, but since 
-        correlation tool is used much less than the filters (which perform several 
-        iterations), the gain in performance is more important in filtering than correlating
-        maps """
-
-        #Map1 = copy.deepcopy(__self__.newimage1)
-        #Map2 = copy.deepcopy(__self__.newimage2)
-
-        Map1, Map2 = __self__.prepare_to_correlate()
-
-        """ Correlation region must now be limited according to the transformed area
-        (any applied filter) and to selected area made with set ROI tool (Annotator class) """
-        bar = Busy(1,0)
-        bar.update_text("Thinking...")
-        
-
-        if __self__.annotate.config("relief")[-1] == "sunken" and \
-                __self__.annotator.x0 is not None:
-            x = [__self__.annotator.x0, __self__.annotator.x1]
-            y = [__self__.annotator.y0, __self__.annotator.y1]
-            #y = [Map1.shape[0]-__self__.annotator.y0-1, Map1.shape[0]-__self__.annotator.y1-1]
-            x.sort()
-            y.sort()
-            Map1 = Map1[y[0]:y[1],x[0]:x[1]]
-            Map2 = Map2[y[0]:y[1],x[0]:x[1]]
-            __self__.crop_x = x
-            __self__.crop_y = y
-        else: 
-            __self__.crop_x = [0,Map1.shape[0]]
-            __self__.crop_y = [0,Map1.shape[1]]
-        dim = Map1.shape[0]
-        bar.progress["maximum"] = dim
-
-        corr = correlate(Map1,Map2,bar=bar)
-        if not corr: 
-            messagebox.showerror("Error","Cannot correlate an empty image or region!")
-            bar.destroybar()
-            return
-        bar.update_text("Loading plot...")
-        corr_plot = PlotWin(__self__)
-        corr_plot.draw_correlation(corr,labels,images=[Map1,Map2])
-        bar.destroybar()
-
-    def export_clicked(__self__):
-        f = filedialog.asksaveasfile(mode='w', 
-                    defaultextension=".png",
-                    filetypes=[("Portable Network Graphic", "*.png")],
-                    title="Save as...")
-        if f is None: 
-            return
-        if __self__.triggered_figure == 1: img = __self__.newimage1
-        elif __self__.triggered_figure == 2: img = __self__.newimage2
-        else: 
-            messagebox.showerror("Error","Could not export.")
-            return 1
-        write_image(
-                img,
-                Constants.TARGET_RES, 
-                f.name, 
-                enhance=Constants.MY_DATACUBE.config["enhance"],
-                merge=False)
-        __self__.master.focus_set()
-        return 0
-
-    def export_maps(__self__):
-        export = ExportDiag(__self__)
-        return 0
-
-
-class PlotWin:
-    global root
-    def __init__(__self__,parent):
-        __self__.parent = parent
-        __self__.master = Toplevel(master=parent.master)
-        __self__.master.attributes("-alpha",0.0)
-        __self__.alt = False
-        __self__.master.bind("<Alt_L>",__self__.AltOn)
-        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
-        __self__.master.bind("<Return>",__self__.maximize)
-        __self__.master.title("Plot")
-        __self__.master.tagged = None
-        __self__.master.minsize(width=600,height=480)
-        __self__.master.configure(bg='white')
-        __self__.master.resizable(True,True) 
-        __self__.plot_font = {'fontname':'Arial','fontsize':14}
-        __self__.lw = 3
-        __self__.menubar = Menu(__self__.master, tearoff=0)
-        __self__.options = Menu(__self__.menubar, tearoff=0)
-        __self__.upper = Canvas(__self__.master)
-        __self__.upper.config(bg='white')
-        __self__.lower = Frame(__self__.master,height=35)
-
-        __self__.upper.pack(side=TOP, expand=True, fill=BOTH, padx=(16,16),pady=(16,16))
-        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
-        
-        __self__.figure = Figure(figsize=(4,3), dpi=60)
-        __self__.plot = __self__.figure.add_subplot(111)
-        __self__.plot.grid(which='both',axis='both')
-        __self__.plot.grid(color="black", ls="--", lw=0.5)
-        __self__.plot.axis('On')
-        __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
-        __self__.canvas.draw()
-        __self__.mplCanvas = __self__.canvas.get_tk_widget()
-        __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
-        __self__.toolbar = NavigationToolbar(__self__.canvas,__self__.lower)
-        __self__.toolbar.update()
-        __self__.canvas._tkcanvas.pack()
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
-
-        __self__.plot.spines["top"].set_color("black")
-        __self__.plot.spines["top"].set_linewidth(2)
-        __self__.plot.spines["bottom"].set_color("black")
-        __self__.plot.spines["bottom"].set_linewidth(2)
-        __self__.plot.spines["left"].set_color("black")
-        __self__.plot.spines["left"].set_linewidth(2)
-        __self__.plot.spines["right"].set_color("black")
-        __self__.plot.spines["right"].set_linewidth(2)
-
-        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
-        __self__.master.iconbitmap(icon)
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
-    
-    def AltOn(__self__,e=""):
-        __self__.alt = True
-
-    def AltOff(__self__,e=""):
-        __self__.alt = False
-
-    def maximize(__self__,e=""):
-        maximize_window(__self__)
-    
-    def wipe_plot(__self__):
-        """clears and destroy plot"""
-        try: 
-            __self__.plot.clear()
-            __self__.figure.clf()
-            del __self__.plot
-            __self__.master.destroy()
-            del __self__
-        except: pass
-
-    def draw_calibration(__self__):
-        __self__.master.tagged = True
-        __self__.plotdata = Constants.MY_DATACUBE.energyaxis
-        channels = np.arange(1,__self__.plotdata.shape[0]+1)
-        anchors = Constants.MY_DATACUBE.calibration
-        __self__.plot.set_title("{0} Calibration curve".format(
-            Constants.DIRECTORY),**__self__.plot_font)
-        __self__.plot.plot(channels,__self__.plotdata,label="Calibration curve")
-        for pair in anchors:
-            __self__.plot.plot(pair[0],pair[1], marker='+',mew=3,ms=12,
-                    label="{0}".format(pair))
-        __self__.plot.set_ylabel("Energy (KeV)")
-        __self__.plot.set_xlabel("Channel")
-        __self__.plot.grid(color="black", ls="--", lw=0.5)
-        __self__.plot.legend(
-                fancybox=True,
-                shadow=True,
-                fontsize=12,
-                framealpha=1,
-                borderpad=1,
-                facecolor="white")
-
-    def draw_spec(__self__,mode,display_mode=None,lines=False):
-        __self__.lw = 1.8 
-        __self__.master.minsize(width=800,height=450)
-        __self__.plot.grid(which='both',axis='both')
-        __self__.plot.grid(color="gray", ls="--", lw=1)
-        __self__.plot.axis('On')
-        __self__.plot.set_facecolor("white")
-        __self__.plot.set_xlim([
-            Constants.MY_DATACUBE.energyaxis.min(),
-            Constants.MY_DATACUBE.energyaxis.max()])
-
-        energy_list=[]
-        __self__.master.tagged = False
-        if __self__.master.winfo_exists() == True:
-            __self__.plot.clear()
-            colors = ["blue","red","green"]
-            if display_mode == '-semilogy':
-                __self__.plot.set_ylabel("Counts")
-                i = 0
-                for option in mode:
-                    __self__.plotdata = getstackplot(Constants.MY_DATACUBE,option)
-                    __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                    __self__.plot.semilogy(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,
-                            label=str(option),color=colors[i],lw=2)
-                    i+=1
-                if lines==True:
-                    __self__.master.tagged = True
-                    for element in Constants.FIND_ELEMENT_LIST:
-                        if element == "custom":
-                            energies = plottables_dict[element]
-                            __self__.plot.plot((energies[0],energies[0]),
-                                    (0,__self__.plotdata.max()),'k--',color="cornflowerblue",
-                                    label="Custom Low",linewidth=__self__.lw)
-                            __self__.plot.plot((energies[1],energies[1]),
-                                    (0,__self__.plotdata.max()),'k--',color="tomato",
-                                    label="Custom High",linewidth=__self__.lw)
-                        else:
-                            energies = plottables_dict[element]
-                            for value in energies: 
-                                energy_list.append(value)
-                                __self__.EL = __self__.plot.axvline(
-                                x=value, color=ElementColors[element],
-                                label=element,linewidth=__self__.lw)
-                            energy_list=[]
-
-                __self__.plot.set_title('{0} {1}'.format(
-                    Constants.DIRECTORY,mode),**__self__.plot_font)
-                __self__.plot.set_xlabel("Energy (KeV)")
-                __self__.plot.legend()
-            else:
-                i = 0
-                for option in mode:
-                    __self__.plotdata = getstackplot(Constants.MY_DATACUBE,option)
-                    __self__.plotdata = __self__.plotdata/__self__.plotdata.max()
-                    __self__.plot.plot(Constants.MY_DATACUBE.energyaxis,__self__.plotdata,
-                            label=str(option),color=colors[i],lw=2)
-                    i+=1
-                if lines==True:
-                    __self__.master.tagged = True
-                    for element in Constants.FIND_ELEMENT_LIST:
-                        if element == "custom":
-                            energies = plottables_dict[element]
-                            __self__.plot.plot((energies[0],energies[0]),
-                                    (0,__self__.plotdata.max()),'k--',color="cornflowerblue",
-                                    label="Custom Low",linewidth=__self__.lw)
-                            __self__.plot.plot((energies[1],energies[1]),
-                                    (0,__self__.plotdata.max()),'k--',color="tomato",
-                                    label="Custom High",linewidth=__self__.lw)
-                        else:
-                            energies = plottables_dict[element]
-                            for value in energies: 
-                                energy_list.append(value)
-                                __self__.EL = __self__.plot.axvline(
-                                x=value, color=ElementColors[element],
-                                label=element,linewidth=__self__.lw)
-                            energy_list=[]
-
-                mode_string = "- "
-                if len(mode)>1:
-                    for i in range(len(mode)): 
-                        if not i: mode_string = mode_string + mode[i] + " & "
-                        else: mode_string = mode_string + mode[i]
-                else: mode_string = "- " + mode[0]
-                __self__.plot.set_title('{0} {1}'.format(
-                    Constants.DIRECTORY, mode_string),**__self__.plot_font)
-                __self__.plot.set_xlabel("Energy (KeV)")
-                __self__.plot.legend(
-                        fancybox=True,
-                        shadow=True,
-                        fontsize=12,
-                        framealpha=1,
-                        borderpad=1,
-                        facecolor="white")
-
-            __self__.canvas.draw()
-    
-    def draw_ROI(__self__):
-        __self__.master.minsize(width=1280,height=720)
-        __self__.plot.grid(which='both',axis='both')
-        __self__.plot.grid(color="gray", ls="--", lw=1)
-        __self__.plot.axis('On')
-        __self__.plot.set_facecolor("white")
-        __self__.plot.set_xlim([
-            Constants.MY_DATACUBE.energyaxis.min(), 
-            Constants.MY_DATACUBE.energyaxis.max()])
-
-        __self__.master.tagged = True
-
-        patches = []
-        for element in Constants.MY_DATACUBE.ROI:
-            __self__.plotdata = Constants.MY_DATACUBE.ROI[element]
-            
-            net = [0,""]
-            #############################################
-            if Constants.MY_DATACUBE.max_counts[element+"_a"] == 0:
-                try: net = [Constants.MY_DATACUBE.max_counts[element+"_b"],"Beta"]
-                except: net = [Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha"]
-            else: net = [Constants.MY_DATACUBE.max_counts[element+"_a"],"Alpha"]
-            #############################################
-            # NEW DATACUBES SUPPORT ALL SIEGBAHN MACROS #
-            #############################################
-            try: 
-                for line in SIEGBAHN:
-                    max_ = Constants.MY_DATACUBE.max_counts[element + f"_{line}"]
-                    if max_ > net[0]:
-                        net = [max_, line]
-            except: pass
-            #############################################
-
-            roi_label = element + " Max net: {} in {}".format(int(net[0]),net[1])
-            if element != "custom":
-
-                ###########################################################################
-                # This block can be used if the ROI's are set as the peak indexes instead #
-                # of the plot curve itself. Changes must be done inside                   #
-                # BatchFitter.build_image()                                               #
-                ###########################################################################
-
-                if isinstance(__self__.plotdata,tuple):
-                    for i in [j for j in __self__.plotdata if j>0]:
-                        __self__.plot.axvline(x=Constants.MY_DATACUBE.energyaxis[i],
-                        color=ElementColors[element],
-                        label=element,linewidth=__self__.lw)
-                    patches.append(
-                        mpatches.Patch(
-                            color=ElementColors[element], 
-                            label=roi_label))
-
-                ###########################################################################
-
-                __self__.plot.fill_between(
-                        Constants.MY_DATACUBE.energyaxis,
-                        Constants.MY_DATACUBE.sum_bg,
-                        __self__.plotdata,
-                        color=ElementColors[element],
-                        where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
-                        alpha=0.85,
-                        interpolate=True,
-                        linewidth=0,
-                        zorder=1)
-                __self__.plot.plot(Constants.MY_DATACUBE.energyaxis,
-                        __self__.plotdata,
-                        color="black",
-                        linewidth=0.8)
-                patches.append(
-                        mpatches.Patch(
-                            color=ElementColors[element], 
-                            label=roi_label))
-            else: 
-                __self__.plot.fill_between(
-                        Constants.MY_DATACUBE.energyaxis,
-                        Constants.MY_DATACUBE.sum_bg,
-                        __self__.plotdata,
-                        color=ElementColors["Custom"],
-                        where=__self__.plotdata > Constants.MY_DATACUBE.sum_bg,
-                        alpha=0.85,
-                        zorder=1)
-                patches.append(
-                        mpatches.Patch(
-                            color=ElementColors["Custom"], 
-                            label=roi_label))
-
-        if Constants.PLOTSCALE == "-semilogy":
-            __self__.plot.semilogy(
-                    Constants.MY_DATACUBE.energyaxis,
-                    Constants.MY_DATACUBE.sum,
-                    color="blue",
-                    label="Sum spectrum",
-                    linewidth=3)
-            if hasattr(Constants.MY_DATACUBE,"sum_fit"):
-                __self__.plot.semilogy(
-                        Constants.MY_DATACUBE.energyaxis,
-                        Constants.MY_DATACUBE.sum_fit,
-                        color="red",
-                        label="Fit",
-                        linewidth=2)
-            __self__.plot.semilogy(
-                    Constants.MY_DATACUBE.energyaxis,
-                    Constants.MY_DATACUBE.sum_bg,
-                    color="green",
-                    label="Continuum",
-                    linewidth=3)
-        else:
-            __self__.plot.plot(
-                    Constants.MY_DATACUBE.energyaxis,
-                    Constants.MY_DATACUBE.sum,
-                    color="blue",
-                    label="Sum spectrum",
-                    linewidth=2)
-            if hasattr(Constants.MY_DATACUBE,"sum_fit"):
-                __self__.plot.plot(
-                        Constants.MY_DATACUBE.energyaxis,
-                        Constants.MY_DATACUBE.sum_fit,
-                        color="red",
-                        label="Fit",
-                        linewidth=2)
-            __self__.plot.plot(
-                    Constants.MY_DATACUBE.energyaxis,
-                    Constants.MY_DATACUBE.sum_bg,
-                    color="green",
-                    label="Continuum",
-                    linewidth=2)
-            
-        patches.append(mpatches.Patch(
-                        color="blue",
-                        label="Sum spectrum"))
-        patches.append(mpatches.Patch(
-                    color="green",
-                    label="Continuum"))
-
-        __self__.plot.set_title("{0} Stacked ROI's sum for all spectra".format(
-            Constants.DIRECTORY),**__self__.plot_font)
-        __self__.plot.set_ylabel("Counts")
-        __self__.plot.set_xlabel("Energy (KeV)")
-        __self__.plot.set_ylim([1,Constants.MY_DATACUBE.sum.max()*1.20])
-        __self__.plot.legend(
-                fancybox=True,
-                shadow=True,
-                fontsize=12,
-                framealpha=1,
-                borderpad=1,
-                facecolor="white",
-                handles=patches,
-		loc="upper right")
-
-    def filter_images(__self__):
-        def filterXx(X,x,k):
-            a = X.min()
-            b = X.max()
-            v = np.zeros(k+1)
-            newX = np.zeros(X.shape[0], dtype=np.float32)
-            for elem in x:
-                v[int((elem-a)*k/(b-a))] = 1
-            for i in range(X.shape[0]):
-                if v[int((X[i]-a)*k/(b-a))] == 1:
-                    newX[i] = X[i]
-            return newX
-
-        shape = __self__.map1.shape
-        img1 = __self__.map1.flatten()
-        img2 = __self__.map2.flatten()
-       
-        x = __self__.selection[0]
-        y = __self__.selection[1]
-        
-        __self__.parent.ElementalMap1 = filterXx(img1,x,2*LEVELS)
-        __self__.parent.ElementalMap2 = filterXx(img2,y,2*LEVELS)
-        __self__.parent.ElementalMap1 = __self__.parent.ElementalMap1*LEVELS/__self__.parent.ElementalMap1.max()
-        __self__.parent.ElementalMap2 = __self__.parent.ElementalMap2*LEVELS/__self__.parent.ElementalMap2.max()
-        
-        __self__.parent.ElementalMap1.shape = (shape)
-        __self__.parent.ElementalMap2.shape = (shape)
-        __self__.parent.left_image.set_data(__self__.parent.ElementalMap1)
-        __self__.parent.left_image.set_clim(vmin=0, vmax=LEVELS)
-        __self__.parent.left_image.set_cmap(Constants.COLORMAP)
-        __self__.parent.left_image.set_extent([0,shape[1],shape[0],0])
-        __self__.parent.right_image.set_data(__self__.parent.ElementalMap2)
-        __self__.parent.right_image.set_clim(vmin=0, vmax=LEVELS)
-        __self__.parent.right_image.set_cmap(Constants.COLORMAP)
-        __self__.parent.right_image.set_extent([0,shape[1],shape[0],0])
-        __self__.parent.refresh()
-        __self__.canvas.draw_idle()
-
-    def place_anchor(__self__, e=""):
-        def make_selection():
-            mask = Mask.polygon(__self__.anchors)
-
-            #i = 0
-            #a = np.zeros(__self__.corrplot.get_offsets().shape[0],bool)
-            #for point in __self__.corrplot.get_offsets(): 
-            #   a[i] = Mask.isInside(mask,point)
-            #   i+=1
-
-            xys = __self__.corrplot.get_offsets()
-            idxs = np.nonzero(mask.contains_points(xys))[0]
-            __self__.selection = np.asarray(xys[idxs], dtype=np.float32)
-            __self__.selection = [__self__.selection[:,0],__self__.selection[:,1]]
-
-            root.busy.busy()
-            __self__.SelectionPlot = __self__.plot.scatter(__self__.selection[0],__self__.selection[1], color="purple")
-            __self__.canvas.draw()
-            __self__.filter_images()
-            __self__.parent.masked = 1
-            __self__.parent.correlate.state(["disabled"])
-            root.busy.notbusy()
-
-        if __self__.MASK_ENABLE: 
-            x, y = e.xdata, e.ydata
-            
-            # MASK COMPLETE
-            if Mask.is_complete(e, __self__.anchors):
-                line_x, line_y = Mask.line(__self__.anchors[-1], __self__.anchors[0])
-                __self__.MaskLines.append(
-                    __self__.plot.plot(line_x,line_y,linewidth=0.5,color="blue"))
-                __self__.canvas.draw()
-
-                make_selection()
-
-                __self__.toggle_mask(complete=True)
-
-            # NOT NOMPLETE
-            elif not Mask.is_too_close(e, __self__.anchors): 
-                anchor = Mask.Anchor(x,y,
-                        __self__.anchor_width,__self__.anchor_height,
-                        __self__.AnchorCount)
-                if anchor.dot is None: return
-                __self__.AnchorCount += 1
-                __self__.plot.add_patch(anchor.dot)
-                __self__.plot.set_xlim(__self__.limit_x)
-                __self__.plot.set_ylim(__self__.limit_y)
-                if __self__.AnchorCount > 1: #only draw line if not adding the first anchor 
-                    line_x, line_y = Mask.line(__self__.anchors[-1], anchor)
-                    __self__.MaskLines.append(
-                        __self__.plot.plot(line_x,line_y,linewidth=1,color="blue"))
-                __self__.anchors.append(anchor)
-                __self__.canvas.draw()
-            else: pass
-        else: pass
-
-    def clear_mask(__self__):
-        for line in __self__.MaskLines: line.pop(0).remove()
-        try: __self__.SelectionPlot.remove()
-        except: pass
-        __self__.AnchorCount = 0
-        __self__.anchors = []
-        __self__.MaskLines = []
-        __self__.plot.patches = []
-        __self__.selection = __self__.data
-        __self__.parent.update_sample1()
-        __self__.parent.update_sample2()
-        __self__.parent.masked = 0
-        __self__.parent.correlate.state(["!disabled"])
-        __self__.canvas.draw_idle()
-
-    def toggle_regression(__self__, e=""):
-        if __self__.linregress: 
-            __self__.LinRegressBtn.config(image=__self__.LINREGRESS_NORMAL_ICO)
-            __self__.linregress.pop(0).remove()
-            __self__.linregress = 0
-            __self__.plot.get_legend().remove()
-            __self__.canvas.draw_idle()
-        else:
-            __self__.LinRegressBtn.config(image=__self__.LINREGRESS_TOGGLED_ICO)
-            corr = __self__.selection
-            A, B, R = linregress(corr[0],corr[1])
-            fit = []
-            for i in range(int(corr[0].max())):
-                value = A*i+B
-                if value < corr[1].max():
-                    fit.append(value)
-                if B < 0: sig = "-"
-                else: sig = "+"
-            __self__.linregress = __self__.plot.plot(fit, color="blue",
-                    label="y(x) = {0:0.2f}x {1} {2:0.2f}\nR = {3:0.4f}".format(
-                        A,sig,abs(B),R))
-            __self__.plot.legend(shadow=True,fontsize=10,facecolor="white",loc="upper right")
-            __self__.canvas.draw_idle()
-
-    def toggle_mask(__self__, complete=False):
-        __self__.anchors = []
-        if not __self__.MASK_ENABLE:
-            __self__.clear_mask()
-            __self__.MASK_ENABLE = 1
-            __self__.MaskBtn.config(image=__self__.MASK_TOGGLED_ICO)
-            __self__.connection = __self__.canvas.mpl_connect(
-                    "button_press_event",__self__.place_anchor)
-        elif __self__.MASK_ENABLE:
-            __self__.MASK_ENABLE = 0
-            __self__.MaskBtn.config(image=__self__.MASK_NORMAL_ICO)
-            __self__.canvas.mpl_disconnect(__self__.connection)
-            if not complete: __self__.clear_mask() 
-
-    def draw_correlation(__self__,corr,labels,images):
-        __self__.map1 = images[0]
-        __self__.map2 = images[1]
-        __self__.anchors = []
-        __self__.AnchorCount = 0
-        __self__.MaskLines = []
-        __self__.data = corr
-        __self__.selection = __self__.data
-        max_xy = corr[0].max(), corr[1].max()
-        __self__.limit_x = [-max_xy[0]*0.10,max_xy[0]*1.10]
-        __self__.limit_y = [-max_xy[1]*0.10,max_xy[1]*1.10]
-        __self__.anchor_width = corr[0].max()*0.015
-        __self__.anchor_height = corr[1].max()*0.015
-        __self__.plot.set_xlim(__self__.limit_x)
-        __self__.plot.set_ylim(__self__.limit_y)
-        __self__.MASK_ENABLE = 0
-
-        def spawn_mask_button():
-            __self__.original_shape = __self__.parent.newimage1.shape
-            mask_normal_icon = PhotoImage(data=ICO_MASK_NORMAL)
-            mask_toggled_icon = PhotoImage(data=ICO_MASK_TOGGLED)
-            clear_icon = PhotoImage(data=ICO_CLEAR)
-            linregress_normal_icon = PhotoImage(data=ICO_LINREGRESS_NORMAL)
-            linregress_toggled_icon = PhotoImage(data=ICO_LINREGRESS_TOGGLED)
-            __self__.MASK_NORMAL_ICO = mask_normal_icon.subsample(1,1)
-            __self__.MASK_TOGGLED_ICO = mask_toggled_icon.subsample(1,1)
-            __self__.CLEAR_ICO = clear_icon.subsample(1,1)
-            __self__.LINREGRESS_NORMAL_ICO = linregress_normal_icon.subsample(1,1)
-            __self__.LINREGRESS_TOGGLED_ICO = linregress_toggled_icon.subsample(1,1)
-
-            __self__.add_ons = Frame(__self__.master, bg=__self__.master.cget("background"))
-            __self__.add_ons.pack(side=BOTTOM,fill=X)
-            __self__.linregress = 0
-            __self__.MaskBtn = Button(__self__.add_ons, 
-                    image=__self__.MASK_NORMAL_ICO,
-                    command= lambda:__self__.toggle_mask(), 
-                    bd=0,
-                    bg=__self__.master.cget("background"))
-            __self__.MaskBtn.pack(side=LEFT)
-            Button(__self__.add_ons, 
-                    image=__self__.CLEAR_ICO,
-                    bd=0,
-                    bg=__self__.master.cget("background"), 
-                    command= lambda: __self__.clear_mask()).pack(side=LEFT)
-            Info = Button(__self__.add_ons,
-                    text="?",
-                    bg=__self__.master.cget("background"),
-                    font=tkFont.Font(family="Tahoma",weight="bold",size=10), 
-                    bd=0)
-            Info.pack(side=LEFT)
-            Info.config(state=DISABLED)
-
-            __self__.LinRegressBtn = Button(__self__.add_ons,
-                    image=__self__.LINREGRESS_NORMAL_ICO,
-                    bg=__self__.master.cget("background"),
-                    bd=0,
-                    command= lambda: __self__.toggle_regression(corr))
-            __self__.LinRegressBtn.pack(side=RIGHT, anchor=E)
-
-            create_tooltip(Info,"Click on the plot to place anchors. To close the mask, click the purple anchor.\nWhen the mask is complete, \"Draw mask\" will be toggled off.")
-        
-        __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
-        labelx,macrox = labels[0].split("_")[0],labels[0].split("_")[1]
-        labelx = labelx+" "+macrox
-        labely,macroy = labels[1].split("_")[0],labels[1].split("_")[1]
-        labely = labely+" "+macroy
-        __self__.plot.set_xlabel(labelx,fontsize=16)
-        __self__.plot.set_ylabel(labely,fontsize=16)
-        __self__.corrplot = __self__.plot.scatter(corr[0],corr[1])
-
-        spawn_mask_button()
-
-        place_topright(__self__.master.master,__self__.master)
-
-    def draw_map(__self__):
-        __self__.plot.set_title('{0}'.format(Constants.DIRECTORY),**__self__.plot_font)
-        __self__.plot.set_xlabel("Size [pixel]",fontsize=16)
-        __self__.plot.set_ylabel("Size [pixel]",fontsize=16)
-        __self__.plot.axis("Off")
-        __self__.plot.grid(b=None, which="both", axis="both")
-        fixed_image = write_image(Constants.MY_DATACUBE.densitymap,
-                resize=Constants.TARGET_RES,
-                path=None,
-                enhance=Constants.MY_DATACUBE.config["enhance"],
-                save=False)
-        __self__.plot.imshow(fixed_image, cmap=Constants.COLORMAP, vmin=0)
-        place_topright(__self__.master.master,__self__.master)
-
-    def configure_fit(__self__):
-        if __self__.parent.Panel is None:
-            fit_config = {}
-            if hasattr(__self__.parent.DATACUBE, "fit_config"):
-                fit_config = __self__.parent.DATACUBE.fit_config
-            __self__.parent.Panel = SimpleFitPanel(__self__.parent, fit_config)
-            """ __self__.parent is the ImageAnalyzer window """
-        else: return
-
-    def export_fit(__self__):
-        f = filedialog.asksaveasfile(mode='w',
-                        defaultextension=".csv",
-                        filetypes=[("Comma separated values", "*.csv")],
-                        title="Save as...")
-        if f is not None:
-           writer = Engine.FitWriter(__self__.results,f.name) 
-           writer.dump()
-
-    def fit_roi(__self__):
-        if not Constants.USEXLIB:
-            messagebox.showerror("Xraylib not found!","Cannot perform fit!")
-            __self__.master.focus_set()
-            return
-        root.busy.busy()
-        x,spec = __self__.DATA.get_data()
-        if __self__.fit_plots != []:
-            for plot in __self__.fit_plots: 
-                try: plot.pop(0).remove()
-                except: pass
-        if __self__.parent.DATACUBE.fit_config["bg"]:
-            try: 
-                cycles, window, savgol, order = \
-                        __self__.parent.DATACUBE.fit_config["bg_settings"]
-            except: 
-                cycles, window, savgol, order = \
-                        Constants.SNIPBG_DEFAULTS
-            continuum = peakstrip(spec,cycles,window,savgol,order)
-            __self__.parent.DATACUBE.fit_fano_and_noise()
-
-        else: continuum = np.ones(spec.shape[0])
-        areas, curves = Engine.fit_single_spectrum(
-                __self__.parent.DATACUBE,
-                spec,
-                continuum,
-                __self__.parent.DATACUBE.fit_config)
-        if areas is None:
-            messagebox.showinfo("Fit failed!","Fit failed!")
-            root.busy.notbusy()
-            __self__.parent.master.focus_set()
-            __self__.master.focus_set()
-            __self__.options.entryconfig("Export fit data . . .", state=DISABLED)
-            return
-        for element in areas.keys():
-            __self__.fit_plots.append(
-                    __self__.plot.plot(
-                        __self__.parent.DATACUBE.energyaxis, curves[element], 
-                    label=element, color=ElementColors[element],linestyle="--"))
-
-        __self__.plot.set_ylim([1,spec.max()*1.20])
-        if Constants.PLOTSCALE == "-semilogy": mode = "log"
-        else: mode = "linear"
-        __self__.plot.set_yscale(mode)
-        __self__.canvas.draw()
-        __self__.results = areas
-        __self__.options.entryconfig("Export fit data . . .", state=NORMAL)
-        root.busy.notbusy()
-
-    def draw_selective_sum(__self__,
-            DATACUBE,
-            y_data,
-            display_mode=None,
-            lines=False,
-            refresh=False):
-
-        __self__.fit_plots = []
-        __self__.parent.Panel = None
-        __self__.plot.grid(which='both',axis='both')
-        __self__.plot.grid(color="gray", ls="--", lw=1)
-        __self__.plot.axis('On')
-        __self__.plot.set_facecolor("white")
-        __self__.plot.set_xlim([
-            __self__.parent.DATACUBE.energyaxis.min(),
-            __self__.parent.DATACUBE.energyaxis.max()])
-
-
-        def add_buttons():
-            save_icon = PhotoImage(data=ICO_SAVE_SPEC)
-            fit_normal_icon = PhotoImage(data=ICO_FIT_NORMAL)
-            fit_disabled_icon = PhotoImage(data=ICO_FIT_DISABLED)
-            __self__.SAVE_SPEC_ICO = save_icon.subsample(1,1)
-            __self__.FIT_NORMAL_ICO = fit_normal_icon.subsample(1,1)
-            __self__.FIT_DISABLED_ICO = fit_disabled_icon.subsample(1,1)
-            __self__.master.config(menu=__self__.menubar)
-            __self__.menubar.add_cascade(label="Options", menu=__self__.options)
-            __self__.options.add_command(label="Configure fit . . .",
-                    command=__self__.configure_fit)
-            __self__.options.add_command(label="Export fit data . . .",
-                    command=__self__.export_fit)
-
-            __self__.add_ons = Frame(__self__.master, 
-                    bg=__self__.master.cget("background"))
-            __self__.save_raw_btn = Button(__self__.add_ons,
-                    image=__self__.SAVE_SPEC_ICO,
-                    bd=0,
-                    bg=__self__.master.cget("background"),
-                    command=lambda: save_raw_spectrum())
-            __self__.fit_btn = Button(__self__.add_ons,
-                    image=__self__.FIT_NORMAL_ICO,
-                    bd=0,
-                    bg=__self__.master.cget("background"),
-                    command=__self__.fit_roi)
-            Info = Button(__self__.add_ons,
-                    text="?",
-                    bg=__self__.master.cget("background"),
-                    font=tkFont.Font(family="Tahoma",weight="bold",size=10),
-                    bd=0)
-
-            create_tooltip(Info,"Datacube fitting configurations must be first set via the \n\"Options\" menu on top. When using background, SNIPBG method \nwill be used to calculate the continuum for the selected ROI.")
-
-            __self__.add_ons.pack(side=TOP,fill=X)
-            __self__.save_raw_btn.pack(side=RIGHT)
-            __self__.fit_btn.pack(side=LEFT)
-            Info.pack(side=LEFT)
-            Info.config(state=DISABLED)
-            
-            if not hasattr(__self__.parent.DATACUBE,"fit_config"):
-                __self__.fit_btn.config(state=DISABLED)
-
-            __self__.options.entryconfig("Export fit data . . .", state=DISABLED)
-            return
-
-        def save_raw_spectrum():
-            x,spec = __self__.DATA.get_data()
-            f = filedialog.asksaveasfile(mode='w',
-                        defaultextension=".mca",
-                        filetypes=[("MCA file", "*.mca")],
-                        title="Save as...")
-            if f is not None:
-                sum_file = open(f.name,'w+')
-                
-                #################
-                # writes header #
-                #################
-                sum_file.write(
-                        "<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - {} ROI\n".format(
-                            DATACUBE.name))
-                sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - OFF\n")
-                sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(
-                    time.strftime("%Y-%m-%d %H:%M:%S", 
-                        time.gmtime())))
-                sum_file.write("SERIAL_NUMBER - 00001\n<<CALIBRATION>>\nLABEL - Channel\n")
-                for pair in DATACUBE.calibration:
-                    sum_file.write("{0} {1}\n".format(pair[0],pair[1]))
-                sum_file.write("<<DATA>>\n")
-                ###############
-                
-                for counts in spec:
-                    sum_file.write("{}\n".format(int(counts)))
-                sum_file.write("<<END>>")
-                sum_file.close()
-                __self__.master.focus_set()
-            else: return
-        
-        if not refresh:
-            add_buttons()
-   
-        __self__.plot.clear()
-        colors = ["blue","red","green"]
-        __self__.plot.set_title('{0}'.format(DATACUBE.name),**__self__.plot_font)
-        __self__.plot.set_ylabel("Counts")
-        __self__.plot.set_xlabel("Energy (KeV)")
-
-        if display_mode == '-semilogy':
-            __self__.plotdata = y_data
-            __self__.DATA, = __self__.plot.semilogy(
-                    DATACUBE.energyaxis,
-                    __self__.plotdata,
-                    label="ROI Sum",
-                    color=colors[0])
-        else:
-            __self__.plotdata = y_data
-            __self__.DATA, = __self__.plot.plot(
-                    DATACUBE.energyaxis,
-                    __self__.plotdata,
-                    label="ROI Sum",
-                    color=colors[0])
-        if lines==True:
-            energy_list = []
-            __self__.master.tagged = True
-            for element in Constants.FIND_ELEMENT_LIST:
-                if element == "custom":
-                    energies = plottables_dict[element]
-                    __self__.EL_CUST_LOW, = __self__.plot.plot(
-                            (energies[0],energies[0]),
-                            (0,__self__.plotdata.max()),
-                            'k--',color="cornflowerblue",
-                            label="Custom Low",linewidth=__self__.lw)
-                    __self__.EL_CUST_HIGH, =__self__.plot.plot(
-                            (energies[1],energies[1]),
-                            (0,__self__.plotdata.max()),
-                            'k--',color="tomato",
-                            label="Custom High",linewidth=__self__.lw)
-                else:
-                    energies = plottables_dict[element]
-                    for value in energies: 
-                        energy_list.append(value)
-                        __self__.EL = __self__.plot.axvline(
-                        x=value, color=ElementColors[element],
-                        label=element,linewidth=__self__.lw)
-                    energy_list=[]
-        __self__.plot.legend(
-                fontsize=12,
-                borderpad=1,
-                loc="upper right")
-        __self__.plot.grid(color="black", ls="--", lw=0.5)
-        __self__.canvas.draw()
 
 
 class Samples:
@@ -2927,12 +1063,12 @@ class Samples:
         for folder in Constants.USER_DATABASE.keys():
             if os.path.exists(Constants.USER_DATABASE[folder]["path"]):
                 __self__.load_folder_from_database(folder)
-                logger.info("Loaded {} parameters from database...".format(folder))
+                Constants.LOGGER.info("Loaded {} parameters from database...".format(folder))
                 __self__.skip_list.append(folder)
                 continue
             else:
                 not_found_samples.append(folder)
-                logger.info(
+                Constants.LOGGER.info(
                         "{} path ({}) does not exist. Removed from database...".format(
                             folder,Constants.USER_DATABASE[folder]["path"]))
         Database.remove_entry_from_database(not_found_samples)
@@ -2948,11 +1084,11 @@ class Samples:
 
     def list_all(__self__, splash=None):
         __self__.skip_list = []
-        logger.info("Loading sample list...")
-        logger.info("Reading database...")
+        Constants.LOGGER.info("Loading sample list...")
+        Constants.LOGGER.info("Reading database...")
         Database.load_user_database()
         __self__.pre_load_from_database()
-        logger.info("Done with reading database...")
+        Constants.LOGGER.info("Done with reading database...")
         indexing = None
         mca_prefix = None
         
@@ -2960,7 +1096,7 @@ class Samples:
             __self__.update_label(
                     splash=splash,
                     text=f"Reading tree {Constants.SAMPLES_FOLDER}...")
-            logger.info(f"Checking tree {Constants.SAMPLES_FOLDER}")
+            Constants.LOGGER.info(f"Checking tree {Constants.SAMPLES_FOLDER}")
                         
             """ Lists all possible samples """
             samples = [name for name in os.listdir(Constants.SAMPLES_FOLDER) \
@@ -3044,14 +1180,14 @@ class Samples:
                                     len(files),
                                     mca_extension,
                                     indexing)
-                            logger.info(f"Added {folder} to database")
-            logger.info("Done.")
+                            Constants.LOGGER.info(f"Added {folder} to database")
+            Constants.LOGGER.info("Done.")
 
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
-                logger.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
+                Constants.LOGGER.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
             elif exception.__class__.__name__ == "PermissionError":
-                logger.info("Cannot load samples. Error {}.".format(
+                Constants.LOGGER.info("Cannot load samples. Error {}.".format(
                     exception.__class__.__name__))
                 messagebox.showerror(exception.__class__.__name__,
                         "Acess denied to folder {}.\nIf error persists, try running the program with administrator rights.".format(Constants.SAMPLES_FOLDER))
@@ -3069,7 +1205,7 @@ class Samples:
             for name in local_path:
                 new_path = new_path + name + "\\"
 
-            logger.info(f"Checking {new_path}")
+            Constants.LOGGER.info(f"Checking {new_path}")
 
             if os.path.exists(os.path.join(sp.__PERSONAL__,"output",folder)):
                 for name in os.listdir(os.path.join(sp.__PERSONAL__,
@@ -3137,14 +1273,14 @@ class Samples:
                                 len(files),
                                 mca_extension,
                                 indexing)
-                        logger.info(f"Added {folder} to database")
-            logger.info("Done.")
+                        Constants.LOGGER.info(f"Added {folder} to database")
+            Constants.LOGGER.info("Done.")
         
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
-                logger.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
+                Constants.LOGGER.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
             elif exception.__class__.__name__ == "PermissionError":
-                logger.info("Cannot load samples. Error {}.".format(
+                Constants.LOGGER.info("Cannot load samples. Error {}.".format(
                     exception.__class__.__name__))
             else: pass
         
@@ -3153,7 +1289,7 @@ class Samples:
 
             folder = "Example Data"
             new_path = os.path.join(sp.__PERSONAL__,folder)
-            logger.info(f"Checking for TRAINING DATA {new_path}")
+            Constants.LOGGER.info(f"Checking for TRAINING DATA {new_path}")
             
             if os.path.exists(new_path):
                 examples = [folder for folder in os.listdir(new_path) if \
@@ -3204,8 +1340,8 @@ class Samples:
                         __self__.mcacount[folder] = len(files)
                         __self__.mca_extension[folder] = mca_extension
                         __self__.mca_indexing[folder] = "1"
-            logger.info("Done.")
-        except: logger.info("Could not locate Training Data.")
+            Constants.LOGGER.info("Done.")
+        except: Constants.LOGGER.info("Could not locate Training Data.")
 
         try:
             """ Verify packed cubes """
@@ -3223,12 +1359,12 @@ class Samples:
                         __self__.samples_path[folder] = "---"
                         __self__.mcacount[folder] = 0
                         __self__.mca_extension[folder] = "---"
-                        logger.info("Datacube {} located. Ignoring mca files".format(folder))
+                        Constants.LOGGER.info("Datacube {} located. Ignoring mca files".format(folder))
         except IOError as exception:
             if exception.__class__.__name__ == "FileNotFoundError":
-                logger.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
+                Constants.LOGGER.info("No folder {} found.".format(Constants.SAMPLES_FOLDER))
             elif exception.__class__.__name__ == "PermissionError":
-                logger.info("Cannot load samples. Error {}.".format(
+                Constants.LOGGER.info("Cannot load samples. Error {}.".format(
                     exception.__class__.__name__))
             else: pass
         try: __self__.kill()
@@ -3290,8 +1426,8 @@ class Settings:
         __self__.CoreMode.set(Constants.MULTICORE)
         __self__.RAMMode.set(Constants.RAM_LIMIT)
         __self__.RAMEntry.set(
-                "%.2f"%(float(convert_bytes(root.RAM_limit_value).split(" ")[0])))
-        __self__.RAMUnit.set(convert_bytes(root.RAM_limit_value).split(" ")[1])
+                "%.2f"%(float(convert_bytes(Constants.ROOT.RAM_limit_value).split(" ")[0])))
+        __self__.RAMUnit.set(convert_bytes(Constants.ROOT.RAM_limit_value).split(" ")[1])
         __self__.WlcmMode.set(Constants.WELCOME)
         __self__.TolVar1.set(Constants.SETROI_TOLERANCE[0])
         __self__.TolVar2.set(Constants.SETROI_TOLERANCE[1])
@@ -3545,7 +1681,7 @@ class Settings:
             __self__.kill_window()
         except: 
             messagebox.showerror("Error","File settings.tag not found.")
-            root.master.destroy()
+            Constants.ROOT.master.destroy()
 
     def kill_window(__self__, e=""):
         try: 
@@ -3555,7 +1691,7 @@ class Settings:
 
     def save_settings(__self__):
         Constants.RAM_LIMIT = __self__.RAMMode.get()
-        root.RAM_limit_value = restore_bytes(
+        Constants.ROOT.RAM_limit_value = restore_bytes(
                 float(__self__.RAMEntry.get()),
                 __self__.RAMUnit.get())
         Constants.COLORMAP = __self__.ColorMapMode.get()
@@ -3600,7 +1736,7 @@ class MainGUI:
             quit = messagebox.showinfo("WARNING",
         "Your screen resolution is too low! XISMuS lowest supported resolution is 800x600.")
             if quit == "ok": sys.exit(1)
-        logger.info("Initializing program...")
+        Constants.LOGGER.info("Initializing program...")
         f = open(os.path.join(sp.__BIN__,"settings.tag"),"r")
         for line in f:
             if line.startswith("<welcome>"):
@@ -4079,8 +2215,8 @@ class MainGUI:
         try:
             os.mkdir(sp.output_path)
         except IOError as exception:
-            logger.warning("Error {}.".format(exception.__class__.__name__))
-            logger.warning("Can't create output folder {}".format(sp.output_path))
+            Constants.LOGGER.warning("Error {}.".format(exception.__class__.__name__))
+            Constants.LOGGER.warning("Can't create output folder {}".format(sp.output_path))
 
         if os.path.exists(sp.cube_path):
             pass
@@ -4101,10 +2237,10 @@ class MainGUI:
             __self__.StatusBox.delete(0,END)
             __self__.StatusBox.insert(END, "\nStarting cube compilation.\n")
             __self__.StatusBox.insert(END, "\nImage size: {} x {}.\n".format(
-                __self__.config_xy[0], root.config_xy[1]))
+                __self__.config_xy[0], Constants.ROOT.config_xy[1]))
             __self__.StatusBox.insert(END, "\nSpectra count: {}.\n".format(
                 __self__.mcacount[Constants.CONFIG["directory"]]))
-            logger.warning("Starting cube {} compilation!".format(Constants.CONFIG["directory"]))
+            Constants.LOGGER.warning("Starting cube {} compilation!".format(Constants.CONFIG["directory"]))
 
             ##########################################################################
             # IF LOADING AN H5 FILE, USER CAN COMPILE A DATACUBE OR USE THE H5 AS IS #
@@ -4207,8 +2343,7 @@ class MainGUI:
         listed = Constants.MY_DATACUBE.check_packed_elements()
         for el in listed:
             if el in click:
-                name = el.split("_")
-                image = Constants.MY_DATACUBE.unpack_element(name[0],name[1])
+                image = Constants.MY_DATACUBE.unpack_element( el )
                 fullname = Constants.MY_DATACUBE.name + " " + el
                 __self__.ClickedMapDisplay = ImageWindow(__self__, fullname, "")
                 __self__.ClickedMapDisplay.draw_image(image)
@@ -4301,8 +2436,8 @@ class MainGUI:
             __self__.master.update_idletasks()
             x = __self__.master.winfo_pointerx()
             y = __self__.master.winfo_pointery()
-            abs_coord_x = __self__.master.winfo_pointerx() - __self__.master.winfo_vrootx()
-            abs_coord_y = __self__.master.winfo_pointery() - __self__.master.winfo_vrooty()
+            abs_coord_x = __self__.master.winfo_pointerx() - __self__.master.winfo_vConstants.ROOTx()
+            abs_coord_y = __self__.master.winfo_pointery() - __self__.master.winfo_vConstants.ROOTy()
             
             try: __self__.plot_canvas_popup.tk_popup(
                     int(abs_coord_x), int(abs_coord_y), entry="")
@@ -4324,7 +2459,7 @@ class MainGUI:
         fit_path = sp.output_path
         
         def call_table(elements):
-            __self__.PoolTable = PeriodicTable(root)
+            __self__.PoolTable = PeriodicTable(Constants.ROOT)
             __self__.PoolTable.auto(elements)
             return
         
@@ -4350,9 +2485,9 @@ class MainGUI:
                         try: os.remove(os.path.join(fit_path,chunk))
                         except: pass
                 else:
-                    root.bar = Busy(1,0)
-                    root.bar.update_text("Building images...")
-                    build_images(fit_path,bar=root.bar)
+                    Constants.ROOT.bar = Busy(1,0)
+                    Constants.ROOT.bar.update_text("Building images...")
+                    build_images(fit_path,bar=Constants.ROOT.bar)
                     wipe_list()
                     __self__.toggle_(toggle="on")
                     __self__.MenuBar.entryconfig("Toolbox", state=NORMAL)
@@ -4376,16 +2511,16 @@ class MainGUI:
                 if Constants.MULTICORE == True and \
                         Constants.CPUS>1 and \
                         Constants.MY_DATACUBE.img_size > 400:
-                    root.Fitter = MultiFit(fit_path)
+                    Constants.ROOT.Fitter = MultiFit(fit_path)
                 else:
-                    root.Fitter = MultiFit(fit_path)
-                    root.Fitter.cores = 1
-                if root.Fitter.bar.KILL: 
+                    Constants.ROOT.Fitter = MultiFit(fit_path)
+                    Constants.ROOT.Fitter.cores = 1
+                if Constants.ROOT.Fitter.bar.KILL: 
                     messagebox.showinfo("ABORTED!","Process aborted by user.")
                     return
                 
                 save_path = os.path.join(sp.output_path,"peak_find.png")
-                __self__.peaks, __self__.matches = root.Fitter.locate_peaks(path=save_path)
+                __self__.peaks, __self__.matches = Constants.ROOT.Fitter.locate_peaks(path=save_path)
 
                 elements = [key for key in __self__.matches.keys()]
                 elements = [ElementList[int(i)] for i in elements[:-1]]
@@ -4402,12 +2537,12 @@ class MainGUI:
                     else: message1 += "{}, ".format(i)
                 #########################
 
-                root.Fitter.bar.destroybar()
+                Constants.ROOT.Fitter.bar.destroybar()
                 p2 = messagebox.askyesnocancel("Attention!","We have found {} in your sample {}. Do you want to add more elements to the pool?".format(
             message1,Constants.MY_DATACUBE.name))
 
                 if p2 == None:
-                    del root.Fitter
+                    del Constants.ROOT.Fitter
                     return
 
                 elif p2 == True:
@@ -4417,15 +2552,15 @@ class MainGUI:
                 elif p2 == False:
 
                     start_time = time.time()
-                    root.Fitter.launch_workers(
+                    Constants.ROOT.Fitter.launch_workers(
                             Constants.FIT_CYCLES,
                             Constants.SAVE_INTERVAL,
                             Constants.SAVE_FIT_FIGURES)
 
-                    root.bar = Busy(1,0)
-                    root.bar.update_text("Building images...")
-                    build_images(fit_path,bar=root.bar)
-                    del root.Fitter
+                    Constants.ROOT.bar = Busy(1,0)
+                    Constants.ROOT.bar.update_text("Building images...")
+                    build_images(fit_path,bar=Constants.ROOT.bar)
+                    del Constants.ROOT.Fitter
 
                     timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
                     timestamps.write(
@@ -4511,11 +2646,11 @@ class MainGUI:
                 __self__.find_elements_diag.master.protocol("WM_DELETE_WINDOW",
                         lambda: wipe_list())
 
-    def remove_sample(__self__,e=""):
+    def remove_sample(__self__, e=""):
         try:
             sample = __self__.SamplesWindow_TableLeft.get(ACTIVE)
         except:
-            sample = event
+            sample = e
         if sample == "" or "Training Data" in sample: 
             messagebox.showinfo("Uh-oh!","It is not possible to remove the Training Data!")
             return
@@ -4632,7 +2767,7 @@ class MainGUI:
             __self__.ok_btn = Button(__self__.maps_window, text="Export!", bd=3, width=13, \
                     command = lambda: __self__.export_maps(cube, maps, maxima))
             __self__.ok_btn.pack(side=BOTTOM, pady=3)
-            place_center(root.SamplesWindow.master, __self__.maps_window)
+            place_center(Constants.ROOT.SamplesWindow.master, __self__.maps_window)
             __self__.maps_window.deiconify()
             __self__.maps_window.focus_force()
             __self__.maps_window.grab_set()
@@ -4745,12 +2880,12 @@ class MainGUI:
                     value != Constants.MY_DATACUBE.name:
                 idx = __self__.SamplesWindow_TableLeft.get(0, END).index(
                         Constants.MY_DATACUBE.name)
-                del root.samples[Constants.MY_DATACUBE.name]
-                del root.samples_path[Constants.MY_DATACUBE.name]
-                del root.mcacount[Constants.MY_DATACUBE.name]
-                del root.mca_indexing[Constants.MY_DATACUBE.name]
-                del root.mca_extension[Constants.MY_DATACUBE.name]
-                root.temporaryh5 = "None"
+                del Constants.ROOT.samples[Constants.MY_DATACUBE.name]
+                del Constants.ROOT.samples_path[Constants.MY_DATACUBE.name]
+                del Constants.ROOT.mcacount[Constants.MY_DATACUBE.name]
+                del Constants.ROOT.mca_indexing[Constants.MY_DATACUBE.name]
+                del Constants.ROOT.mca_extension[Constants.MY_DATACUBE.name]
+                Constants.ROOT.temporaryh5 = "None"
                 gc.collect()
                 __self__.SamplesWindow_TableLeft.delete(idx)
                 __self__.SamplesWindow_TableRight.config(state=NORMAL)
@@ -4765,7 +2900,7 @@ class MainGUI:
 
         __self__.master.deiconify()
         __self__.master.focus_set()
-        if root.samples[value] == "temp .h5":
+        if Constants.ROOT.samples[value] == "temp .h5":
             return
         for widget in __self__.master.winfo_children():
             if isinstance(widget, Toplevel): 
@@ -4822,7 +2957,7 @@ class MainGUI:
             __self__.draw_map()
         else: 
             if "Example Data" in value: path="auto"
-            else: path=root.samples_path[value]
+            else: path=Constants.ROOT.samples_path[value]
             sp.conditional_setup(name=value,path=path)
             __self__.call_configure()
 
@@ -4894,7 +3029,7 @@ class MainGUI:
             __self__.plot_canvas_popup.entryconfig("Export as *.h5 . . .", state=NORMAL)
             __self__.SamplesWindow.popup.entryconfig("Remove from database", state=NORMAL)
 
-        try: __self__.SamplesWindow.popup.tk_popup(event.x_root, event.y_root, entry="")
+        try: __self__.SamplesWindow.popup.tk_popup(event.x_Constants.ROOT, event.y_Constants.ROOT, entry="")
         finally: __self__.SamplesWindow.popup.grab_release()
     
     def draw_map(__self__):
@@ -4943,7 +3078,7 @@ class MainGUI:
     def open_files_location(__self__, event=""):
         value = __self__.SamplesWindow_TableLeft.get(ACTIVE)
         local_cube_path = os.path.join(sp.workpath,"output",value,value+".cube")
-        path = root.samples_path[value]
+        path = Constants.ROOT.samples_path[value]
         if Constants.MY_DATACUBE == None or Constants.MY_DATACUBE.name != value:
             if os.path.exists(local_cube_path):
                 __self__.sample_select(event)
@@ -4992,7 +3127,7 @@ class MainGUI:
     def export_density_map(__self__,event=""):
         """
         try:
-            actv = root.SamplesWindow_TableLeft.get(ACTIVE)
+            actv = Constants.ROOT.SamplesWindow_TableLeft.get(ACTIVE)
             curr = Constants.MY_DATACUBE.name
             if actv == curr:
                 pass
@@ -5188,7 +3323,7 @@ class MainGUI:
         else:
             s = open(f,"r") 
             size = [int(i) for i in s.readlines()[0].split("shape:")[-1].split("x")]
-            Mosaic_API(size, root, loadfile=f)
+            Mosaic_API(size, Constants.ROOT, loadfile=f)
 
     def open_analyzer(__self__,e=""):
         API = ImageAnalyzer(__self__,Constants.MY_DATACUBE)
@@ -5240,17 +3375,17 @@ class MainGUI:
             if os.path.exists(Constants.MY_DATACUBE.path):
                 files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
                         if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
-                root.mcacount[Constants.DIRECTORY] = len(files)
+                Constants.ROOT.mcacount[Constants.DIRECTORY] = len(files)
                 __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
                 __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
                 __self__.StatusBox.insert(END,
-                        "{0} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
+                        "{0} spectra found!\n".format(Constants.ROOT.mcacount[Constants.DIRECTORY]))
                 __self__.StatusBox.insert(END, 
                         "\nDatacube loaded with {} spectra packed\n".format(
                             Constants.MY_DATACUBE.img_size))
                 __self__.no_sample = False
             else:
-                root.mcacount[Constants.DIRECTORY] = Constants.MY_DATACUBE.img_size
+                Constants.ROOT.mcacount[Constants.DIRECTORY] = Constants.MY_DATACUBE.img_size
                 __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
                 __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
                 __self__.StatusBox.insert(END,
@@ -5265,17 +3400,17 @@ class MainGUI:
                 if os.path.exists(Constants.MY_DATACUBE.path):
                     files = [f for f in os.listdir(Constants.MY_DATACUBE.path) \
                             if f.lower().endswith(".mca") or f.lower().endswith(".txt")]
-                    root.mcacount[Constants.DIRECTORY] = len(files)
+                    Constants.ROOT.mcacount[Constants.DIRECTORY] = len(files)
                     __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
                     __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
                     __self__.StatusBox.insert(END,
-                            "{0} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
+                            "{0} spectra found!\n".format(Constants.ROOT.mcacount[Constants.DIRECTORY]))
                     __self__.StatusBox.insert(END,
                             "\nDatacube loaded with {} spectra packed\n".format(
                                 Constants.MY_DATACUBE.img_size))
                     __self__.no_sample = False
                 else:
-                    root.mcacount[Constants.DIRECTORY] = Constants.MY_DATACUBE.img_size
+                    Constants.ROOT.mcacount[Constants.DIRECTORY] = Constants.MY_DATACUBE.img_size
                     __self__.StatusBox.insert(END, "\nSpectra files folder:\n")
                     __self__.StatusBox.insert(END,"{0}\n".format(Constants.MY_DATACUBE.path))
                     __self__.StatusBox.insert(END,
@@ -5302,7 +3437,7 @@ class MainGUI:
                     __self__.StatusBox.insert(END, "\nLooking for spectra files at:\n")
                     __self__.StatusBox.insert(END,"{0}\n".format(Constants.SAMPLE_PATH))
                     __self__.StatusBox.insert(END, 
-                        "\n{} spectra found!\n".format(root.mcacount[Constants.DIRECTORY]))
+                        "\n{} spectra found!\n".format(Constants.ROOT.mcacount[Constants.DIRECTORY]))
                     __self__.no_sample = False
                 except: pass
 
@@ -5329,7 +3464,7 @@ class MainGUI:
             __self__.StatusBox.insert(END, "No sample configured!") 
             for key in Constants.CONFIG:
                 __self__.TableLeft.insert(END,key)
-        elif __self__.no_sample == False and root.temporaryh5 == "None": 
+        elif __self__.no_sample == False and Constants.ROOT.temporaryh5 == "None": 
             __self__.StatusBox.insert(END, "Datacube not compiled.") 
             __self__.StatusBox.insert(END, "Please compile the cube first.")
             for key in Constants.CONFIG:
@@ -5342,7 +3477,7 @@ class MainGUI:
     def reset_sample(__self__,e=""):
 
         def repack(__self__, sample):
-            logger.warning("Cube {} and its output contents were erased!".format(sample))
+            Constants.LOGGER.warning("Cube {} and its output contents were erased!".format(sample))
             shutil.rmtree(sp.output_path)
             try: x,y,tag_dimension_file = sp.getdimension()
             except OSError as exception:
@@ -5350,7 +3485,7 @@ class MainGUI:
             if tag_dimension_file == True:
                 try: 
                     os.remove(Constants.DIMENSION_FILE)
-                    logger.warning("Custom image dimension was deleted.")
+                    Constants.LOGGER.warning("Custom image dimension was deleted.")
                 except: raise PermissionError("Can't delete custom dimension file!")
 
             # clears all open plot windows
@@ -5433,7 +3568,6 @@ class MainGUI:
         
 
 class ReConfigDiag:
-    global root
     def __init__(__self__, master):
         __self__.master = Toplevel(master = master)
         __self__.master.grab_set()
@@ -5577,13 +3711,13 @@ class ReConfigDiag:
         __self__.get_version()
         __self__.check_datatype()
 
-        place_center(root.master,__self__.master)
+        place_center(Constants.ROOT.master,__self__.master)
         icon = os.path.join(os.getcwd(),"images","icons","refresh.ico")
         __self__.master.iconbitmap(icon)
-        root.master.wait_window(__self__.master)
+        Constants.ROOT.master.wait_window(__self__.master)
 
     def call_advcalib(__self__):
-        AdvCalib(__self__,root,hascube=1) 
+        AdvCalib(__self__,Constants.ROOT,hascube=1) 
 
     def save(__self__, e=""):
         save_cube = 0   #NOTE: will save if not merged or h5 anyways!!
@@ -5665,12 +3799,12 @@ class ReConfigDiag:
 
             ###############################################################################
 
-            root.draw_map()
+            Constants.ROOT.draw_map()
 
         if "mca" in Constants.MY_DATACUBE.datatypes or save_cube:
             if not "h5-temp" in Constants.MY_DATACUBE.datatypes:
                 Constants.MY_DATACUBE.save_cube()
-        root.write_stat()
+        Constants.ROOT.write_stat()
         __self__.kill()
 
     def toggle(__self__,mode):
@@ -5686,203 +3820,6 @@ class ReConfigDiag:
             __self__.Label6.config(state=DISABLED)
 
     def kill(__self__, e=""):
-        __self__.master.destroy()
-
-
-class ImageOperationOutput:
-    def __init__(__self__, image, el1, el2, operation, cube_datatypes, cube, parent):
-        __self__.image = image
-        __self__.parent = parent
-        __self__.master = Toplevel()
-        __self__.cube = cube
-        __self__.master.attributes("-alpha",0.0)
-        __self__.alt = False
-        __self__.master.bind("<Alt_L>",__self__.AltOn)
-        __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
-        __self__.master.bind("<Return>",__self__.maximize)
-
-        __self__.master.title("Result: {} {} {}".format(el1,operation,el2))
-        __self__.master.tagged = None
-        __self__.master.minsize(width=600,height=480)
-        __self__.master.configure(bg='white')
-        __self__.master.resizable(True,True)
-        __self__.upper = Canvas(__self__.master)
-        __self__.upper.config(bg='white')
-        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)#, padx=(16,16),pady=(16,16))
-        __self__.lower = Frame(__self__.master,height=35)
-        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
-
-        # Save and replace buttons #
-        save_icon = PhotoImage(data=ICO_SAVE)
-        replace_icon = PhotoImage(data=ICO_RUBIK)
-        __self__.SAVE_ICO = save_icon.subsample(1,1)
-        __self__.REPLACE_ICO = replace_icon.subsample(1,1)
-
-        __self__.replace = Button(__self__.lower,
-                text=" Replace {} in Cube".format(el1),
-                image=__self__.REPLACE_ICO,
-                compound=LEFT,
-                command= lambda: __self__.replace_on_cube(image,el1),
-                width=180,
-                height=24,
-                bd=1,
-                pady=10)
-        __self__.replace.grid(row=0,column=0,sticky="")
-        __self__.save = Button(__self__.lower,
-                text=" Save output image",
-                image=__self__.SAVE_ICO,
-                compound=LEFT,
-                command=lambda: __self__.save_image(image),
-                width=180,
-                bd=1,
-                pady=10)
-        __self__.save.grid(row=0,column=1,sticky="")
-
-        __self__.figure = Figure(figsize=(5,4), dpi=75)
-        __self__.plot = __self__.figure.add_subplot(111)
-        __self__.plot.grid(which="both",axis="both")
-        __self__.plot.axis("Off")
-        __self__.plot.set_title("Result: {} {} {}".format(el1,operation,el2))
-        __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
-        __self__.canvas.draw()
-        __self__.mplCanvas = __self__.canvas.get_tk_widget()
-        __self__.mplCanvas.pack(fill=BOTH, anchor=N+W,expand=True)
-        __self__.canvas._tkcanvas.pack()
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
-        if __self__.parent.masked:
-            __self__.replace.config(state=DISABLED)
-        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
-
-        if any("temp" in x for x in cube_datatypes):
-            __self__.replace.config(state=DISABLED)
-
-        __self__.master.iconbitmap(icon)
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
-        __self__.draw(image)
-
-    def AltOn(__self__,e=""):
-        __self__.alt = True
-
-    def AltOff(__self__,e=""):
-        __self__.alt = False
-
-    def maximize(__self__,e=""):
-        maximize_window(__self__)
-
-    def draw(__self__,image=None):
-        __self__.plot.imshow(image, vmin=0, cmap=Constants.COLORMAP)
-        spawn_center(__self__.master)
-
-    def replace_on_cube(__self__,image,element):
-        p = messagebox.askquestion("Warning!","You are about to replace {} map in your datacube with the output image. This operation is irreversible. Do you want to proceed?".format(element))
-        if p =="yes":
-            __self__.cube.replace_map(image,element)
-            __self__.parent.update_sample1()
-            __self__.parent.update_sample2()
-            __self__.wipe_plot()
-            return
-        else: 
-            __self__.parent.master.focus_set()
-            __self__.master.focus_set()
-            return
-
-    def save_image(__self__,image):
-        f = filedialog.asksaveasfile(mode='w',
-                        defaultextension=".png",
-                        filetypes=[("Portable Network Graphic", "*.png")],
-                        title="Save as...")
-        if f is not None: 
-            Engine.ImgMath.write_image(image,
-                Constants.TARGET_RES,
-                f.name,
-                enhance=Constants.MY_DATACUBE.config["enhance"],
-                save=True)
-        else: 
-            __self__.master.focus_set()
-            return
-
-    def wipe_plot(__self__):
-        __self__.parent.master.focus_set()
-        __self__.master.destroy()
-        del __self__
-
-
-class ImageOperationWarning:
-    def __init__(__self__,parent,mode=None,scaled=False):
-        __self__.master = Toplevel(parent.master)
-        __self__.parent = parent
-        __self__.scaled = scaled
-        __self__.mode = mode
-        if mode == "add": 
-            __self__.gif_size = 8
-            text="Image 2 is going to be added to image 1. Click OK to proceed."
-            speed = 200
-        if mode == "subtract": 
-            text="Image 2 is going to be subtracted from image 1. Click OK to proceed."
-            speed = 125
-            __self__.gif_size = 11
-        __self__.master.geometry("400x330")
-        __self__.master.title("Operation Warning")
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
-        __self__.master.resizable(False, False)
-        path=os.path.join(os.getcwd(),"images","animation_{}.gif".format(mode))
-        __self__.gif = [PhotoImage(file=path,format = 'gif -index %i' %(i),
-            master = __self__.master) for i in range(__self__.gif_size)]
-        __self__.frameno = 0
-        __self__.speed = speed
-        __self__.animation = Label(__self__.master, 
-                image=__self__.gif[__self__.frameno])
-        __self__.text = Label(__self__.master, 
-                text=text,
-                wraplength=300)
-        __self__.ok = ttk.Button(__self__.master,text="OK",width=13,
-                command = __self__.perform)
-        __self__.animation.pack(side=TOP,fill=BOTH,anchor=CENTER,padx=15,pady=15)
-        __self__.ok.pack(side=BOTTOM,anchor=CENTER,padx=15,pady=15)
-        __self__.text.pack(side=BOTTOM,fill=BOTH,anchor=CENTER,padx=15)
-        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
-        __self__.master.iconbitmap(icon)
-        __self__.master.grab_set()
-        __self__.master.after(__self__.speed, __self__.update_frame)
-
-    def update_frame(__self__):
-        __self__.frameno += 1
-        if __self__.frameno >= __self__.gif_size: __self__.frameno = 0
-        __self__.frame = __self__.gif[__self__.frameno]
-        __self__.animation.configure(image=__self__.frame)
-        __self__.master.update()
-        __self__.master.after(__self__.speed, __self__.update_frame)
-
-    def kill(__self__):
-        __self__.master.grab_release()
-        __self__.parent.master.focus_force()
-        __self__.master.destroy()
-        del __self__
-
-    def perform(__self__):
-
-        from Engine.ImgMath import subtract as sub_
-        from Engine.ImgMath import add as add_
-
-        if __self__.mode == "subtract": 
-            operation = "minus"
-            output = sub_(__self__.parent.newimage1,
-                    __self__.parent.newimage2,norm=True)
-        elif __self__.mode == "add":
-            operation = "plus"
-            output = add_(__self__.parent.newimage1,
-                    __self__.parent.newimage2,norm=True)
-        else: pass
-        if output is None: 
-            messagebox.showerror("Error!","Images have incompatible shapes!")
-            return
-        if __self__.scaled:
-            output = fast_scaling(__self__.parent.DATACUBE, output, -1)
-        ImageOperationOutput(output,__self__.parent.Map1Var.get(),
-                __self__.parent.Map2Var.get(),operation, 
-                __self__.parent.DATACUBE.datatypes, __self__.parent.DATACUBE,
-                __self__.parent)
-        __self__.master.grab_release()
         __self__.master.destroy()
 
 
@@ -5966,22 +3903,22 @@ class PeriodicTable:
         
         for i in __self__.elements: Constants.FIND_ELEMENT_LIST.remove(i)
         __self__.elements = [ElementList.index(i) for i in Constants.FIND_ELEMENT_LIST]
-        logger.info("Elements to add to wizard: {}".format(__self__.elements))
+        Constants.LOGGER.info("Elements to add to wizard: {}".format(__self__.elements))
         __self__.master.grab_release()
         __self__.master.destroy()
         start_time = time.time()
 
         save_path = os.path.join(sp.output_path,"peak_find.png")
-        root.Fitter.locate_peaks(add_list=__self__.elements,path=save_path)
-        root.Fitter.launch_workers(
+        Constants.ROOT.Fitter.locate_peaks(add_list=__self__.elements,path=save_path)
+        Constants.ROOT.Fitter.launch_workers(
                         Constants.FIT_CYCLES,
                         Constants.SAVE_INTERVAL,
                         Constants.SAVE_FIT_FIGURES)
-        root.bar = Busy(1,0)
-        root.bar.update_text("Building images...")
-        del root.Fitter
+        Constants.ROOT.bar = Busy(1,0)
+        Constants.ROOT.bar.update_text("Building images...")
+        del Constants.ROOT.Fitter
 
-        build_images(sp.output_path,bar=root.bar)
+        build_images(sp.output_path,bar=Constants.ROOT.bar)
 
         timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
         timestamps.write(
@@ -5995,10 +3932,10 @@ class PeriodicTable:
         timestamps.close()
 
         wipe_list()
-        root.toggle_(toggle="on")
-        root.MenuBar.entryconfig("Toolbox", state=NORMAL)
-        root.ButtonLoad.config(state=NORMAL)
-        root.write_stat()
+        Constants.ROOT.toggle_(toggle="on")
+        Constants.ROOT.MenuBar.entryconfig("Toolbox", state=NORMAL)
+        Constants.ROOT.ButtonLoad.config(state=NORMAL)
+        Constants.ROOT.write_stat()
         refresh_plots()
     
     def add_element(__self__,toggle_btn):
@@ -6031,7 +3968,7 @@ class PeriodicTable:
     def save_and_run(__self__,mode=None):
         try: cube_status = os.stat(sp.cube_path)
         except: 
-            try: cube_status = os.stat(root.h5path)
+            try: cube_status = os.stat(Constants.ROOT.h5path)
             except:
                 messagebox.showerror("Error","No datacube found! Cannot proceed.")
                 return
@@ -6044,18 +3981,18 @@ class PeriodicTable:
             messagebox.showinfo("Error", "No element input!")
         else:
             # disabled widgets to avoid user changes sample
-            root.toggle_(toggle="off")
+            Constants.ROOT.toggle_(toggle="off")
 
             # Sets fano and noise factor 
             if not hasattr(Constants.MY_DATACUBE,"FN"):
                 FANO,NOISE = 0.114, 80
-                logger.warning("Datacube has no attribute FN, using default FANO and NOISE")
+                Constants.LOGGER.warning("Datacube has no attribute FN, using default FANO and NOISE")
             else:
                 FANO, NOISE = Constants.MY_DATACUBE.FN
             FN_set(FANO, NOISE)
 
-            root.MenuBar.entryconfig("Toolbox", state=DISABLED)
-            root.ButtonLoad.config(state=DISABLED)
+            Constants.ROOT.MenuBar.entryconfig("Toolbox", state=DISABLED)
+            Constants.ROOT.ButtonLoad.config(state=DISABLED)
             for widget in __self__.master.body.winfo_children():
                 try: widget.config(state=DISABLED)
                 except: pass
@@ -6083,9 +4020,9 @@ class PeriodicTable:
                         and Constants.MULTICORE == True:
                     
                     max_copies = 0 #as many copies as cores available
-                    if needed_memory > root.RAM_limit_value:
+                    if needed_memory > Constants.ROOT.RAM_limit_value:
                         max_copies = 1
-                        while cube_size*max_copies < root.RAM_limit_value:
+                        while cube_size*max_copies < Constants.ROOT.RAM_limit_value:
                             max_copies += 1
                     elif needed_memory > sys_mem["available"]:
                         max_copies = 1
@@ -6144,14 +4081,14 @@ class PeriodicTable:
                 sort_results(results,Constants.FIND_ELEMENT_LIST)
                 __self__.progress.update_text("Digesting maps...")
                 digest_results(Constants.MY_DATACUBE,results,Constants.FIND_ELEMENT_LIST)
-                logger.info("Finished iteration process for element(s) {0}".format(
+                Constants.LOGGER.info("Finished iteration process for element(s) {0}".format(
                     Constants.FIND_ELEMENT_LIST))
                 __self__.progress.destroybar()
                 del __self__.progress
                 gc.collect()
 
                 timestamp = time.time() - partialtimer
-                logger.info("Execution took %s seconds" % (timestamp))
+                Constants.LOGGER.info("Execution took %s seconds" % (timestamp))
                 timestamps = open(os.path.join(sp.__BIN__,"timestamps.txt"),"a")
                 timestamps.write("\n{5} - {7}\nbgtrip={1} enhance={2} peakmethod={3}\t\n{6} elements\n{4} seconds\n".format(
                     Constants.FIND_ELEMENT_LIST,
@@ -6162,14 +4099,14 @@ class PeriodicTable:
                     time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
                     len(Constants.FIND_ELEMENT_LIST),
                     Constants.MY_DATACUBE.name))
-                logger.info("Finished map acquisition!")
+                Constants.LOGGER.info("Finished map acquisition!")
 
             # reactivate widgets
             wipe_list()
-            root.toggle_(toggle="on")
-            root.MenuBar.entryconfig("Toolbox", state=NORMAL)
-            root.ButtonLoad.config(state=NORMAL)
-            root.write_stat()
+            Constants.ROOT.toggle_(toggle="on")
+            Constants.ROOT.MenuBar.entryconfig("Toolbox", state=NORMAL)
+            Constants.ROOT.ButtonLoad.config(state=NORMAL)
+            Constants.ROOT.write_stat()
             refresh_plots()
             gc.collect()
 
@@ -6402,6 +4339,7 @@ class PeriodicTable:
         __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
 
+
 if __name__.endswith("__main__"):         
     from multiprocessing import freeze_support
     freeze_support()
@@ -6417,18 +4355,11 @@ if __name__.endswith("__main__"):
     _init_numpy_mkl()
 
     # tcl/Tk imports
-    try:
-        from tkinter import *
-        from tkinter import ttk
-        from tkinter import messagebox
-        from tkinter import filedialog
-        from tkinter import font as tkFont
-    except:
-        from Tkinter import *
-        from Tkinter import ttk
-        from Tkinter import messagebox
-        from Tkinter import filedialog
-        import tkFont
+    from tkinter import *
+    from tkinter import ttk
+    from tkinter import messagebox
+    from tkinter import filedialog
+    from tkinter import font as tkFont
 
     # general utilities
     t = 0.050 #50 ms
@@ -6437,9 +4368,6 @@ if __name__.endswith("__main__"):
     splash.update("Importing utilities... numpy")
     time.sleep(t)
     import numpy as np
-    splash.update("Importing utilities... h5py")
-    time.sleep(t)
-    import h5py
     splash.update("Importing utilities... cv2")
     time.sleep(t)
     import cv2
@@ -6471,8 +4399,6 @@ if __name__.endswith("__main__"):
     matplotlib.use("TkAgg")
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
     from matplotlib.figure import Figure
-    from matplotlib.patches import Rectangle
-    import matplotlib.patches as mpatches
     from matplotlib import style
     style.use('ggplot')
 
@@ -6481,20 +4407,19 @@ if __name__.endswith("__main__"):
     check_screen_resolution(optimum_resolution)
 
     open_log()
-    logger = logging.getLogger("logfile")
 
     splash.update("Reading configuration...")
     from ReadConfig import checkout_config, set_settings 
 
     time.sleep(t)
     splash.update("Booting Engine...")
-    import Engine
+    from Utilities import *
     import Engine.SpecRead as sp
     import Engine.SpecReadPlus as spp
     from Engine import FastFit
     from Engine import Database
-    from Engine.ImgMath import LEVELS, correlate
-    from Engine.ImgMath import write_image, stackimages
+    from Engine.ImgMath import LEVELS
+    from Engine.ImgMath import write_image
     from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
     from Engine.SpecMath import datacube as Cube
     from Engine.CBooster import *
@@ -6505,14 +4430,14 @@ if __name__.endswith("__main__"):
 
     splash.update("Preparing GUI...")
     time.sleep(t)
-    from GUI import Mask
     from GUI import Theme
-    from GUI import AdvCalib, SimpleFitPanel, Navigator
+    from GUI import AdvCalib
     from GUI import Busy, BusyManager, create_tooltip
     from GUI import ImageWindow
+    from GUI.PlotWindow import PlotWin
+    from GUI.ImageAnalyzer import ImageAnalyzer
     from GUI.Mosaic import Mosaic_API
     from GUI.ConfigurationParser import *
-    from GUI.Utils import *
 
     splash.update("Revving Engine...")
     time.sleep(t)
@@ -6524,4 +4449,3 @@ if __name__.endswith("__main__"):
     logger.info("#"*3+" Configuring environment "+"#"*3)
     start_up()
     mainloop()
-

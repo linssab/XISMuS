@@ -1,16 +1,43 @@
-#################################################################
-#                                                               #
-#          SPEC MATHEMATICS                                     #
-#                        version: 2.4.0 - May - 2021            #
-# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#################################################################
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 TESTFNC = False
 
 #############
 # Utilities #
 #############
-import logging
-logger = logging.getLogger("logfile")
 import threading
 import os, time
 import sys
@@ -18,13 +45,14 @@ import gc
 import copy
 import numpy as np
 import pickle
-import random
+import shutil
 #############
 
 #################
 # Local imports #
 #################
-logger.info("In SpecMath: Importing local modules...")
+import Constants
+Constants.LOGGER.info("In SpecMath: Importing local modules...")
 import Elements
 from .SpecRead import (getdata,
 getdimension,
@@ -32,7 +60,11 @@ getcalibration,
 getfirstfile,
 getftirdata,
 calibrate,
-updatespectra)
+build_pool,
+read_ftir_pool,
+read_pool,
+get_chunks,
+refresh_position)
 from .ImgMath import LEVELS
 from .Mapping import getdensitymap
 from .CBooster import *
@@ -77,7 +109,7 @@ class datacube:
             from Constants import SAMPLE_PATH
             __self__.name = configuration["directory"]
             __self__.path = SAMPLE_PATH
-        logger.debug("Initializing cube file")
+        Constants.LOGGER.debug("Initializing cube file")
         
         __self__.datatypes = np.array(["{0}".format(
             dtypes[type]) for type in range(len(dtypes))])
@@ -154,7 +186,7 @@ class datacube:
         try: 
             cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
         except: 
-            logger.warning("Matrix set to float32!")
+            Constants.LOGGER.warning("Matrix set to float32!")
             __self__.matrix = __self__.matrix.astype(np.int32)
             cy_funcs.cy_MPS(__self__.matrix, shape, mps, size)
 
@@ -338,7 +370,7 @@ class datacube:
                     ndegree_single=ndegree_single,
                     r=r_fact,
                     bar=progressbar)
-                logger.warning(
+                Constants.LOGGER.warning(
                 "Attempt {} to fit continuum. Too slow, increasing R factor".format(
                             attempt))
                 r_fact+=1
@@ -348,20 +380,7 @@ class datacube:
             __self__.background = y_cont[1:]
             __self__.background.shape = (__self__.matrix.shape[0], 
                     __self__.matrix.shape[1], __self__.matrix.shape[2])
-            
-            # NOTE:
-            # looping to fill in __self__.background is too slow. Better user numpy reshape
-
             del y_cont
-
-        #plt.semilogy(__self__.background.sum(0).sum(0),label="bg")
-        #plt.semilogy(__self__.matrix.sum(0).sum(0))
-        #plt.semilogy(__self__.sum_bg, label="sum bg")
-        #plt.semilogy(__self__.matrix[15][22])
-        #plt.semilogy(__self__.background[15][22])
-        #plt.legend()
-        #plt.show()
-
         return
 
     def create_densemap(__self__):
@@ -379,11 +398,11 @@ class datacube:
 
         try: 
             if not os.path.exists(output_path):
-                logger.info("Creating outputh path {0}".format(output_path))
+                Constants.LOGGER.info("Creating outputh path {0}".format(output_path))
                 os.mkdir(output_path)
-            else: logger.debug("Output path exists")
+            else: Constants.LOGGER.debug("Output path exists")
         except: 
-            logger.warning("Could not create output folder {}".format(output_path))
+            Constants.LOGGER.warning("Could not create output folder {}".format(output_path))
         p_output = open(cube_path,'wb')
         pickle.dump(__self__,p_output)
         p_output.close()
@@ -446,7 +465,7 @@ class datacube:
             nonstop = True
             failspec = None
 
-            logger.debug("Started mca compilation")
+            Constants.LOGGER.debug("Started mca compilation")
             timer = time.time()
             __self__.progressbar = Busy(__self__.img_size,0)
             x,y,scan = 0,0,(0,0)
@@ -496,7 +515,7 @@ class datacube:
                                     __self__.matrix,
                                     __self__.chunks_done,))
                     running_chunks.append(t)
-                    logger.info("Polling chunk {}. Leftovers: {}".format(chunk,leftovers))
+                    Constants.LOGGER.info("Polling chunk {}. Leftovers: {}".format(chunk,leftovers))
 
                 if leftovers > 0:
                     start = (__self__.dimension[0]-leftovers)
@@ -520,7 +539,7 @@ class datacube:
                                     __self__.matrix,
                                     __self__.chunks_done,))
                     running_chunks.append(t)
-                    logger.info("Polling Leftovers")
+                    Constants.LOGGER.info("Polling Leftovers")
 
                 for thread in running_chunks:
                     thread.start()
@@ -569,11 +588,11 @@ class datacube:
                     Constants.FTIR_DATA = 0
                     __self__.progressbar.destroybar()
                     return 1, spec
-            logger.info("Packed spectra in {} seconds".format(time.time()-timer))
+            Constants.LOGGER.info("Packed spectra in {} seconds".format(time.time()-timer))
             ######################
 
 
-        logger.debug("Calculating MPS...")
+        Constants.LOGGER.debug("Calculating MPS...")
         __self__.progressbar.progress["maximum"] = 6
         __self__.progressbar.update_text("Calculating MPS...")
         __self__.progressbar.updatebar(1)
@@ -581,7 +600,7 @@ class datacube:
         __self__.MPS(mps)
         __self__.mps = mps
 
-        logger.debug("Calculating summation spectrum...")
+        Constants.LOGGER.debug("Calculating summation spectrum...")
         __self__.progressbar.update_text("Calculating sum spec...")
         __self__.progressbar.updatebar(2)
         __self__.stacksum()
@@ -590,30 +609,30 @@ class datacube:
                 specsize=__self__.matrix.shape[2])
         __self__.config["gain"] = __self__.gain
         
-        logger.debug("Stripping background...")
+        Constants.LOGGER.debug("Stripping background...")
         __self__.progressbar.update_text("Stripping background...")
         __self__.progressbar.updatebar(3)
         __self__.strip_background()
         __self__.progressbar.progress["maximum"] = 6
         
-        logger.debug("Calculating sum map...")
+        Constants.LOGGER.debug("Calculating sum map...")
         __self__.progressbar.update_text("Calculating sum map...")
         __self__.progressbar.updatebar(4)
         __self__.create_densemap()
         
-        logger.debug("Writing summation mca and ANSII files...")
+        Constants.LOGGER.debug("Writing summation mca and ANSII files...")
         __self__.write_sum()
         __self__.progressbar.update_text("Finding Noise and Fano...")
         __self__.progressbar.updatebar(5)
         __self__.fit_fano_and_noise()
 
-        logger.debug("Saving cube file to disk...")
+        Constants.LOGGER.debug("Saving cube file to disk...")
         __self__.progressbar.update_text("Writing to disk...")
         __self__.progressbar.updatebar(6)
         __self__.progressbar.destroybar()
         del __self__.progressbar 
         __self__.save_cube()
-        logger.debug("Finished packing.")
+        Constants.LOGGER.debug("Finished packing.")
         return 0,None
     
     def periodic_check(__self__,threads):
@@ -633,37 +652,6 @@ class datacube:
             for t in threads:
                 print(t.is_alive())
         return
-
-    def cut_zeros(__self__):
-        """ Sliced the data cutting off the necessary lead and tail zeros.
-        Lead and tail are verified through the sum spectrum to avoid data loss """
-
-        lead_zeros, tail_zeros = 0,__self__.matrix.shape[2]
-        for i in range(__self__.sum.shape[0]):
-            if __self__.sum[i] < __self__.img_size:
-                lead_zeros = i
-            else: break
-        for i in range(1,__self__.sum.shape[0]):
-            if __self__.sum[-i] < __self__.img_size:
-                tail_zeros = __self__.matrix.shape[2]-i
-            else: break
-        
-        print("lead",lead_zeros,"tail",tail_zeros)
-        __self__.energyaxis, __self__.gain, __self__.zero = calibrate(
-                lead=lead_zeros,tail=__self__.matrix.shape[2]-tail_zeros)
-        __self__.config["gain"] = __self__.gain
-    
-        __self__.matrix = __self__.matrix[:,:,lead_zeros:tail_zeros]
-        __self__.background = __self__.background[:,:,lead_zeros:tail_zeros]
-        __self__.sum = __self__.sum[lead_zeros:tail_zeros]
-        __self__.sum_bg = __self__.sum_bg[lead_zeros:tail_zeros]
-        __self__.mps = __self__.mps[lead_zeros:tail_zeros]
-        
-        print(len(__self__.sum),"sum")
-        print(len(__self__.sum_bg),"sum_bg")
-        print(len(__self__.mps),"mps")
-        print(len(__self__.energyaxis),"energy")
-        return lead_zeros, tail_zeros
         
     def pack_element(__self__,image,element,line):
         """ Saves elemental distribution image to datacibe object 
@@ -672,7 +660,7 @@ class datacube:
         line; a string """
 
         if image.max() <= 1: 
-            logger.info(f"Can't pack an empty map to datacube {__self__.name}. \
+            Constants.LOGGER.info(f"Can't pack an empty map to datacube {__self__.name}. \
                     Map name: {element}_{line}")
             print(f"Can't pack an empty map to datacube {__self__.name}. \
                     Map name: {element}_{line}")
@@ -680,7 +668,7 @@ class datacube:
 
         __self__.__dict__[element + f"_{line}"] = image
         __self__.max_counts[element + f"_{line}"] = image.max()
-        logger.info("Packed {0} map to datacube {1}".format(element,__self__.name))
+        Constants.LOGGER.info("Packed {0} map to datacube {1}".format(element,__self__.name))
     
     def pack_hist(__self__,hist,bins,element):
         """ Saves the histogram of the last calculated elemental distribution map. 
@@ -696,17 +684,17 @@ class datacube:
         histfile.close()
         __self__.hist[element] = [hist,bins]
      
-    def unpack_element(__self__,element,line):
+    def unpack_element( __self__, image ):
         """ Retrieves a 2d-array elemental distribution map from the datacube.
         element; a string
         line; a string """
 
         try:
-            unpacked = __self__.__dict__[element+"_"+line]
+            unpacked = __self__.__dict__[image]
             return unpacked
         except KeyError as exception:
-            logger.info("Failed to unpack {}{} map from {}".format(element,line,__self__.name))
-            print("Failed to unpack {}{} map from {}".format(element,line,__self__.name))
+            Constants.LOGGER.info(f"Failed to unpack {image} map from {__self__.name}")
+            print(f"Failed to unpack {image} map from {__self__.name}")
             return np.zeros([__self__.dimension[0],
                     __self__.dimension[1]],dtype="float32")
 
@@ -715,6 +703,9 @@ class datacube:
         datacube object """
 
         packed = []
+        ####################################
+        # Picks all lines from roi methods #
+        ####################################
         for element in Elements.ElementList:
             if hasattr(__self__,element + "_a"):
                 if hasattr(__self__,element + "_b"):
@@ -725,10 +716,14 @@ class datacube:
                 else:
                     if __self__.__dict__[element + "_a"].max() > 0:
                         packed.append(element + "_a")
+        ####################################
+
+        ####################################
             for line in Elements.SIEGBAHN:
                 if hasattr(__self__,element + f"_{line}"):
                     if __self__.__dict__[element + f"_{line}"].max() > 0:
                         packed.append(element + f"_{line}")
+        ####################################
         if hasattr(__self__,"custom_a"): packed.append("custom_a")
         for key in __self__.__dict__.keys():
             if "Slice" in key: packed.append(key)
@@ -801,26 +796,26 @@ def converth5(dtypes):
     cube = datacube(dtypes,Constants.CONFIG)
     progressbar = Busy(5,0)
 
-    logger.debug("Calculating MPS...")
+    Constants.LOGGER.debug("Calculating MPS...")
     progressbar.update_text("Calculating MPS...")
     progressbar.updatebar(1)
     mps = np.zeros([cube.matrix.shape[2]],dtype="int32")
     cube.MPS(mps)
     cube.mps = mps
 
-    logger.debug("Calculating summation spectrum...")
+    Constants.LOGGER.debug("Calculating summation spectrum...")
     progressbar.update_text("Calculating sum spec...")
     progressbar.updatebar(2)
     cube.stacksum()
     cube.energyaxis, cube.gain, cube.zero = calibrate(specsize=cube.matrix.shape[2])
     cube.config["gain"] = cube.gain
 
-    logger.debug("Stripping background...")
+    Constants.LOGGER.debug("Stripping background...")
     progressbar.update_text("Stripping background...")
     progressbar.updatebar(3)
     cube.strip_background(progressbar=progressbar)
 
-    logger.debug("Calculating sum map...")
+    Constants.LOGGER.debug("Calculating sum map...")
     progressbar.update_text("Calculating sum map...")
     progressbar.progress["maximum"] = 5
     progressbar.updatebar(4)
@@ -833,98 +828,7 @@ def converth5(dtypes):
     del progressbar
     return cube
 
-def build_pool(size):
-    Constants.FILE_POOL = []
-    spec = getfirstfile()
-    
-    name=str(spec)
-    specfile_name = name.split("\\")[-1]
-    name = specfile_name.split(".")[0]
-    extension = specfile_name.split(".")[-1]
-    for i in range(len(name)):
-        if not name[-i-1].isdigit(): 
-            prefix = name[:-i]
-            index = name[-i:]
-            break
-    index = int(index)+1
 
-    Constants.FILE_POOL.append(spec)
-    for idx in range(index,size+index-1,1):
-        spec = os.path.join(Constants.SAMPLE_PATH,
-                str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
-        Constants.FILE_POOL.append(spec)
-
-def read_ftir_pool(start,end,pool,dimension,m,chunk):
-    """ INPUT:
-        - start: int; starting row
-        - end: int; lower boundary row
-        - pool: list; contains the spectra to be read
-        - dimension: int; row length
-        - m: np.array (int); spectra matrix """
-
-    global iterator
-    global nonstop
-    global failspec
-    scan = (start,0)
-    x, y = scan[0], scan[1]
-    try:
-        for spec in pool:
-            if not nonstop: return
-            logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
-            with lock: m[x][y] = getftirdata(spec)
-            scan = refresh_position(scan[0],scan[1],dimension)
-            x,y = scan[0],scan[1]
-            with lock: iterator += 1
-    except FileNotFoundError as e:
-        nonstop = False
-        failspec = spec
-        return
-    chunk.append(1)
-    print(chunk)
-    return
-
-def read_pool(start,end,pool,dimension,m,chunk):
-    """ INPUT:
-        - start: int; starting row
-        - end: int; lower boundary row
-        - pool: list; contains the spectra to be read
-        - dimension: int; row length
-        - m: np.array (int); spectra matrix """
-        
-    global iterator
-    global nonstop
-    global failspec
-    scan = (start,0)
-    x, y = scan[0], scan[1]
-    try:
-        for spec in pool:
-            if not nonstop: return
-            logger.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
-            with lock: m[x][y] = getdata(spec)
-            scan = refresh_position(scan[0],scan[1],dimension)
-            x,y = scan[0],scan[1]
-            with lock: iterator += 1
-    except FileNotFoundError as e:
-        nonstop = False
-        failspec = spec
-        return
-    chunk.append(1)
-    print(chunk)
-    return
-
-def get_chunks(size):
-    max_chunks = Constants.CPUS*2
-    bites = int(((size[0]*size[1])/max_chunks)/size[1])
-    
-    ###################################################################
-    # missing lines at the end (cannot fit into more chunks or bites) #
-    ###################################################################
-
-    leftovers = size[0]-(bites*max_chunks) 
-
-    ###################################################################
-
-    return max_chunks, bites, leftovers
 
 def digest_psdinv(y,energies):
     """ -- y is an array with the measured FWHM.
@@ -988,7 +892,7 @@ def FN_fit_pseudoinv(specdata,gain):
     while i < x:
         F, N = FN_iter(data,gain,v,w,r)
         if 0.114-(2*0.0114) <= F <= 0.114+(2*0.0114): 
-            logger.warning("Fano and Noise matched: F:{} N:{}".format(F,N))
+            Constants.LOGGER.warning("Fano and Noise matched: F:{} N:{}".format(F,N))
             return F,N
         avg_F += F
         avg_N += N
@@ -1167,7 +1071,7 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
                 sigma=uncertainty,
                 maxfev=Constants.FIT_CYCLES)
     except: 
-        logger.warning("Failed to fit fano and noise. Continuing with default")
+        Constants.LOGGER.warning("Failed to fit fano and noise. Continuing with default")
         return Fano, Noise
 
     #print(popt_gaus.shape)
@@ -1186,26 +1090,6 @@ def FN_fit_gaus(spec,spec_bg,e_axis,gain):
     print(popt_gaus[1], popt_gaus[0])
 
     return popt_gaus[1], popt_gaus[0]
-    
-def refresh_position(a,b,length):
-    """ Returns the next pixel position """
-
-    imagex = length[0]
-    imagey = length[1]
-    imagedimension = imagex*imagey
-    currentx = a
-    currenty = b 
-    if currenty == imagey-1:
-        currenty=0
-        currentx+=1
-    else:
-        currenty+=1
-    if currentx > imagex:
-        currentx = 0
-    if currenty > imagey:
-        currenty = 0
-    actual=([currentx,currenty])
-    return actual
 
 def dif2(ydata,x,gain):
     """ Complementary function to getdif2 """
@@ -1428,15 +1312,15 @@ def setROI(lookup,xarray,yarray,localconfig):
     
     yarray  = savgol_filter(yarray,5,3)
     
-    logger.debug("-"*15 + " Setting ROI " + "-"*15)
+    Constants.LOGGER.debug("-"*15 + " Setting ROI " + "-"*15)
     
     for peak_corr in range(3):
-        logger.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
-        logger.debug("lookup: %d" % lookup)
+        Constants.LOGGER.debug("-"*15 + " iteration {0} ".format(peak_corr) + "-"*15)
+        Constants.LOGGER.debug("lookup: %d" % lookup)
         FWHM = 2.3548 * sigma(lookup)
         lowx = (lookup - (FWHM))/1000
         highx = (lookup + (FWHM))/1000
-        logger.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
+        Constants.LOGGER.debug("FWHM: %feV lowx: %fKeV highx: %fKeV" % (FWHM, lowx,highx))
 
         #################### 
         # gets ROI indexes #
@@ -1447,10 +1331,10 @@ def setROI(lookup,xarray,yarray,localconfig):
             lowx_idx = np.where(xarray==find_nearest(xarray,lowx))[0][0]
             highx_idx = np.where(xarray==find_nearest(xarray,highx))[0][0]
         except:
-            logger.debug("ROI error. Index out of bounds.")
+            Constants.LOGGER.debug("ROI error. Index out of bounds.")
             return 0,2,1,False
-        logger.debug("{}, {}".format(lowx_idx,highx_idx))
-        logger.debug("Closest peak index: {}; Value (KeV): {}".format(idx,xarray[idx]))
+        Constants.LOGGER.debug("{}, {}".format(lowx_idx,highx_idx))
+        Constants.LOGGER.debug("Closest peak index: {}; Value (KeV): {}".format(idx,xarray[idx]))
             
         ROIaxis = xarray[lowx_idx:highx_idx]
         ROIdata = yarray[lowx_idx:highx_idx]
@@ -1464,20 +1348,20 @@ def setROI(lookup,xarray,yarray,localconfig):
             break
         
         shift = shift_center(ROIaxis,ROIdata)
-        logger.debug("Shift: {0}".format(shift))
+        Constants.LOGGER.debug("Shift: {0}".format(shift))
        
         ##########################################
         # verify the distance from a higher peak #
         ##########################################
 
         difference = abs((shift[0])-xarray[idx])*1000
-        logger.debug("DIFFERENCE: {}, Tolerable: {}. Peak is at: {}".format(
+        Constants.LOGGER.debug("DIFFERENCE: {}, Tolerable: {}. Peak is at: {}".format(
             int(difference),
             int((w_tolerance)*localconfig["gain"]*1000),
             shift[0]))
         if int(difference) <= int((w_tolerance)*localconfig["gain"]*1000):
-            logger.debug("Shift - lookup = {0}!".format(difference))
-            logger.debug("GAP IS LESSER THAN {0}!".format((
+            Constants.LOGGER.debug("Shift - lookup = {0}!".format(difference))
+            Constants.LOGGER.debug("GAP IS LESSER THAN {0}!".format((
                 w_tolerance)*localconfig["gain"]*1000))
             peak_center = shift[2]
             peak_corr += 1
@@ -1490,7 +1374,7 @@ def setROI(lookup,xarray,yarray,localconfig):
         
             lw, hi = lowx_idx, highx_idx
         else: 
-            logger.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
+            Constants.LOGGER.debug("Difference is too large: {0}".format((shift[0]*1000)-lookup))
             
             ############################################################
             # if peak_corr = 0 here, shift failed in the first attempt #
@@ -1499,12 +1383,12 @@ def setROI(lookup,xarray,yarray,localconfig):
             if peak_corr == 0: 
                 isapeak = False
                 lw, hi = lowx_idx, highx_idx
-            logger.debug("Failed at first for energy: {}".format(lookup))
+            Constants.LOGGER.debug("Failed at first for energy: {}".format(lookup))
             return lw,hi,peak_center,isapeak
         
-        logger.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
+        Constants.LOGGER.debug("ROI[0] = {0}, ROI[-1] = {1}".format(ROIaxis[0],ROIaxis[-1]))
     
-    logger.debug("peak_center = {0}, channels = {1} {2}, peakwidth= {3}".format(
+    Constants.LOGGER.debug("peak_center = {0}, channels = {1} {2}, peakwidth= {3}".format(
         peak_center,lowx_idx,highx_idx,(highx_idx-lowx_idx))) 
     return lw,hi,peak_center,isapeak
 
@@ -1549,14 +1433,14 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,usedif2,dif2):
     
         # checks second differential and calculates the net area - background
         if smooth_dif2[idx[2]] < 0 or smooth_dif2[idx[2]+1] < 0 or smooth_dif2[idx[2]-1] < 0:
-            logger.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
-            logger.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
+            Constants.LOGGER.debug("Dif2 is: {0}".format(smooth_dif2[idx[2]]))
+            Constants.LOGGER.debug("Dif2 left = {0} and Dif2 right = {1}".format(\
                     smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
             Area += ydata.sum() - ROIbg.sum()
         else: 
-            logger.debug("{0} has no peak! Dif2 = {1} and isapeak = {2}\n"\
+            Constants.LOGGER.debug("{0} has no peak! Dif2 = {1} and isapeak = {2}\n"\
                     .format(lookup,smooth_dif2[idx[2]],isapeak))
-            logger.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
+            Constants.LOGGER.debug("Dif2 left = {0} and Dif 2 right = {1}".format(
                 smooth_dif2[idx[2]-1],smooth_dif2[idx[2]+1]))
     
     ##########################
@@ -1585,8 +1469,7 @@ def getpeakarea(lookup,data,energyaxis,continuum,localconfig,usedif2,dif2):
     
     return Area,idx
 
-@jit
-def strip(an_array,cycles,width):
+def strip(an_array, cycles, width):
     """
     Strips the peaks contained in the input array following an
     iteractive peak clipping method.
@@ -1683,7 +1566,7 @@ def peakstrip(an_array,cycles,width,*args):
     # in this case, smooth_sqr is CHANGED.                                               #
     ######################################################################################
      
-    strip(smooth_sqr,cycles,width)
+    strip(smooth_sqr, cycles,width)
 
     ##################################################################################
     # change snip_bg to the transformed smooth_sqr after applying the strip function #
@@ -1858,7 +1741,7 @@ def polfit_batch(spectra_batch,ndegree_global=6,ndegree_single=0,r=2,
                 if bar is not None: bar.updatebar(iteration)
                 if time.time()-start > timeout: return np.zeros([spectra_batch.shape[1]])
                 
-            logger.info("Iterations polynomial to overall converge: {}".format(iteration))
+            Constants.LOGGER.info("Iterations polynomial to overall converge: {}".format(iteration))
 
         ########################################################################
         # Concatenate continuum global spectrum with continuum single spectra  #
@@ -1897,14 +1780,3 @@ def gaus(x, E_peak, gain, Noise, Fano, *A):
     s = np.sqrt(((Noise/2.3548200450309493)**2)+3.85*Fano*E_peak) #np.sqrt works for arrays
     return gain*np.sum(
             A/(s*2.5066282746310002)*np.exp(-np.square(x[:,None]-E_peak)/(2*(s**2))),1)
-
-if __name__=="__main__":
-    logger.info("This is SpecMath")
-    import Constants
-    _path_ = r"C:\Users\sergi\Documents\XISMuS\output\Training Data 2\Training Data 2.cube"
-    cube_file = open(_path_,'rb')
-    Constants.MY_DATACUBE = pickle.load(cube_file)
-    cube_file.close()
-    data = Constants.MY_DATACUBE.sum
-    e_axis = Constants.MY_DATACUBE.energyaxis
-

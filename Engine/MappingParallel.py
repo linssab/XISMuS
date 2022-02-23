@@ -1,15 +1,43 @@
-#################################################################
-#                                                               #
-#          Mapping module for multi-core processing             #
-#                        version: 2.0.0 - Feb - 2021            #
-# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#################################################################
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 
 #############
 # Utilities #
 #############
 import logging
-logger = logging.getLogger("logfile")
 import os, sys, logging, multiprocessing
 import numpy as np
 import gc
@@ -25,8 +53,8 @@ from matplotlib import pyplot as plt
 #################
 # Local imports #
 #################
-logger.info("In MappingParallel: Importing local modules...")
 import Constants
+Constants.LOGGER.info("In MappingParallel: Importing local modules...")
 import Elements
 from .SpecRead import __PERSONAL__, __BIN__
 from . import SpecMath
@@ -34,7 +62,7 @@ from . import SpecRead
 from . import ImgMath
 #################
 lock = multiprocessing.Lock()
-logger = logging.getLogger("logfile")
+Constants.LOGGER = logging.getLogger("logfile")
 
 def convert_bytes(num):
     """ Obtained from https://stackoverflow.com/questions/210408 """
@@ -116,7 +144,7 @@ def grab_line(cube,lines,iterator,Element):
         #  ITERATE OVER LIST OF ELEMENTS  #
         ###################################
         
-        logger.debug("current x = {0} / current y = {1}".format(currentx,currenty))
+        Constants.LOGGER.debug("current x = {0} / current y = {1}".format(currentx,currenty))
 
         ################################################################
         #    Kx_INFO[0] IS THE NET AREA AND [1] IS THE PEAK INDEXES    #
@@ -163,7 +191,7 @@ def grab_line(cube,lines,iterator,Element):
     ################################
     
     timestamp = time.time() - start_time
-    logger.info("Execution took %s seconds" % (timestamp))
+    Constants.LOGGER.info("Execution took %s seconds" % (timestamp))
     timestamps = open(os.path.join(__BIN__,"timestamps.txt"),"a")
     timestamps.write("\n{5} - MULTIPROCESSING\n{0} bgtrip={1} enhance={2} peakmethod={3}\n{4} seconds\n".format(
         Element,
@@ -174,13 +202,13 @@ def grab_line(cube,lines,iterator,Element):
         time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
     timestamps.close()
        
-    logger.info("Finished map acquisition!")
+    Constants.LOGGER.info("Finished map acquisition!")
     if cube["config"]["peakmethod"] == 'auto_roi': 
         el_dist_map = ImgMath.interpolate_zeros(el_dist_map)
     
-    logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
+    Constants.LOGGER.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".\
             format(Element,lines[0],lines[1]))
-    logger.info("Runtime for {}: {}".format(Element,time.time()-start_time))
+    Constants.LOGGER.info("Runtime for {}: {}".format(Element,time.time()-start_time))
     return el_dist_map, ROI
 
 def digest_results(datacube,results,elements):
@@ -222,7 +250,7 @@ def start_reader(cube,Element,iterator,results,F,N,TOL):
         element_idx = Elements.ElementList.index(Element)
         kaenergy = Elements.Energies[element_idx]*1000
         kbenergy = Elements.kbEnergies[element_idx]*1000
-        logger.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".format(
+        Constants.LOGGER.warning("Element {0} energies are: {1:.0f}eV and {2:.0f}eV".format(
             Element,kaenergy,kbenergy))
 
         if  cube["config"]["ratio"] == True:
@@ -284,7 +312,7 @@ class Cube_reader():
             try:
                 for p in __self__.processes:
                     p.terminate()
-                    logger.info("Terminated {}".format(p))
+                    Constants.LOGGER.info("Terminated {}".format(p))
             except: pass
             __self__.running = True
             __self__.processes = []
@@ -302,7 +330,7 @@ class Cube_reader():
                         TOL))
                 __self__.processes.append(p)
                 __self__.process_names.append(p.name)
-                logger.info("Polling process {}".format(p))
+                Constants.LOGGER.info("Polling process {}".format(p))
         
             for p in __self__.processes:
                 i = i + 1
@@ -415,4 +443,4 @@ if __name__=="__main__":
         reader.p_bar.update_text("Digesting results...")
         digest_results(datacube,results,elements)
     """
-    logger.info("This is Mapping_parallel.py module")
+    Constants.LOGGER.info("This is Mapping_parallel.py module")

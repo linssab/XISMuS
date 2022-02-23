@@ -1,27 +1,53 @@
-#################################################################
-#                                                               #
-#          SPEC READER                                          #
-#                        version: 2.4.0 - May - 2021            #
-# @author: Sergio Lins               sergio.lins@roma3.infn.it  #
-#################################################################
+"""
+Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+
+The example data distributed together with XISMuS was kindly provided by
+Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
+the universities "La Sapienza" University of Rome and Università degli studi di
+Sassari. Please do not publish, commercialize or distribute this data alone
+without any prior authorization.
+
+This software is distrubuted with an MIT license.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Credits:
+Few of the icons used in the software were obtained under a Creative Commons 
+Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org/licenses/by-nd/3.0/) 
+from the Icon Archive website (http://www.iconarchive.com).
+XISMuS source-code can be found at https://github.com/linssab/XISMuS
+"""
 
 ###########
 # imports #
 ###########
-import logging
 import Constants
 from ReadConfig import unpack_cfg as CONFIGURE
 from ReadConfig import pop_error, __PERSONAL__, __BIN__ 
 # User space is picked from ReadConfig, then passed to global variables here
 import csv
-import sys
 import os
-import time
 import numpy as np
-import matplotlib.pyplot as plt
+import threading
+lock = threading.Lock()
 ###########
 
-global __PERSONAL__, __BIN__
 __PERSONAL__ = __PERSONAL__
 __BIN__ = __BIN__
 
@@ -100,21 +126,6 @@ def conditional_setup(name="None",path="auto"):
     Constants.FIRSTFILE_ABSPATH = os.path.join(Constants.SAMPLE_PATH, name)
     return np.nan
 
-def load_cube():
-    """ Loads cube to memory (unpickle). Cube name is passed according to
-    latest SpecRead parameters. See setup conditions inside SpecRead module.
-    Returns the datacube object """
-
-    if os.path.exists(SpecRead.cube_path):
-        cube_file = open(SpecRead.cube_path,'rb')
-        del Constants.MY_DATACUBE
-        Constants.MY_DATACUBE = pickle.load(cube_file)
-        cube_file.close()
-        Constants.MY_DATACUBE.densitymap = Constants.MY_DATACUBE.densitymap.astype("float32")
-    else:
-        pass
-    return Constants.MY_DATACUBE
-
 def RatioMatrixReadFile(ratiofile):
     """ Reads a ratio file created by any mapping module and transforms into
     a 2D-array.
@@ -161,27 +172,6 @@ def RatioMatrixReadFile(ratiofile):
         if kb == 0: ka,kb = 0,1
         RatesMatrix[x,y] = ka/kb
     return RatesMatrix
-
-def getheader(mca):
-    """ Gets PMCA spectra file (*.mca) header
-    
-    -----------------------------------------
-
-    INPUT:
-        mca; path
-    OUTPUT:
-        ObjectHeader; string """
-
-    ObjectHeader=[]
-    specile = open(mca)
-    line = specfile.readline()
-    while "<<DATA>>" not in line:
-        ObjectHeader.append(line.replace('\n',' '))
-        line = specfile.readline()
-        if "<<CALIBRATION>>" in line:
-            specfile.close()
-            break
-    return ObjectHeader
 
 def getcalibration():
     """ Extracts the calibration anchors from source 
@@ -501,3 +491,113 @@ def dump_ratios(maps_list,element_list):
         r_file.close()
     return 0
 
+def build_pool(size):
+    Constants.FILE_POOL = []
+    spec = getfirstfile()
+    
+    name=str(spec)
+    specfile_name = name.split("\\")[-1]
+    name = specfile_name.split(".")[0]
+    extension = specfile_name.split(".")[-1]
+    for i in range(len(name)):
+        if not name[-i-1].isdigit(): 
+            prefix = name[:-i]
+            index = name[-i:]
+            break
+    index = int(index)+1
+
+    Constants.FILE_POOL.append(spec)
+    for idx in range(index,size+index-1,1):
+        spec = os.path.join(Constants.SAMPLE_PATH,
+                str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
+        Constants.FILE_POOL.append(spec)
+
+def read_ftir_pool(start,end,pool,dimension,m,chunk):
+    """ INPUT:
+        - start: int; starting row
+        - end: int; lower boundary row
+        - pool: list; contains the spectra to be read
+        - dimension: int; row length
+        - m: np.array (int); spectra matrix """
+
+    global iterator
+    global nonstop
+    global failspec
+    scan = (start,0)
+    x, y = scan[0], scan[1]
+    try:
+        for spec in pool:
+            if not nonstop: return
+            Constants.LOGGER.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+            with lock: m[x][y] = getftirdata(spec)
+            scan = refresh_position(scan[0],scan[1],dimension)
+            x,y = scan[0],scan[1]
+            with lock: iterator += 1
+    except FileNotFoundError as e:
+        nonstop = False
+        failspec = spec
+        return
+    chunk.append(1)
+    return
+
+def read_pool(start,end,pool,dimension,m,chunk):
+    """ INPUT:
+        - start: int; starting row
+        - end: int; lower boundary row
+        - pool: list; contains the spectra to be read
+        - dimension: int; row length
+        - m: np.array (int); spectra matrix """
+        
+    global iterator
+    global nonstop
+    global failspec
+    scan = (start,0)
+    x, y = scan[0], scan[1]
+    try:
+        for spec in pool:
+            if not nonstop: return
+            Constants.LOGGER.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+            with lock: m[x][y] = getdata(spec)
+            scan = refresh_position(scan[0],scan[1],dimension)
+            x,y = scan[0],scan[1]
+            with lock: iterator += 1
+    except FileNotFoundError as e:
+        nonstop = False
+        failspec = spec
+        return
+    chunk.append(1)
+    return
+
+def get_chunks(size):
+    max_chunks = Constants.CPUS*2
+    bites = int(((size[0]*size[1])/max_chunks)/size[1])
+    
+    ###################################################################
+    # missing lines at the end (cannot fit into more chunks or bites) #
+    ###################################################################
+
+    leftovers = size[0]-(bites*max_chunks) 
+
+    ###################################################################
+
+    return max_chunks, bites, leftovers
+
+def refresh_position(a,b,length):
+    """ Returns the next pixel position """
+
+    imagex = length[0]
+    imagey = length[1]
+    imagedimension = imagex*imagey
+    currentx = a
+    currenty = b 
+    if currenty == imagey-1:
+        currenty=0
+        currentx+=1
+    else:
+        currenty+=1
+    if currentx > imagex:
+        currentx = 0
+    if currenty > imagey:
+        currenty = 0
+    actual=([currentx,currenty])
+    return actual
