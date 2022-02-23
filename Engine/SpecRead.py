@@ -44,8 +44,6 @@ from ReadConfig import pop_error, __PERSONAL__, __BIN__
 import csv
 import os
 import numpy as np
-import threading
-lock = threading.Lock()
 ###########
 
 __PERSONAL__ = __PERSONAL__
@@ -511,62 +509,6 @@ def build_pool(size):
         spec = os.path.join(Constants.SAMPLE_PATH,
                 str(Constants.NAME_STRUCT[0]+str(idx)+"."+Constants.NAME_STRUCT[2]))
         Constants.FILE_POOL.append(spec)
-
-def read_ftir_pool(start,end,pool,dimension,m,chunk):
-    """ INPUT:
-        - start: int; starting row
-        - end: int; lower boundary row
-        - pool: list; contains the spectra to be read
-        - dimension: int; row length
-        - m: np.array (int); spectra matrix """
-
-    global iterator
-    global nonstop
-    global failspec
-    scan = (start,0)
-    x, y = scan[0], scan[1]
-    try:
-        for spec in pool:
-            if not nonstop: return
-            Constants.LOGGER.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
-            with lock: m[x][y] = getftirdata(spec)
-            scan = refresh_position(scan[0],scan[1],dimension)
-            x,y = scan[0],scan[1]
-            with lock: iterator += 1
-    except FileNotFoundError as e:
-        nonstop = False
-        failspec = spec
-        return
-    chunk.append(1)
-    return
-
-def read_pool(start,end,pool,dimension,m,chunk):
-    """ INPUT:
-        - start: int; starting row
-        - end: int; lower boundary row
-        - pool: list; contains the spectra to be read
-        - dimension: int; row length
-        - m: np.array (int); spectra matrix """
-        
-    global iterator
-    global nonstop
-    global failspec
-    scan = (start,0)
-    x, y = scan[0], scan[1]
-    try:
-        for spec in pool:
-            if not nonstop: return
-            Constants.LOGGER.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
-            with lock: m[x][y] = getdata(spec)
-            scan = refresh_position(scan[0],scan[1],dimension)
-            x,y = scan[0],scan[1]
-            with lock: iterator += 1
-    except FileNotFoundError as e:
-        nonstop = False
-        failspec = spec
-        return
-    chunk.append(1)
-    return
 
 def get_chunks(size):
     max_chunks = Constants.CPUS*2

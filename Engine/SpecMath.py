@@ -61,8 +61,6 @@ getfirstfile,
 getftirdata,
 calibrate,
 build_pool,
-read_ftir_pool,
-read_pool,
 get_chunks,
 refresh_position)
 from .ImgMath import LEVELS
@@ -827,8 +825,6 @@ def converth5(dtypes):
     progressbar.destroybar()
     del progressbar
     return cube
-
-
 
 def digest_psdinv(y,energies):
     """ -- y is an array with the measured FWHM.
@@ -1780,3 +1776,59 @@ def gaus(x, E_peak, gain, Noise, Fano, *A):
     s = np.sqrt(((Noise/2.3548200450309493)**2)+3.85*Fano*E_peak) #np.sqrt works for arrays
     return gain*np.sum(
             A/(s*2.5066282746310002)*np.exp(-np.square(x[:,None]-E_peak)/(2*(s**2))),1)
+
+def read_ftir_pool(start, end, pool, dimension, m, chunk):
+    """ INPUT:
+        - start: int; starting row
+        - end: int; lower boundary row
+        - pool: list; contains the spectra to be read
+        - dimension: int; row length
+        - m: np.array (int); spectra matrix """
+
+    global iterator
+    global nonstop
+    global failspec
+    scan = (start,0)
+    x, y = scan[0], scan[1]
+    try:
+        for spec in pool:
+            if not nonstop: return
+            Constants.LOGGER.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+            with lock: m[x][y] = getftirdata(spec)
+            scan = refresh_position(scan[0],scan[1],dimension)
+            x,y = scan[0],scan[1]
+            with lock: iterator += 1
+    except FileNotFoundError as e:
+        nonstop = False
+        failspec = spec
+        return
+    chunk.append(1)
+    return
+
+def read_pool(start,end,pool,dimension,m,chunk):
+    """ INPUT:
+        - start: int; starting row
+        - end: int; lower boundary row
+        - pool: list; contains the spectra to be read
+        - dimension: int; row length
+        - m: np.array (int); spectra matrix """
+        
+    global iterator
+    global nonstop
+    global failspec
+    scan = (start,0)
+    x, y = scan[0], scan[1]
+    try:
+        for spec in pool:
+            if not nonstop: return
+            Constants.LOGGER.debug("Coordinates: x {}, y {}. Spectra: {}".format(x,y,spec))
+            with lock: m[x][y] = getdata(spec)
+            scan = refresh_position(scan[0],scan[1],dimension)
+            x,y = scan[0],scan[1]
+            with lock: iterator += 1
+    except FileNotFoundError as e:
+        nonstop = False
+        failspec = spec
+        return
+    chunk.append(1)
+    return

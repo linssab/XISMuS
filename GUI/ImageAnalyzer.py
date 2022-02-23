@@ -225,7 +225,7 @@ class Annotator:
         #print("y",y_)
         #print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
         
-        if unpacker1 != [""] or unpacker2 != [""]:
+        if unpacker1 != "" or unpacker2 != "":
             image1 = __self__.parent.DATACUBE.unpack_element(unpacker1)
             image2 = __self__.parent.DATACUBE.unpack_element(unpacker2)
         else:
@@ -278,10 +278,11 @@ class ImageAnalyzer:
         __self__.MenuBar = Menu(__self__.master, tearoff=0)
         __self__.Menu = Menu(__self__.MenuBar, tearoff=0)
         __self__.MenuBar.add_cascade(label="More", menu=__self__.Menu)
-        __self__.Menu.add_command(
-                label="Navigate by index . . .",
+        __self__.Menu.add_command(label="Navigate by index . . .",
                 command=__self__.call_index_navigator)
+        
         __self__.alt = False
+        __self__.openFrames = []
 
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Alt_L>",__self__.AltOn)
@@ -708,9 +709,11 @@ class ImageAnalyzer:
     def kill(__self__):
         for widget in __self__.master.winfo_children():
             widget.destroy()
-        __self__.master.destroy()   
         try: __self__.plot.wipe_plot()
         except: pass
+        for frame in __self__.openFrames:
+            frame.wipe_plot()
+        __self__.master.destroy()
         Constants.ROOT.ImageAnalyzers.remove(__self__)
         gc.collect()
         del __self__
@@ -1152,7 +1155,7 @@ class ExportDiag():
 class ImageOperationOutput:
     def __init__(__self__, image, el1, el2, operation, cube_datatypes, cube, parent):
         __self__.image = image
-        __self__.parent = parent
+        __self__.parent = parent #ImageAnalyzer
         __self__.master = Toplevel()
         __self__.cube = cube
         __self__.master.attributes("-alpha",0.0)
@@ -1168,7 +1171,7 @@ class ImageOperationOutput:
         __self__.master.resizable(True,True)
         __self__.upper = Canvas(__self__.master)
         __self__.upper.config(bg='white')
-        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)#, padx=(16,16),pady=(16,16))
+        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)
         __self__.lower = Frame(__self__.master,height=35)
         __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
 
@@ -1262,6 +1265,7 @@ class ImageOperationOutput:
             return
 
     def wipe_plot(__self__):
+        __self__.parent.openFrames.remove( __self__ )
         __self__.parent.master.focus_set()
         __self__.master.destroy()
         del __self__
@@ -1337,9 +1341,13 @@ class ImageOperationWarning:
             return
         if __self__.scaled:
             output = fast_scaling(__self__.parent.DATACUBE, output, -1)
-        ImageOperationOutput(output,__self__.parent.Map1Var.get(),
+        
+        __self__.parent.openFrames.append( 
+            ImageOperationOutput(output,__self__.parent.Map1Var.get(),
                 __self__.parent.Map2Var.get(),operation, 
                 __self__.parent.DATACUBE.datatypes, __self__.parent.DATACUBE,
                 __self__.parent)
+        )
+
         __self__.master.grab_release()
         __self__.master.destroy()

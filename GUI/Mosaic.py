@@ -429,31 +429,8 @@ class Layer:
 
         __self__.maps_buffer = {}
         for name in cube.check_packed_elements():
-            __self__.maps_buffer[name] = cube.unpack_element(name.split("_")[0],name.split("_")[1])
+            __self__.maps_buffer[name] = cube.unpack_element( name )
         __self__.element = None
-
-        """
-        if element == "": 
-            __self__.element = None
-            #__self__.img = (cube.densitymap-cube.densitymap.min())*LEVELS/((cube.densitymap.max()-cube.densitymap.min()))
-            cubemax = cube.densitymap.max()
-            __self__.img = cube.densitymap*LEVELS/cubemax
-
-            __self__.img_max = cubemax 
-            if __self__.img_max > VMAX: VMAX = __self__.img_max
-
-            __self__.img = __self__.img.astype("float32")
-        else: 
-            __self__.element = element
-            unpacker = element.split("_")
-            image = cube.unpack_element(unpacker[0],unpacker[1])
-
-            __self__.img_max = image.max() #to calculate the display factor 
-            if __self__.img_max > VMAX: VMAX = __self__.img_max
-
-            __self__.img = image*LEVELS/__self__.img_max
-            __self__.img = __self__.img.astype("float32")
-        """
         
         """ Define anchors """
         if coords == None:

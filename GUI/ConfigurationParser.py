@@ -34,16 +34,19 @@ from the Icon Archive website (http://www.iconarchive.com).
 XISMuS source-code can be found at https://github.com/linssab/XISMuS
 """
 
-from Engine import SpecRead as sp 
-from Engine import SpecMath as sm
-from .AdvCalibration import AdvCalib
-import Constants
+
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 import numpy as np
 import os, gc, copy, random
 import shutil
+
+from Engine import SpecRead as sp 
+from Engine import SpecMath as sm
+from .AdvCalibration import AdvCalib
+import Constants
+from Utilities import *
 
 import matplotlib
 matplotlib.use("TkAgg")

@@ -72,9 +72,6 @@ def select_lines(element,ratio):
     for the alpha and beta energy macros """
 
     element_idx = Elements.ElementList.index(element)
-    print(element_idx)
-    print(len(Elements.Energies))
-    print(len(Elements.kbEnergies))
     kaenergy = Elements.Energies[element_idx]*1000
     kbenergy = Elements.kbEnergies[element_idx]*1000
     

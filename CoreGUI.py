@@ -1895,13 +1895,13 @@ class MainGUI:
         __self__.Toolbox.add_command(label="Change samples folder . . .", 
                 command=__self__.prompt_folder)
         __self__.Toolbox.add_command(label="Load file selection . . .",
-                command=__self__.batch)
+                command=__self__.load_file_batch)
         __self__.Toolbox.add_command(label="Load h5 file . . .",
                 command= lambda: __self__.h5loader(ftype="h5"))
         __self__.Toolbox.add_command(label="Load EDF stack . . .",
                 command= lambda: __self__.h5loader(ftype="edf"))
         __self__.Toolbox.add_command(label="Load ftir data [experimental] . . .",
-                command= lambda:__self__.batch(ftir=1))
+                command= lambda:__self__.load_file_batch(ftir=1))
         __self__.Toolbox.add_command(label="Convert spectra name . . .",
                 command=__self__.converter)
         __self__.Toolbox.add_separator()
@@ -3205,7 +3205,7 @@ class MainGUI:
         if ftype is None: return
         else: spp.load(__self__, ftype=ftype)
 
-    def batch(__self__,**kwargs):
+    def load_file_batch(__self__,**kwargs):
         #1 prompt for files
         if "ftir" in kwargs:
             Constants.FTIR_DATA = 1
@@ -3295,12 +3295,12 @@ class MainGUI:
                 lines=False)
         spawn_center(__self__.combined.master)
     
-    def call_author(__self__):
+    def call_author(__self__, e=""):
         try:
             if __self__.AboutWin.master.state() == "normal":
                 __self__.AboutWin.master.focus_force()
         except:
-            __self__.AboutWin = About(__self__)
+            __self__.AboutWin = About()
 
     def call_settings(__self__,e=""):
         try:
@@ -4419,8 +4419,7 @@ if __name__.endswith("__main__"):
     from Engine import FastFit
     from Engine import Database
     from Engine.ImgMath import LEVELS
-    from Engine.ImgMath import write_image
-    from Engine.SpecMath import converth5, getstackplot, peakstrip, FN_set, linregress
+    from Engine.SpecMath import converth5, FN_set
     from Engine.SpecMath import datacube as Cube
     from Engine.CBooster import *
 
