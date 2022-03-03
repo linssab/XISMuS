@@ -34,7 +34,6 @@ from the Icon Archive website (http://www.iconarchive.com).
 XISMuS source-code can be found at https://github.com/linssab/XISMuS
 """
 
-import logging
 import Constants
 Constants.LOGGER.info("In AdvFit: Importing Constants...")
 import Constants

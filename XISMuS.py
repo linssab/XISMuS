@@ -323,7 +323,10 @@ def load_cube():
             gc.collect()
         except: 
             pass
-        Constants.MY_DATACUBE = pickle.load(cube_file)
+        try: Constants.MY_DATACUBE = pickle.load(cube_file)
+        except Exception as e: 
+            messagebox.showerror("Error",f"Could not unpickle the datacube. Exception:\n{e}")
+            return
         cube_file.close()
         if hasattr(Constants.MY_DATACUBE,"version"):
             version = [int(i) for i in Constants.MY_DATACUBE.version.split("v")[-1].split(".")]

@@ -37,24 +37,16 @@ XISMuS source-code can be found at https://github.com/linssab/XISMuS
 from .SpecRead import __PERSONAL__
 from .SpecMath import *
 from .AdvFit import *
-from .CBooster import fast_scaling
-from .ImgMath import write_image
 import Engine.SpecRead as SpecRead
 import Constants
 from Elements import *
 import threading
 from psutil import cpu_count
 import numpy as np
-from scipy.optimize import least_squares
-from scipy.optimize import curve_fit
-import time
 from matplotlib.figure import Figure
-from matplotlib.figure import figaspect
-import sys,os,copy
-import csv
+import sys, os
 import pickle
 import matplotlib
-import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
 from tkinter import messagebox
 
