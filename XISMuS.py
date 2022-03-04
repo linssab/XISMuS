@@ -1,5 +1,6 @@
 """
-Copyright (c) 2020 Sergio Augusto Barcellos Lins & Giovanni Ettore Gigante
+Copyright (c) 2022 Sergio Augusto Barcellos Lins,
+Bories Bremmers & Giovanni Ettore Gigante
 
 The example data distributed together with XISMuS was kindly provided by
 Giovanni Ettore Gigante and Roberto Cesareo. It is intelectual property of 
@@ -107,8 +108,8 @@ def update_version():
                     Constants.LOGGER.info("Patch file already exists!")
                     try: os.remove(destination)
                     except OSError: 
-                        messagebox.showerror("Failed to get patch!",
-                            "Something went wrong trying to download the patch file!\nBe sure you are running XISMuS with administrator rights.")
+                        messagebox.showerror("Patch file already exists!",
+                            f"A patch file already exists! Remove it manually and try again. File location:\n{destination}")
                         return 0
                 try:
                     p = download_file(destination,
@@ -470,23 +471,34 @@ class About:
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.bind("<Escape>",__self__.kill)
-        icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
-        __self__.master.iconbitmap(icon)  
-        infotext="Software version: {0}\nContact: sergio.lins@roma3.infn.it".format(Constants.VERSION)
+        __self__.master.iconbitmap( os.path.join(os.getcwd(),"images","icons","icon.ico") )  
+
+        infotext = f"Software version: {Constants.VERSION}\nContact: sergiolins_@outlook.com"
+
         __self__.winFrame = Frame(__self__.master)
-        __self__.winFrame.pack(padx=(16,16),pady=(16,16))
-        __self__.Info = Label(__self__.winFrame,text=infotext, wraplength=640, anchor=W, justify=LEFT)
-        __self__.Info.pack()
-        __self__.Link = Label(__self__.winFrame, text="Contact via ResearchGate", fg="blue", cursor="hand2")
-        __self__.Link.bind("<Button-1>", __self__.go_to_RS)
-        __self__.Link.pack(side=LEFT)
+        
+        __self__.Info = Label(__self__.winFrame, text=infotext, wraplength=640, anchor=W, justify=LEFT)
+        __self__.Link1 = Label(__self__.winFrame, text="Contact via ResearchGate", fg="blue", cursor="hand2", anchor=W)
+        __self__.Link2 = Label(__self__.winFrame, text="Go to XISMuS webpage", fg="blue", cursor="hand2", anchor=W)
+        __self__.Link1.bind("<Button-1>", __self__.go_to_rs)
+        __self__.Link2.bind("<Button-1>", __self__.go_to_web)
+        
+        __self__.winFrame.grid(row=0, column=0, padx=(16,16),pady=(16,16), sticky="NWSE")
+        __self__.Info.grid(row=1, sticky=W)
+        __self__.Link1.grid(row=2, sticky=W)
+        __self__.Link2.grid(row=3, sticky=W)
+
         place_center(Constants.ROOT.master,__self__.master)
 
     def kill(__self__,e=""):
         __self__.master.destroy()
 
-    def go_to_RS(__self__,e=""):
+    def go_to_rs(__self__,e=""):
         openURL("https://www.researchgate.net/profile/Sergio_Augusto_Lins")
+        __self__.master.destroy()
+
+    def go_to_web(__self__,e=""):
+        openURL("https://linssab.github.io/contact")
         __self__.master.destroy()
 
 
@@ -578,10 +590,11 @@ class Convert_File_Name:
         __self__.prefix.set("Spectrum")
         __self__.starting_index.set(1)
 
-        __self__.LeftPane = LabelFrame(__self__.master,height=250,width=128,text="Input")
-        __self__.LeftPane.grid(row=0,column=0,sticky=N+W+S+E,padx=(3,2),pady=2)
-        __self__.RightPane = LabelFrame(__self__.master, height=250,text="Output",padx=15)
-        __self__.RightPane.grid(row=0, column=1,sticky=N+S,padx=(2,3),pady=2)
+        __self__.LeftPane = ttk.LabelFrame(__self__.master, height=250, width=128, text="Input", padding=10)
+        __self__.RightPane = ttk.LabelFrame(__self__.master, height=250, text="Output", padding=10)
+
+        __self__.LeftPane.grid(row=0, column=0, sticky=N+W+S+E, padx=(3,2), pady=2)
+        __self__.RightPane.grid(row=0, column=1, sticky=N+S, padx=(2,3), pady=2)
 
         __self__.build_widgets()
         place_center(parent.master,__self__.master)
@@ -592,54 +605,51 @@ class Convert_File_Name:
         """ Left Pane """
         icon = PhotoImage(data=ICO_LOAD)
         __self__.LoadIco = icon.subsample(1,1)
-        __self__.LoadBtn = Button(__self__.LeftPane, 
+        __self__.LoadBtn = ttk.Button(__self__.LeftPane, 
                 text="Load",
                 image=__self__.LoadIco,
                 command=__self__.grab_file_list,
                 compound=TOP,
-                width=64, height=64, bd=2)
+                takefocus=False)
         
         """ Right Pane Labels """
-        __self__.PrefixLabel = Label(__self__.RightPane, text="Prefix")
-        __self__.StartLabel = Label(__self__.RightPane, text="Starting No.")
-        __self__.WidthLabel = Label(__self__.RightPane, text="Width (optional)")
-        __self__.HeightLabel = Label(__self__.RightPane, text="Height (optional)")
+        __self__.PrefixLabel = ttk.Label(__self__.RightPane, text="Prefix")
+        __self__.StartLabel = ttk.Label(__self__.RightPane, text="Starting No.")
+        __self__.WidthLabel = ttk.Label(__self__.RightPane, text="Width (optional)")
+        __self__.HeightLabel = ttk.Label(__self__.RightPane, text="Height (optional)")
 
         """ Right Pane Entries """
-        __self__.PrefixEntry = Entry(__self__.RightPane, 
+        __self__.PrefixEntry = ttk.Entry(__self__.RightPane, 
                 textvariable=__self__.prefix,
                 width=10)
-        __self__.StartEntry = Entry(__self__.RightPane,
+        __self__.StartEntry = ttk.Entry(__self__.RightPane,
                 textvariable=__self__.starting_index,
                 width=10)
-        __self__.WidthEntry = Entry(__self__.RightPane,
+        __self__.WidthEntry = ttk.Entry(__self__.RightPane,
                 textvariable=__self__.width,
                 width=10)
-        __self__.HeightEntry = Entry(__self__.RightPane,
+        __self__.HeightEntry = ttk.Entry(__self__.RightPane,
                 textvariable=__self__.height,
                 width=10)
         
         """ Right Pane Buttons """
         icon = PhotoImage(data=ICO_ACCEPT)
         __self__.OkIcon = icon.subsample(1,1)
-        __self__.OkBtn = Button(__self__.RightPane, 
+        __self__.OkBtn = ttk.Button(__self__.RightPane, 
                 image=__self__.OkIcon, 
                 text= " Convert",
-                anchor=CENTER,
                 compound=LEFT,
                 command=__self__.start_conversion,
-                width=80,
-                height=24, bd=1)
+                takefocus=False)
+
         icon = PhotoImage(data=ICO_REJECT)
         __self__.QuitIcon = icon.subsample(1,1)
-        __self__.QuitBtn = Button(__self__.RightPane, 
+        __self__.QuitBtn = ttk.Button(__self__.RightPane, 
                 text=" Cancel",
-                anchor=CENTER,
                 compound=LEFT,
                 image=__self__.QuitIcon,
                 command=__self__.kill,
-                width=80,
-                height=24, bd=1)
+                takefocus=False)
         
         __self__.LoadBtn.grid(row=1,column=0,rowspan=5,padx=24,pady=24)
         __self__.PrefixLabel.grid(row=1,column=1)
@@ -1382,22 +1392,20 @@ class Settings:
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill_window)
         __self__.master.bind("<Escape>",__self__.kill_window)
+        __self__.master.iconbitmap( os.path.join(os.getcwd(),"images","icons","settings.ico") )
         __self__.master.attributes("-alpha",0.0)
 
-        __self__.CoreCount = Constants.CPUS
         sys_mem = dict(virtual_memory()._asdict())
-        __self__.GeneralOptions = LabelFrame(__self__.master, 
-                text="General options",padx=15,pady=15)
-        __self__.PeakOptions = LabelFrame(__self__.master, 
-                text="Peakmethod options",padx=15,pady=15)
+
+        __self__.CoreCount = Constants.CPUS
+        __self__.GeneralOptions = LabelFrame(__self__.master, text="General options", padx=15, pady=15)
+        __self__.PeakOptions = LabelFrame(__self__.master, text="Peakmethod options", padx=15, pady=15)
         __self__.GeneralOptions.grid(row=0,column=0,padx=(15,15),sticky=N+S+W+E)
         __self__.PeakOptions.grid(row=1,column=0,padx=(15,15),sticky=N+S+W+E)
         __self__.RAM_tot = convert_bytes(sys_mem["total"])
         __self__.RAM_free = convert_bytes(sys_mem["available"])
-        __self__.build_widgets()
 
-        icon = os.path.join(os.getcwd(),"images","icons","settings.ico")
-        __self__.master.iconbitmap(icon)  
+        __self__.build_widgets()
         place_center(parent.master,__self__.master)
         __self__.master.grab_set()
 
@@ -1428,8 +1436,7 @@ class Settings:
         __self__.ColorMapMode.set(Constants.COLORMAP)
         __self__.CoreMode.set(Constants.MULTICORE)
         __self__.RAMMode.set(Constants.RAM_LIMIT)
-        __self__.RAMEntry.set(
-                "%.2f"%(float(convert_bytes(Constants.ROOT.RAM_limit_value).split(" ")[0])))
+        __self__.RAMEntry.set("%.2f"%(float(convert_bytes(Constants.ROOT.RAM_limit_value).split(" ")[0])))
         __self__.RAMUnit.set(convert_bytes(Constants.ROOT.RAM_limit_value).split(" ")[1])
         __self__.WlcmMode.set(Constants.WELCOME)
         __self__.TolVar1.set(Constants.SETROI_TOLERANCE[0])
@@ -1445,6 +1452,7 @@ class Settings:
         ########################
         
         PlotLabel = Label(__self__.GeneralOptions,text="Plot mode: ")
+
         PlotOption = ttk.Combobox(__self__.GeneralOptions, 
                 textvariable=__self__.PlotMode, 
                 values=("Linear","Logarithmic"),
@@ -1452,6 +1460,7 @@ class Settings:
                 state="readonly")
 
         ColorMapLabel = Label(__self__.GeneralOptions,text="Color scale: ")
+
         ColorMapOption = ttk.Combobox(__self__.GeneralOptions, 
                 textvariable=__self__.ColorMapMode, 
                 values=("gray","jet","hot","Spectral"),
@@ -1459,49 +1468,40 @@ class Settings:
                 state="readonly")
 
         CoreLabel = Label(__self__.GeneralOptions,text="Enable Multi-Core? ")
-        CoreOption =ttk.Checkbutton(__self__.GeneralOptions, variable=__self__.CoreMode,
+
+        CoreOption = ttk.Checkbutton(__self__.GeneralOptions, 
+                variable=__self__.CoreMode,
+                text="Yes",
                 takefocus=False,
                 command=__self__.toggle_multicore)
-        CoreOptionText = Label(__self__.GeneralOptions, text="Yes")
+
         CoreCountLabel = Label(__self__.GeneralOptions,
                 text="Total number of cores: "+str(__self__.CoreCount),
                 relief=GROOVE)
         
         __self__.RAMLabel = Label(__self__.GeneralOptions,text="Limit RAM in Multi-Core? ")
+
         __self__.RAMUnitLabel = Label(__self__.GeneralOptions, text=__self__.RAMUnit.get())
-        __self__.RAMOption =ttk.Checkbutton(__self__.GeneralOptions, variable=__self__.RAMMode,
+
+        __self__.RAMOption = ttk.Checkbutton(__self__.GeneralOptions, 
+                variable=__self__.RAMMode,
+                text="Yes",
                 takefocus=False,
                 command=__self__.toggle_ram)
-        __self__.RAMOptionText = Label(__self__.GeneralOptions, text="Yes")
+
         __self__.RAMEntryBox = Entry(__self__.GeneralOptions, 
                 textvariable=__self__.RAMEntry,
                 width=10)
+
         __self__.RAMCountLabel = Label(__self__.GeneralOptions,
                 text="Available RAM: "+str(__self__.RAM_free))
 
         WlcmLabel = Label(__self__.GeneralOptions,text="Welcome message at startup? ")
-        WlcmOption =ttk.Checkbutton(__self__.GeneralOptions, 
+
+        WlcmOption = ttk.Checkbutton(__self__.GeneralOptions, 
                 takefocus=False,
+                text = "Yes",
                 variable=__self__.WlcmMode)
-        WlcmOptionText = Label(__self__.GeneralOptions, text="Yes")
-        
-        PlotLabel.grid(row=0,column=0,sticky=W)
-        PlotOption.grid(row=0,column=1,columnspan=2,sticky=E)
-        ColorMapLabel.grid(row=1,column=0,sticky=W)
-        ColorMapOption.grid(row=1,column=1,columnspan=2,sticky=E)
-        CoreLabel.grid(row=3,column=0,sticky=W)
-        CoreOption.grid(row=3,column=1,sticky=E)
-        CoreOptionText.grid(row=3,column=2,sticky=E)
-        CoreCountLabel.grid(row=2,column=0,columnspan=12,sticky=N+S+W+E,pady=(8,0))
-        __self__.RAMLabel.grid(row=4,column=0,sticky=W)
-        __self__.RAMUnitLabel.grid(row=5,column=2,sticky="")
-        __self__.RAMOption.grid(row=4,column=1,sticky=E)
-        __self__.RAMOptionText.grid(row=4,column=2,sticky=E)
-        __self__.RAMEntryBox.grid(row=5,column=1,sticky=E)
-        __self__.RAMCountLabel.grid(row=5,column=0,sticky=W)
-        WlcmLabel.grid(row=6,column=0,sticky=W)
-        WlcmOption.grid(row=6,column=1,sticky=E)
-        WlcmOptionText.grid(row=6,column=2,sticky=E)
 
         ###########################
         # Peakmethod Option Frame #
@@ -1511,6 +1511,7 @@ class Settings:
         ToleranceLabel = Label(__self__.PeakOptions, 
                 text="Auto and simple roi peak tolerance ",
                 relief=GROOVE)
+
         Tolerance1 = Label(__self__.PeakOptions, text="< 4 KeV")
         Tolerance2 = Label(__self__.PeakOptions, text="4-12 KeV")
         Tolerance3 = Label(__self__.PeakOptions, text="> 12 KeV")
@@ -1519,17 +1520,86 @@ class Settings:
         ToleranceDescription3 = Label(__self__.PeakOptions, text="*gain")
         
         # ENTRIES #
-        ToleranceEntry1 = Entry(__self__.PeakOptions, 
+        ToleranceEntry1 = ttk.Entry(__self__.PeakOptions, 
                 textvariable=__self__.TolVar1,
                 width=7)
-        ToleranceEntry2 = Entry(__self__.PeakOptions, 
+
+        ToleranceEntry2 = ttk.Entry(__self__.PeakOptions, 
                 textvariable=__self__.TolVar2,
                 width=7)
-        ToleranceEntry3 = Entry(__self__.PeakOptions, 
+
+        ToleranceEntry3 = ttk.Entry(__self__.PeakOptions, 
                 textvariable=__self__.TolVar3,
                 width=7)
 
-        ToleranceLabel.grid(row=0,column=0,columnspan=3,sticky=N+S+W+E)
+        # LABELS #
+        AutoWizardLabel = Label(__self__.PeakOptions, text="Auto wizard parameters ",relief=GROOVE)
+        FitCycles = Label(__self__.PeakOptions, text="Fit cycles/spectrum: ")
+        PeakFindTolerance = Label(__self__.PeakOptions, text="Peakfind sensitivity: ")
+        ContSupprLabel = Label(__self__.PeakOptions, text="Continuum suppression factor: ")
+        PeakCheckTolerance = Label(__self__.PeakOptions, text="Peakfind tolerance: ")
+        PeakCheckLabel = Label(__self__.PeakOptions, text="*gain")
+        __self__.PlotSaveInterval = Label(__self__.PeakOptions, text="Save plots w/ interval: ")
+        PlotSave = Label(__self__.PeakOptions, text="Save fit plots? ")
+
+        # ENTRIES #
+        FitCyclesEntry = ttk.Entry(__self__.PeakOptions, 
+                textvariable=__self__.CycVar,
+                width=13)
+
+        PeakFindEntry = ttk.Entry(__self__.PeakOptions,
+                textvariable=__self__.Sensitivity,
+                width=13)
+    
+        ContSupprEntry = ttk.Entry(__self__.PeakOptions,
+                textvariable=__self__.ContSuppr,
+                width=13)
+
+        PeakCheckEntry = ttk.Entry(__self__.PeakOptions,
+                textvariable=__self__.WizTol,
+                width=7)
+
+        __self__.PlotSaveIntervalEntry = ttk.Entry(__self__.PeakOptions, 
+                textvariable=__self__.PlotSaveVar,
+                width=13)
+
+        PlotSaveBool = ttk.Checkbutton(__self__.PeakOptions, 
+                takefocus=False,
+                text = "Yes",
+                variable=__self__.PlotSaveBoolVar,
+                command=__self__.toggle_save_plot)
+
+        # BUTTONS #
+        ButtonsFrame = Frame(__self__.master, padx=10, pady=10)
+        OKButton = ttk.Button(
+                ButtonsFrame, 
+                text="OK", 
+                width=10,
+                takefocus=False,
+                command=__self__.save_settings)
+    
+        CancelButton = ttk.Button(
+                ButtonsFrame, 
+                text="Cancel", 
+                width=10,
+                takefocus=False,
+                command=__self__.kill_window)
+
+        PlotLabel.grid(row=0,column=0,sticky=W)
+        PlotOption.grid(row=0,column=1,columnspan=2,sticky=E)
+        ColorMapLabel.grid(row=1,column=0,sticky=W)
+        ColorMapOption.grid(row=1,column=1,columnspan=2,sticky=E)
+        CoreLabel.grid(row=3,column=0,sticky=W)
+        CoreOption.grid(row=3,column=1,columnspan=2,sticky=E)
+        CoreCountLabel.grid(row=2,column=0,columnspan=12,sticky=N+S+W+E,pady=(10,0))
+        __self__.RAMLabel.grid(row=4,column=0,sticky=W)
+        __self__.RAMUnitLabel.grid(row=5,column=2,sticky="")
+        __self__.RAMOption.grid(row=4,column=1,columnspan=2,sticky=E)
+        __self__.RAMEntryBox.grid(row=5,column=1,sticky=E)
+        __self__.RAMCountLabel.grid(row=5,column=0,sticky=W)
+        WlcmLabel.grid(row=6,column=0,sticky=W)
+        WlcmOption.grid(row=6,column=1,columnspan=2,sticky=E)
+        ToleranceLabel.grid(row=0,column=0,columnspan=3,sticky=N+S+W+E,pady=(0,10))
         Tolerance1.grid(row=1,column=0,sticky=W)
         Tolerance2.grid(row=2,column=0,sticky=W)
         Tolerance3.grid(row=3,column=0,sticky=W)
@@ -1539,47 +1609,7 @@ class Settings:
         ToleranceDescription1.grid(row=1,column=2,sticky=E)
         ToleranceDescription2.grid(row=2,column=2,sticky=E)
         ToleranceDescription3.grid(row=3,column=2,sticky=E)
-
-        # LABELS #
-        AutoWizardLabel = Label(__self__.PeakOptions, text="Auto wizard parameters ",
-                relief=GROOVE)
-        FitCycles = Label(__self__.PeakOptions, text="Fit cycles/spectrum: ")
-        PeakFindTolerance = Label(__self__.PeakOptions, text="Peakfind sensitivity: ")
-        ContSupprLabel = Label(__self__.PeakOptions, 
-                text="Continuum suppression factor: ")
-        PeakCheckTolerance = Label(__self__.PeakOptions, text="Peakfind tolerance: ")
-        PeakCheckLabel = Label(__self__.PeakOptions, text="*gain")
-        __self__.PlotSaveInterval = Label(__self__.PeakOptions, 
-                text="Save plots w/ interval: ")
-        PlotSave = Label(__self__.PeakOptions, text="Save fit plots? ")
-        PlotSaveYes = Label(__self__.PeakOptions, text="Yes")
-
-        # ENTRIES #
-        FitCyclesEntry = Entry(__self__.PeakOptions, 
-                textvariable=__self__.CycVar,
-                width=13)
-        PeakFindEntry = Entry(__self__.PeakOptions,
-                textvariable=__self__.Sensitivity,
-                width=13)
-        create_tooltip(PeakFindTolerance,"Works best when set closer to the peaks FWHM average.\nLower values usually yield more peaks.")
-        create_tooltip(PeakFindEntry,"Works best when set closer to the peaks FWHM average.\nLower values usually yield more peaks.")
-        ContSupprEntry = Entry(__self__.PeakOptions,
-                textvariable=__self__.ContSuppr,
-                width=13)
-        create_tooltip(ContSupprLabel,"Suppresses misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
-        create_tooltip(ContSupprEntry,"Suppresses misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
-        PeakCheckEntry = Entry(__self__.PeakOptions,
-                textvariable=__self__.WizTol,
-                width=7)
-        __self__.PlotSaveIntervalEntry = Entry(__self__.PeakOptions, 
-                textvariable=__self__.PlotSaveVar,
-                width=13)
-        PlotSaveBool =ttk.Checkbutton(__self__.PeakOptions, 
-                takefocus=False,
-                variable=__self__.PlotSaveBoolVar,
-                command=__self__.toggle_save_plot)
-
-        AutoWizardLabel.grid(row=4,column=0,columnspan=3,sticky=N+S+W+E,pady=(8,0))
+        AutoWizardLabel.grid(row=4,column=0,columnspan=3,sticky=N+S+W+E,pady=(10,10))
         FitCycles.grid(row=5,column=0,sticky=W)
         PeakFindTolerance.grid(row=6,column=0,sticky=W)
         ContSupprLabel.grid(row=7,column=0,sticky=W)
@@ -1592,33 +1622,25 @@ class Settings:
         ContSupprEntry.grid(row=7,column=1,columnspan=2,sticky=E)
         PeakCheckEntry.grid(row=8,column=1,sticky=W)
         __self__.PlotSaveIntervalEntry.grid(row=9,column=1,columnspan=2,sticky=E)
-        PlotSaveBool.grid(row=10,column=1,sticky=E)
-        PlotSaveYes.grid(row=10,column=2,sticky=E)
+        PlotSaveBool.grid(row=10,column=1,columnspan=2,sticky=E)
+        ButtonsFrame.grid(row=4,column=0,columnspan=2)
+        OKButton.grid(row=4,column=0)
+        CancelButton.grid(row=4,column=1)
+
+        create_tooltip(ContSupprLabel,"Suppresses misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
+        create_tooltip(ContSupprEntry,"Suppresses misleading peaks, usually occasioned by a low peakfind sensitivity.\nHigher values will suppress more peaks.")
+        create_tooltip(PeakFindTolerance,"Works best when set closer to the peaks FWHM average.\nLower values usually yield more peaks.")
+        create_tooltip(PeakFindEntry,"Works best when set closer to the peaks FWHM average.\nLower values usually yield more peaks.")
 
         ###########################
         
         __self__.GeneralOptions.grid_columnconfigure(0,weight=1,pad=32)
         __self__.PeakOptions.grid_columnconfigure(0,weight=1,pad=32)
+
         __self__.toggle_ram()
         __self__.toggle_multicore()
         __self__.toggle_save_plot()
         
-        ButtonsFrame = Frame(__self__.master, padx=10, pady=10)
-        ButtonsFrame.grid(row=4,column=0,columnspan=2)
-        OKButton = ttk.Button(
-                ButtonsFrame, 
-                text="OK", 
-                width=10,
-                takefocus=False,
-                command=__self__.save_settings)
-        OKButton.grid(row=4,column=0)
-        CancelButton = ttk.Button(
-                ButtonsFrame, 
-                text="Cancel", 
-                width=10,
-                takefocus=False,
-                command=__self__.kill_window)
-        CancelButton.grid(row=4,column=1)
         __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     def toggle_save_plot(__self__,e=""):
@@ -1646,19 +1668,16 @@ class Settings:
         if yn:
             __self__.RAMLabel.config(state=NORMAL)
             __self__.RAMOption.config(state=NORMAL)
-            __self__.RAMOptionText.config(state=NORMAL)
         elif __self__.RAMMode.get():
             __self__.RAMMode.set(0)
             __self__.RAMLabel.config(state=DISABLED)
             __self__.RAMOption.config(state=DISABLED)
-            __self__.RAMOptionText.config(state=DISABLED)
             __self__.RAMUnitLabel.config(state=DISABLED)
             __self__.RAMEntryBox.config(state=DISABLED)
             __self__.RAMCountLabel.config(state=DISABLED)
         else:
             __self__.RAMLabel.config(state=DISABLED)
             __self__.RAMOption.config(state=DISABLED)
-            __self__.RAMOptionText.config(state=DISABLED)
             __self__.RAMUnitLabel.config(state=DISABLED)
             __self__.RAMEntryBox.config(state=DISABLED)
             __self__.RAMCountLabel.config(state=DISABLED)
@@ -2204,8 +2223,13 @@ class MainGUI:
             return
         path = sp.__PERSONAL__
         __self__.CubeViewer = ImageWindow(__self__, "Cube Viewer", path)
-        __self__.CubeViewer.draw_image(Constants.MY_DATACUBE.densitymap)
-        __self__.CubeViewer.create_connection(Constants.MY_DATACUBE)
+
+        #If no writing permission is granted, CubeViewer cannot track the user operations
+        #with PermissionError, the ImageWindow object fails to spawn and throws an error
+        if __self__.CubeViewer.success: 
+            __self__.CubeViewer.draw_image(Constants.MY_DATACUBE.densitymap)
+            __self__.CubeViewer.create_connection(Constants.MY_DATACUBE)
+        else: return
 
     def call_compilecube(__self__):
         """ Tries to create output folder (name is Constants.CONFIG['directory'])
@@ -4013,8 +4037,7 @@ class PeriodicTable:
                     results = []
                     Constants.FIND_ELEMENT_LIST.remove("custom") 
                     lines = [__self__.cvar1.get(),__self__.cvar2.get()]
-                    elmap, ROI = (grab_simple_roi_image(Constants.MY_DATACUBE,lines,\
-                            custom_energy=True))
+                    elmap, ROI = (grab_simple_roi_image(Constants.MY_DATACUBE,lines,custom_energy=True))
                     results.append((elmap, ROI, "custom"))
                     digest_results(Constants.MY_DATACUBE,results,["custom"])
 

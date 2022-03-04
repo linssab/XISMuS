@@ -65,10 +65,6 @@ from GUI.ProgressBar import Busy
 ####################
 # External modules #
 ####################
-try:
-    from numba import jit
-except:
-    print("Failed to load numba")
 from tkinter import *
 from tkinter import filedialog, messagebox, ttk
 
@@ -162,10 +158,11 @@ class Annotator:
         
         __self__.parent.plot.DATA.set_ydata(__self__.parent.sum_spectrum)
         __self__.parent.plot.plot.legend().get_texts()[0].set_text(
-                "{} Spectra".format(__self__.spec_no))
+                f"{__self__.spec_no} Spectra (X: {__self__.x0};{__self__.x1}, Y: {__self__.y0};{__self__.y1})")
         __self__.parent.plot.plot.set_ylim(
                 bottom=1,
                 top=1.20*__self__.parent.sum_spectrum.max())
+        __self__.parent.plot.limits = (__self__.x0, __self__.x1, __self__.y0, __self__.y1)
         try:
             __self__.parent.plot.canvas.draw()
         except: pass

@@ -33,6 +33,7 @@ Attribution-No Derivative Works 3.0 Unported License (http://creativecommons.org
 from the Icon Archive website (http://www.iconarchive.com).
 XISMuS source-code can be found at https://github.com/linssab/XISMuS
 """
+from email import message
 import Constants
 
 # tcl/Tk imports
@@ -64,11 +65,9 @@ style.use('ggplot')
 
 class ImageWindow:
     def __init__(__self__, parent, title, path):
-        icon = os.path.join(os.getcwd(),"images","icons","plot.ico")
         __self__.parent = parent
-        __self__.Writer = Writer(path)
         __self__.master = Toplevel()
-        __self__.master.iconbitmap(icon)
+        __self__.master.iconbitmap( os.path.join(os.getcwd(),"images","icons","plot.ico") )
         __self__.master.attributes("-alpha",0.0)
         __self__.alt = False
         __self__.master.bind("<Alt_L>",__self__.AltOn)
@@ -76,15 +75,19 @@ class ImageWindow:
         __self__.master.bind("<Return>",__self__.maximize)
         __self__.master.title(title)
         __self__.master.minsize(width=600,height=480)
-        __self__.master.configure(bg='white')
         __self__.master.resizable(True,True)
         __self__.upper = Canvas(__self__.master)
         __self__.upper.config(bg='white')
-        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)#, padx=(16,16),pady=(16,16))
         text=f"Datacube loaded: {Constants.MY_DATACUBE.name}"
-        __self__.lower = Frame(__self__.master,height=35)
-        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
-        Label(__self__.lower, text=text).pack(padx=15, anchor=E, fill=BOTH, expand=1)
+        __self__.lower = Frame(__self__.master, height=35)
+        __self__.success = True
+
+        try: __self__.Writer = Writer(path)
+        except Exception as e:
+            messagebox.showerror("Error",f"Could not start the input tracker. Exception:\n{e}")
+            __self__.wipe_plot()
+            __self__.success = False
+            return
 
         # Save and replace buttons #
         __self__.figure = Figure(figsize=(5,4), dpi=75)
@@ -94,11 +97,16 @@ class ImageWindow:
         __self__.plot.set_title(title)
         __self__.canvas = FigureCanvasTkAgg(__self__.figure,__self__.upper)
         __self__.canvas.draw()
-        __self__.mplCanvas = __self__.canvas.get_tk_widget()
+        __self__.mplCanvas = __self__.canvas.get_tk_widget()        
+        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
+
+        __self__.upper.pack(side=TOP, expand=True, fill=BOTH)
+        __self__.lower.pack(side=BOTTOM, anchor=N, fill=BOTH, expand=0)
+        Label(__self__.lower, text=text).pack(padx=15, anchor=E, fill=BOTH, expand=1)
         __self__.mplCanvas.pack(fill=BOTH, anchor=N+W, expand=True)
         __self__.canvas._tkcanvas.pack()
-        __self__.master.protocol("WM_DELETE_WINDOW",__self__.wipe_plot)
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+        __self__.master.after( 100, __self__.master.attributes, "-alpha",1.0)
+
 
     def AltOn(__self__,e=""):
         __self__.alt = True
@@ -127,35 +135,44 @@ class ImageWindow:
         __self__.start.set(0)
         __self__.pixels.set(0)
 
-        __self__.LeftPanel = Frame(__self__.master, 
-                height=__self__.master.winfo_height())
-        __self__.LeftPanel.pack(side=RIGHT)
-        __self__.LabelStart = Label(__self__.LeftPanel, text="Line start")
-        __self__.LabelPixels = Label(__self__.LeftPanel, text="Pixels to move")
-        create_tooltip(__self__.LabelPixels, "Positive values moves to the right, negative values move to the left.")
+        __self__.Panel = ttk.LabelFrame(__self__.master, padding=10, text="Options")
+        __self__.LeftPanel = ttk.Frame(__self__.Panel)
+        __self__.RightPanel = ttk.Frame(__self__.Panel)
+        __self__.LabelStart = ttk.Label(__self__.LeftPanel, text="Line start")
+        __self__.LabelPixels = ttk.Label(__self__.LeftPanel, text="Pixels to move")
+        
         __self__.EntryStart = ttk.Entry(
                 __self__.LeftPanel, 
                 textvariable=__self__.start, 
                 width=5)
+
         __self__.EntryPixels = ttk.Entry(
                 __self__.LeftPanel, 
                 textvariable=__self__.pixels,
                 width=5)
+
         __self__.BtnEntryOk = ttk.Button(__self__.LeftPanel, text="Move lines", 
                 command=__self__.move_callback)
-        __self__.BtnOk = ttk.Button(__self__.LeftPanel, text="Fix!", width=13, 
+
+        __self__.BtnOk = ttk.Button(__self__.RightPanel, text="Fix!", width=13, 
                 command=__self__.execute)
-        __self__.BtnCancel = ttk.Button(__self__.LeftPanel, text="Cancel", width=13,
+
+        __self__.BtnCancel = ttk.Button(__self__.RightPanel, text="Cancel", width=13,
                 command=__self__.wipe_plot)
 
-        padx, pady= 12, 12
+        padx, pady= 6, 6
+        __self__.Panel.pack(side=RIGHT, anchor=E, fill=BOTH, expand=1, padx=5)
+        __self__.LeftPanel.grid(row=0, column=0, padx=padx, stick=W)
+        __self__.RightPanel.grid(row=0, column=1, padx=padx, stick=E)
         __self__.LabelStart.grid(row=0, column=0, padx=padx)
         __self__.LabelPixels.grid(row=1, column=0, padx=padx)
         __self__.EntryStart.grid(row=0, column=1, padx=padx)
         __self__.EntryPixels.grid(row=1, column=1, padx=padx)
-        __self__.BtnEntryOk.grid(row=2, column=0, padx=padx, pady=(pady,0))
-        __self__.BtnOk.grid(row=3, column=0, pady=(pady,0))
-        __self__.BtnCancel.grid(row=3, column=1, pady=(pady,0))
+        __self__.BtnEntryOk.grid(row=0, rowspan=2, column=2, padx=padx, pady=(pady,0))
+        __self__.BtnOk.grid(row=0, column=0, pady=(pady,0), stick=E)
+        __self__.BtnCancel.grid(row=0, column=1, pady=(pady,0), sticky=E)
+
+        create_tooltip(__self__.LabelPixels, "Positive values moves to the right, negative values move to the left.")
 
         __self__.toolbar = NavigationToolbar(__self__.canvas,__self__.lower)
         __self__.toolbar.update()
@@ -262,23 +279,17 @@ class Clicker:
         __self__.win.bind("<FocusOut>",__self__.kill_popup)
         __self__.win.bind("<MouseWheel>",__self__.on_scroll)
         __self__.parent.master.bind("<MouseWheel>",__self__.on_scroll)
+        __self__.win.bind("<Return>",__self__.dummy)
         __self__.win.withdraw()
         __self__.win.resizable(False,False)
         __self__.win.overrideredirect(True)
-        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE, style="dark.TFrame")
-
-        label1 = ttk.Label(__self__.diag,text="Move (px): ", style="dark.TLabel")
-
         __self__.en = IntVar()
-        __self__.win.bind("<Return>",__self__.dummy)
-
-        value_entry = ttk.Entry(__self__.diag, textvariable=__self__.en,validate="focusout",
-                width=9)
-
-        accept = ttk.Button(__self__.diag,text="Ok", width=8,
-                command=__self__.dummy)
-        cancel = ttk.Button(__self__.diag,text="Cancel", width=8,
-                command=__self__.kill_popup)
+        
+        __self__.diag = ttk.Frame(__self__.win, relief=RIDGE, style="dark.TFrame")
+        label1 = ttk.Label(__self__.diag,text="Move (px): ", style="dark.TLabel")
+        value_entry = ttk.Entry(__self__.diag, textvariable=__self__.en,validate="focusout", width=9)
+        accept = ttk.Button(__self__.diag,text="Ok", width=8,command=__self__.dummy)
+        cancel = ttk.Button(__self__.diag,text="Cancel", width=8,command=__self__.kill_popup)
 
         __self__.diag.grid()
         label1.grid(row=0,column=0, pady=(6,0),padx=(6,0))

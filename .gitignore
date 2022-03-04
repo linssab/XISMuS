@@ -17,9 +17,10 @@
 *.tag
 *.npy
 *.old
+*.pdf
 
 setup.py
-calculator.py
+SpotRemover.py
 config.cfg
 FitSingle.py
 HeightMapping.py

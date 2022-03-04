@@ -38,6 +38,7 @@ XISMuS source-code can be found at https://github.com/linssab/XISMuS
 #############
 # Utilities #
 #############
+from ast import Constant
 import os
 import numpy as np
 #############
@@ -87,12 +88,15 @@ class PlotWin:
         __self__.master.bind("<KeyRelease-Alt_L>",__self__.AltOff)
         __self__.master.bind("<Return>",__self__.maximize)
         __self__.master.title("Plot")
-        __self__.master.tagged = None
+
         __self__.master.minsize(width=600,height=480)
         __self__.master.configure(bg='white')
         __self__.master.resizable(True,True) 
         __self__.plot_font = {'fontname':'Arial','fontsize':14}
-        __self__.lw = 3
+
+        __self__.lw = 3                 #plot linewidth
+        __self__.master.tagged = None
+        __self__.limits = ()            #boundaries of selected region with Annotator class
         __self__.menubar = Menu(__self__.master, tearoff=0)
         __self__.options = Menu(__self__.menubar, tearoff=0)
         __self__.upper = Canvas(__self__.master)
@@ -782,7 +786,7 @@ class PlotWin:
             return
 
         def save_raw_spectrum():
-            x,spec = __self__.DATA.get_data()
+            x, spec = __self__.DATA.get_data()
             f = filedialog.asksaveasfile(mode='w',
                         defaultextension=".mca",
                         filetypes=[("MCA file", "*.mca")],
@@ -790,12 +794,17 @@ class PlotWin:
             if f is not None:
                 sum_file = open(f.name,'w+')
                 
+                if __self__.limits == ():
+                    limits = "FULL AREA"
+                else:
+                    limits =  f"X: {__self__.limits[0]};{__self__.limits[1]}, Y: {__self__.limits[2]};{__self__.limits[3]}"
+                
                 #################
                 # writes header #
                 #################
                 sum_file.write(
-                        "<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - {} ROI\n".format(
-                            DATACUBE.name))
+                        f"<<PMCA SPECTRUM>>\nTAG - TAG\nDESCRIPTION - {DATACUBE.name} - ROI {limits}\n"
+                        )
                 sum_file.write("GAIN - 2\nTHRESHOLD - 0\nLIVE_MODE - 0\nPRESET_TIME - OFF\n")
                 sum_file.write("LIVE_TIME - 0\nREAL_TIME - 0\nSTART_TIME - {}\n".format(
                     time.strftime("%Y-%m-%d %H:%M:%S", 
@@ -811,6 +820,8 @@ class PlotWin:
                 sum_file.write("<<END>>")
                 sum_file.close()
                 __self__.master.focus_set()
+                __self__.parent.master.focus_set()
+                __self__.master.focus_force()
             else: return
         
         if not refresh:

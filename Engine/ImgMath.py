@@ -37,8 +37,6 @@ XISMuS source-code can be found at https://github.com/linssab/XISMuS
 #############
 # Utilities #
 #############
-import logging, os, time
-import threading
 import numpy as np
 import cv2
 import math
@@ -262,7 +260,7 @@ def correlate(map1,map2,bar=None):
     corr_x, corr_y = np.asarray(corr_x), np.asarray(corr_y)
     return corr_x, corr_y
 
-def set_axes_equal(ax,z_lim):
+def set_axes_equal( ax, z_lim, **kwargs):
     #####################################################
     #   set_axes_equal(ax) FUNCTION OBTAINED FROM:      #
     #   https://stackoverflow.com/questions/13685386    #
@@ -280,9 +278,25 @@ def set_axes_equal(ax,z_lim):
     y_limits = ax.get_ylim3d()
     z_limits = ax.get_zlim3d()
     
-    ax.set_xlabel("mm")
-    ax.set_ylabel("mm")
-    ax.set_zlabel("Thickness (μm)")
+    if "labels" in kwargs:
+        if len( kwargs["labels"] ) != 3 :
+            print("Need 3 labels!")
+            return
+        else:
+            x = kwargs["labels"][0]
+            y = kwargs["labels"][1]
+            z = kwargs["labels"][2]
+    else:
+        x = "mm"
+        y = "mm"
+        z = "Thickness (μm)"
+
+    ax.set_xlabel( x )
+    ax.set_ylabel( y )
+    ax.set_zlabel( z )
+    ax.xaxis.labelpad = 10
+    ax.yaxis.labelpad = 10
+    ax.zaxis.labelpad = 10
     ax.set_facecolor("white")
 
     x_range = abs(x_limits[1] - x_limits[0])

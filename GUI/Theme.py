@@ -38,14 +38,8 @@ import Constants
 BG = {}
 FG = {}
 
-try:
-    from tkinter import *
-    from tkinter import ttk
-    from tkinter import font as tkFont
-except:
-    from Tkinter import *
-    from Tkinter import ttk
-    import tkFont
+from tkinter import *
+from tkinter import ttk
 
 def apply_theme(root):
     default = Constants.DEFAULTBTN_COLOR
