@@ -2463,8 +2463,8 @@ class MainGUI:
             __self__.master.update_idletasks()
             x = __self__.master.winfo_pointerx()
             y = __self__.master.winfo_pointery()
-            abs_coord_x = __self__.master.winfo_pointerx() - __self__.master.winfo_vConstants.ROOTx()
-            abs_coord_y = __self__.master.winfo_pointery() - __self__.master.winfo_vConstants.ROOTy()
+            abs_coord_x = __self__.master.winfo_pointerx() - __self__.master.winfo_vrootx()
+            abs_coord_y = __self__.master.winfo_pointery() - __self__.master.winfo_vrooty()
             
             try: __self__.plot_canvas_popup.tk_popup(
                     int(abs_coord_x), int(abs_coord_y), entry="")
@@ -3056,7 +3056,7 @@ class MainGUI:
             __self__.plot_canvas_popup.entryconfig("Export as *.h5 . . .", state=NORMAL)
             __self__.SamplesWindow.popup.entryconfig("Remove from database", state=NORMAL)
 
-        try: __self__.SamplesWindow.popup.tk_popup(event.x_Constants.ROOT, event.y_Constants.ROOT, entry="")
+        try: __self__.SamplesWindow.popup.tk_popup(event.x_root, event.y_root, entry="")
         finally: __self__.SamplesWindow.popup.grab_release()
     
     def draw_map(__self__):

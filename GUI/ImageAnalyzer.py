@@ -748,8 +748,8 @@ class ImageAnalyzer:
             Constants.ROOT.master.update_idletasks()
             x = Constants.ROOT.master.winfo_pointerx()
             y = Constants.ROOT.master.winfo_pointery()
-            abs_coord_x = Constants.ROOT.master.winfo_pointerx() - Constants.ROOT.master.winfo_vConstants.ROOTx()
-            abs_coord_y = Constants.ROOT.master.winfo_pointery() - Constants.ROOT.master.winfo_vConstants.ROOTy()
+            abs_coord_x = Constants.ROOT.master.winfo_pointerx() - Constants.ROOT.master.winfo_vrootx()
+            abs_coord_y = Constants.ROOT.master.winfo_pointery() - Constants.ROOT.master.winfo_vrooty()
             try: __self__.popup.tk_popup(int(abs_coord_x), int(abs_coord_y), entry="")
             finally: __self__.popup.grab_release()
         else: return
