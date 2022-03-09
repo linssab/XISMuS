@@ -217,7 +217,7 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0:
-                d = (math.sin(math.radians(ANGLE))/(-mu1+mu2))*(math.log((depth_matrix[i][j]/thickratio)))
+                d = ( math.sin( math.radians( ANGLE ) ) / ( -mu1 + mu2 ) ) * ( math.log( ( depth_matrix[i][j] / thickratio ) ) )
             else: d = 0
             
             #############################################
