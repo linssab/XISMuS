@@ -35,30 +35,29 @@ XISMuS source-code can be found at https://github.com/linssab/XISMuS
 """
 
 import json
-import logging
 import os, sys
 import Constants
+from tkinter import messagebox
 from .SpecRead import __BIN__
 
 def load_user_database():
     """ Read database file and load all entries to global variable """    
 
     path = os.path.join(__BIN__,"database.json")
+    if not os.path.exists( path ):
+        Constants.LOGGER.info("database.json does not exist. Creating file...")
+        try: 
+            f = open(path, "w")
+            f.close()
+        except Exception as e:
+            messagebox.showerror("Error",f"Could not create a database file.\n{e}")
+            Constants.LOGGER.warning("Failed to create database file.")
+            sys.exit(1)
     try: 
         with open(path, "r") as db:
             Constants.USER_DATABASE = json.load(db)
-    except FileNotFoundError:
-        Constants.LOGGER.info("Database.json does not exist. Creating file...")
-        f = open(path, "w")
-        f.close()
-        try:
-            with open(path, "r") as db:
-                Constants.USER_DATABASE = json.load(db)
-        except:
-            Constants.LOGGER.info("Failed to create database.json!")
-            sys.exit(1)
     except json.decoder.JSONDecodeError:
-        Constants.LOGGER.info("Failed to read database! It may be empty or corrupted!")
+        Constants.LOGGER.warning("Failed to read database! It may be empty or corrupted!")
     return
 
 def write_to_user_database(name, 
