@@ -174,6 +174,7 @@ class ViewController():
         for layer in __self__.parent.layer:
             shared.append(__self__.parent.layer[layer].maps)            
         if shared != []: common = set.intersection(*map(set, shared))
+        else: common = []
         common = sorted(list(common))
         for item in common:
             __self__.parent.elements_list.insert(END,item)
@@ -1779,9 +1780,6 @@ class Mosaic_API:
                     __self__.image, 
                     limit,
                     LAYERS_DICT)
-            __self__.im_plot.set_data(__self__.image)
-            __self__.canvas.draw_idle()
-            return
         if bound == True:
             if limit == None:
                 limit = np.asarray([[0,__self__.image.shape[0]],[0,__self__.image.shape[1]]],
@@ -1791,9 +1789,9 @@ class Mosaic_API:
                     __self__.image,
                     limit,
                     LAYERS_DICT)
-            __self__.im_plot.set_data(__self__.image)
-            __self__.canvas.draw_idle()
-            return
+        __self__.im_plot.set_data(__self__.image)
+        __self__.canvas.draw_idle()
+        return
 
     def pack_spectra(__self__,i,j,void_spectrum):
         front_layer, top_layer, spectrum, bg = 0, 0, void_spectrum, void_spectrum
@@ -2254,7 +2252,7 @@ class HistogramWindow:
             __self__.add_anchors()
         except: 
             messagebox.showerror("Failed to create histogram!",
-                    f"The Mosaic has failed to create a histogram for {layer_object.name}")
+                    f"The Mosaic has failed to create a histogram for {__self__.layer.name}")
 
     def refresh_anchors(__self__):
         """ Called when updating the input values in Entry boxes """

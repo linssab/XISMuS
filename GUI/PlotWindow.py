@@ -38,7 +38,6 @@ XISMuS source-code can be found at https://github.com/linssab/XISMuS
 #############
 # Utilities #
 #############
-from ast import Constant
 import os
 import numpy as np
 #############
@@ -63,10 +62,6 @@ from Elements import *
 ####################
 # External modules #
 ####################
-try:
-    from numba import jit
-except:
-    print("Failed to load numba")
 from tkinter import *
 from tkinter import messagebox
 from tkinter import filedialog

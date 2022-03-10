@@ -45,10 +45,9 @@ import math
 ####################
 # External modules #
 ####################
-import matplotlib
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import ListedColormap
+from mpl_toolkits.mplot3d import Axes3D
 try: from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 except: Constants.LOGGER.warning("Failed to load make_axes_locatable from mpl_toolkits.axes_grid1.axes_divider")
 ####################
@@ -168,7 +167,7 @@ def mask(a_datacube,a_compound,mask_threshold):
 
     return id_element_matrix
 
-def getheightmap(depth_matrix,mask,thickratio,compound):
+def getheightmap(depth_matrix, mask, thickratio, compound, **kwargs):
     """ Creates a heightmap of a given layer on top of the samples substrate through
     the differential attenuation method.
     The function writes the thickness values to a txt file.
@@ -189,14 +188,16 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     --------------------------------------------------------------------------------
 
     INPUT:
-        depth_matrix; a 2D-array
-        mask; a 2D-array
-        thickratio; float
-        compound; compound class object
+        depth_matrix: a 2D-array
+        mask: a 2D-array
+        thickratio: float
+        compound: compound class object
+        path: path String (optional)
+        angle: float (optional), default is 90
     OUTPUT:
-        heightmap; a 2D-array
-        median; float
-        deviation; float """
+        heightmap: a 2D-array
+        median: float
+        deviation: float """
 
     average = [[],0]
     imagesize = mask.shape
@@ -205,7 +206,10 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     heightmap = np.zeros([imagex,imagey])
     coefficients = compound.lin_att
     
-    heightfile = open(os.path.join(SpecRead.output_path,f"{Constants.DIRECTORY}_heightmap.txt"),'w+')
+    if "path" in kwargs:
+        heightfile = open( os.path.join( kwargs["path"], "heightmap.txt"), "w+")
+    else:
+        heightfile = open( os.path.join( SpecRead.output_path, f"{Constants.DIRECTORY}_heightmap.txt" ), 'w+')
     heightfile.write("-"*10 + f" Thickness Values (um) of {compound.name} " + 10*"-" + '\n')
     heightfile.write("row\tcolumn\tthickness\n")
 
@@ -213,7 +217,9 @@ def getheightmap(depth_matrix,mask,thickratio,compound):
     mu2 = coefficients[1]
     Constants.LOGGER.warning(f"mu1 = {mu1} / mu2 = {mu2}")
     
-    ANGLE = 90
+    if "angle" in kwargs:
+        ANGLE = kwargs["angle"]
+    else: ANGLE = 90
     for i in range(len(depth_matrix)):
         for j in range(len(depth_matrix[i])):
             if depth_matrix[i][j] > 0 and mask[i][j] > 0:
@@ -317,7 +323,7 @@ def set_axes_equal( ax, z_lim, **kwargs):
     if z_lim == None: ax.set_zlim3d([0, plot_radius])
     else: ax.set_zlim3d([0, z_lim])
 
-def plot3D(depth_matrix,z_lim=None):
+def plot3D(depth_matrix, z_lim=None):
     """ Displays a 3D-plot of a heightmap.
 
     --------------------------------------
@@ -344,7 +350,7 @@ def plot3D(depth_matrix,z_lim=None):
     MAP = ax.plot_surface(X,Y,depth_matrix,\
             cmap='BuGn',linewidth=0,antialiased=True)
     set_axes_equal(ax,z_lim)
-    fig.savefig(os.getcwd()+'\\myimage.svg', format='svg', dpi=1200)
+    #fig.savefig(os.getcwd()+'\\myimage.svg', format='svg', dpi=1200)
     return fig, ax
 
 def colorize(elementmap,color=None):

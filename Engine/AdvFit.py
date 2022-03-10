@@ -35,8 +35,6 @@ XISMuS source-code can be found at https://github.com/linssab/XISMuS
 """
 
 import Constants
-Constants.LOGGER.info("In AdvFit: Importing Constants...")
-import Constants
 Constants.LOGGER.info("In AdvFit: Importing Elements...")
 from Elements import *
 try: 

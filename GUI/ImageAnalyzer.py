@@ -77,191 +77,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 ####################
 
-class Annotator:
-    """ Creates an annotator to select areas on matplotlib canvases
-    Annotator is invoked from Image Analyzer and is destroyed when Set ROI
-    button is toggled off """
-
-    def __init__(__self__,parent):
-
-        # parent is the Image Analyzer object. The PlotWin object is the plot attribute:
-        # parent.plot
-
-        __self__.parent = parent
-        __self__.alive = True #This exists because killing this object seems impossible
-        __self__.element1 = parent.Map1Var.get()
-        __self__.element2 = parent.Map2Var.get()
-        __self__.roibox1 = parent.roibox1
-        __self__.roibox2 = parent.roibox2
-        __self__.ratebox = parent.ratebox
-        __self__.area1 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
-        __self__.area2 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
-        __self__.x0 = None
-        __self__.y0 = None
-        __self__.x1 = None
-        __self__.y1 = None
-        __self__.parent.plot1.add_patch(__self__.area1)
-        __self__.parent.plot2.add_patch(__self__.area2)
-        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.on_press)
-        __self__.parent.canvas1.mpl_connect("motion_notify_event",__self__.on_drag)
-        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.on_release)
-        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.on_press)
-        __self__.parent.canvas2.mpl_connect("motion_notify_event",__self__.on_drag)
-        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.on_release)
-        __self__.press, __self__.move = False, False
-
-    def refresh_annotator(__self__):
-        __self__.element1 = __self__.parent.Map1Var.get()
-        __self__.element2 = __self__.parent.Map2Var.get()
-        __self__.area1.remove()
-        __self__.area2.remove()
-        __self__.canvas1.draw()
-        __self__.canvas2.draw()
-        __self__.parent.plot1.add_patch(__self__.area1)
-        __self__.parent.plot2.add_patch(__self__.area2)
-
-    def wipe_annotator(__self__):
-        __self__.parent.plot.fit_plots = []
-        __self__.area1.remove()
-        __self__.area2.remove()
-        __self__.parent.canvas1.draw()
-        __self__.parent.canvas2.draw()
-        __self__.roibox1["text"] = "Roi 1: None"
-        __self__.roibox2["text"] = "Roi 2: None"
-        __self__.ratebox["text"] = "Ratio: None"
-        try: __self__.parent.plot.wipe_plot()
-        except: pass
-        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.do_nothing)
-        __self__.parent.canvas1.mpl_connect("button_notify_event",__self__.do_nothing)
-        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.do_nothing)
-        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.do_nothing)
-        __self__.parent.canvas2.mpl_connect("button_notify_event",__self__.do_nothing)
-        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.do_nothing)
-        __self__.parent.master.after(50,delattr(__self__.parent,"annotator"))
-        __self__.alive = False #prevents on_drag from working
-        del __self__
-
-    def do_nothing(__self__,e=""):
-        """ doing bunches of nothing """
-        return
-
-    def refresh_roi_plot(__self__):
-        if __self__.parent.plot.fit_plots != []:
-            for plot in __self__.parent.plot.fit_plots: 
-                try: plot.pop(0).remove()
-                except: pass
-        __self__.parent.plot.fit_plots = []
-        if len(Constants.FIND_ELEMENT_LIST) > 0: 
-            lines = True
-        else: 
-            lines = False
-        
-        __self__.parent.plot.DATA.set_ydata(__self__.parent.sum_spectrum)
-        __self__.parent.plot.plot.legend().get_texts()[0].set_text(
-                f"{__self__.spec_no} Spectra (X: {__self__.x0};{__self__.x1}, Y: {__self__.y0};{__self__.y1})")
-        __self__.parent.plot.plot.set_ylim(
-                bottom=1,
-                top=1.20*__self__.parent.sum_spectrum.max())
-        __self__.parent.plot.limits = (__self__.x0, __self__.x1, __self__.y0, __self__.y1)
-        try:
-            __self__.parent.plot.canvas.draw()
-        except: pass
-
-    def on_press(__self__,event):
-        __self__.press = True
-        try: __self__.x0 = int(event.xdata)
-        except: pass
-        try: __self__.y0 = int(event.ydata)
-        except: pass
-
-    def on_drag(__self__,event):
-        if __self__.press and __self__.alive:
-            __self__.move = True
-            try: __self__.x1 = int(event.xdata)+1
-            except: pass
-            try: __self__.y1 = int(event.ydata)+1
-            except: pass
-            __self__.area1.set_width(__self__.x1 - __self__.x0)
-            __self__.area2.set_width(__self__.x1 - __self__.x0)
-            __self__.area1.set_height(__self__.y1 - __self__.y0)
-            __self__.area2.set_height(__self__.y1 - __self__.y0)
-            __self__.area1.set_xy((__self__.x0,__self__.y0))
-            __self__.area2.set_xy((__self__.x0,__self__.y0))
-            __self__.parent.canvas1.draw()
-            __self__.parent.canvas2.draw()
-            __self__.calculate_area()
-
-            try: __self__.refresh_roi_plot()
-            except: pass
-
-    def on_release(__self__,event):
-        __self__.press = False
-        if __self__.press and not __self__.move:
-            __self__.press = False
-            __self__.move = False
-
-    def calculate_area(__self__):
-        __self__.area1_sum = 0
-        __self__.area2_sum = 0
-        __self__.spec_no = 0
-        __self__.parent.sum_spectrum = np.ones([__self__.parent.DATACUBE.sum.shape[0]],
-                dtype="float32")
-        unpacker1 = __self__.element1
-        unpacker2 = __self__.element2
-        
-        #print("MPL X:",__self__.x0,__self__.x1)
-        #print("MPL Y:",__self__.y0,__self__.y1)
-        # in matplotlib canvas directions are swapped
-        x_ = [__self__.y0,__self__.y1]
-        y_ = [__self__.x0,__self__.x1]
-        #print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
-        x_.sort()
-        y_.sort()
-
-        #print("x",x_)
-        #print("y",y_)
-        #print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
-        
-        if unpacker1 != "" or unpacker2 != "":
-            image1 = __self__.parent.DATACUBE.unpack_element(unpacker1)
-            image2 = __self__.parent.DATACUBE.unpack_element(unpacker2)
-        else:
-            __self__.parent.sum_spectrum = \
-                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
-            __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
-            return
-
-        #################################################################################
-        #NOTE: if the image on display in the panel is a result of masking with         #
-        # the correlation plot window, we need to crop the unpacked image to match what #
-        # is displayed. Then, coordinates must be changed to pick the corresponding spec#
-        #################################################################################
-        if __self__.parent.masked:
-            x = __self__.parent.crop_y
-            y = __self__.parent.crop_x #NOTE: coordinates in matplotlib canvas are swapped
-            image1 = image1[x[0]:x[1],y[0]:y[1]]
-            image2 = image2[x[0]:x[1],y[0]:y[1]]
-            #x_ = [-__self__.y0+image1.shape[0],
-            #    -__self__.y1+image1.shape[0]]
-            #x_.sort()
-            cx = [x_[0]+x[0], x_[0]+x[0]+(x_[1]-x_[0])]
-            cy = [y_[0]+y[0], y_[0]+y[0]+(y_[1]-y_[0])]
-            __self__.parent.sum_spectrum = \
-                    __self__.parent.DATACUBE.matrix[cx[0]:cx[1],cy[0]:cy[1]].sum(0).sum(0)
-        else:
-            __self__.parent.sum_spectrum = \
-                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
-        #################################################################################
-        
-        __self__.area1_sum = image1[x_[0]:x_[1],y_[0]:y_[1]].sum()
-        __self__.area2_sum = image2[x_[0]:x_[1],y_[0]:y_[1]].sum()
-        __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
-        __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
-        __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
-        if __self__.area2_sum > 0:
-            __self__.ratebox["text"] = "Ratio: {:.2f}".format(
-                    __self__.area1_sum/__self__.area2_sum)
-
 class ImageAnalyzer:
     def __init__(__self__,parent,datacube):
         __self__.DATACUBE = datacube
@@ -1348,3 +1163,189 @@ class ImageOperationWarning:
 
         __self__.master.grab_release()
         __self__.master.destroy()
+
+
+class Annotator:
+    """ Creates an annotator to select areas on matplotlib canvases
+    Annotator is invoked from Image Analyzer and is destroyed when Set ROI
+    button is toggled off """
+
+    def __init__(__self__, parent: ImageAnalyzer):
+
+        # parent is the Image Analyzer object. The PlotWin object is the plot attribute:
+        # parent.plot
+
+        __self__.parent = parent
+        __self__.alive = True #This exists because killing this object seems impossible
+        __self__.element1 = parent.Map1Var.get()
+        __self__.element2 = parent.Map2Var.get()
+        __self__.roibox1 = parent.roibox1
+        __self__.roibox2 = parent.roibox2
+        __self__.ratebox = parent.ratebox
+        __self__.area1 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
+        __self__.area2 = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
+        __self__.x0 = None
+        __self__.y0 = None
+        __self__.x1 = None
+        __self__.y1 = None
+        __self__.parent.plot1.add_patch(__self__.area1)
+        __self__.parent.plot2.add_patch(__self__.area2)
+        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.on_press)
+        __self__.parent.canvas1.mpl_connect("motion_notify_event",__self__.on_drag)
+        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.on_release)
+        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.on_press)
+        __self__.parent.canvas2.mpl_connect("motion_notify_event",__self__.on_drag)
+        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.on_release)
+        __self__.press, __self__.move = False, False
+
+    def refresh_annotator(__self__):
+        __self__.element1 = __self__.parent.Map1Var.get()
+        __self__.element2 = __self__.parent.Map2Var.get()
+        __self__.area1.remove()
+        __self__.area2.remove()
+        __self__.canvas1.draw()
+        __self__.canvas2.draw()
+        __self__.parent.plot1.add_patch(__self__.area1)
+        __self__.parent.plot2.add_patch(__self__.area2)
+
+    def wipe_annotator(__self__):
+        __self__.parent.plot.fit_plots = []
+        __self__.area1.remove()
+        __self__.area2.remove()
+        __self__.parent.canvas1.draw()
+        __self__.parent.canvas2.draw()
+        __self__.roibox1["text"] = "Roi 1: None"
+        __self__.roibox2["text"] = "Roi 2: None"
+        __self__.ratebox["text"] = "Ratio: None"
+        try: __self__.parent.plot.wipe_plot()
+        except: pass
+        __self__.parent.canvas1.mpl_connect("button_press_event",__self__.do_nothing)
+        __self__.parent.canvas1.mpl_connect("button_notify_event",__self__.do_nothing)
+        __self__.parent.canvas1.mpl_connect("button_release_event",__self__.do_nothing)
+        __self__.parent.canvas2.mpl_connect("button_press_event",__self__.do_nothing)
+        __self__.parent.canvas2.mpl_connect("button_notify_event",__self__.do_nothing)
+        __self__.parent.canvas2.mpl_connect("button_release_event",__self__.do_nothing)
+        __self__.parent.master.after(50,delattr(__self__.parent,"annotator"))
+        __self__.alive = False #prevents on_drag from working
+        del __self__
+
+    def do_nothing(__self__,e=""):
+        """ doing bunches of nothing """
+        return
+
+    def refresh_roi_plot(__self__):
+        if __self__.parent.plot.fit_plots != []:
+            for plot in __self__.parent.plot.fit_plots: 
+                try: plot.pop(0).remove()
+                except: pass
+        __self__.parent.plot.fit_plots = []
+        if len(Constants.FIND_ELEMENT_LIST) > 0: 
+            lines = True
+        else: 
+            lines = False
+        
+        __self__.parent.plot.DATA.set_ydata(__self__.parent.sum_spectrum)
+        __self__.parent.plot.plot.legend().get_texts()[0].set_text(
+                f"{__self__.spec_no} Spectra (X: {__self__.x0};{__self__.x1}, Y: {__self__.y0};{__self__.y1})")
+        __self__.parent.plot.plot.set_ylim(
+                bottom=1,
+                top=1.20*__self__.parent.sum_spectrum.max())
+        __self__.parent.plot.limits = (__self__.x0, __self__.x1, __self__.y0, __self__.y1)
+        try:
+            __self__.parent.plot.canvas.draw()
+        except: pass
+
+    def on_press(__self__,event):
+        __self__.press = True
+        try: __self__.x0 = int(event.xdata)
+        except: pass
+        try: __self__.y0 = int(event.ydata)
+        except: pass
+
+    def on_drag(__self__,event):
+        if __self__.press and __self__.alive:
+            __self__.move = True
+            try: __self__.x1 = int(event.xdata)+1
+            except: pass
+            try: __self__.y1 = int(event.ydata)+1
+            except: pass
+            __self__.area1.set_width(__self__.x1 - __self__.x0)
+            __self__.area2.set_width(__self__.x1 - __self__.x0)
+            __self__.area1.set_height(__self__.y1 - __self__.y0)
+            __self__.area2.set_height(__self__.y1 - __self__.y0)
+            __self__.area1.set_xy((__self__.x0,__self__.y0))
+            __self__.area2.set_xy((__self__.x0,__self__.y0))
+            __self__.parent.canvas1.draw()
+            __self__.parent.canvas2.draw()
+            __self__.calculate_area()
+
+            try: __self__.refresh_roi_plot()
+            except: pass
+
+    def on_release(__self__,event):
+        __self__.press = False
+        if __self__.press and not __self__.move:
+            __self__.press = False
+            __self__.move = False
+
+    def calculate_area(__self__):
+        __self__.area1_sum = 0
+        __self__.area2_sum = 0
+        __self__.spec_no = 0
+        __self__.parent.sum_spectrum = np.ones([__self__.parent.DATACUBE.sum.shape[0]],
+                dtype="float32")
+        unpacker1 = __self__.element1
+        unpacker2 = __self__.element2
+        
+        #print("MPL X:",__self__.x0,__self__.x1)
+        #print("MPL Y:",__self__.y0,__self__.y1)
+        # in matplotlib canvas directions are swapped
+        x_ = [__self__.y0,__self__.y1]
+        y_ = [__self__.x0,__self__.x1]
+        #print("SHAPE:", __self__.parent.DATACUBE.matrix.shape)
+        x_.sort()
+        y_.sort()
+
+        #print("x",x_)
+        #print("y",y_)
+        #print(__self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].shape)
+        
+        if unpacker1 != "" or unpacker2 != "":
+            image1 = __self__.parent.DATACUBE.unpack_element(unpacker1)
+            image2 = __self__.parent.DATACUBE.unpack_element(unpacker2)
+        else:
+            __self__.parent.sum_spectrum = \
+                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
+            __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
+            return
+
+        #################################################################################
+        #NOTE: if the image on display in the panel is a result of masking with         #
+        # the correlation plot window, we need to crop the unpacked image to match what #
+        # is displayed. Then, coordinates must be changed to pick the corresponding spec#
+        #################################################################################
+        if __self__.parent.masked:
+            x = __self__.parent.crop_y
+            y = __self__.parent.crop_x #NOTE: coordinates in matplotlib canvas are swapped
+            image1 = image1[x[0]:x[1],y[0]:y[1]]
+            image2 = image2[x[0]:x[1],y[0]:y[1]]
+            #x_ = [-__self__.y0+image1.shape[0],
+            #    -__self__.y1+image1.shape[0]]
+            #x_.sort()
+            cx = [x_[0]+x[0], x_[0]+x[0]+(x_[1]-x_[0])]
+            cy = [y_[0]+y[0], y_[0]+y[0]+(y_[1]-y_[0])]
+            __self__.parent.sum_spectrum = \
+                    __self__.parent.DATACUBE.matrix[cx[0]:cx[1],cy[0]:cy[1]].sum(0).sum(0)
+        else:
+            __self__.parent.sum_spectrum = \
+                    __self__.parent.DATACUBE.matrix[x_[0]:x_[1],y_[0]:y_[1]].sum(0).sum(0)
+        #################################################################################
+        
+        __self__.area1_sum = image1[x_[0]:x_[1],y_[0]:y_[1]].sum()
+        __self__.area2_sum = image2[x_[0]:x_[1],y_[0]:y_[1]].sum()
+        __self__.spec_no = (y_[1]-y_[0]) * (x_[1]-x_[0])
+        __self__.roibox1["text"] = "Roi 1: {}".format(int(__self__.area1_sum))
+        __self__.roibox2["text"] = "Roi 2: {}".format(int(__self__.area2_sum))
+        if __self__.area2_sum > 0:
+            __self__.ratebox["text"] = "Ratio: {:.2f}".format(
+                    __self__.area1_sum/__self__.area2_sum)

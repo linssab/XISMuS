@@ -166,6 +166,7 @@ def open_log():
     try:
         with open(os.path.join(__PERSONAL__,
             "logfile.log"),'w+') as mylog: mylog.truncate(0)
+            
     except: pass
 
     # tries to create logfile on user folder
@@ -1749,6 +1750,7 @@ class MainGUI:
         __self__.master.iconbitmap(icon)
         __self__.master.title("XISMuS {}".format(Constants.VERSION))
         __self__.master.attributes("-alpha",0.0)
+        __self__.heightMapping = None
 
     def load_cube(__self__):
         load_cube()
@@ -1945,6 +1947,7 @@ class MainGUI:
         __self__.Toolbox.add_command(label="Settings", command=__self__.call_settings)
         __self__.Toolbox.add_command(label="Exit", command=__self__.root_quit)
         __self__.Extra.add_command(label="Cube Viewer . . .", command=__self__.cube_viewer)
+        __self__.Extra.add_command(label="Differential Attenuation . . .", command=__self__.call_height_mapping)
         __self__.master.config(menu=__self__.MenuBar)
         
         #####
@@ -3340,6 +3343,14 @@ class MainGUI:
         except:
             __self__.SettingsWin = Settings(__self__)
 
+    def call_height_mapping(__self__, e=""):
+        if Constants.MY_DATACUBE is not None:
+            if __self__.heightMapping is None:
+                __self__.heightMapping = DifferentialAttenuation.HeighMappingMain( __self__, Constants.MY_DATACUBE )
+        else:
+            messagebox.showinfo("Uh-oh!","It appears there is no datacube in memory!")
+            return
+
     def open_mosaic(__self__,e=""):
         CanvasSizeDialog(__self__)
     
@@ -4459,6 +4470,7 @@ if __name__.endswith("__main__"):
     from GUI import AdvCalib
     from GUI import Busy, BusyManager, create_tooltip
     from GUI import ImageWindow
+    from GUI import DifferentialAttenuation
     from GUI.PlotWindow import PlotWin
     from GUI.ImageAnalyzer import ImageAnalyzer
     from GUI.Mosaic import Mosaic_API

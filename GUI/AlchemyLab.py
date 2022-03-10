@@ -34,9 +34,12 @@ from the Icon Archive website (http://www.iconarchive.com).
 XISMuS source-code can be found at https://github.com/linssab/XISMuS
 """
 
-# tcl/Tk imports
+#############
+# tcl/Tk ####
+#############
 from tkinter import *
 from tkinter import ttk
+#############
 
 #############
 # utilities #
@@ -45,13 +48,16 @@ import os
 from tkinter import messagebox
 #############
 
+#############
+# Internal ##
+#############
 from Elements import Compounds
 from Elements import ElementList
+#############
 
 MATERIAL = Compounds.compound()
 
 class AlchemyLab:
-
     def __init__(__self__, parent):
         __self__.parent = parent
         __self__.master = Toplevel(master = parent.master)
@@ -75,14 +81,20 @@ class AlchemyLab:
 
     def kill(__self__, e=""):
         __self__.master.destroy()
-        MATERIAL = Compounds.compound()
+        MATERIAL.reset()
+        __self__.parent.master.after( 50, delattr(__self__.parent, "AlchemyLab") )
+        del __self__
         return
 
     def save(__self__):
-        MATERIAL = __self__.material
+        MATERIAL.create_compound_by_weight( 
+            [i[1] for i in __self__.material.weight.items()],
+            [i[0] for i in __self__.material.weight.items()] )
         __self__.master.destroy()
-        __self__.parent.focus_set()
-        del __self__
+        __self__.parent.master.after( 50, delattr(__self__.parent, "AlchemyLab") )
+        __self__.parent.master.focus_set()
+        __self__.parent.display_material()
+        __self__ = None
         return
     
     def build_widgets(__self__):
@@ -91,7 +103,7 @@ class AlchemyLab:
         padding = 10
         __self__.leftPanel = ttk.LabelFrame(__self__.mainFrame, text="Material", padding=padding)
         __self__.materialFrame = Frame(__self__.leftPanel, bd=1, bg="black", height=height)
-        __self__.materialLabels = ttk.Label(__self__.materialFrame, text="Material name | %")
+        __self__.materialLabels = ttk.Label(__self__.materialFrame, text="Compound name | %")
         __self__.materialName = Listbox(__self__.materialFrame, bd=0, highlightthickness=0)
         __self__.removeCompound = ttk.Button(__self__.leftPanel, text="Remove compound", command=__self__.remove_from_material)
 
@@ -125,8 +137,8 @@ class AlchemyLab:
         __self__.saveButton = ttk.Button(__self__.buttonsSubPanel, text="Save", command=__self__.save, width=w)
         __self__.changeAssembleMode = ttk.Button(__self__.compoundFrame, text="Switch make mode", command=__self__.switch_assemble_mode)
 
-        __self__.leftPanel.grid(row=0, column=0, sticky="NSEW")
-        __self__.rightPanel.grid(row=0, column=1, sticky="NSEW")
+        __self__.leftPanel.grid(row=0, column=0, sticky="NSEW", pady=padding, padx=(padding, 0))
+        __self__.rightPanel.grid(row=0, column=1, sticky="NSEW", padx=(0, padding), pady=padding)
 
         __self__.materialFrame.grid(row=0, sticky="NSEW")
         __self__.materialLabels.grid(row=0, sticky="EW")
@@ -248,6 +260,10 @@ class AlchemyLab:
                 [ i[1] for i in __self__.compoundsInMaterial ], 
                 [ i[0] for i in __self__.compoundsInMaterial ] )
         
+        MATERIAL.reset()
+        MATERIAL.create_compound_by_weight( 
+            [i[1] for i in __self__.material.weight.items()],
+            [i[0] for i in __self__.material.weight.items()] )
         __self__.refresh_material_view()
         return
 
@@ -333,6 +349,7 @@ class AlchemyLab:
         __self__.materialName.delete(0, END)
         for compound in __self__.compoundsInMaterial:
             __self__.materialName.insert(END, compound[0].name + ", " + str(compound[1]) )
+        __self__.parent.display_material()
         return
 
 if __name__.endswith("__main__"):
