@@ -140,7 +140,7 @@ def fast_scaling(datacube, image, scalemode=0, mask=np.zeros(0)):
     newimg.shape = (newimg.size//shape[1], shape[1])
     return newimg
 
-def fast_threshold(image, mode, t):
+def fast_threshold(image: np.array, mode: int, t: int):
     """ Applies a threshold filter to input 2D-array.
     modes:
     0 cuts lower than t values;

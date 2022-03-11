@@ -519,6 +519,7 @@ class ImageAnalyzer:
         __self__.canvas2.draw()
 
     def kill(__self__):
+        __self__.master.attributes("-alpha", 0.0)
         for widget in __self__.master.winfo_children():
             widget.destroy()
         try: __self__.plot.wipe_plot()

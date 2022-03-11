@@ -155,6 +155,7 @@ def start_up():
     database = Samples()
     database.list_all( splash )
     splash.kill()
+
     Constants.ROOT = MainGUI()
     Constants.ROOT.boot( database )
     Constants.ROOT.busy = BusyManager( Constants.ROOT.master )
@@ -736,14 +737,13 @@ class Welcome:
     """ Welcome window class. Spawns a window with given texts at the center
     of MainGUI window """
 
-    def __init__(__self__,parent):
+    def __init__(__self__, parent):
         """parent is a Tk window"""
-
         __self__.h, __self__.w = 400, 240
         __self__.master = Toplevel(master=parent.master)
+        __self__.master.attributes("-alpha", 0.0)
         __self__.parent = parent
-        icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
-        __self__.master.iconbitmap(icon)  
+        __self__.master.iconbitmap(os.path.join(os.getcwd(),"images","icons","icon.ico"))  
         __self__.master.bind("<Return>",__self__.checkout)
         __self__.master.bind("<Escape>",__self__.checkout)
         __self__.font = tkFont.Font(family="Tahoma", size=8)
@@ -771,6 +771,7 @@ class Welcome:
         __self__.tag.set(False)
         __self__.infotext.set(__self__.messages[0])
         __self__.build_widgets()
+        __self__.master.after(150, __self__.master.attributes, "-alpha", 1.0)
 
     def build_widgets(__self__):
         __self__.page_counter = Label(
@@ -1388,13 +1389,14 @@ class Samples:
 class Settings:        
     def __init__(__self__,parent):
         __self__.master = Toplevel(master=parent.master)
+        __self__.master.attributes("-alpha",0.0)
         __self__.parent = parent
         __self__.master.title("Settings")
         __self__.master.resizable(False,False)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill_window)
         __self__.master.bind("<Escape>",__self__.kill_window)
         __self__.master.iconbitmap( os.path.join(os.getcwd(),"images","icons","settings.ico") )
-        __self__.master.attributes("-alpha",0.0)
+        
 
         sys_mem = dict(virtual_memory()._asdict())
 
@@ -1409,6 +1411,7 @@ class Settings:
         __self__.build_widgets()
         place_center(parent.master,__self__.master)
         __self__.master.grab_set()
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
 
     def build_widgets(__self__):
 
@@ -1641,8 +1644,7 @@ class Settings:
         __self__.toggle_ram()
         __self__.toggle_multicore()
         __self__.toggle_save_plot()
-        
-        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+        return
 
     def toggle_save_plot(__self__,e=""):
         yn = __self__.PlotSaveBoolVar.get()
@@ -1744,13 +1746,10 @@ class Settings:
 class MainGUI:
     def __init__(__self__):
         __self__.master = Tk()
-        __self__.master.configure(bg=Constants.DEFAULTBTN_COLOR)
-        __self__.master.withdraw()
-        icon = os.path.join(os.getcwd(),"images","icons","icon.ico")
-        __self__.master.iconbitmap(icon)
-        __self__.master.title("XISMuS {}".format(Constants.VERSION))
         __self__.master.attributes("-alpha",0.0)
-        __self__.heightMapping = None
+        __self__.master.configure(bg=Constants.DEFAULTBTN_COLOR)
+        __self__.master.iconbitmap(os.path.join(os.getcwd(),"images","icons","icon.ico"))
+        __self__.master.title("XISMuS {}".format(Constants.VERSION))
 
     def load_cube(__self__):
         load_cube()
@@ -1773,18 +1772,16 @@ class MainGUI:
         Theme.apply_theme(__self__)
         __self__.find_elements_diag = None
         __self__.ImageAnalyzers = [] 
-        #everytime ImgAnalyzer API is opened, instance is appended
-        
         __self__.ConfigDiag = None
         __self__.sample_figure = Figure(figsize=(4,3), dpi=75)
         __self__.sample_plot =__self__.sample_figure.add_subplot(111)
         __self__.sample_plot.grid(b=None)
         __self__.sample_plot.axis('off')
-        mapfont = {'fontname':'Arial','fontsize':10}
-
         sys_mem = dict(virtual_memory()._asdict())
         inipath = os.path.join(sp.__BIN__,"settings.tag")
+
         set_settings(inipath)
+
         __self__.RAM_limit_value = sys_mem["available"]
         
         #####################################################################
@@ -1812,7 +1809,6 @@ class MainGUI:
 
         __self__.build_widgets()
         __self__.plot_canvas.mpl_connect("button_press_event",__self__.pop)
-
         __self__.plot_canvas_popup = Menu(__self__.master, tearoff=0)
         __self__.plot_canvas_popup.add_command(
                 label="Export as *.h5 . . .",
@@ -1829,9 +1825,13 @@ class MainGUI:
         __self__.plot_canvas_popup.add_command(
                 label="Clear all maps",
                 command=__self__.wipe_maps)
-
-        __self__.master.after(400,__self__.pop_welcome)
+        __self__.master.after( 1400,__self__.pop_welcome )
         __self__.toggle_(toggle='off')
+        __self__.master.update_idletasks()
+        __self__.master.minsize( __self__.master.winfo_width(), __self__.master.winfo_height() + 150 )
+        __self__.master.after( 1000, __self__.master.attributes, "-alpha", 1.0 )
+        __self__.master.state("zoomed")
+        return
 
     def build_widgets(__self__):
         magnifier_icon = PhotoImage(data=ICO_MAGNIFIER)
@@ -2219,6 +2219,7 @@ class MainGUI:
 
         __self__.list_samples()
         __self__.StatusBox.focus_set()
+        return
 
     def cube_viewer(__self__):
         if Constants.MY_DATACUBE is None: 
@@ -3024,20 +3025,12 @@ class MainGUI:
         return alive, killed
 
     def pop_welcome(__self__):
-        __self__.master.attributes("-alpha",1.0)
-        __self__.master.deiconify()
         """Displays a pop-up window with information on the software"""
-        __self__.master.geometry()
-        __self__.master.update_idletasks()
-        w, h = __self__.master.winfo_width(), __self__.master.winfo_height()+150
-        __self__.master.minsize(w,h)
-        __self__.master.state("zoomed")
         if Constants.WELCOME == True:
             __self__.welcome_window = Welcome(__self__)
             __self__.welcome_window.master.grab_set()
             place_center(__self__.master, __self__.welcome_window.master)
-            return 0
-        else: return 1
+        return
 
     def sample_popup(__self__,event):
         """Call the right-click menu for SampleList"""
@@ -3345,10 +3338,10 @@ class MainGUI:
 
     def call_height_mapping(__self__, e=""):
         if Constants.MY_DATACUBE is not None:
-            if __self__.heightMapping is None:
-                __self__.heightMapping = DifferentialAttenuation.HeighMappingMain( __self__, Constants.MY_DATACUBE )
+            if not hasattr(__self__, "HeighMappingMain"):
+                __self__.HeighMappingMain = DifferentialAttenuation.HeighMappingMain( __self__, Constants.MY_DATACUBE )
         else:
-            messagebox.showinfo("Uh-oh!","It appears there is no datacube in memory!")
+            messagebox.showinfo("Uh-oh!", "It appears there is no datacube in memory!")
             return
 
     def open_mosaic(__self__,e=""):
@@ -3562,8 +3555,7 @@ class MainGUI:
             LocalLabel.pack()
             Erase_ico = PhotoImage(data=ICO_ERASE)
             __self__.Erase_ico = Erase_ico.zoom(2, 2)
-            EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).\
-                    pack(side=LEFT, pady=8, padx=16)
+            EraseLabel = Label(__self__.ResetWindow, image = __self__.Erase_ico).pack(side=LEFT, pady=8, padx=16)
             YesButton = ttk.Button(
                     __self__.ResetWindow, 
                     text="Yes", 
@@ -3608,7 +3600,8 @@ class MainGUI:
 class ReConfigDiag:
     def __init__(__self__, master):
         __self__.master = Toplevel(master = master)
-        __self__.master.grab_set()
+        __self__.master.attributes("-alpha",0.0)
+        __self__.master.iconbitmap(os.path.join(os.getcwd(),"images","icons","refresh.ico"))
         __self__.master.resizable(False,False)
         __self__.master.title("Cube Configuration")
         __self__.master.bind("<Escape>",__self__.kill)
@@ -3616,11 +3609,14 @@ class ReConfigDiag:
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.calibration_params = None
         __self__.Frame = Frame(__self__.master, padx=15, pady=15)
-        __self__.MergeSettings = LabelFrame(__self__.master,text="Merged Cube Settings:",
-                padx=15, pady=15)
+        __self__.MergeSettings = LabelFrame(__self__.master,text="Merged Cube Settings:",padx=15, pady=15)
         __self__.MergeSettings.grid(row=1, column=0, columnspan=2, padx=15, pady=(0,15))
         __self__.Frame.grid(row=0, column=0, padx=15, pady=(0,15))
         __self__.build_widgets()
+        place_center(Constants.ROOT.master, __self__.master)
+        __self__.master.after(100, __self__.master.attributes, "-alpha", 1.0)
+        __self__.master.grab_set()
+        return
 
     def get_version(__self__):
         """ version attribute was implemented in XISMuS 1.3.0,
@@ -3748,11 +3744,7 @@ class ReConfigDiag:
         else: __self__.toggle("off")
         __self__.get_version()
         __self__.check_datatype()
-
-        place_center(Constants.ROOT.master,__self__.master)
-        icon = os.path.join(os.getcwd(),"images","icons","refresh.ico")
-        __self__.master.iconbitmap(icon)
-        Constants.ROOT.master.wait_window(__self__.master)
+        return
 
     def call_advcalib(__self__):
         AdvCalib(__self__,Constants.ROOT,hascube=1) 
@@ -3863,8 +3855,9 @@ class ReConfigDiag:
 
 class PeriodicTable:
     # Creates the periodic table and starts find_elements module from Mapping.py
-    def __init__(__self__,parent):
+    def __init__(__self__, parent):
         __self__.master = Toplevel(master = parent.master)
+        __self__.master.attributes("-alpha", 0.0)
         __self__.master.tagged = True
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
         __self__.master.title("Periodic Table of Elements")
@@ -3884,8 +3877,11 @@ class PeriodicTable:
         __self__.cvar2.set(0.5)
         __self__.draw_buttons() 
         icon = os.path.join(os.getcwd(),"images","icons","rubik.ico")
-        place_center(parent.master,__self__.master)
+        place_center(parent.master, __self__.master)
         __self__.master.iconbitmap(icon)
+        __self__.master.after(100,__self__.master.attributes,"-alpha",1.0)
+        return
+        
 
     def kill(__self__,e=""):
         wipe_list()
@@ -4375,6 +4371,7 @@ class PeriodicTable:
 
         __self__.go = Button(__self__.master.footer, text="Map selected elements!",relief='raised',fg="red",bg="#da8a67",command= __self__.save_and_run)
         __self__.go.grid(column=7,columnspan=3,pady=(6,3))
+        return
 
 
 if __name__.endswith("__main__"):         

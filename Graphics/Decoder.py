@@ -65,6 +65,7 @@ def unpack_icons():
     global ICO_MASK_NORMAL, ICO_MASK_TOGGLED 
     global ICO_LINREGRESS_NORMAL, ICO_LINREGRESS_TOGGLED, ICO_CLEAR 
     global ICO_MOSAIC, ICO_HFLIP, ICO_VFLIP
+    global ICO_VALSUCCESS, ICO_VALFAIL
 
     icons_file = open(os.path.join(os.getcwd(),"images","icons","icons.tz"),"rb")
     ICO_ACCEPT = icons_file.read(1548)
@@ -101,6 +102,8 @@ def unpack_icons():
     ICO_SAVE_SPEC = icons_file.read(8060)
     ICO_SETTINGS = icons_file.read(3624)
     ICO_UP = icons_file.read(4064)
+    ICO_VALFAIL = icons_file.read(4736)
+    ICO_VALSUCCESS = icons_file.read(4588)
     ICO_VFLIP = icons_file.read(4272)
 
 unpack_images()

@@ -197,7 +197,9 @@ def getheightmap(depth_matrix, mask, thickratio, compound, **kwargs):
     OUTPUT:
         heightmap: a 2D-array
         median: float
-        deviation: float """
+        deviation: float
+        collected points: a 2D-array
+    """
 
     average = [[],0]
     imagesize = mask.shape
@@ -235,19 +237,19 @@ def getheightmap(depth_matrix, mask, thickratio, compound, **kwargs):
              
             if d > 0: 
                 heightfile.write(f"{i}\t{j}\t{heightmap[i][j]}\n")
-                average[0].append(d)
+                average[0].append(d * 10000)
                 average[1] = average[1]+1  #counts how many values are
     
     if average[1] == 0: average[1] += 1
     if average[0] == []: average[0] = np.zeros([100])
-    median = sum(average[0])/(average[1])*10000  #calculates the average (mean) value
-    deviation = np.std(average[0])*10000         #calculates the standard deviation
+    median = sum(average[0])/(average[1])  #calculates the average (mean) value
+    deviation = np.std(average[0])         #calculates the standard deviation
 
     print(f"Deviation {deviation}")
     print(f"Average {median}")
-    print("max: {0} min: {1}".format(max(average[0])*10000,min(average[0])*10000))
+    print("max: {0} min: {1}".format(max(average[0]), min(average[0])))
     heightfile.write("Average: {0}um, sampled points: {1}".format(median,average[1]))
-    return heightmap, median, deviation
+    return heightmap, median, deviation, np.asarray(average[0])
 
 def correlate(map1,map2,bar=None):
     """ Correlates the pixels of two bi-dimensional arrays

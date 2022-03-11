@@ -83,6 +83,8 @@ class AlchemyLab:
         __self__.master.destroy()
         MATERIAL.reset()
         __self__.parent.master.after( 50, delattr(__self__.parent, "AlchemyLab") )
+        __self__.parent.master.focus_set()
+        __self__.parent.display_material()
         del __self__
         return
 
@@ -94,7 +96,7 @@ class AlchemyLab:
         __self__.parent.master.after( 50, delattr(__self__.parent, "AlchemyLab") )
         __self__.parent.master.focus_set()
         __self__.parent.display_material()
-        __self__ = None
+        del __self__
         return
     
     def build_widgets(__self__):

@@ -37,8 +37,6 @@ XISMuS source-code can be found at https://github.com/linssab/XISMuS
 #############
 # tcl/Tk ####
 #############
-from copy import copy
-from email import message
 from tkinter import *
 from tkinter import ttk
 #############
@@ -47,11 +45,8 @@ from tkinter import ttk
 # utilities #
 #############
 import os
-from tkinter import messagebox
 from tkinter import filedialog
-from tokenize import Double
-from turtle import width
-from matplotlib.pyplot import text
+from turtle import color
 import numpy as np
 #############
 
@@ -70,15 +65,17 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # Internal ##
 #############
 import Constants
+from Graphics.Decoder import ICO_VALFAIL, ICO_VALSUCCESS
 from Utilities import *
 from GUI.AlchemyLab import AlchemyLab, MATERIAL
 from Engine import ImgMath
 from Engine.SpecMath import datacube
+from Elements import ElementList
 #############
 
 
 class MplBackendFrame():
-    def __init__(__self__, parent, guiCanvas):
+    def __init__(__self__, parent, guiCanvas: Canvas):
         __self__.guiCanvas = guiCanvas
         __self__.guiCanvas.configure(bg='white')
         __self__.parent = parent
@@ -86,10 +83,14 @@ class MplBackendFrame():
         __self__.lw = 3
         __self__.plots = []
         __self__.figure = Figure(figsize=(4,3), dpi=75)
+        __self__.figure.set_tight_layout( True )
         __self__.canvas = FigureCanvasTkAgg(__self__.figure, __self__.guiCanvas)
         __self__.mplCanvas = __self__.canvas.get_tk_widget()
         __self__.mplCanvas.pack(fill=BOTH, anchor=N+W, expand=True)
+        __self__.mplCanvas.configure( takefocus=False )
+        __self__.guiCanvas.configure( takefocus=False )
         __self__.canvas.draw_idle()
+        __self__.guiCanvas.update_idletasks()
         return
     
     def add_toolbar(__self__, toolBarFrame):
@@ -119,12 +120,28 @@ class MplBackendFrame():
         __self__.canvas.draw_idle()
         return
 
-    def draw_histogram(__self__, X):
+    def draw_histogram(__self__, X, title=""):
+        try: __self__.plot.cla()
+        except: pass
         __self__.plot = __self__.figure.add_subplot(111)
         __self__.plot.grid(which='both',axis='both')
-        __self__.plot.grid(color="black", ls="--", lw=0.5)
+        __self__.plot.grid(color="gray", ls="--", lw=1)
         __self__.plot.axis('On')
-        __self__.plot.hist( X, bins=(X.size) )
+        __self__.plot.set_facecolor("white")
+        __self__.plot.spines["top"].set_color("black")
+        __self__.plot.spines["top"].set_linewidth(1)
+        __self__.plot.spines["bottom"].set_color("black")
+        __self__.plot.spines["bottom"].set_linewidth(1)
+        __self__.plot.spines["left"].set_color("black")
+        __self__.plot.spines["left"].set_linewidth(1)
+        __self__.plot.spines["right"].set_color("black")
+        __self__.plot.spines["right"].set_linewidth(1)
+
+        __self__.plot.hist( X, bins="auto", edgecolor='white', lw=0.75, color="green")
+        __self__.figure.subplots_adjust(left=0.10, right=0.85, top=0.90, bottom=0.20)
+        __self__.plot.set_title(f"Thickness distribution\n{title}")
+        __self__.plot.set_ylabel("Occurrences")
+        __self__.plot.set_xlabel("Grouped bins (um)")
         __self__.canvas.draw_idle()
         return
 
@@ -155,6 +172,9 @@ class MplBackendFrame():
             antialiased=False)
         ImgMath.set_axes_equal(__self__.plot, zlim)
         __self__.plot.elev = 24
+        __self__.plot.azim = -75
+        __self__.plot.dist = 12
+        __self__.figure.subplots_adjust(left=0.05, right=0.55, top=0.90, bottom=0.20)
         __self__.canvas.draw()
         return
 
@@ -169,33 +189,43 @@ class HeighMappingMain:
         __self__.master.attributes("-alpha", 0.0)
         __self__.master.resizable(True, True)
         __self__.master.protocol("WM_DELETE_WINDOW",__self__.kill)
+
         __self__.build_widgets()
+
         __self__.datacubePlot.draw_datacube_image( __self__.datacube )
         __self__.animatedPlot.make_3d_plot( np.zeros( __self__.datacube.densitymap.shape ), zlim=1 )
-        __self__.histogramPlot.draw_histogram( np.arange(20) )
+        __self__.histogramPlot.draw_histogram( np.arange(256) )
+
         __self__.master.after( 100, __self__.master.attributes, "-alpha", 1.0 )
-        __self__.master.focus_force()
-        __self__.master.grab_set()
+
         w, h = __self__.master.winfo_width(), __self__.master.winfo_height()
         __self__.master.minsize(w,h)
+        __self__.histogramFrame.config( width= __self__.histogramPlot.mplCanvas.winfo_width() + 200 )
+        __self__.animatedPlotFrame.config( width= __self__.animatedPlot.mplCanvas.winfo_width() + 200 )
+        __self__.materialName.focus_force()
+        __self__.master.update_idletasks()
+        __self__.master.grab_set()
         return
 
     def build_widgets(__self__):
         framePadding = 10
+        plotPaddingX, plotPaddingY = 20, 20
         w = 20
 
         # left panel
         __self__.rightPanel = ttk.LabelFrame(__self__.master, text="Results", padding=framePadding)
-        __self__.histogramFrame = ttk.Frame(__self__.rightPanel)
-        __self__.histogramCanvas = Canvas(__self__.histogramFrame)
-        __self__.animatedPlotFrame = ttk.Frame(__self__.rightPanel)
-        __self__.animatedPlotFrameCanvas = Canvas(__self__.animatedPlotFrame)
-        __self__.animatedPlotFrameOption = ttk.Frame(__self__.animatedPlotFrame)
+        __self__.histogramFrame = Frame(__self__.rightPanel, relief=GROOVE, bd=1, takefocus=False)
+        __self__.histogramCanvas = Canvas(__self__.histogramFrame, takefocus=False)
+        __self__.animatedPlotFrame = Frame(__self__.rightPanel, relief=GROOVE, bd=1, takefocus=False)
+        __self__.animatedPlotFrameCanvas = Canvas(__self__.animatedPlotFrame, takefocus=False)
+        __self__.animatedPlotFrameOption = ttk.Frame(__self__.animatedPlotFrame, takefocus=False)
 
         # right panel
         __self__.symbol = StringVar()
         __self__.ratio = DoubleVar()
         __self__.theta = DoubleVar()
+        __self__.maskRegion = BooleanVar()
+        __self__.maskRegion.set(0)
         __self__.diagram = PhotoImage( file=os.path.join( os.getcwd(), "images", "diagram.png") )
         __self__.leftPanel = ttk.LabelFrame(__self__.master, text="Control panel", padding=framePadding)
         __self__.leftPanelRowOne = ttk.Frame(__self__.leftPanel)
@@ -206,7 +236,9 @@ class HeighMappingMain:
         __self__.entryRatio = ttk.Entry(__self__.formFrame, textvariable=__self__.ratio, width=w)
         __self__.entrySymbol = ttk.Entry(__self__.formFrame, textvariable=__self__.symbol, width=w)
         __self__.createMaterial = ttk.Button(__self__.formFrame, text="Set layer material", command=__self__.open_alchemy)
-        __self__.startButton = ttk.Button(__self__.formFrame, text="Start!", command=__self__.run_differential_attenuation)
+        __self__.maskRegionCheckButton = ttk.Checkbutton(__self__.formFrame, text="Limit region by material", variable=__self__.maskRegion, command=__self__.toggle_mask_selection)
+        __self__.maskRegionMapCombo = ttk.Combobox(__self__.formFrame, values=[])
+        __self__.startButton = ttk.Button(__self__.formFrame, text="Start!", command=__self__.validate_form)
         __self__.cancelButton = ttk.Button(__self__.formFrame, text="Exit", command=__self__.kill)
 
         # right panel second row (datacube and material display)
@@ -226,8 +258,8 @@ class HeighMappingMain:
         __self__.materialFrame = ttk.Frame(__self__.leftPanelRowTwo)
         __self__.materialLabels = ttk.Label(__self__.materialFrame, text="Material properties")
         __self__.materialName = Listbox(__self__.materialFrame, bd=1, highlightthickness=0)
-        __self__.datacubeDisplayFrame = ttk.Frame(__self__.datacubeFrame)
-        __self__.datacubeDisplayCanvas = Canvas(__self__.datacubeDisplayFrame)
+        __self__.datacubeDisplayFrame = ttk.Frame(__self__.datacubeFrame, takefocus=False)
+        __self__.datacubeDisplayCanvas = Canvas(__self__.datacubeDisplayFrame, takefocus=False)
         __self__.datacubeOptionsFrame = ttk.Frame(__self__.datacubeFrame)
         __self__.mapSelectorOne = ttk.Combobox(__self__.datacubeOptionsFrame, values=__self__.datacube.check_packed_elements(), width=20)
         __self__.mapSelectorTwo = ttk.Combobox(__self__.datacubeOptionsFrame, values=__self__.datacube.check_packed_elements(), width=20)
@@ -255,8 +287,10 @@ class HeighMappingMain:
         __self__.entryRatio.grid(row=1, column=1)
         __self__.entrySymbol.grid(row=2, column=1)
         __self__.createMaterial.grid(row=3, columnspan=2, sticky="NSEW",pady=(10,10))
-        __self__.startButton.grid(row=4, column=0, sticky="NSEW", padx=(0,10))
-        __self__.cancelButton.grid(row=4, column=1, sticky="NSEW", padx=(10,0))
+        __self__.maskRegionCheckButton.grid(row=4, columnspan=2, sticky=W, pady=(10,0))
+        __self__.maskRegionMapCombo.grid(row=5, columnspan=2, sticky="EW", pady=(5,10))
+        __self__.startButton.grid(row=6, column=0, sticky="NSEW", padx=(0,10))
+        __self__.cancelButton.grid(row=6, column=1, sticky="NSEW", padx=(10,0))
         __self__.leftPanelRowTwo.grid(row=1, sticky="NSEW")
         __self__.datacubeFrame.grid(row=0, column=0, sticky="NSEW")
         __self__.materialFrame.grid(row=0, column=1, sticky="NSEW", padx=(framePadding, 0))
@@ -314,12 +348,35 @@ class HeighMappingMain:
         __self__.datacubePlot = MplBackendFrame(__self__, __self__.datacubeDisplayCanvas)
         __self__.animatedPlot = MplBackendFrame(__self__, __self__.animatedPlotFrameCanvas)
         __self__.histogramPlot = MplBackendFrame(__self__, __self__.histogramCanvas)
+
+        __self__.animatedPlot.mplCanvas.pack_configure( padx=plotPaddingX, pady=plotPaddingY )
+        __self__.histogramPlot.mplCanvas.pack_configure( padx=plotPaddingX, pady=plotPaddingY )
+
+        create_tooltip(__self__.createMaterial,"Set the material properties of the layer which will have its thickness calculated.")
+        create_tooltip(__self__.maskRegionCheckButton,"Limits the region where the layer thickness will be calculated to where the most abundant element from the material is present. The mask uses a threshold filter to cut noise.")
+        return
+
+    def toggle_mask_selection(__self__):
+        values = []
+        if __self__.maskRegion.get():
+            elementsInCube = __self__.datacube.check_packed_elements()
+            for element in elementsInCube:
+                if MATERIAL.identity in element and MATERIAL.identity != " ":
+                    values.append(element)
+            __self__.maskRegionMapCombo.state(["!disabled"])
+        else: 
+            __self__.maskRegionMapCombo.state(["disabled"])
+            
+        __self__.maskRegionMapCombo.configure(values=values)
+        if values != []: __self__.maskRegionMapCombo.current( 0 )
+        else: __self__.maskRegionMapCombo.set("")
+        __self__.maskRegionMapCombo.update_idletasks()
         return
 
     def kill(__self__):
         __self__.master.destroy()
-        __self__.parent.heightMapping = None
         __self__.parent.master.focus_set()
+        __self__.parent.master.after( 50, delattr(__self__.parent, "HeighMappingMain") )
         del __self__
         return
 
@@ -338,11 +395,129 @@ class HeighMappingMain:
             values.append( value )
         for symbol, value in zip( symbols, values ):
             __self__.materialName.insert( 0, f"{symbol}, \t{value * 100:.2f}%" )
+        __self__.toggle_mask_selection()
         __self__.materialName.update_idletasks()
         return
 
-    def run_differential_attenuation(__self__):
+    def validate_form(__self__):
+        master = Toplevel(master=__self__.master)
+        master.attributes("-alpha", 0.0)
+        frame = ttk.LabelFrame(master, text="Summary", padding=15)
+        frame.grid(padx=10, pady=10)
 
+        angle = __self__.theta.get()
+        attenuatedElement = __self__.symbol.get()
+        thickRatio = __self__.ratio.get()
+        compound = MATERIAL
+
+        inputWidth = 12
+        labelWidth = 36
+        imageWidth = 24
+        padxLabel = 5
+        padxIcon = 10
+
+        ##############
+        # Validation #
+        ##############
+        GREEN = PhotoImage( data=ICO_VALSUCCESS )
+        RED = PhotoImage( data=ICO_VALFAIL )
+        __self__.GREEN = GREEN.subsample( 2 )
+        __self__.RED = RED.subsample( 2 )
+        fails = 0
+        if 0 <= angle <= 180:
+            angleVal = __self__.GREEN
+        else: 
+            angleVal = __self__.RED
+            fails += 1
+        if attenuatedElement in ElementList:
+            elementVal = __self__.GREEN
+        else: 
+            elementVal = __self__.RED
+            fails += 1
+        if thickRatio > 0:
+            thickRatioVal = __self__.GREEN
+        else: 
+            thickRatioVal = __self__.RED
+            fails += 1
+        if __self__.mapSelectorOne.get() != "" or __self__.mapSelectorTwo.get() != "":
+            mapSelectionVal = __self__.GREEN
+        else: 
+            mapSelectionVal = __self__.RED
+            fails += 1
+        
+        symbols, values = [], []
+        for symbol, value in compound.weight.items():
+            symbols.append( symbol )
+            values.append( value )
+        if symbols != [] or values != []:
+            materialVal = __self__.GREEN
+            compound.give_name("Set")
+        else:
+            materialVal = __self__.RED
+            compound.give_name("Not set")
+            fails += 1
+        ##############
+
+        ttk.Label(frame, text="Input parameters:").grid(row=0, columnspan=2, pady=(0,10))
+
+        ttk.Label(frame, text="Theta angle:", width=labelWidth).grid(row=1, column=0, padx=(0,padxLabel), sticky=W)
+        ttk.Label(frame, text=f"{angle}", width=inputWidth).grid(row=1, column=1, sticky="EW")
+        angleValAlert = ttk.Label(frame, image=angleVal, width=imageWidth)
+        angleValAlert.grid(row=1, column=2, padx=(padxIcon,0), sticky=E)
+
+        ttk.Label(frame, text="Attenuated element (from matrix):", width=labelWidth).grid(row=2, column=0, padx=(0,padxLabel), sticky=W)
+        ttk.Label(frame, text=f"{attenuatedElement}", width=inputWidth).grid(row=2, column=1, sticky="EW")
+        elementValAlert = ttk.Label(frame, image=elementVal, width=imageWidth)
+        elementValAlert.grid(row=2, column=2, padx=(padxIcon,0), sticky=E)
+
+        ttk.Label(frame, text="Infinitely thick ratio (matrix):", width=labelWidth).grid(row=3, column=0, padx=(0,padxLabel), sticky=W)
+        ttk.Label(frame, text=f"{thickRatio}", width=inputWidth).grid(row=3, column=1, sticky="EW")
+        thickRatioValAlert = ttk.Label(frame, image=thickRatioVal, width=imageWidth)
+        thickRatioValAlert.grid(row=3, column=2, padx=(padxIcon,0), sticky=E)
+
+        ttk.Label(frame, text="Intensity (Alpha/Beta):", width=labelWidth).grid(row=4, column=0, padx=(0,padxLabel), sticky=W)
+        ttk.Label(frame, text=f"{__self__.mapSelectorOne.get()} / {__self__.mapSelectorTwo.get()}", width=inputWidth).grid(row=4, column=1, sticky="EW")
+        mapSelectionValAlert = ttk.Label(frame, image=mapSelectionVal, width=imageWidth)
+        mapSelectionValAlert.grid(row=4, column=2, padx=(padxIcon,0), sticky=E)
+
+        ttk.Label(frame, text="Layer material:", width=labelWidth).grid(row=5, column=0, padx=(0,padxLabel), sticky=W)
+        ttk.Label(frame, text=f"{compound.name}", width=inputWidth).grid(row=5, column=1, sticky="EW")
+        materialValAlert = ttk.Label(frame, image=materialVal, width=imageWidth)
+        materialValAlert.grid(row=5, column=2, padx=(padxIcon,0), sticky=E)
+
+        create_tooltip(angleValAlert,"Angle must be a number between 0 and 180")
+        create_tooltip(elementValAlert, f"Element {attenuatedElement} does not exist")
+        create_tooltip(thickRatioValAlert, "Matrix infinitely thick ratio must be a positive number")
+        create_tooltip(mapSelectionValAlert, "One or more maps (energy lines) were not selected!")
+        create_tooltip(materialValAlert, "A material must be set")
+
+        master.grid_columnconfigure(0, weight=1)
+        Label(frame, text=f"Failed inputs: {fails}", relief=GROOVE, bd=1).grid(row=6, column=0, columnspan=4, sticky="EW", pady=5)
+
+        goBtn = ttk.Button(frame, text="Go!", 
+            command= lambda: 
+                (
+                    __self__.run_differential_attenuation(),
+                    master.destroy()
+                ) )
+        goBtn.grid(row=7, column=0, columnspan=2, sticky="EW")
+        cancelBtn = ttk.Button(frame, text="Cancel", command=master.destroy)
+        cancelBtn.grid(row=7, column=2, columnspan=2, sticky="EW")
+        if fails > 0: goBtn.state(["disabled"])
+
+        master.iconbitmap(os.path.join(os.getcwd(),"images","icons","adv.ico"))
+        master.title("Parameters validation")
+        master.resizable( False, False )
+        place_center( __self__.master, master )
+        master.after( 100, master.attributes, "-alpha", 1.0 )
+        return
+
+    def run_differential_attenuation(__self__):
+        angle = __self__.theta.get()
+        attenuatedElement = __self__.symbol.get()
+        thickRatio = __self__.ratio.get()
+        compound = MATERIAL
+        
         def prompt_path():
             path = filedialog.askdirectory(parent=__self__.master,
                 title="Select output folder")
@@ -351,20 +526,7 @@ class HeighMappingMain:
             else:
                 return path
 
-        compound = MATERIAL
-
-        angle = __self__.theta.get()
-        attenuatedElement = __self__.symbol.get()
-        thickRatio = __self__.ratio.get()
-        
-        messagebox.showinfo("Info","We will be runnig with the following parameters:" +
-            f"\nTheta angle: {angle}" + 
-            f"\nAttenuated element (from within matrix): {attenuatedElement}" + 
-            f"\nInfinitely thick ratio (matrix): {thickRatio}" + 
-            f"\nIntensity (Alpha/Beta): {__self__.mapSelectorOne.get()} / {__self__.mapSelectorTwo.get()}")
         ratioMatrix = __self__.datacube.unpack_element( __self__.mapSelectorOne.get() ) / __self__.datacube.unpack_element( __self__.mapSelectorTwo.get() )
-        mask = ratioMatrix # means no mask at all
-
         compound.set_attenuation( attenuatedElement )
         if hasattr(__self__, "Annotator"):
             mask = np.zeros( ratioMatrix.shape )
@@ -377,7 +539,13 @@ class HeighMappingMain:
             mask[x0:x1, y0:y1] = 1
         else: mask = ratioMatrix
 
-        hist, avg, d = ImgMath.getheightmap( 
+        if __self__.maskRegion.get():
+            newMask = __self__.datacube.unpack_element( __self__.maskRegionMapCombo.get() )
+            newMask = newMask / newMask.max() * ImgMath.LEVELS
+            newMask = ImgMath.fast_threshold( newMask, 0, 62 )
+            mask = mask * newMask
+
+        heightMap, avg, d, values = ImgMath.getheightmap( 
             ratioMatrix, 
             mask,
             thickRatio,
@@ -385,7 +553,9 @@ class HeighMappingMain:
             path=prompt_path(),
             angle=angle)
         
-        __self__.animatedPlot.make_3d_plot( hist, zlim=hist.max() )
+        __self__.animatedPlot.make_3d_plot( heightMap, zlim=heightMap.max() )
+        __self__.histogramPlot.draw_histogram( values, title=f"Mean average:{avg:.4f} | Std:{d:.4f}" )
+
         print( avg, d )
         return
 
@@ -393,6 +563,7 @@ class HeighMappingMain:
         if not hasattr(__self__, "Annotator"):
             __self__.Annotator = Annotator( __self__ )
         else: __self__.Annotator.wipe_annotator()
+        return
 
 
 class Annotator:
@@ -408,10 +579,10 @@ class Annotator:
         __self__.parent.selectedMaps.set(f"Using maps {__self__.element1} and {__self__.element2}")
         __self__.ratebox = parent.ratioBetweenMaps
         __self__.area = Rectangle((0,0),1,1,fill=False,snap=True,color="red",linewidth=3)
-        __self__.x0 = None
-        __self__.y0 = None
-        __self__.x1 = None
-        __self__.y1 = None
+        __self__.x0 = 0
+        __self__.y0 = 0
+        __self__.x1 = 1
+        __self__.y1 = 1
         __self__.parent.datacubePlot.plot.add_patch(__self__.area)
         __self__.parent.datacubePlot.canvas.mpl_connect("button_press_event", __self__.on_press)
         __self__.parent.datacubePlot.canvas.mpl_connect("motion_notify_event", __self__.on_drag)

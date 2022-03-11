@@ -83,15 +83,14 @@ style.use('ggplot')
 #################
 import cy_funcs
 import Constants
-from Elements import plottables_dict
-import Engine
 import Engine.SpecRead as sp
 from Engine import __PERSONAL__
 from Engine.ImgMath import LEVELS, hist_match
 from Engine.SpecMath import datacube as Cube
 from Engine.CBooster import *
 from Graphics import *
-from .ProgressBar import Busy, BusyManager, create_tooltip 
+from .ProgressBar import Busy, BusyManager 
+from Utilities import *
 #################
 VERSION = Constants.VERSION_MOS
 
