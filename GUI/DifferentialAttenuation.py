@@ -46,7 +46,6 @@ from tkinter import ttk
 #############
 import os
 from tkinter import filedialog
-from turtle import color
 import numpy as np
 #############
 
@@ -65,7 +64,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # Internal ##
 #############
 import Constants
-from Graphics.Decoder import ICO_VALFAIL, ICO_VALSUCCESS
+from Graphics.Decoder import ICO_VALFAIL, ICO_VALSUCCESS, IMG_DIFFDIAGRAM
 from Utilities import *
 from GUI.AlchemyLab import AlchemyLab, MATERIAL
 from Engine import ImgMath
@@ -120,7 +119,7 @@ class MplBackendFrame():
         __self__.canvas.draw_idle()
         return
 
-    def draw_histogram(__self__, X, title=""):
+    def draw_histogram(__self__, X, title="", bins=20):
         try: __self__.plot.cla()
         except: pass
         __self__.plot = __self__.figure.add_subplot(111)
@@ -137,7 +136,7 @@ class MplBackendFrame():
         __self__.plot.spines["right"].set_color("black")
         __self__.plot.spines["right"].set_linewidth(1)
 
-        __self__.plot.hist( X, bins="auto", edgecolor='white', lw=0.75, color="green")
+        __self__.plot.hist( X, bins=bins, edgecolor='white', lw=0.75, color="green")
         __self__.figure.subplots_adjust(left=0.10, right=0.85, top=0.90, bottom=0.20)
         __self__.plot.set_title(f"Thickness distribution\n{title}")
         __self__.plot.set_ylabel("Occurrences")
@@ -224,9 +223,12 @@ class HeighMappingMain:
         __self__.symbol = StringVar()
         __self__.ratio = DoubleVar()
         __self__.theta = DoubleVar()
+        __self__.histogramBinsNumber = StringVar() #can receive anything, later checked with .isdigit()
         __self__.maskRegion = BooleanVar()
+        __self__.autoHistBins = BooleanVar()
         __self__.maskRegion.set(0)
-        __self__.diagram = PhotoImage( file=os.path.join( os.getcwd(), "images", "diagram.png") )
+        __self__.autoHistBins.set(1)
+        __self__.diagram = PhotoImage( data=IMG_DIFFDIAGRAM )
         __self__.leftPanel = ttk.LabelFrame(__self__.master, text="Control panel", padding=framePadding)
         __self__.leftPanelRowOne = ttk.Frame(__self__.leftPanel)
         __self__.diagramPanel = ttk.Frame(__self__.leftPanelRowOne, padding=framePadding)
@@ -238,6 +240,10 @@ class HeighMappingMain:
         __self__.createMaterial = ttk.Button(__self__.formFrame, text="Set layer material", command=__self__.open_alchemy)
         __self__.maskRegionCheckButton = ttk.Checkbutton(__self__.formFrame, text="Limit region by material", variable=__self__.maskRegion, command=__self__.toggle_mask_selection)
         __self__.maskRegionMapCombo = ttk.Combobox(__self__.formFrame, values=[])
+        __self__.histogramBinsManualEntry = ttk.Entry(__self__.formFrame, textvariable=__self__.histogramBinsNumber, width=7)
+        __self__.histogramBinsAutoCheckbutton = ttk.Checkbutton(__self__.formFrame, text="Automatically set", variable=__self__.autoHistBins, 
+        command= lambda: 
+                __self__.histogramBinsManualEntry.state(["disabled"]) if __self__.autoHistBins.get() else __self__.histogramBinsManualEntry.state(["!disabled"]) )
         __self__.startButton = ttk.Button(__self__.formFrame, text="Start!", command=__self__.validate_form)
         __self__.cancelButton = ttk.Button(__self__.formFrame, text="Exit", command=__self__.kill)
 
@@ -263,7 +269,7 @@ class HeighMappingMain:
         __self__.datacubeOptionsFrame = ttk.Frame(__self__.datacubeFrame)
         __self__.mapSelectorOne = ttk.Combobox(__self__.datacubeOptionsFrame, values=__self__.datacube.check_packed_elements(), width=20)
         __self__.mapSelectorTwo = ttk.Combobox(__self__.datacubeOptionsFrame, values=__self__.datacube.check_packed_elements(), width=20)
-        __self__.toggleAnnotatorButton = ttk.Button(__self__.datacubeOptionsFrame, text="Toggle area selection", width=10, command=__self__.toggle_annotator)
+        __self__.toggleAnnotatorButton = ttk.Button(__self__.datacubeOptionsFrame, text="Toggle area", width=10, command=__self__.toggle_annotator)
         __self__.leftPanelFooter = Frame(__self__.leftPanel, relief=GROOVE, bd=1)
         __self__.statusLabelDatacubeName = Label(__self__.leftPanelFooter, text=f"Datacube name: {__self__.datacube.name}")
         __self__.statusLabelRoiX = Label(__self__.leftPanelFooter, textvariable=__self__.roiX, width=10)
@@ -283,14 +289,25 @@ class HeighMappingMain:
         __self__.diagramPanel.grid(row=0, column=0, sticky="NSEW")
         __self__.diagramImage.grid(row=0)
         __self__.formFrame.grid(row=0, column=1, sticky="NSEW")
+        ttk.Label(__self__.formFrame, text="Psi2:", width=w).grid(row=0, column=0, sticky="W")
         __self__.entryTheta.grid(row=0, column=1)
+        ttk.Label(__self__.formFrame, text="Thick ratio:", width=w).grid(row=1, column=0, sticky="W")
         __self__.entryRatio.grid(row=1, column=1)
+        ttk.Label(__self__.formFrame, text="Matrix element:", width=w).grid(row=2, column=0, sticky="W")
         __self__.entrySymbol.grid(row=2, column=1)
         __self__.createMaterial.grid(row=3, columnspan=2, sticky="NSEW",pady=(10,10))
-        __self__.maskRegionCheckButton.grid(row=4, columnspan=2, sticky=W, pady=(10,0))
-        __self__.maskRegionMapCombo.grid(row=5, columnspan=2, sticky="EW", pady=(5,10))
-        __self__.startButton.grid(row=6, column=0, sticky="NSEW", padx=(0,10))
-        __self__.cancelButton.grid(row=6, column=1, sticky="NSEW", padx=(10,0))
+        ttk.Separator(__self__.formFrame, orient="horizontal").grid(row=4, columnspan=2, sticky="EW")
+        __self__.maskRegionCheckButton.grid(row=5, columnspan=2, sticky=W, pady=(10,0))
+        __self__.maskRegionMapCombo.grid(row=6, columnspan=2, sticky="EW", pady=(5,10))
+        ttk.Separator(__self__.formFrame, orient="horizontal").grid(row=7, columnspan=2, sticky="EW")
+        ttk.Label(__self__.formFrame, text="Histogram display settings").grid(row=8, columnspan=2, sticky="W", pady=(10,0))
+        ttk.Label(__self__.formFrame, text="Number of grouped bins:").grid(row=9, column=0, sticky="W")
+        __self__.histogramBinsManualEntry.grid(row=9, column=1, sticky="E")
+        __self__.histogramBinsAutoCheckbutton.grid(row=10, columnspan=2, sticky="EW", pady=(0,10))
+        ttk.Separator(__self__.formFrame, orient="horizontal").grid(row=11, columnspan=2, sticky="EW")
+        __self__.startButton.grid(row=12, column=0, sticky="NSEW", padx=(0,10), pady=(10,0))
+        __self__.cancelButton.grid(row=12, column=1, sticky="NSEW", padx=(10,0), pady=(10,0))
+
         __self__.leftPanelRowTwo.grid(row=1, sticky="NSEW")
         __self__.datacubeFrame.grid(row=0, column=0, sticky="NSEW")
         __self__.materialFrame.grid(row=0, column=1, sticky="NSEW", padx=(framePadding, 0))
@@ -341,10 +358,6 @@ class HeighMappingMain:
         __self__.animatedPlotFrame.grid_rowconfigure(0, weight=1)
         __self__.materialFrame.grid_rowconfigure(1, weight=1)
 
-        ttk.Label(__self__.formFrame, text="Theta:", width=w).grid(row=0, column=0, sticky="W")
-        ttk.Label(__self__.formFrame, text="Thick ratio:", width=w).grid(row=1, column=0, sticky="W")
-        ttk.Label(__self__.formFrame, text="Matrix element:", width=w).grid(row=2, column=0, sticky="W")
-
         __self__.datacubePlot = MplBackendFrame(__self__, __self__.datacubeDisplayCanvas)
         __self__.animatedPlot = MplBackendFrame(__self__, __self__.animatedPlotFrameCanvas)
         __self__.histogramPlot = MplBackendFrame(__self__, __self__.histogramCanvas)
@@ -353,7 +366,10 @@ class HeighMappingMain:
         __self__.histogramPlot.mplCanvas.pack_configure( padx=plotPaddingX, pady=plotPaddingY )
 
         create_tooltip(__self__.createMaterial,"Set the material properties of the layer which will have its thickness calculated.")
-        create_tooltip(__self__.maskRegionCheckButton,"Limits the region where the layer thickness will be calculated to where the most abundant element from the material is present. The mask uses a threshold filter to cut noise.")
+        create_tooltip(__self__.maskRegionCheckButton,"Limits the region where the layer thickness will be calculated to where the most abundant element from the material is present (the corresponding element map must have been previously generated, the available ones will be displayed in the box below). The mask uses a threshold filter to cut noise.", wrap=220)
+        create_tooltip(__self__.toggleAnnotatorButton,"Enables/Disables manual area selection in the datacube image.")
+        
+        if __self__.autoHistBins.get(): __self__.histogramBinsManualEntry.state(["disabled"])
         return
 
     def toggle_mask_selection(__self__):
@@ -423,44 +439,44 @@ class HeighMappingMain:
         RED = PhotoImage( data=ICO_VALFAIL )
         __self__.GREEN = GREEN.subsample( 2 )
         __self__.RED = RED.subsample( 2 )
-        fails = 0
+        fails = [0,0,0,0,0]
         if 0 <= angle <= 180:
             angleVal = __self__.GREEN
         else: 
             angleVal = __self__.RED
-            fails += 1
+            fails[0] = 1
         if attenuatedElement in ElementList:
             elementVal = __self__.GREEN
         else: 
             elementVal = __self__.RED
-            fails += 1
+            fails[1] = 1
         if thickRatio > 0:
             thickRatioVal = __self__.GREEN
         else: 
             thickRatioVal = __self__.RED
-            fails += 1
-        if __self__.mapSelectorOne.get() != "" or __self__.mapSelectorTwo.get() != "":
+            fails[2] = 1
+        if __self__.mapSelectorOne.get() != "" and __self__.mapSelectorTwo.get() != "":
             mapSelectionVal = __self__.GREEN
         else: 
             mapSelectionVal = __self__.RED
-            fails += 1
+            fails[3] = 1
         
         symbols, values = [], []
         for symbol, value in compound.weight.items():
             symbols.append( symbol )
             values.append( value )
-        if symbols != [] or values != []:
+        if symbols != [] and values != []:
             materialVal = __self__.GREEN
             compound.give_name("Set")
         else:
             materialVal = __self__.RED
             compound.give_name("Not set")
-            fails += 1
+            fails[4] = 1
         ##############
 
         ttk.Label(frame, text="Input parameters:").grid(row=0, columnspan=2, pady=(0,10))
 
-        ttk.Label(frame, text="Theta angle:", width=labelWidth).grid(row=1, column=0, padx=(0,padxLabel), sticky=W)
+        ttk.Label(frame, text="Psi angle:", width=labelWidth).grid(row=1, column=0, padx=(0,padxLabel), sticky=W)
         ttk.Label(frame, text=f"{angle}", width=inputWidth).grid(row=1, column=1, sticky="EW")
         angleValAlert = ttk.Label(frame, image=angleVal, width=imageWidth)
         angleValAlert.grid(row=1, column=2, padx=(padxIcon,0), sticky=E)
@@ -476,7 +492,7 @@ class HeighMappingMain:
         thickRatioValAlert.grid(row=3, column=2, padx=(padxIcon,0), sticky=E)
 
         ttk.Label(frame, text="Intensity (Alpha/Beta):", width=labelWidth).grid(row=4, column=0, padx=(0,padxLabel), sticky=W)
-        ttk.Label(frame, text=f"{__self__.mapSelectorOne.get()} / {__self__.mapSelectorTwo.get()}", width=inputWidth).grid(row=4, column=1, sticky="EW")
+        ttk.Label(frame, text=f"{__self__.mapSelectorOne.get()} / {__self__.mapSelectorTwo.get()}", width=len(f"{__self__.mapSelectorOne.get()} / {__self__.mapSelectorTwo.get()}")).grid(row=4, column=1, sticky="EW")
         mapSelectionValAlert = ttk.Label(frame, image=mapSelectionVal, width=imageWidth)
         mapSelectionValAlert.grid(row=4, column=2, padx=(padxIcon,0), sticky=E)
 
@@ -485,14 +501,14 @@ class HeighMappingMain:
         materialValAlert = ttk.Label(frame, image=materialVal, width=imageWidth)
         materialValAlert.grid(row=5, column=2, padx=(padxIcon,0), sticky=E)
 
-        create_tooltip(angleValAlert,"Angle must be a number between 0 and 180")
-        create_tooltip(elementValAlert, f"Element {attenuatedElement} does not exist")
-        create_tooltip(thickRatioValAlert, "Matrix infinitely thick ratio must be a positive number")
-        create_tooltip(mapSelectionValAlert, "One or more maps (energy lines) were not selected!")
-        create_tooltip(materialValAlert, "A material must be set")
+        if fails[0]: create_tooltip(angleValAlert,"Angle must be a number between 0 and 180")
+        if fails[1]: create_tooltip(elementValAlert, f"Element {attenuatedElement} does not exist")
+        if fails[2]: create_tooltip(thickRatioValAlert, "Matrix infinitely thick ratio must be a positive number")
+        if fails[3]: create_tooltip(mapSelectionValAlert, "One or more maps (energy lines) were not selected!")
+        if fails[4]: create_tooltip(materialValAlert, "A material must be set")
 
         master.grid_columnconfigure(0, weight=1)
-        Label(frame, text=f"Failed inputs: {fails}", relief=GROOVE, bd=1).grid(row=6, column=0, columnspan=4, sticky="EW", pady=5)
+        Label(frame, text=f"Failed inputs: {sum (fails )}", relief=GROOVE, bd=1).grid(row=6, column=0, columnspan=4, sticky="EW", pady=5)
 
         goBtn = ttk.Button(frame, text="Go!", 
             command= lambda: 
@@ -503,7 +519,7 @@ class HeighMappingMain:
         goBtn.grid(row=7, column=0, columnspan=2, sticky="EW")
         cancelBtn = ttk.Button(frame, text="Cancel", command=master.destroy)
         cancelBtn.grid(row=7, column=2, columnspan=2, sticky="EW")
-        if fails > 0: goBtn.state(["disabled"])
+        if sum( fails ) > 0: goBtn.state(["disabled"])
 
         master.iconbitmap(os.path.join(os.getcwd(),"images","icons","adv.ico"))
         master.title("Parameters validation")
@@ -553,8 +569,16 @@ class HeighMappingMain:
             path=prompt_path(),
             angle=angle)
         
+        if __self__.autoHistBins.get(): 
+            bins="auto"
+        elif __self__.histogramBinsNumber.get().isdigit():
+            if int( __self__.histogramBinsNumber.get() ) > 0: 
+                bins = int( __self__.histogramBinsNumber.get() )
+        else: 
+            bins = 20
+
         __self__.animatedPlot.make_3d_plot( heightMap, zlim=heightMap.max() )
-        __self__.histogramPlot.draw_histogram( values, title=f"Mean average:{avg:.4f} | Std:{d:.4f}" )
+        __self__.histogramPlot.draw_histogram( values, title=f"Mean average:{avg:.4f} | Std:{d:.4f}", bins=bins )
 
         print( avg, d )
         return

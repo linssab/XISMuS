@@ -143,8 +143,12 @@ def restore_bytes(num,unit):
         if unit == x:
             return num * (1024**(units.index(x)+1))
 
-def create_tooltip(widget, text):
-    toolTip = ToolTip(widget)
+def create_tooltip(widget, text, wrap=None):
+    if wrap is None:
+        toolTip = ToolTip(widget)
+    else:
+        toolTip = ToolTip(widget, wraplength=wrap)
+
     def enter(event):
         toolTip.showtip(text)
     def leave(event):
@@ -156,7 +160,7 @@ def create_tooltip(widget, text):
 class ToolTip(object):
     """ taken from https://stackoverflow.com/questions/20399243/display-message-when-hovering-over-something-with-mouse-cursor-in-python """
 
-    def __init__(__self__, widget, wraplength=160):
+    def __init__(__self__, widget, wraplength: int=160):
         __self__.widget = widget
         __self__.tipwindow = None
         __self__.id = None

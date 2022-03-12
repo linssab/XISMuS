@@ -43,7 +43,7 @@ import cv2
 import os
 
 global IMG_SPLASH
-global IMG_NODATA
+global IMG_DIFFDIAGRAM
 
 def b64_to_array(uri):
     nparr = np.frombuffer(base64.b64decode(uri), np.uint8)
@@ -51,9 +51,11 @@ def b64_to_array(uri):
     return img
 
 def unpack_images():
-    global IMG_NODATA, IMG_SPLASH
+    global IMG_DIFFDIAGRAM, IMG_SPLASH
     image_file = open(os.path.join(os.path.dirname(__file__),"graphics.tz"),"rb")
     IMG_SPLASH = image_file.read(751468)
+    IMG_DIFFDIAGRAM = image_file.read(49172)
+    return
 
 def unpack_icons():
     global ICO_ACCEPT, ICO_CCW, ICO_CW, ICO_DOWN

@@ -1,14 +1,15 @@
 [{
 	"version": "v2.5.0",
 	"changelog":[
-		"- Elements replaced by compwizard module",
-		"- Addressed issue where old version cubes could not be loaded into Mosaic",
-		"- Fixed spectra reading pool error handling",
+		"- New CubeViewer tool for fixing line phasing issues",
+		"- New Differential Attenuation Utility tool",
+		"- Elements module replaced by compwizard",
 		"- Improved database reading/writing and fixed other db issues",
 		"- Database now uses *.json files",
 		"- Added selected region description to Image Analyzer plot and mca files output",
-		"- Implemented the CubeViewer tool to fix line phasing issues",
-		"- Overall stability improvements"
+		"- Overall stability improvements",
+		"- Old version cubes could not be loaded into Mosaic (fixed)",
+		"- Spectra reading pool error handling was broken (fixed)"
 	]
 
 },

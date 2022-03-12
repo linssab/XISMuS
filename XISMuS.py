@@ -184,6 +184,7 @@ def open_log():
         Constants.LOGGER.info(log_start)
     except IOError as exception:
         p = Tk()
+        p.iconbitmap(os.path.join(os.getcwd(),"images","icons","icon.ico"))
         p.iconify()
         messagebox.showerror(
                 exception.__class__.__name__,
@@ -1825,11 +1826,15 @@ class MainGUI:
         __self__.plot_canvas_popup.add_command(
                 label="Clear all maps",
                 command=__self__.wipe_maps)
-        __self__.master.after( 1400,__self__.pop_welcome )
+
         __self__.toggle_(toggle='off')
         __self__.master.update_idletasks()
-        __self__.master.minsize( __self__.master.winfo_width(), __self__.master.winfo_height() + 150 )
         __self__.master.after( 1000, __self__.master.attributes, "-alpha", 1.0 )
+        __self__.master.focus_set()
+        __self__.master.focus_force()
+        __self__.master.after( 1500, __self__.pop_welcome )
+        __self__.master.minsize( __self__.master.winfo_width(), __self__.master.winfo_height() + 150 )
+        __self__.master.deiconify()
         __self__.master.state("zoomed")
         return
 
@@ -3028,8 +3033,8 @@ class MainGUI:
         """Displays a pop-up window with information on the software"""
         if Constants.WELCOME == True:
             __self__.welcome_window = Welcome(__self__)
-            __self__.welcome_window.master.grab_set()
             place_center(__self__.master, __self__.welcome_window.master)
+            __self__.welcome_window.master.grab_set()
         return
 
     def sample_popup(__self__,event):
