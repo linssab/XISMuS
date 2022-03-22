@@ -82,12 +82,13 @@ class ImageWindow:
         __self__.lower = Frame(__self__.master, height=35)
         __self__.success = True
 
-        try: __self__.Writer = Writer(path)
-        except Exception as e:
-            messagebox.showerror("Error",f"Could not start the input tracker. Exception:\n{e}")
-            __self__.wipe_plot()
-            __self__.success = False
-            return
+        if path != "":
+            try: __self__.Writer = Writer(path)
+            except Exception as e:
+                messagebox.showerror("Error",f"Could not start the input tracker. Exception:\n{e}")
+                __self__.wipe_plot()
+                __self__.success = False
+                return
 
         # Save and replace buttons #
         __self__.figure = Figure(figsize=(5,4), dpi=75)

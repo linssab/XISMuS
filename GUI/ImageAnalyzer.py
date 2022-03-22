@@ -852,6 +852,7 @@ class ImageAnalyzer:
         export = ExportDiag(__self__)
         return 0
 
+
 class ExportDiag():
     """ Creates a dialog to export ImageAnalyzer API images.
     Target is the desired output image size. If enhance configuration is True,
@@ -964,6 +965,7 @@ class ExportDiag():
         __self__.parent.master.focus_force()
         __self__.master.grab_release()
         __self__.master.destroy()
+
 
 class ImageOperationOutput:
     def __init__(__self__, image, el1, el2, operation, cube_datatypes, cube, parent):
@@ -1082,6 +1084,7 @@ class ImageOperationOutput:
         __self__.parent.master.focus_set()
         __self__.master.destroy()
         del __self__
+
 
 class ImageOperationWarning:
     def __init__(__self__,parent,mode=None,scaled=False):

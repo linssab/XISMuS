@@ -1,11 +1,3 @@
-New in Version v2.5.0
+New in Version v2.5.1
 
-- New CubeViewer tool for fixing line phasing issues
-- New Differential Attenuation Utility
-- Elements module replaced by compwizard
-- Improved database reading/writing and fixed other db issues
-- Database now uses *.json files
-- Added selected region description to Image Analyzer plot and mca files output
-- Overall stability improvements
-- Old version cubes could not be loaded into Mosaic (fixed)
-- Spectra reading pool error handling was broken (fixed)
+- Double-clicking map name in the main panel status window was throwing an error with no admin rights (fixed)
