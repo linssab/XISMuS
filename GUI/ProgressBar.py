@@ -146,7 +146,7 @@ class Busy:
         __self__.master.destroy()
         del __self__
 
-    def interrupt(__self__,mca,timeout):
+    def interrupt(__self__, mca, timeout):
         """ In case of read failure, progress is interrupted """
 
         __self__.progress["maximum"] = timeout

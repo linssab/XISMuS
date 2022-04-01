@@ -17,16 +17,22 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 ## From Source
 If you rather run it from the source, on your local Python environment interpreter, simply fork or clone the repository.
 
-`git clone https://github.com/linssab/XISMuS`
+```
+git clone https://github.com/linssab/XISMuS
+``` 
 
 Be sure to have all the required Python modules installed! They are listed in the section below.
 You can install the proper corresponding versions using the "requirements.txt" file provided by typing the following command:
 
-`pip install -r .\requirements.txt`
+```
+pip install -r .\requirements.txt
+```
 
 You will have to compile the Cython code, by typing in the following command on your terminal:
 
-`python .\setup_cy.py build_ext --inplace`
+```
+python .\setup_cy.py build_ext --inplace
+```
 
 You must have a GNU compiler to do so, as `setup_cy.py` will compile the python code in `cy_funcs.pyx` into native C code.
 Finally, add `My Documents` content inside your user documents folder.
@@ -35,7 +41,9 @@ Finally, add `My Documents` content inside your user documents folder.
 XISMuS Elements module is available as a package.\
 To install it, simply type:
 
-`pip install compwizard`
+```
+pip install compwizard
+```
 
 Another module derived from this software is also available: the [xfit][xfit] module.\
 The modules can be imported with:
@@ -65,7 +73,9 @@ The packages whose versions are mentioned are the stable versions working with X
 
 You can install the proper corresponding versions using the "requirements.txt" file provided by typing the following command:
 
-`pip install -r .\requirements.txt`
+```
+pip install -r .\requirements.txt
+```
 
 
 #### xraylib _v 3.3.0_
@@ -82,4 +92,6 @@ Xraylib is used to ensure more precise experimental X-rays data are used. Its ab
 [xfit]: https://pypi.org/project/xfit/
 
 ## Funding
-This project has received funding from the European Union’s Horizon 2020 research and innovation programme under the Marie-Skłodowska Curie Innovative Training Networks (MSCA-ITN) grant agreement No 766311.<img align="right" src="https://github.com/linssab/XISMuS/blob/master/images/msca_itn.png?raw=true" width="70px"></img>
+<img align="left" src="https://github.com/linssab/XISMuS/blob/master/images/msca_itn.png?raw=true" width="100px" />
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme under the Marie-Skłodowska Curie Innovative Training Networks (MSCA-ITN) grant agreement No 766311.
+<br clear="right"/>

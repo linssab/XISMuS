@@ -1,3 +1,4 @@
 New in Version v2.5.1
 
+- Updated online HELP guide information
 - Double-clicking map name in the main panel status window was throwing an error with no admin rights (fixed)
